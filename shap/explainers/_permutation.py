@@ -73,7 +73,7 @@ class PermutationExplainer(Explainer):
         # has a call function with those new default arguments
         if len(call_args) > 0:
             # this signature should match the __call__ signature of the class defined below
-            class PermutationExplainer(self.__class__):
+            class PermutationExplainer(self.__class__):  # type: ignore[name-defined]
                 def __call__(
                     self,
                     *args: Any,
@@ -99,7 +99,7 @@ class PermutationExplainer(Explainer):
             PermutationExplainer.__call__.__doc__ = self.__class__.__call__.__doc__
             self.__class__ = PermutationExplainer
             for k, v in call_args.items():
-                self.__call__.__kwdefaults__[k] = v
+                self.__call__.__kwdefaults__[k] = v  # type: ignore[index]
 
     # note that changes to this function signature should be copied to the default call argument wrapper above
     def __call__(
@@ -125,7 +125,7 @@ class PermutationExplainer(Explainer):
             **kwargs,
         )
 
-    def explain_row(
+    def explain_row(  # type: ignore[override]
         self,
         *row_args: Any,
         max_evals: int | Literal["auto"],
@@ -206,13 +206,13 @@ class PermutationExplainer(Explainer):
                 for ind in inds:  # forward
                     row_values[ind] += outputs[i + 1] - outputs[i]
                     if error_bounds:
-                        row_values_history[history_pos][ind] = outputs[i + 1] - outputs[i]
+                        row_values_history[history_pos][ind] = outputs[i + 1] - outputs[i]  # type: ignore[index]
                     i += 1
                 history_pos += 1
                 for ind in inds:  # backward
                     row_values[ind] += outputs[i] - outputs[i + 1]
                     if error_bounds:
-                        row_values_history[history_pos][ind] = outputs[i] - outputs[i + 1]
+                        row_values_history[history_pos][ind] = outputs[i] - outputs[i + 1]  # type: ignore[index]
                     i += 1
                 history_pos += 1
 
@@ -241,7 +241,7 @@ class PermutationExplainer(Explainer):
                 )
 
         return {
-            "values": row_values / (2 * npermutations),
+            "values": row_values / (2 * npermutations),  # type: ignore[operator]
             "expected_values": expected_value,
             "mask_shapes": fm.mask_shapes,
             "main_effects": main_effect_values,
@@ -284,7 +284,7 @@ class PermutationExplainer(Explainer):
 
         """
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
-        return explanation.values
+        return explanation.values  # type: ignore[union-attr]
 
     def __str__(self) -> str:
         return "shap.explainers.PermutationExplainer()"

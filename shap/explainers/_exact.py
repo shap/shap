@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
-from numba import njit
+from numba import njit  # type: ignore[attr-defined]
 
 from .. import links
 from ..models import Model
@@ -85,7 +85,7 @@ class ExactExplainer(Explainer):
 
         self._gray_code_cache = {}  # used to avoid regenerating the same gray code patterns
 
-    def __call__(
+    def __call__(  # type: ignore[override]
         self,
         *args: Any,
         max_evals: int | Literal["auto"] = 100000,
@@ -113,7 +113,7 @@ class ExactExplainer(Explainer):
             self._gray_code_cache[n] = gray_code_indexes(n)
         return self._gray_code_cache[n]
 
-    def explain_row(
+    def explain_row(  # type: ignore[override]
         self,
         *row_args: Any,
         max_evals: int | Literal["auto"],
@@ -324,10 +324,10 @@ def partition_masks(
     all_masks.append(m00)
     all_masks.append(~m00)
     # inds_stack = [0,1]
-    inds_lists = [[[], []] for i in range(M)]
+    inds_lists: list[list[list[int]]] = [[[], []] for i in range(M)]  # type: ignore[var-annotated]
     _partition_masks_recurse(len(partition_tree) - 1, m00, 0, 1, inds_lists, mask_matrix, partition_tree, M, all_masks)
 
-    all_masks = np.array(all_masks)
+    all_masks = np.array(all_masks)  # type: ignore[assignment]
 
     # we resort the clustering matrix to minimize the sequential difference between the masks
     # this minimizes the number of model evaluations we need to run when the background sometimes

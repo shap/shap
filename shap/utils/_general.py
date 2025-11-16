@@ -297,6 +297,9 @@ def ordinal_str(n: int) -> str:
 class OpChain:
     """A way to represent a set of dot chained operations on an object without actually running them."""
 
+    _ops: list[list[Any]]
+    _root_name: str
+
     def __init__(self, root_name: str = "") -> None:
         self._ops = []
         self._root_name = root_name

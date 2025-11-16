@@ -209,8 +209,8 @@ class LinearExplainer(Explainer):
             self.expected_value = np.dot(self.coef, self.mean) + self.intercept
 
             # unwrap the matrix form
-            if len(self.expected_value) == 1:
-                self.expected_value = self.expected_value[0, 0]
+            if len(self.expected_value) == 1:  # type: ignore[arg-type]
+                self.expected_value = self.expected_value[0, 0]  # type: ignore[index]
             else:
                 self.expected_value = np.array(self.expected_value)[0]
         else:
@@ -234,7 +234,7 @@ class LinearExplainer(Explainer):
             # if we still have some multi-collinearity present then we just add regularization...
             e, _ = np.linalg.eig(self.cov)
             if e.min() < 1e-7:
-                self.cov = self.cov + np.eye(self.cov.shape[0]) * 1e-6
+                self.cov = self.cov + np.eye(self.cov.shape[0]) * 1e-6  # type: ignore[assignment]
 
             mean_transform, x_transform = self._estimate_transforms(nsamples)
             self.mean_transformed = np.matmul(mean_transform, self.mean)
@@ -276,7 +276,7 @@ class LinearExplainer(Explainer):
                 cov_inv_SS = cov_inv_SiSi
 
                 # get the new cov_Si
-                cov_Si = self.cov[:, inds[: j + 1]]
+                cov_Si = self.cov[:, inds[: j + 1]]  # type: ignore[assignment]
 
                 # compute the new cov_inv_SiSi from cov_inv_SS
                 d = cov_Si[i, :-1].T

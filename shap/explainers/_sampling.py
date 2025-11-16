@@ -58,7 +58,7 @@ class SamplingExplainer(KernelExplainer):
             emsg = f"SamplingExplainer only supports the identity link, not {self.link}"
             raise ValueError(emsg)
 
-    def __call__(
+    def __call__(  # type: ignore[override]
         self,
         X: npt.NDArray[Any] | pd.DataFrame,
         y: Any = None,
@@ -85,7 +85,7 @@ class SamplingExplainer(KernelExplainer):
         instance = convert_to_instance(incoming_instance)
         match_instance_to_data(instance, self.data)
 
-        if len(self.data.groups) != self.P:
+        if len(self.data.groups) != self.P:  # type: ignore[arg-type]
             emsg = "SamplingExplainer does not support feature groups!"
             raise ExplainerError(emsg)
 
@@ -109,13 +109,13 @@ class SamplingExplainer(KernelExplainer):
 
         # if no features vary then there no feature has an effect
         if self.M == 0:
-            phi = np.zeros((len(self.data.groups), self.D))
-            phi_var = np.zeros((len(self.data.groups), self.D))
+            phi = np.zeros((len(self.data.groups), self.D))  # type: ignore[arg-type]
+            phi_var = np.zeros((len(self.data.groups), self.D))  # type: ignore[arg-type]
 
         # if only one feature varies then it has all the effect
         elif self.M == 1:
-            phi = np.zeros((len(self.data.groups), self.D))
-            phi_var = np.zeros((len(self.data.groups), self.D))
+            phi = np.zeros((len(self.data.groups), self.D))  # type: ignore[arg-type]
+            phi_var = np.zeros((len(self.data.groups), self.D))  # type: ignore[arg-type]
             diff = self.fx - self.fnull
             for d in range(self.D):
                 phi[self.varyingInds[0], d] = diff[d]

@@ -195,7 +195,7 @@ class KernelExplainer(Explainer):
                 tensor_as_np_array = sess.run(symbolic_tensor)
         return tensor_as_np_array
 
-    def __call__(
+    def __call__(  # type: ignore[override]
         self,
         X: npt.NDArray[Any] | pd.DataFrame | scipy.sparse.spmatrix,
         l1_reg: str | float | bool = "num_features(10)",
@@ -206,7 +206,7 @@ class KernelExplainer(Explainer):
         if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
         else:
-            feature_names = getattr(self, "data_feature_names", None)
+            feature_names = getattr(self, "data_feature_names", None)  # type: ignore[assignment]
 
         v = self.shap_values(X, l1_reg=l1_reg, silent=silent)
         if isinstance(v, list):
@@ -297,7 +297,7 @@ class KernelExplainer(Explainer):
         arr_type = "'numpy.ndarray'>"
         # if sparse, convert to lil for performance
         if scipy.sparse.issparse(X) and not scipy.sparse.isspmatrix_lil(X):
-            X = X.tolil()
+            X = X.tolil()  # type: ignore[union-attr]
         assert x_type.endswith(arr_type) or scipy.sparse.isspmatrix_lil(X), "Unknown instance type: " + x_type
 
         # single instance
@@ -331,8 +331,8 @@ class KernelExplainer(Explainer):
                 for i in range(X.shape[0]):
                     for j in range(s[1]):
                         outs[j][i] = explanations[i][:, j]
-                outs = np.stack(outs, axis=-1)
-                return outs
+                outs = np.stack(outs, axis=-1)  # type: ignore[assignment]
+                return outs  # type: ignore[return-value]
 
             # single-output
             else:
@@ -558,7 +558,7 @@ class KernelExplainer(Explainer):
         if not scipy.sparse.issparse(x):
             varying = np.zeros(self.data.groups_size)
             for i in range(self.data.groups_size):
-                inds = self.data.groups[i]
+                inds = self.data.groups[i]  # type: ignore[index]
                 x_group = x[0, inds]
                 if scipy.sparse.issparse(x_group):
                     if all(j not in x.nonzero()[1] for j in inds):
@@ -569,7 +569,7 @@ class KernelExplainer(Explainer):
             varying_indices = np.nonzero(varying)[0]
             return varying_indices
         else:
-            varying_indices = []
+            varying_indices = []  # type: ignore[assignment]
             # go over all nonzero columns in background and evaluation data
             # if both background and evaluation are zero, the column does not vary
             varying_indices = np.unique(np.union1d(self.data.data.nonzero()[1], x.nonzero()[1]))
@@ -631,7 +631,7 @@ class KernelExplainer(Explainer):
         self.nsamplesAdded = 0
         self.nsamplesRun = 0
         if self.keep_index:
-            self.synth_data_index = np.tile(self.data.index_value, self.nsamples)
+            self.synth_data_index = np.tile(self.data.index_value, self.nsamples)  # type: ignore[union-attr]
 
     def addsample(
         self,
@@ -669,9 +669,9 @@ class KernelExplainer(Explainer):
         data = self.synth_data[self.nsamplesRun * self.N : self.nsamplesAdded * self.N, :]
         if self.keep_index:
             index = self.synth_data_index[self.nsamplesRun * self.N : self.nsamplesAdded * self.N]
-            index = pd.DataFrame(index, columns=[self.data.index_name])
+            index = pd.DataFrame(index, columns=[self.data.index_name])  # type: ignore[union-attr]
             data = pd.DataFrame(data, columns=self.data.group_names)
-            data = pd.concat([index, data], axis=1).set_index(self.data.index_name)
+            data = pd.concat([index, data], axis=1).set_index(self.data.index_name)  # type: ignore[union-attr]
             if self.keep_index_ordered:
                 data = data.sort_index()
         modelOut = self.model.f(data)

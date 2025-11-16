@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
-from numba import njit
+from numba import njit  # type: ignore[attr-defined]
 from tqdm.auto import tqdm
 
 from .. import Explanation, links
@@ -141,7 +141,7 @@ class PartitionExplainer(Explainer):
         # has a call function with those new default arguments
         if len(call_args) > 0:
 
-            class PartitionExplainer(self.__class__):
+            class PartitionExplainer(self.__class__):  # type: ignore[name-defined]
                 # this signature should match the __call__ signature of the class defined below
                 def __call__(
                     self,
@@ -170,7 +170,7 @@ class PartitionExplainer(Explainer):
             PartitionExplainer.__call__.__doc__ = self.__class__.__call__.__doc__
             self.__class__ = PartitionExplainer
             for k, v in call_args.items():
-                self.__call__.__kwdefaults__[k] = v
+                self.__call__.__kwdefaults__[k] = v  # type: ignore[index]
 
     # note that changes to this function signature should be copied to the default call argument wrapper above
     def __call__(
@@ -242,7 +242,7 @@ class PartitionExplainer(Explainer):
             elif isinstance(outputs, OpChain):
                 outputs = outputs.apply(Explanation(f11)).values
 
-            out_shape = (2 * self._clustering.shape[0] + 1, len(outputs))
+            out_shape: tuple[int, ...] = (2 * self._clustering.shape[0] + 1, len(outputs))  # type: ignore[assignment]
         else:
             out_shape = (2 * self._clustering.shape[0] + 1,)
 
@@ -317,7 +317,7 @@ class PartitionExplainer(Explainer):
             f00 = f00[output_indexes]
             f11 = f11[output_indexes]
 
-        q = queue.PriorityQueue()
+        q: Any = queue.PriorityQueue()  # type: ignore[var-annotated]
         q.put((0, 0, (m00, f00, f11, ind, 1.0)))
         eval_count = 0
         total_evals = min(
@@ -335,8 +335,8 @@ class PartitionExplainer(Explainer):
 
             # create a batch of work to do
             batch_args = []
-            batch_masks = []
-            while not q.empty() and len(batch_masks) < batch_size and eval_count + len(batch_masks) < max_evals:
+            batch_masks: list[Any] = []  # type: ignore[var-annotated]
+            while not q.empty() and len(batch_masks) < batch_size and eval_count + len(batch_masks) < max_evals:  # type: ignore[operator]
                 # get our next set of arguments
                 m00, f00, f11, ind, weight = q.get()[2]
 
@@ -368,7 +368,7 @@ class PartitionExplainer(Explainer):
                 batch_masks.append(m10)
                 batch_masks.append(m01)
 
-            batch_masks = np.array(batch_masks)
+            batch_masks = np.array(batch_masks)  # type: ignore[assignment]
 
             # run the batch
             if len(batch_args) > 0:
@@ -470,7 +470,7 @@ class PartitionExplainer(Explainer):
         # our starting plan is to evaluate all the nodes with a fixed_context
         evals_planned = M
 
-        q = queue.PriorityQueue()
+        q: Any = queue.PriorityQueue()  # type: ignore[var-annotated]
         q.put((0, 0, (m00, f00, f11, ind, 1.0, fixed_context)))  # (m00, f00, f11, tree_index, weight)
         eval_count = 0
         total_evals = min(
@@ -488,8 +488,8 @@ class PartitionExplainer(Explainer):
 
             # create a batch of work to do
             batch_args = []
-            batch_masks = []
-            while not q.empty() and len(batch_masks) < batch_size and eval_count < max_evals:
+            batch_masks: list[Any] = []  # type: ignore[var-annotated]
+            while not q.empty() and len(batch_masks) < batch_size and eval_count < max_evals:  # type: ignore[operator]
                 # get our next set of arguments
                 m00, f00, f11, ind, weight, context = q.get()[2]
 
@@ -518,7 +518,7 @@ class PartitionExplainer(Explainer):
                 batch_masks.append(m10)
                 batch_masks.append(m01)
 
-            batch_masks = np.array(batch_masks)
+            batch_masks = np.array(batch_masks)  # type: ignore[assignment]
 
             # run the batch
             if len(batch_args) > 0:

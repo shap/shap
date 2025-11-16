@@ -96,7 +96,7 @@ class GradientExplainer(Explainer):
         elif framework == "pytorch":
             self.explainer = _PyTorchGradient(model, data, batch_size, local_smoothing)
 
-    def __call__(self, X: Any, nsamples: int = 200) -> Explanation:
+    def __call__(self, X: Any, nsamples: int = 200) -> Explanation:  # type: ignore[override]
         """Return an explanation object for the model applied to X.
 
         Parameters
@@ -115,7 +115,7 @@ class GradientExplainer(Explainer):
 
         """
         shap_values = self.shap_values(X, nsamples)
-        return Explanation(values=shap_values, data=X, feature_names=self.features)
+        return Explanation(values=shap_values, data=X, feature_names=self.features)  # type: ignore[arg-type]
 
     def shap_values(
         self,
@@ -175,7 +175,7 @@ class GradientExplainer(Explainer):
                 from list to np.ndarray.
 
         """
-        return self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order, rseed, return_variances)
+        return self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order, rseed, return_variances)  # type: ignore[arg-type]
 
 
 class _TFGradient(Explainer):
@@ -206,22 +206,22 @@ class _TFGradient(Explainer):
         if tf is None:
             import tensorflow as tf
 
-            if version.parse(tf.__version__) < version.parse("1.4.0"):
+            if version.parse(tf.__version__) < version.parse("1.4.0"):  # type: ignore[attr-defined]
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
         if keras is None:
             try:
                 from tensorflow import keras
 
-                if version.parse(keras.__version__) < version.parse("2.1.0"):
+                if version.parse(keras.__version__) < version.parse("2.1.0"):  # type: ignore[attr-defined]
                     warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
             except Exception:
                 pass
-        if tf.executing_eagerly():
+        if tf.executing_eagerly():  # type: ignore[attr-defined]
             if isinstance(model, (list, tuple)):
                 assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
                 from tensorflow import keras
 
-                self.model = keras.Model(model[0], model[1])
+                self.model = keras.Model(model[0], model[1])  # type: ignore[attr-defined]
             else:
                 self.model = model
 
@@ -248,7 +248,7 @@ class _TFGradient(Explainer):
         self.batch_size = batch_size
         self.local_smoothing = local_smoothing
 
-        if not tf.executing_eagerly():
+        if not tf.executing_eagerly():  # type: ignore[attr-defined]
             self.session = _get_session(session)
             self.graph = _get_graph(self)
             # see if there is a keras operation we need to save
@@ -269,18 +269,18 @@ class _TFGradient(Explainer):
         global tf, keras
 
         if self.gradients[i] is None:
-            if not tf.executing_eagerly():
+            if not tf.executing_eagerly():  # type: ignore[attr-defined]
                 out = self.model_output[:, i] if self.multi_output else self.model_output
-                self.gradients[i] = tf.gradients(out, self.model_inputs)
+                self.gradients[i] = tf.gradients(out, self.model_inputs)  # type: ignore[attr-defined]
             else:
-                if version.parse(tf.__version__) < version.parse("2.16.0"):
+                if version.parse(tf.__version__) < version.parse("2.16.0"):  # type: ignore[attr-defined]
                     # todo: add legacy warning here.
-                    @tf.function
+                    @tf.function  # type: ignore[attr-defined]
                     def grad_graph(x):
-                        phase = tf.keras.backend.learning_phase()
-                        tf.keras.backend.set_learning_phase(0)
+                        phase = tf.keras.backend.learning_phase()  # type: ignore[attr-defined]
+                        tf.keras.backend.set_learning_phase(0)  # type: ignore[attr-defined]
 
-                        with tf.GradientTape(watch_accessed_variables=False) as tape:
+                        with tf.GradientTape(watch_accessed_variables=False) as tape:  # type: ignore[attr-defined]
                             tape.watch(x)
                             out = self.model(x)
                             if self.multi_output:
@@ -288,14 +288,14 @@ class _TFGradient(Explainer):
 
                         x_grad = tape.gradient(out, x)
 
-                        tf.keras.backend.set_learning_phase(phase)
+                        tf.keras.backend.set_learning_phase(phase)  # type: ignore[attr-defined]
 
                         return x_grad
                 else:
 
-                    @tf.function
+                    @tf.function  # type: ignore[attr-defined]
                     def grad_graph(x):
-                        with tf.GradientTape(watch_accessed_variables=False) as tape:
+                        with tf.GradientTape(watch_accessed_variables=False) as tape:  # type: ignore[attr-defined]
                             tape.watch(x)
                             out = self.model(x, training=False)
                             if self.multi_output:
@@ -331,7 +331,7 @@ class _TFGradient(Explainer):
         assert len(self.model_inputs) == len(X), "Number of model inputs does not match the number given!"
 
         # rank and determine the model outputs that we will explain
-        if not tf.executing_eagerly():
+        if not tf.executing_eagerly():  # type: ignore[attr-defined]
             model_output_values = self.run(self.model_output, self.model_inputs, X)
         else:
             model_output_values = self.run(self.model, self.model_inputs, X)
@@ -343,13 +343,13 @@ class _TFGradient(Explainer):
             elif output_rank_order == "max_abs":
                 model_output_ranks = np.argsort(np.abs(model_output_values))
             elif output_rank_order == "custom":
-                model_output_ranks = ranked_outputs
+                model_output_ranks = ranked_outputs  # type: ignore[assignment]
             else:
                 emsg = "output_rank_order must be max, min, max_abs or custom!"
                 raise ValueError(emsg)
 
             if output_rank_order in ["max", "min", "max_abs"]:
-                model_output_ranks = model_output_ranks[:, :ranked_outputs]
+                model_output_ranks = model_output_ranks[:, :ranked_outputs]  # type: ignore[index, misc]
         else:
             model_output_ranks = np.tile(np.arange(len(self.gradients)), (X[0].shape[0], 1))
 
@@ -360,7 +360,7 @@ class _TFGradient(Explainer):
         samples_delta = [np.zeros((nsamples,) + X[t].shape[1:], dtype=np.float32) for t in range(len(X))]
         # use random seed if no argument given
         if rseed is None:
-            rseed = np.random.randint(0, 1e6)
+            rseed = np.random.randint(0, 1e6)  # type: ignore[call-overload]
 
         for i in range(model_output_ranks.shape[1]):
             np.random.seed(rseed)  # so we get the same noise patterns for each output class
@@ -431,22 +431,22 @@ class _TFGradient(Explainer):
                 output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1) for i in range(len(output_phis[0]))]
             # multiple outputs case
             else:
-                output_phis = np.stack(output_phis, axis=-1)
+                output_phis = np.stack(output_phis, axis=-1)  # type: ignore[assignment]
         if ranked_outputs is not None:
             if return_variances:
-                return output_phis, output_phi_vars, model_output_ranks
+                return output_phis, output_phi_vars, model_output_ranks  # type: ignore[return-value]
             else:
                 return output_phis, model_output_ranks
         else:
             if return_variances:
                 return output_phis, output_phi_vars
             else:
-                return output_phis
+                return output_phis  # type: ignore[return-value]
 
     def run(self, out: Any, model_inputs: list[Any], X: list[Any]) -> Any:
         global tf, keras
 
-        if not tf.executing_eagerly():
+        if not tf.executing_eagerly():  # type: ignore[attr-defined]
             feed_dict = dict(zip(model_inputs, X))
             if self.keras_phase_placeholder is not None:
                 feed_dict[self.keras_phase_placeholder] = 0
@@ -457,7 +457,7 @@ class _TFGradient(Explainer):
             for i in range(len(X)):
                 shape = list(self.model_inputs[i].shape)
                 shape[0] = -1
-                v = tf.constant(X[i].reshape(shape), dtype=self.model_inputs[i].dtype)
+                v = tf.constant(X[i].reshape(shape), dtype=self.model_inputs[i].dtype)  # type: ignore[attr-defined]
                 inputs.append(v)
             return out(inputs)
 
@@ -545,14 +545,14 @@ class _PyTorchGradient(Explainer):
         outputs = self.model(*X)
         selected = [val for val in outputs[:, idx]]
         if self.input_handle is not None:
-            interim_inputs = self.layer.target_input
+            interim_inputs = self.layer.target_input  # type: ignore[union-attr]
             grads = [
                 torch.autograd.grad(selected, input, retain_graph=True if idx + 1 < len(interim_inputs) else None)[0]
                 .cpu()
                 .numpy()
                 for idx, input in enumerate(interim_inputs)
             ]
-            del self.layer.target_input
+            del self.layer.target_input  # type: ignore[union-attr]
         else:
             grads = [
                 torch.autograd.grad(selected, x, retain_graph=True if idx + 1 < len(X) else None)[0].cpu().numpy()
@@ -629,7 +629,7 @@ class _PyTorchGradient(Explainer):
 
         # use random seed if no argument given
         if rseed is None:
-            rseed = np.random.randint(0, 1e6)
+            rseed = np.random.randint(0, 1e6)  # type: ignore[call-overload]
 
         for i in range(model_output_ranks.shape[1]):
             np.random.seed(rseed)  # so we get the same noise patterns for each output class
@@ -662,15 +662,15 @@ class _PyTorchGradient(Explainer):
                     if self.interim is True:
                         with torch.no_grad():
                             _ = self.model(*[samples_input[a][k].unsqueeze(0) for a in range(len(X))])
-                            interim_inputs = self.layer.target_input
-                            del self.layer.target_input
+                            interim_inputs = self.layer.target_input  # type: ignore[union-attr]
+                            del self.layer.target_input  # type: ignore[union-attr]
                             if type(interim_inputs) is tuple:
                                 if type(interim_inputs) is tuple:
                                     # this should always be true, but just to be safe
                                     for a in range(len(interim_inputs)):
                                         samples_delta[a][k] = interim_inputs[a].cpu().numpy()
                                 else:
-                                    samples_delta[0][k] = interim_inputs.cpu().numpy()
+                                    samples_delta[0][k] = interim_inputs.cpu().numpy()  # type: ignore[attr-defined]
 
                 # compute the gradients at all the sample points
                 find = model_output_ranks[j, i]
@@ -701,15 +701,15 @@ class _PyTorchGradient(Explainer):
                 output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1) for i in range(len(output_phis[0]))]
             # multiple outputs case
             else:
-                output_phis = np.stack(output_phis, axis=-1)
+                output_phis = np.stack(output_phis, axis=-1)  # type: ignore[assignment]
 
         if ranked_outputs is not None:
             if return_variances:
-                return output_phis, output_phi_vars, model_output_ranks
+                return output_phis, output_phi_vars, model_output_ranks  # type: ignore[return-value]
             else:
                 return output_phis, model_output_ranks
         else:
             if return_variances:
                 return output_phis, output_phi_vars
             else:
-                return output_phis
+                return output_phis  # type: ignore[return-value]

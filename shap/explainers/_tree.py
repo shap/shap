@@ -318,7 +318,7 @@ class TreeExplainer(Explainer):
             self.expected_value = self.__dynamic_expected_value
         elif data is not None:
             try:
-                self.expected_value = self.model.predict(self.data).mean(0)
+                self.expected_value = self.model.predict(self.data).mean(0)  # type: ignore[union-attr]
             except ValueError:
                 raise ExplainerError(
                     "Currently TreeExplainer can only handle models with categorical splits when "
@@ -341,7 +341,7 @@ class TreeExplainer(Explainer):
 
     def __dynamic_expected_value(self, y: npt.NDArray[Any]) -> npt.NDArray[Any]:
         """This computes the expected value conditioned on the given label value."""
-        return self.model.predict(self.data, np.ones(self.data.shape[0]) * y).mean(0)
+        return self.model.predict(self.data, np.ones(self.data.shape[0]) * y).mean(0)  # type: ignore[union-attr]
 
     def __call__(  # type: ignore
         self,
@@ -633,8 +633,8 @@ class TreeExplainer(Explainer):
                 if check_additivity and model_output_vals is not None:
                     self.assert_additivity(out, model_output_vals)
                 if isinstance(out, list):
-                    out = np.stack(out, axis=-1)
-                return out
+                    out = np.stack(out, axis=-1)  # type: ignore[assignment]
+                return out  # type: ignore[return-value]
 
         X, y, X_missing, flat_output, tree_limit, check_additivity = self._validate_inputs(
             X, y, tree_limit, check_additivity
@@ -690,13 +690,13 @@ class TreeExplainer(Explainer):
 
         out = self._get_shap_output(phi, flat_output)
         if check_additivity and self.model.model_output == "raw":
-            self.assert_additivity(out, self.model.predict(X))
+            self.assert_additivity(out, self.model.predict(X))  # type: ignore[arg-type]
 
         # This statements handles the case of multiple outputs
         # e.g. a multi-class classification problem, multi-target regression problem
         # in this case the output shape corresponds to [num_samples, num_features, num_outputs]
         if isinstance(out, list):
-            out = np.stack(out, axis=-1)
+            out = np.stack(out, axis=-1)  # type: ignore[assignment]
         return out
 
     def _get_shap_output(self, phi: npt.NDArray[Any], flat_output: bool) -> Any:
@@ -712,13 +712,13 @@ class TreeExplainer(Explainer):
             if self.expected_value is None and self.model.model_output != "log_loss":
                 self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
             if flat_output:
-                out = [phi[0, :-1, i] for i in range(self.model.num_outputs)]
+                out = [phi[0, :-1, i] for i in range(self.model.num_outputs)]  # type: ignore[assignment]
             else:
-                out = [phi[:, :-1, i] for i in range(self.model.num_outputs)]
+                out = [phi[:, :-1, i] for i in range(self.model.num_outputs)]  # type: ignore[assignment]
 
         # if our output format requires binary classification to be represented as two outputs then we do that here
         if self.model.model_output == "probability_doubled":
-            out = [-out, out]
+            out = [-out, out]  # type: ignore[assignment]
         return out
 
     def shap_interaction_values(
@@ -806,7 +806,7 @@ class TreeExplainer(Explainer):
             # note we pull off the last column and keep it as our expected_value
             if len(phi.shape) == 4:
                 self.expected_value = getattr(self, "expected_value", [phi[0, i, -1, -1] for i in range(phi.shape[1])])
-                return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]
+                return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]  # type: ignore[return-value]
             else:
                 self.expected_value = getattr(self, "expected_value", phi[0, -1, -1])
                 return phi[:, :-1, :-1]
@@ -1584,13 +1584,13 @@ class TreeEnsemble:
             return self._xgboost_n_outputs
 
         if self.num_stacked_models > 1:
-            if len(self.trees) % self.num_stacked_models != 0:
+            if len(self.trees) % self.num_stacked_models != 0:  # type: ignore[arg-type]
                 raise ValueError("Only stacked models with equal numbers of trees are supported!")
-            if self.trees[0].values.shape[1] != 1:
+            if self.trees[0].values.shape[1] != 1:  # type: ignore[index]
                 raise ValueError("Only stacked models with single outputs per model are supported!")
             return self.num_stacked_models
         else:
-            return self.trees[0].values.shape[1]
+            return self.trees[0].values.shape[1]  # type: ignore[index]
 
     def get_transform(self) -> str:
         """A consistent interface to make predictions from this model."""
@@ -1850,7 +1850,7 @@ class SingleTree:
             self.features = np.full(num_nodes, -2, dtype=np.int32)
             self.thresholds = np.full(num_nodes, -2, dtype=np.float64)
             self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
-            self.values = [-2] * num_nodes
+            self.values = [-2] * num_nodes  # type: ignore[assignment]
             self.node_sample_weight = np.full(num_nodes, -2, dtype=np.float64)
 
             def buildTree(index, node):
@@ -1903,7 +1903,7 @@ class SingleTree:
             self.features = np.empty(num_nodes, dtype=np.int32)
             self.thresholds = np.empty(num_nodes, dtype=np.float64)
             self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
-            self.values = [-2 for _ in range(num_nodes)]
+            self.values = [-2 for _ in range(num_nodes)]  # type: ignore[assignment]
             self.node_sample_weight = np.empty(num_nodes, dtype=np.float64)
 
             # BFS traversal through the tree structure

@@ -132,7 +132,7 @@ class Composite(Masker):
 
 def joint_clustering(self: Composite, *args: Any) -> Any:
     """Return a joint clustering that merges the clusterings of all the submaskers."""
-    single_clustering = []
+    single_clustering = []  # type: ignore[var-annotated]
     arg_pos = 0
     for i, masker in enumerate(self.maskers):
         masker_args = args[arg_pos : arg_pos + self.arg_counts[i]]
