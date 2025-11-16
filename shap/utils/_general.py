@@ -43,15 +43,19 @@ def shapley_coefficients(n: int) -> npt.NDArray[Any]:
 
 
 def convert_name(
-    ind: str | int,
-    shap_values: npt.NDArray[Any],
+    ind: str | int | None,
+    shap_values: npt.NDArray[Any] | None,
     input_names: list[str] | npt.NDArray[Any],
-) -> int | str:
+) -> int | str | None:
+    if ind is None:
+        return None
     if isinstance(ind, str):
         nzinds = np.where(np.array(input_names) == ind)[0]
         if len(nzinds) == 0:
             # we allow rank based indexing using the format "rank(int)"
             if ind.startswith("rank("):
+                if shap_values is None:
+                    raise ValueError("shap_values must be provided for rank-based indexing")
                 return np.argsort(-np.abs(shap_values).mean(0))[int(ind[5:-1])]
 
             # we allow the sum of all the SHAP values to be specified with "sum()"
@@ -131,7 +135,7 @@ def approximate_interactions(
             feature_names = X.columns
         X = X.values
 
-    index = convert_name(index, shap_values, feature_names)  # type: ignore[arg-type]
+    index = convert_name(index, shap_values, feature_names)  # type: ignore[arg-type, assignment]
 
     if X.shape[0] > 10000:
         a = np.arange(X.shape[0])
