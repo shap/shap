@@ -2301,8 +2301,10 @@ def test_tree_explainer_with_decision_tree_regressor():
     shap_values = explainer.shap_values(X[:5])
 
     assert shap_values.shape == (5, 4)
-    # expected_value can be float or array
-    assert isinstance(explainer.expected_value, (float, np.floating, np.ndarray))
+
+    # Check additivity
+    predictions = model.predict(X[:5])
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
 
 
 def test_tree_explainer_with_dataframe():
@@ -2382,6 +2384,10 @@ def test_tree_explainer_gradient_boosting_regressor():
 
     assert shap_values.shape == (8, 6)
 
+    # Check additivity
+    predictions = model.predict(X[:8])
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
+
 
 def test_tree_explainer_gradient_boosting_classifier():
     """Test TreeExplainer with GradientBoostingClassifier."""
@@ -2395,6 +2401,10 @@ def test_tree_explainer_gradient_boosting_classifier():
     shap_values = explainer.shap_values(X[:10])
 
     assert shap_values.shape == (10, 4)
+
+    # Check additivity (GradientBoostingClassifier uses decision_function for raw output)
+    predictions = model.decision_function(X[:10])
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
 
 
 def test_tree_explainer_with_background_data():
@@ -2471,6 +2481,10 @@ def test_tree_explainer_with_xgboost_basic():
 
     assert shap_values.shape == (10, 5)
 
+    # Check additivity
+    predictions = model.predict(X[:10])
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
+
 
 def test_tree_explainer_with_xgboost_classifier():
     """Test TreeExplainer with XGBoost classifier."""
@@ -2502,6 +2516,10 @@ def test_tree_explainer_with_lightgbm_regressor():
     shap_values = explainer.shap_values(X[:10])
 
     assert shap_values.shape == (10, 5)
+
+    # Check additivity
+    predictions = model.predict(X[:10])
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
 
 
 def test_tree_explainer_with_lightgbm_classifier():
@@ -2645,6 +2663,11 @@ def test_tree_explainer_with_approximate():
 
     assert shap_values.shape == (10, 4)
 
+    # Note: approximate mode may not be perfectly additive
+    predictions = model.predict(X[:10])
+    # Use larger tolerance for approximate mode
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-2
+
 
 def test_tree_explainer_with_check_additivity_false():
     """Test TreeExplainer with check_additivity=False."""
@@ -2714,6 +2737,11 @@ def test_tree_explainer_with_pandas_series():
 
     # Single sample can have various shapes
     assert shap_values.shape in [(4,), (1, 4)]
+
+    # Check additivity for single sample
+    prediction = model.predict(single_row.to_frame().T)[0]
+    shap_sum = shap_values.sum() if shap_values.ndim == 1 else shap_values.sum(1)[0]
+    assert abs(shap_sum + explainer.expected_value - prediction) < 1e-4
 
 
 def test_tree_explainer_random_forest_multiclass():
