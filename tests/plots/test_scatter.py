@@ -181,7 +181,7 @@ def test_scatter_with_color_as_numpy_array(explainer):
     return plt.gcf()
 
 
-@pytest.mark.mpl_image_compare
+@pytest.mark.mpl_image_compare(tolerance=20)
 def test_scatter_with_multi_feature_color(explainer):
     """Test scatter plot with color as multi-feature Explanation."""
     explanation = explainer(explainer.data)

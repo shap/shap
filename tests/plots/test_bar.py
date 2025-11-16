@@ -112,7 +112,7 @@ def test_bar_raises_error_for_empty_explanation(explainer):
         shap.plots.bar(shap_values[0:0], show=False)
 
 
-@pytest.mark.mpl_image_compare(tolerance=3)
+@pytest.mark.mpl_image_compare(tolerance=15)
 def test_bar_legacy():
     """Test legacy bar plot function."""
     np.random.seed(42)

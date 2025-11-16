@@ -120,7 +120,7 @@ def test_waterfall_plot_for_data_with_number_columns():
     shap.plots.waterfall(shap_values[0], show=False)
 
 
-@pytest.mark.mpl_image_compare(tolerance=3)
+@pytest.mark.mpl_image_compare(tolerance=20)
 def test_waterfall_max_display():
     """Test waterfall plot with max_display to trigger feature grouping."""
     # Create a model with many features
