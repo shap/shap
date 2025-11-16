@@ -68,7 +68,7 @@ class Composite(Masker):
         out: list[Any] = []
         pos: int = 0
         for i, masker in enumerate(self.maskers):
-            out.extend(masker.mask_shapes(*args[pos : pos + self.arg_counts[i]]))
+            out.extend(masker.mask_shapes(*args[pos : pos + self.arg_counts[i]]))  # type: ignore[attr-defined]
         return out
 
     def data_transform(self, *args: Any) -> list[Any]:

@@ -21,13 +21,6 @@ class Masker(Serializable):
     def __call__(self, mask: bool | npt.NDArray[Any], *args: Any) -> Any:
         """Maskers are callable objects that accept the same inputs as the model plus a binary mask."""
 
-    def mask_shapes(self, *args: Any) -> list[tuple[int, ...]]:
-        """Return the shape(s) of the mask(s) that this masker produces.
-
-        Subclasses may override this method.
-        """
-        raise NotImplementedError("Subclasses should implement mask_shapes")
-
     def _standardize_mask(self, mask: bool | npt.NDArray[Any], *args: Any) -> npt.NDArray[np.bool_]:
         """This allows users to pass True/False as short hand masks."""
         if mask is True or mask is False:
