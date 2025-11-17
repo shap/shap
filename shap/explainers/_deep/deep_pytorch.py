@@ -395,7 +395,9 @@ def lstm_cell_handler(module, grad_input, grad_output):
     """
     Backward hook handler for LSTMCell that computes SHAP values manually.
 
-    For now, return None to fallback to standard gradients while we debug the proper format.
+    Returns gradients in the format: shap_values / (input - baseline)
+    so that when DeepExplainer aggregates with (grad * (X - baseline)).mean(0),
+    it produces the correct SHAP values.
     """
     import torch
 
@@ -404,9 +406,218 @@ def lstm_cell_handler(module, grad_input, grad_output):
         warnings.warn("LSTM handler: No saved tensors, using standard gradients")
         return None
 
-    # For debugging: just return None (standard gradients) for now
-    # TODO: Implement proper SHAP calculation once we understand gradient format
-    return None
+    # Extract inputs (doubled batch: [actual; baseline])
+    if isinstance(module.x, tuple):
+        x_doubled = module.x[0]
+        h_doubled = module.x[1] if len(module.x) > 1 else None
+        c_doubled = module.x[2] if len(module.x) > 2 else None
+    else:
+        return None
+
+    # Split actual and baseline
+    batch_size = x_doubled.shape[0] // 2
+    x = x_doubled[:batch_size]
+    x_base = x_doubled[batch_size:]
+
+    if h_doubled is not None:
+        h = h_doubled[:batch_size]
+        h_base = h_doubled[batch_size:]
+    else:
+        hidden_size = module.hidden_size
+        h = torch.zeros(batch_size, hidden_size, device=x.device, dtype=x.dtype)
+        h_base = h.clone()
+
+    if c_doubled is not None:
+        c = c_doubled[:batch_size]
+        c_base = c_doubled[batch_size:]
+    else:
+        hidden_size = module.hidden_size
+        c = torch.zeros(batch_size, hidden_size, device=x.device, dtype=x.dtype)
+        c_base = c.clone()
+
+    # Extract weights from LSTMCell
+    hidden_size = module.hidden_size
+    W_ii, W_if, W_ig, W_io = torch.chunk(module.weight_ih, 4, dim=0)
+    W_hi, W_hf, W_hg, W_ho = torch.chunk(module.weight_hh, 4, dim=0)
+
+    if module.bias:
+        b_ii, b_if, b_ig, b_io = torch.chunk(module.bias_ih, 4, dim=0)
+        b_hi, b_hf, b_hg, b_ho = torch.chunk(module.bias_hh, 4, dim=0)
+    else:
+        zeros = torch.zeros(hidden_size, device=x.device, dtype=x.dtype)
+        b_ii = b_if = b_ig = b_io = zeros
+        b_hi = b_hf = b_hg = b_ho = zeros
+
+    # Helper function for gate SHAP - keep hidden dimension separate
+    def manual_shap_gate(W_i, W_h, b_i, b_h, x, h, x_base, h_base, activation='sigmoid'):
+        linear_current = torch.matmul(x, W_i.T) + torch.matmul(h, W_h.T) + b_i + b_h
+        linear_base = torch.matmul(x_base, W_i.T) + torch.matmul(h_base, W_h.T) + b_i + b_h
+
+        act_fn = torch.sigmoid if activation == 'sigmoid' else torch.tanh
+        output = act_fn(linear_current)
+        output_base = act_fn(linear_base)
+
+        # DeepLift rescale rule
+        denom = torch.matmul(x, W_i.T) + torch.matmul(h, W_h.T)
+
+        x_diff = (x - x_base).unsqueeze(1)
+        h_diff = (h - h_base).unsqueeze(1)
+
+        W_i_expanded = W_i.unsqueeze(0)
+        W_h_expanded = W_h.unsqueeze(0)
+
+        numerator_x = W_i_expanded * x_diff
+        numerator_h = W_h_expanded * h_diff
+
+        denom_expanded = denom.unsqueeze(-1)
+
+        Z_x = numerator_x / (denom_expanded + 1e-10)
+        Z_h = numerator_h / (denom_expanded + 1e-10)
+
+        output_diff = (output - output_base).unsqueeze(-1)
+
+        # Return element-wise relevances WITHOUT summing over hidden dimension yet
+        # r_x: (batch, hidden_size, input_size)
+        # r_h: (batch, hidden_size, hidden_size)
+        r_x = output_diff * Z_x  # (batch, hidden_size, input_size)
+        r_h = output_diff * Z_h  # (batch, hidden_size, hidden_size)
+
+        return r_x, r_h, output, output_base
+
+    # Helper function for element-wise multiplication SHAP
+    def manual_shap_multiplication(a, b, a_base, b_base):
+        r_a = 0.5 * (a * b - a_base * b + a * b_base - a_base * b_base)
+        r_b = 0.5 * (a * b - a * b_base + a_base * b - a_base * b_base)
+        return r_a, r_b
+
+    # Calculate SHAP values for each gate (element-wise)
+    r_x_i, r_h_i, i_t, i_t_base = manual_shap_gate(
+        W_ii, W_hi, b_ii, b_hi, x, h, x_base, h_base, activation='sigmoid'
+    )
+
+    r_x_f, r_h_f, f_t, f_t_base = manual_shap_gate(
+        W_if, W_hf, b_if, b_hf, x, h, x_base, h_base, activation='sigmoid'
+    )
+
+    r_x_g, r_h_g, c_tilde, c_tilde_base = manual_shap_gate(
+        W_ig, W_hg, b_ig, b_hg, x, h, x_base, h_base, activation='tanh'
+    )
+
+    # Cell state update: c_new = f_t ⊙ c + i_t ⊙ c_tilde
+    # Shapley values for multiplications
+    r_f_from_mult, r_c_from_f = manual_shap_multiplication(f_t, c, f_t_base, c_base)
+    r_i_from_mult, r_ctilde_from_mult = manual_shap_multiplication(i_t, c_tilde, i_t_base, c_tilde_base)
+
+    # Get output selection from grad_output
+    # grad_output[1] is for c_new, shape (doubled_batch, hidden_size)
+    # Each row indicates which output dimension is being explained
+    if len(grad_output) > 1 and grad_output[1] is not None:
+        c_output_selector = grad_output[1][:batch_size]  # (batch, hidden_size)
+    else:
+        # If no grad_output, explain all outputs equally
+        c_output_selector = torch.ones_like(c)
+
+    # Now r_x_f, r_h_f etc have shape (batch, hidden_size, feature_size)
+    # We need to:
+    # 1. Multiply multiplication relevances by output selector
+    # 2. Distribute back to input features
+    # 3. Sum over hidden dimension
+
+    # Weight multiplication relevances by output selector
+    # r_f_from_mult: (batch, hidden_size)
+    # c_output_selector: (batch, hidden_size)
+    # Result: (batch, hidden_size)
+    r_f_weighted = r_f_from_mult * c_output_selector
+    r_i_weighted = r_i_from_mult * c_output_selector
+    r_ctilde_weighted = r_ctilde_from_mult * c_output_selector
+
+    # For forget gate path:
+    # r_x_f: (batch, hidden_size, input_size)
+    # r_h_f: (batch, hidden_size, hidden_size)
+    # r_f_weighted: (batch, hidden_size)
+
+    # Distribute r_f_weighted[b,k] to input features based on their contribution to f_t[k]
+    # Total contribution to f_t[k] from all inputs: sum over input_size and hidden_size
+    total_r_f_per_hidden = r_x_f.sum(dim=2) + r_h_f.sum(dim=2)  # (batch, hidden_size)
+
+    # Avoid division by zero
+    total_r_f_per_hidden = torch.where(
+        torch.abs(total_r_f_per_hidden) < 1e-10,
+        torch.ones_like(total_r_f_per_hidden),
+        total_r_f_per_hidden
+    )
+
+    # Scale gate relevances by multiplication relevances
+    # (batch, hidden_size, 1) * (batch, hidden_size, input_size) / (batch, hidden_size, 1)
+    scale_f = (r_f_weighted / total_r_f_per_hidden).unsqueeze(-1)
+    shap_x_from_f = (r_x_f * scale_f).sum(dim=1)  # Sum over hidden_size → (batch, input_size)
+    shap_h_from_f = (r_h_f * scale_f).sum(dim=1)  # Sum over hidden_size → (batch, hidden_size)
+
+    # For input gate path
+    total_r_i_per_hidden = r_x_i.sum(dim=2) + r_h_i.sum(dim=2)
+    total_r_i_per_hidden = torch.where(
+        torch.abs(total_r_i_per_hidden) < 1e-10,
+        torch.ones_like(total_r_i_per_hidden),
+        total_r_i_per_hidden
+    )
+    scale_i = (r_i_weighted / total_r_i_per_hidden).unsqueeze(-1)
+    shap_x_from_i = (r_x_i * scale_i).sum(dim=1)
+    shap_h_from_i = (r_h_i * scale_i).sum(dim=1)
+
+    # For candidate gate path
+    total_r_g_per_hidden = r_x_g.sum(dim=2) + r_h_g.sum(dim=2)
+    total_r_g_per_hidden = torch.where(
+        torch.abs(total_r_g_per_hidden) < 1e-10,
+        torch.ones_like(total_r_g_per_hidden),
+        total_r_g_per_hidden
+    )
+    scale_g = (r_ctilde_weighted / total_r_g_per_hidden).unsqueeze(-1)
+    shap_x_from_g = (r_x_g * scale_g).sum(dim=1)
+    shap_h_from_g = (r_h_g * scale_g).sum(dim=1)
+
+    # Sum all contributions
+    shap_x = shap_x_from_f + shap_x_from_i + shap_x_from_g  # (batch, input_size)
+    shap_h = shap_h_from_f + shap_h_from_i + shap_h_from_g  # (batch, hidden_size)
+    shap_c = (r_c_from_f * c_output_selector).sum(dim=1, keepdim=True)  # (batch, 1) but broadcast to (batch, hidden_size)
+
+    # Actually, shap_c should be (batch, hidden_size) with relevance for each c[k]
+    # But we're explaining c_new, not c_in, so we need element-wise relevance
+    shap_c = r_c_from_f * c_output_selector  # (batch, hidden_size)
+
+    # Compute deltas
+    delta_x = x - x_base
+    delta_h = h - h_base
+    delta_c = c - c_base
+
+    dup0 = [2] + [1 for i in delta_x.shape[1:]]
+
+    # Compute gradients with numerical stability (avoid division by zero)
+    # Where delta is very small, the SHAP value should also be very small (no change = no contribution)
+    # So we can safely set gradient to 0 in those cases
+    eps = 1e-6
+    grad_x_value = torch.where(
+        torch.abs(delta_x) < eps,
+        torch.zeros_like(shap_x),
+        shap_x / delta_x
+    )
+    grad_h_value = torch.where(
+        torch.abs(delta_h) < eps,
+        torch.zeros_like(shap_h),
+        shap_h / delta_h
+    )
+    grad_c_value = torch.where(
+        torch.abs(delta_c) < eps,
+        torch.zeros_like(shap_c),
+        shap_c / delta_c
+    )
+
+    # Return gradients repeated for doubled batch
+    # grad_input structure: (grad_x, (grad_h, grad_c))
+    grads_x = grad_x_value.repeat(dup0)
+    grads_h = grad_h_value.repeat(dup0)
+    grads_c = grad_c_value.repeat(dup0)
+
+    return (grads_x, (grads_h, grads_c))
 
 
 op_handler = {}
