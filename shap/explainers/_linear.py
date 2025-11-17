@@ -1,5 +1,4 @@
 import warnings
-from collections.abc import Callable
 from typing import Any, Literal
 
 import numpy as np
