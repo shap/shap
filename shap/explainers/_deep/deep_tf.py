@@ -745,6 +745,11 @@ op_handlers["TensorArrayReadV3"] = passthrough
 op_handlers["TensorArrayWriteV3"] = passthrough
 op_handlers["Split"] = passthrough
 op_handlers["SplitV"] = passthrough
+op_handlers["TensorListStack"] = passthrough
+op_handlers["TensorListFromTensor"] = passthrough
+op_handlers["TensorListReserve"] = passthrough
+op_handlers["TensorListSetItem"] = passthrough
+op_handlers["TensorListGetItem"] = passthrough
 
 
 # ops that don't pass any attributions to their inputs
