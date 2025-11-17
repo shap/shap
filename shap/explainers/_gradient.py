@@ -14,6 +14,7 @@ from ..explainers.tf_utils import (
     _get_model_output,
     _get_session,
 )
+from ..utils._types import _Model
 
 keras = None
 tf = None
@@ -42,7 +43,7 @@ class GradientExplainer(Explainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         data: npt.NDArray[Any] | pd.DataFrame | list[Any],
         session: Any = None,
         batch_size: int = 50,

@@ -4,6 +4,7 @@ import numpy as np
 import numpy.typing as npt
 
 from ..utils import MaskedModel, safe_isinstance
+from ..utils._types import _LinkFunction, _Model
 from ._explainer import Explainer
 
 
@@ -21,9 +22,9 @@ class AdditiveExplainer(Explainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         masker: Any,
-        link: Any = None,
+        link: _LinkFunction | None = None,
         feature_names: list[str] | None = None,
         linearize_link: bool = True,
     ) -> None:
@@ -107,7 +108,7 @@ class AdditiveExplainer(Explainer):
         )
 
     @staticmethod
-    def supports_model_with_masker(model: Any, masker: Any) -> bool:
+    def supports_model_with_masker(model: _Model, masker: Any) -> bool:
         """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.

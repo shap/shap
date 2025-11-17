@@ -26,6 +26,7 @@ from ..utils._exceptions import (
     InvalidModelError,
 )
 from ..utils._legacy import DenseData
+from ..utils._types import _Model
 from ..utils._warnings import ExperimentalWarning
 from ._explainer import Explainer
 from .other._ubjson import decode_ubjson_buffer
@@ -136,7 +137,7 @@ class TreeExplainer(Explainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         data: npt.NDArray[Any] | pd.DataFrame | None = None,
         model_output: str = "raw",
         feature_perturbation: Literal["auto", "interventional", "tree_path_dependent"] = "auto",
@@ -885,7 +886,7 @@ class TreeExplainer(Explainer):
             check_sum(self.expected_value + phi.sum(-1), model_output)
 
     @staticmethod
-    def supports_model_with_masker(model: Any, masker: Any) -> bool:
+    def supports_model_with_masker(model: _Model, masker: Any) -> bool:
         """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
