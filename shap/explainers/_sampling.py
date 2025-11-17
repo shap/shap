@@ -147,10 +147,10 @@ class SamplingExplainer(KernelExplainer):
             for i, ind in enumerate(self.varyingInds):
                 phi[ind, :], phi_var[ind, :] = self.sampling_estimate(
                     ind,
-                    self.model.f,
+                    self.model.f,  # type: ignore[union-attr]
                     instance.x,
                     self.data.data,
-                    nsamples=nsamples_each1[i],  # type: ignore[union-attr]
+                    nsamples=nsamples_each1[i],
                 )
 
             # optimally allocate samples according to the variance
@@ -174,10 +174,10 @@ class SamplingExplainer(KernelExplainer):
                 if nsamples_each2[i] > 0:
                     val, var = self.sampling_estimate(
                         ind,
-                        self.model.f,
+                        self.model.f,  # type: ignore[union-attr]
                         instance.x,
                         self.data.data,
-                        nsamples=nsamples_each2[i],  # type: ignore[union-attr]
+                        nsamples=nsamples_each2[i],
                     )
 
                     total_samples = nsamples_each1[i] + nsamples_each2[i]
