@@ -2630,7 +2630,9 @@ def test_tree_explainer_expected_value():
     # Check additivity
     shap_values = explainer.shap_values(X[:10])
     predictions = model.predict(X[:10])
-    expected = explainer.expected_value[0] if isinstance(explainer.expected_value, np.ndarray) else explainer.expected_value
+    expected = (
+        explainer.expected_value[0] if isinstance(explainer.expected_value, np.ndarray) else explainer.expected_value
+    )
     assert np.abs(shap_values.sum(1) + expected - predictions).max() < 1e-4
 
 
@@ -2653,7 +2655,9 @@ def test_tree_explainer_with_interactions():
     # Check additivity for interactions (sum of all interaction values equals main effects)
     predictions = model.predict(X[:10])
     # Sum of all elements in interaction matrix should equal prediction - expected_value
-    expected = explainer.expected_value[0] if isinstance(explainer.expected_value, np.ndarray) else explainer.expected_value
+    expected = (
+        explainer.expected_value[0] if isinstance(explainer.expected_value, np.ndarray) else explainer.expected_value
+    )
     for i in range(10):
         interaction_sum = shap_interaction_values[i].sum()
         assert abs(interaction_sum + expected - predictions[i]) < 1e-4
