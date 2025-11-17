@@ -33,6 +33,7 @@ from ..utils._legacy import (
     match_instance_to_data,
     match_model_to_data,
 )
+from ..utils._types import _Model
 from ._explainer import Explainer
 
 log = logging.getLogger("shap")
@@ -88,7 +89,7 @@ class KernelExplainer(Explainer):
     link: Any
     keep_index: bool
     keep_index_ordered: bool
-    model: Any
+    model: _Model
     data: DenseData | SparseData
     N: int
     P: int
@@ -116,7 +117,7 @@ class KernelExplainer(Explainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         data: Any,
         feature_names: list[str] | None = None,
         link: Literal["identity", "logit"] | Any = "identity",
