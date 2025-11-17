@@ -2279,6 +2279,16 @@ def test_tree_explainer_with_single_tree():
     # Classifiers return shape (n_samples, n_features, n_classes)
     assert shap_values.shape == (10, 5, 2) or shap_values.shape == (10, 5)
 
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X[:10])[:, 1]
+    if shap_values.ndim == 3:
+        # Shape is (n_samples, n_features, n_classes)
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        # Shape is (n_samples, n_features) - already for positive class
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
 
 def test_tree_explainer_with_decision_tree_regressor():
     """Test TreeExplainer with DecisionTreeRegressor."""
@@ -2312,6 +2322,14 @@ def test_tree_explainer_with_dataframe():
     # Classifiers return shape (n_samples, n_features, n_classes)
     assert shap_values.shape == (10, 3, 2) or shap_values.shape == (10, 3)
 
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(df[:10])[:, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
 
 def test_tree_explainer_feature_perturbation_interventional():
     """Test TreeExplainer with interventional feature perturbation."""
@@ -2327,6 +2345,14 @@ def test_tree_explainer_feature_perturbation_interventional():
 
     assert shap_values.shape == (5, 4, 2) or shap_values.shape == (5, 4)
 
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X[:5])[:, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
 
 def test_tree_explainer_feature_perturbation_tree_path_dependent():
     """Test TreeExplainer with tree_path_dependent feature perturbation."""
@@ -2340,6 +2366,14 @@ def test_tree_explainer_feature_perturbation_tree_path_dependent():
     shap_values = explainer.shap_values(X[:5])
 
     assert shap_values.shape == (5, 4, 2) or shap_values.shape == (5, 4)
+
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X[:5])[:, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
 
 
 def test_tree_explainer_random_forest_binary_classification():
@@ -2357,9 +2391,20 @@ def test_tree_explainer_random_forest_binary_classification():
     if isinstance(shap_values, list):
         assert len(shap_values) == 2
         assert shap_values[0].shape == (10, 5)
+        # Check additivity for class 1 (positive class)
+        predictions = model.predict_proba(X[:10])[:, 1]
+        shap_sum = shap_values[1].sum(1) + explainer.expected_value[1]
+        assert np.abs(shap_sum - predictions).max() < 1e-4
     else:
         # Can be (10, 5) or (10, 5, 2) depending on model
         assert shap_values.shape in [(10, 5), (10, 5, 2)]
+        # Check additivity for class 1 (positive class)
+        predictions = model.predict_proba(X[:10])[:, 1]
+        if shap_values.ndim == 3:
+            shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+        else:
+            shap_sum = shap_values.sum(1) + explainer.expected_value
+        assert np.abs(shap_sum - predictions).max() < 1e-4
 
 
 def test_tree_explainer_gradient_boosting_regressor():
@@ -2414,6 +2459,14 @@ def test_tree_explainer_with_background_data():
 
     assert shap_values.shape == (10, 4, 2) or shap_values.shape == (10, 4)
 
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X[50:60])[:, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
 
 def test_tree_explainer_check_additivity():
     """Test that SHAP values sum to prediction - expected_value."""
@@ -2456,6 +2509,18 @@ def test_tree_explainer_single_sample():
     # Classifier with single sample can have various shapes
     assert shap_values.shape in [(4,), (1, 4), (4, 2), (1, 4, 2)]
 
+    # Check additivity for class 1 (positive class)
+    prediction = model.predict_proba(single_sample.reshape(1, -1))[0, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[0, :, 1].sum() + explainer.expected_value[1]
+    elif shap_values.ndim == 2 and shap_values.shape[1] == 2:
+        shap_sum = shap_values[:, 1].sum() + explainer.expected_value[1]
+    elif shap_values.ndim == 2:
+        shap_sum = shap_values[0].sum() + explainer.expected_value
+    else:
+        shap_sum = shap_values.sum() + explainer.expected_value
+    assert abs(shap_sum - prediction) < 1e-4
+
 
 def test_tree_explainer_with_xgboost_basic():
     """Test TreeExplainer with basic XGBoost model."""
@@ -2491,6 +2556,10 @@ def test_tree_explainer_with_xgboost_classifier():
     shap_values = explainer.shap_values(X[:10])
 
     assert shap_values.shape == (10, 4)
+
+    # Check additivity - XGBoost outputs log-odds for binary classification
+    predictions = model.predict_proba(X[:10])[:, 1]
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
 
 
 def test_tree_explainer_with_lightgbm_regressor():
@@ -2529,6 +2598,14 @@ def test_tree_explainer_with_lightgbm_classifier():
     # LightGBM binary classifier returns array, not list
     assert shap_values.shape == (10, 4) or (isinstance(shap_values, list) and len(shap_values) == 2)
 
+    # Check additivity
+    predictions = model.predict_proba(X[:10])[:, 1]
+    if isinstance(shap_values, list):
+        shap_sum = shap_values[1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
 
 def test_tree_explainer_expected_value():
     """Test that expected_value is computed correctly."""
@@ -2550,6 +2627,12 @@ def test_tree_explainer_expected_value():
         assert isinstance(explainer.expected_value, (float, np.floating))
         assert abs(explainer.expected_value - mean_pred) < 1.0
 
+    # Check additivity
+    shap_values = explainer.shap_values(X[:10])
+    predictions = model.predict(X[:10])
+    expected = explainer.expected_value[0] if isinstance(explainer.expected_value, np.ndarray) else explainer.expected_value
+    assert np.abs(shap_values.sum(1) + expected - predictions).max() < 1e-4
+
 
 def test_tree_explainer_with_interactions():
     """Test TreeExplainer with interaction detection."""
@@ -2566,6 +2649,14 @@ def test_tree_explainer_with_interactions():
     shap_interaction_values = explainer.shap_interaction_values(X[:10])
 
     assert shap_interaction_values.shape == (10, 4, 4)
+
+    # Check additivity for interactions (sum of all interaction values equals main effects)
+    predictions = model.predict(X[:10])
+    # Sum of all elements in interaction matrix should equal prediction - expected_value
+    expected = explainer.expected_value[0] if isinstance(explainer.expected_value, np.ndarray) else explainer.expected_value
+    for i in range(10):
+        interaction_sum = shap_interaction_values[i].sum()
+        assert abs(interaction_sum + expected - predictions[i]) < 1e-4
 
 
 def test_tree_explainer_output_as_explanation_object():
@@ -2584,6 +2675,14 @@ def test_tree_explainer_output_as_explanation_object():
     assert isinstance(explanation, shap.Explanation)
     # Classifiers have extra dimension for classes
     assert explanation.values.shape in [(5, 3), (5, 3, 2)]
+
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X[:5])[:, 1]
+    if explanation.values.ndim == 3:
+        shap_sum = explanation.values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = explanation.values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
 
 
 def test_tree_explainer_model_output_parameter():
@@ -2609,6 +2708,14 @@ def test_tree_explainer_model_output_parameter():
     assert shap_values_raw.shape in [(5, 3), (5, 3, 2)]
     assert shap_values_prob.shape in [(5, 3), (5, 3, 2)]
 
+    # Check additivity for raw output
+    predictions_raw = model.predict_proba(X[:5])[:, 1]
+    if shap_values_raw.ndim == 3:
+        shap_sum = shap_values_raw[:, :, 1].sum(1) + explainer_raw.expected_value[1]
+    else:
+        shap_sum = shap_values_raw.sum(1) + explainer_raw.expected_value
+    assert np.abs(shap_sum - predictions_raw).max() < 1e-4
+
 
 def test_tree_explainer_different_dtypes():
     """Test TreeExplainer with different data types."""
@@ -2623,6 +2730,14 @@ def test_tree_explainer_different_dtypes():
     shap_values = explainer.shap_values(X_float32[:5])
 
     assert shap_values.shape in [(5, 3), (5, 3, 2)]
+
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X_float32[:5])[:, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
 
 
 def test_tree_explainer_with_sparse_data():
@@ -2639,6 +2754,14 @@ def test_tree_explainer_with_sparse_data():
     shap_values = explainer.shap_values(X_dense[:10])
 
     assert shap_values.shape in [(10, 5), (10, 5, 2)]
+
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X_dense[:10])[:, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
 
 
 def test_tree_explainer_with_approximate():
@@ -2708,8 +2831,19 @@ def test_tree_explainer_multiclass():
     if isinstance(shap_values, list):
         assert len(shap_values) == 3
         assert shap_values[0].shape == (10, 4)
+        # Check additivity for each class
+        predictions = model.predict_proba(X[:10])
+        for class_idx in range(3):
+            shap_sum = shap_values[class_idx].sum(1) + explainer.expected_value[class_idx]
+            assert np.abs(shap_sum - predictions[:, class_idx]).max() < 1e-4
     else:
         assert shap_values.shape in [(10, 4, 3), (10, 4)]
+        # Check additivity for at least one class
+        predictions = model.predict_proba(X[:10])
+        if shap_values.ndim == 3:
+            for class_idx in range(3):
+                shap_sum = shap_values[:, :, class_idx].sum(1) + explainer.expected_value[class_idx]
+                assert np.abs(shap_sum - predictions[:, class_idx]).max() < 1e-4
 
 
 def test_tree_explainer_with_pandas_series():
@@ -2752,8 +2886,19 @@ def test_tree_explainer_random_forest_multiclass():
     # Should handle multi-class output
     if isinstance(shap_values, list):
         assert len(shap_values) == 3
+        # Check additivity for each class
+        predictions = model.predict_proba(X[:10])
+        for class_idx in range(3):
+            shap_sum = shap_values[class_idx].sum(1) + explainer.expected_value[class_idx]
+            assert np.abs(shap_sum - predictions[:, class_idx]).max() < 1e-4
     else:
         assert shap_values.shape in [(10, 4), (10, 4, 3)]
+        # Check additivity for at least one class
+        if shap_values.ndim == 3:
+            predictions = model.predict_proba(X[:10])
+            for class_idx in range(3):
+                shap_sum = shap_values[:, :, class_idx].sum(1) + explainer.expected_value[class_idx]
+                assert np.abs(shap_sum - predictions[:, class_idx]).max() < 1e-4
 
 
 def test_tree_explainer_random_forest_regressor():
@@ -2770,5 +2915,16 @@ def test_tree_explainer_random_forest_regressor():
     # Verify shape is correct
     if isinstance(shap_values, list):
         assert len(shap_values) == 2
+        # Check additivity for class 1 (positive class)
+        predictions = model.predict_proba(X[:10])[:, 1]
+        shap_sum = shap_values[1].sum(1) + explainer.expected_value[1]
+        assert np.abs(shap_sum - predictions).max() < 1e-4
     else:
         assert shap_values.shape in [(10, 5), (10, 5, 2)]
+        # Check additivity for class 1 (positive class)
+        predictions = model.predict_proba(X[:10])[:, 1]
+        if shap_values.ndim == 3:
+            shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+        else:
+            shap_sum = shap_values.sum(1) + explainer.expected_value
+        assert np.abs(shap_sum - predictions).max() < 1e-4
