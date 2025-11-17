@@ -1,0 +1,236 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{fancyref}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{xcolor}
+\usetikzlibrary{arrows.meta, positioning}
+
+\title{Generic SHAP Value Calculation for LSTM Gates}
+\author{LSTM SHAP Implementation}
+\date{\today}
+
+% Define Python style for highlighting
+\lstdefinestyle{python}{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\bfseries\color{blue},
+    stringstyle=\color{green},
+    commentstyle=\color{gray},
+    showstringspaces=false,
+    frame=single,
+    breaklines=true
+}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+This document describes the generic formula for calculating SHAP values for LSTM gates using DeepLift relevance propagation. The formulas work for any number of output dimensions (1D, 2D, or N-D).
+
+\section{LSTM Input Gate}
+
+\subsection{Forward Pass}
+
+The LSTM input gate is computed as:
+\begin{equation}
+\mathbf{i}_t = \sigma(\mathbf{W}_{ii} \mathbf{x}_t + \mathbf{b}_{ii} + \mathbf{W}_{hi} \mathbf{h}_{t-1} + \mathbf{b}_{hi})
+\label{eq:input_gate}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\mathbf{x}_t \in \mathbb{R}^{M}$: Input at time step $t$ ($M$ features)
+    \item $\mathbf{h}_{t-1} \in \mathbb{R}^{H}$: Hidden state from previous time step ($H$ features)
+    \item $\mathbf{W}_{ii} \in \mathbb{R}^{N \times M}$: Weight matrix for input ($N$ outputs, $M$ inputs)
+    \item $\mathbf{W}_{hi} \in \mathbb{R}^{N \times H}$: Weight matrix for hidden state ($N$ outputs, $H$ hidden features)
+    \item $\mathbf{b}_{ii}, \mathbf{b}_{hi} \in \mathbb{R}^{N}$: Bias vectors
+    \item $\mathbf{i}_t \in \mathbb{R}^{N}$: Output of input gate ($N$ neurons)
+    \item $\sigma$: Sigmoid activation function (applied element-wise)
+\end{itemize}
+
+\subsection{DeepLift Relevance Propagation}
+
+\subsubsection{Denominator Calculation}
+
+For each output dimension $j \in \{1, \ldots, N\}$, compute the linear combination difference:
+
+\begin{equation}
+d_j = \sum_{k=1}^{M} W_{ii}[j,k] \cdot (x_k - x_{k,\text{base}}) + \sum_{k=1}^{H} W_{hi}[j,k] \cdot (h_k - h_{k,\text{base}})
+\label{eq:denominator}
+\end{equation}
+
+\textbf{Critical Note}: The denominator $d_j$ is specific to each output dimension $j$. Do NOT sum across output dimensions!
+
+\subsubsection{Matrix Form}
+
+In matrix notation, the denominator vector $\mathbf{d} \in \mathbb{R}^{N}$ is:
+
+\begin{equation}
+\mathbf{d} = \mathbf{W}_{ii}(\mathbf{x} - \mathbf{x}_{\text{base}}) + \mathbf{W}_{hi}(\mathbf{h} - \mathbf{h}_{\text{base}})
+\label{eq:denominator_matrix}
+\end{equation}
+
+where the products are matrix-vector multiplications:
+\begin{itemize}
+    \item $\mathbf{W}_{ii}(\mathbf{x} - \mathbf{x}_{\text{base}})$: $(N \times M) \cdot (M \times 1) = (N \times 1)$
+    \item $\mathbf{W}_{hi}(\mathbf{h} - \mathbf{h}_{\text{base}})$: $(N \times H) \cdot (H \times 1) = (N \times 1)$
+\end{itemize}
+
+\subsubsection{Relevance Matrices}
+
+The relevance matrices $\mathbf{Z}_{ii} \in \mathbb{R}^{N \times M}$ and $\mathbf{Z}_{hi} \in \mathbb{R}^{N \times H}$ are:
+
+\begin{equation}
+Z_{ii}[j, i] = \frac{W_{ii}[j, i] \cdot (x_i - x_{i,\text{base}})}{d_j}
+\label{eq:z_ii_element}
+\end{equation}
+
+\begin{equation}
+Z_{hi}[j, i] = \frac{W_{hi}[j, i] \cdot (h_i - h_{i,\text{base}})}{d_j}
+\label{eq:z_hi_element}
+\end{equation}
+
+In matrix form using element-wise operations:
+
+\begin{equation}
+\mathbf{Z}_{ii} = \frac{\mathbf{W}_{ii} \odot (\mathbf{x} - \mathbf{x}_{\text{base}})^T}{\mathbf{d}}
+\label{eq:z_ii_matrix}
+\end{equation}
+
+\begin{equation}
+\mathbf{Z}_{hi} = \frac{\mathbf{W}_{hi} \odot (\mathbf{h} - \mathbf{h}_{\text{base}})^T}{\mathbf{d}}
+\label{eq:z_hi_matrix}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\odot$ denotes element-wise (Hadamard) multiplication
+    \item The division is element-wise broadcasting: $(N \times M) / (N \times 1) = (N \times M)$
+\end{itemize}
+
+\subsubsection{Final Relevance Scores}
+
+The relevance scores for inputs and hidden states are:
+
+\begin{equation}
+\mathbf{r}_x = (\mathbf{i}_t - \mathbf{i}_{t,\text{base}})^T \mathbf{Z}_{ii}
+\label{eq:relevance_x}
+\end{equation}
+
+\begin{equation}
+\mathbf{r}_h = (\mathbf{i}_t - \mathbf{i}_{t,\text{base}})^T \mathbf{Z}_{hi}
+\label{eq:relevance_h}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\mathbf{i}_t - \mathbf{i}_{t,\text{base}} \in \mathbb{R}^{N}$: Output difference
+    \item Matrix multiplication: $(1 \times N) \cdot (N \times M) = (1 \times M)$
+    \item Result: $\mathbf{r}_x \in \mathbb{R}^{M}$, $\mathbf{r}_h \in \mathbb{R}^{H}$
+\end{itemize}
+
+\subsection{Additivity Property}
+
+The relevance scores satisfy the additivity property:
+
+\begin{equation}
+\sum_{i=1}^{M} r_{x,i} + \sum_{i=1}^{H} r_{h,i} = \sum_{j=1}^{N} (i_{t,j} - i_{t,\text{base},j})
+\end{equation}
+
+This ensures that the total relevance equals the total output difference.
+
+\section{Implementation Notes}
+
+\subsection{TensorFlow/NumPy Implementation}
+
+\begin{lstlisting}[style=python]
+import tensorflow as tf
+
+# Compute denominator (shape: (N, 1))
+denom = (tf.matmul(W_ii, x.T) +
+         tf.matmul(W_hi, h.T) -
+         tf.matmul(W_ii, x_base.T) -
+         tf.matmul(W_hi, h_base.T))
+
+# Compute Z matrices (shape: (N, M) and (N, H))
+Z_ii = (W_ii * (x - x_base)) / denom
+Z_hi = (W_hi * (h - h_base)) / denom
+
+# Compute relevance scores
+normalized_outputs = output - output_base  # shape: (batch, N)
+r_x = tf.matmul(normalized_outputs, Z_ii)  # shape: (batch, M)
+r_h = tf.matmul(normalized_outputs, Z_hi)  # shape: (batch, H)
+\end{lstlisting}
+
+\subsection{Common Pitfalls}
+
+\begin{enumerate}
+    \item \textbf{DO NOT} use \texttt{tf.reduce\_sum(denom, axis=0)}. This collapses the denominator across output dimensions, which is mathematically incorrect.
+
+    \item \textbf{DO NOT} compute a single global denominator. Each output dimension must have its own denominator.
+
+    \item \textbf{ENSURE} proper broadcasting: The division $(N \times M) / (N \times 1)$ should broadcast correctly to produce shape $(N \times M)$.
+\end{enumerate}
+
+\section{Extension to Other Gates}
+
+The same formula applies to all LSTM gates:
+
+\subsection{Forget Gate}
+
+\begin{equation}
+\mathbf{f}_t = \sigma(\mathbf{W}_{if} \mathbf{x}_t + \mathbf{b}_{if} + \mathbf{W}_{hf} \mathbf{h}_{t-1} + \mathbf{b}_{hf})
+\end{equation}
+
+Use the same relevance propagation formulas~(\ref{eq:denominator_matrix}--\ref{eq:relevance_h}) with $W_{if}$ and $W_{hf}$ replacing $W_{ii}$ and $W_{hi}$.
+
+\subsection{Cell State Update (Candidate)}
+
+\begin{equation}
+\tilde{\mathbf{C}}_t = \tanh(\mathbf{W}_{ig} \mathbf{x}_t + \mathbf{b}_{ig} + \mathbf{W}_{hg} \mathbf{h}_{t-1} + \mathbf{b}_{hg})
+\end{equation}
+
+Use the same formulas but replace $\sigma$ with $\tanh$ in the output calculation.
+
+\subsection{Output Gate}
+
+\begin{equation}
+\mathbf{o}_t = \sigma(\mathbf{W}_{io} \mathbf{x}_t + \mathbf{b}_{io} + \mathbf{W}_{ho} \mathbf{h}_{t-1} + \mathbf{b}_{ho})
+\end{equation}
+
+Use the same formulas with $W_{io}$ and $W_{ho}$.
+
+\section{Verification}
+
+To verify the implementation:
+
+\begin{enumerate}
+    \item \textbf{Test 1D case}: Use a single output neuron (N=1) and verify the calculation matches known results.
+
+    \item \textbf{Test 2D case}: Use multiple output neurons (N=2 or more) with non-zero weights in all dimensions.
+
+    \item \textbf{Check additivity}: Verify that $\sum r_x + \sum r_h = \sum(\text{output} - \text{output}_{\text{base}})$.
+
+    \item \textbf{Compare with SHAP}: Run SHAP's DeepExplainer and verify your manual calculation matches.
+\end{enumerate}
+
+\section{Conclusion}
+
+The key insight for generic SHAP value calculation in LSTM gates is:
+
+\begin{center}
+\fbox{\parbox{0.9\textwidth}{
+\textbf{Each output dimension calculates its relevance independently.} \\
+\\
+The denominator must be computed per output dimension (shape: $(N, 1)$), NOT summed across all dimensions (shape: $(1,)$).
+}}
+\end{center}
+
+This formula works for any dimensionality and satisfies the additivity property required by SHAP values.
+
+\end{document}
