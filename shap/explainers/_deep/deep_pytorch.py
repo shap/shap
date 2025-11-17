@@ -277,18 +277,16 @@ def add_interim_values(module, input, output):
         if func_name == "passthrough":
             pass
         elif func_name == "lstm_cell_handler":
-            # Special handling for LSTMCell which has multiple varying inputs
-            # input is tuple: (x, (h, c))
+            # Special handling for LSTMCell which has multiple varying inputs: (x, (h, c))
             if type(input) is tuple and len(input) >= 2:
                 x_in = input[0]
                 if type(input[1]) is tuple:
                     h_in, c_in = input[1]
                 else:
-                    # Fallback if format is different
                     h_in = input[1] if len(input) > 1 else None
                     c_in = input[2] if len(input) > 2 else None
 
-                # Save all inputs
+                # Save all inputs as a tuple
                 module.x = (x_in.detach(), h_in.detach() if h_in is not None else None,
                            c_in.detach() if c_in is not None else None)
 
@@ -393,245 +391,22 @@ def nonlinear_1d(module, grad_input, grad_output):
     return tuple(grads)
 
 
-def lstm_cell_shap_gate(W_i, W_h, b_i, b_h, x, h, x_base, h_base, activation='sigmoid'):
-    """
-    Manual SHAP calculation for a single LSTM gate using DeepLift formulation.
-
-    Args:
-        W_i, W_h: Weight matrices for input and hidden
-        b_i, b_h: Bias vectors
-        x, h: Current values
-        x_base, h_base: Baseline values
-        activation: 'sigmoid' or 'tanh'
-
-    Returns:
-        r_x, r_h: Relevance for x and h inputs
-        output, output_base: Gate activations
-    """
-    import torch
-
-    linear_current = torch.matmul(x, W_i.T) + torch.matmul(h, W_h.T) + b_i + b_h
-    linear_base = torch.matmul(x_base, W_i.T) + torch.matmul(h_base, W_h.T) + b_i + b_h
-
-    if activation == 'sigmoid':
-        act_fn = torch.sigmoid
-    else:  # tanh
-        act_fn = torch.tanh
-
-    output = act_fn(linear_current)
-    output_base = act_fn(linear_base)
-
-    # Denominator for normalization
-    denom = torch.matmul(x, W_i.T) + torch.matmul(h, W_h.T)
-
-    # Expand for broadcasting
-    x_diff = (x - x_base).unsqueeze(1)
-    h_diff = (h - h_base).unsqueeze(1)
-
-    W_i_expanded = W_i.unsqueeze(0)
-    W_h_expanded = W_h.unsqueeze(0)
-
-    # Element-wise multiplication
-    numerator_x = W_i_expanded * x_diff
-    numerator_h = W_h_expanded * h_diff
-
-    # Normalize by denominator
-    denom_expanded = denom.unsqueeze(-1)
-
-    Z_x = numerator_x / denom_expanded
-    Z_h = numerator_h / denom_expanded
-
-    # Calculate relevance
-    output_diff = (output - output_base).unsqueeze(-1)
-
-    # Sum over hidden dimension
-    r_x = (output_diff * Z_x).sum(dim=1)
-    r_h = (output_diff * Z_h).sum(dim=1)
-
-    return r_x, r_h, output, output_base
-
-
-def lstm_cell_shap_multiplication(a, b, a_base, b_base):
-    """
-    Manual SHAP calculation for element-wise multiplication using Shapley values.
-
-    Formula: R[a] = 1/2 * [a⊙b - a_base⊙b + a⊙b_base - a_base⊙b_base]
-    """
-    r_a = 0.5 * (a * b - a_base * b + a * b_base - a_base * b_base)
-    r_b = 0.5 * (a * b - a * b_base + a_base * b - a_base * b_base)
-    return r_a, r_b
-
-
 def lstm_cell_handler(module, grad_input, grad_output):
     """
     Backward hook handler for LSTMCell that computes SHAP values manually.
 
-    This handler calculates SHAP values using the DeepLift formulation with
-    Shapley values for element-wise multiplications. Achieves perfect additivity.
-
-    Args:
-        module: The LSTMCell layer
-        grad_input: Tuple of gradients w.r.t. inputs (x, h, c)
-        grad_output: Tuple of gradients w.r.t. outputs (h_new, c_new)
-
-    Returns:
-        Modified grad_input tuple with SHAP values
+    For now, return None to fallback to standard gradients while we debug the proper format.
     """
     import torch
 
-    # Check if we have saved tensors (from forward hook)
+    # Check if we have saved tensors
     if not hasattr(module, 'x') or not hasattr(module, 'y'):
-        warnings.warn("LSTM handler: module.x or module.y not found, using standard gradients")
-        return grad_input
+        warnings.warn("LSTM handler: No saved tensors, using standard gradients")
+        return None
 
-    # Extract inputs (doubled batch: [actual; baseline])
-    if isinstance(module.x, tuple):
-        x_doubled = module.x[0]
-        h_doubled = module.x[1] if len(module.x) > 1 else None
-        c_doubled = module.x[2] if len(module.x) > 2 else None
-    else:
-        warnings.warn("LSTM handler: Expected tuple input for LSTMCell")
-        return grad_input
-
-    # Split actual and baseline
-    batch_size = x_doubled.shape[0] // 2
-    if batch_size == 0:
-        # If batch_size becomes 0, it means inputs weren't doubled
-        warnings.warn("LSTM handler: Inputs not properly doubled, falling back to standard gradients")
-        return grad_input
-
-    x = x_doubled[:batch_size]
-    x_base = x_doubled[batch_size:]
-
-    if h_doubled is not None:
-        h = h_doubled[:batch_size]
-        h_base = h_doubled[batch_size:]
-    else:
-        hidden_size = module.hidden_size
-        h = torch.zeros(batch_size, hidden_size, device=x.device, dtype=x.dtype)
-        h_base = h.clone()
-
-    if c_doubled is not None:
-        c = c_doubled[:batch_size]
-        c_base = c_doubled[batch_size:]
-    else:
-        hidden_size = module.hidden_size
-        c = torch.zeros(batch_size, hidden_size, device=x.device, dtype=x.dtype)
-        c_base = c.clone()
-
-    # Extract weights from LSTMCell
-    hidden_size = module.hidden_size
-    W_ii, W_if, W_ig, W_io = torch.chunk(module.weight_ih, 4, dim=0)
-    W_hi, W_hf, W_hg, W_ho = torch.chunk(module.weight_hh, 4, dim=0)
-
-    if module.bias:
-        b_ii, b_if, b_ig, b_io = torch.chunk(module.bias_ih, 4, dim=0)
-        b_hi, b_hf, b_hg, b_ho = torch.chunk(module.bias_hh, 4, dim=0)
-    else:
-        zeros = torch.zeros(hidden_size, device=x.device, dtype=x.dtype)
-        b_ii = b_if = b_ig = b_io = zeros
-        b_hi = b_hf = b_hg = b_ho = zeros
-
-    # Calculate SHAP values for each gate
-    r_x_i, r_h_i, i_t, i_t_base = lstm_cell_shap_gate(
-        W_ii, W_hi, b_ii, b_hi, x, h, x_base, h_base, activation='sigmoid'
-    )
-
-    r_x_f, r_h_f, f_t, f_t_base = lstm_cell_shap_gate(
-        W_if, W_hf, b_if, b_hf, x, h, x_base, h_base, activation='sigmoid'
-    )
-
-    r_x_g, r_h_g, c_tilde, c_tilde_base = lstm_cell_shap_gate(
-        W_ig, W_hg, b_ig, b_hg, x, h, x_base, h_base, activation='tanh'
-    )
-
-    # Cell state update: c_new = f_t ⊙ c + i_t ⊙ c_tilde
-    # Use Shapley values for multiplications
-    r_f_from_mult, r_c_from_f = lstm_cell_shap_multiplication(f_t, c, f_t_base, c_base)
-    r_i_from_mult, r_ctilde_from_mult = lstm_cell_shap_multiplication(i_t, c_tilde, i_t_base, c_tilde_base)
-
-    # Distribute multiplication relevances back to x, h using gate SHAP as weights
-
-    # Forget gate
-    total_r_f = r_x_f.abs().sum() + r_h_f.abs().sum()
-    if total_r_f > 1e-10:
-        weight_x_f = r_x_f.abs().sum() / total_r_f
-        weight_h_f = r_h_f.abs().sum() / total_r_f
-    else:
-        weight_x_f = 0.5
-        weight_h_f = 0.5
-
-    r_x_from_f = weight_x_f * r_f_from_mult.sum()
-    r_h_from_f = weight_h_f * r_f_from_mult.sum()
-
-    # Input gate
-    total_r_i = r_x_i.abs().sum() + r_h_i.abs().sum()
-    if total_r_i > 1e-10:
-        weight_x_i = r_x_i.abs().sum() / total_r_i
-        weight_h_i = r_h_i.abs().sum() / total_r_i
-    else:
-        weight_x_i = 0.5
-        weight_h_i = 0.5
-
-    r_x_from_i = weight_x_i * r_i_from_mult.sum()
-    r_h_from_i = weight_h_i * r_i_from_mult.sum()
-
-    # Candidate gate
-    total_r_g = r_x_g.abs().sum() + r_h_g.abs().sum()
-    if total_r_g > 1e-10:
-        weight_x_g = r_x_g.abs().sum() / total_r_g
-        weight_h_g = r_h_g.abs().sum() / total_r_g
-    else:
-        weight_x_g = 0.5
-        weight_h_g = 0.5
-
-    r_x_from_g = weight_x_g * r_ctilde_from_mult.sum()
-    r_h_from_g = weight_h_g * r_ctilde_from_mult.sum()
-
-    # Get cell state output change
-    c_new = f_t * c + i_t * c_tilde
-    c_new_base = f_t_base * c_base + i_t_base * c_tilde_base
-    delta_c_out = c_new - c_new_base  # [batch, hidden]
-
-    # Get incoming gradient from output
-    if len(grad_output) > 1 and grad_output[1] is not None:
-        # grad_output is (grad_h, grad_c)
-        grad_c_out = grad_output[1][:batch_size]  # Only actual, not baseline
-    else:
-        grad_c_out = torch.ones_like(c)
-
-    # Calculate gradients using DeepLift formula: grad_out * (delta_out / delta_in)
-    eps = 1e-10
-
-    # SHAP values (scalars)
-    shap_x = r_x_from_f + r_x_from_i + r_x_from_g
-    shap_h = r_h_from_f + r_h_from_i + r_h_from_g
-    shap_c = r_c_from_f.sum()
-
-    # Input changes
-    delta_x = x - x_base
-    delta_h_in = h - h_base
-    delta_c_in = c - c_base
-
-    # DeepExplainer multiplies the returned gradients by (X - baseline)
-    # So we need: sum(grad[i] * delta[i]) = SHAP_total
-    # Distribute evenly: grad[i] = SHAP_total / (n_elements * delta[i])
-
-    n_x = delta_x.numel()
-    n_h = delta_h_in.numel()
-    n_c = delta_c_in.numel()
-
-    grad_x_new = shap_x / (n_x * (delta_x + eps * torch.sign(delta_x + eps)))
-    grad_h_new = shap_h / (n_h * (delta_h_in + eps * torch.sign(delta_h_in + eps)))
-    grad_c_new = shap_c / (n_c * (delta_c_in + eps * torch.sign(delta_c_in + eps)))
-
-    # Concatenate with baseline gradients (zeros)
-    grad_x_doubled = torch.cat([grad_x_new, torch.zeros_like(grad_x_new)], dim=0)
-    grad_h_doubled = torch.cat([grad_h_new, torch.zeros_like(grad_h_new)], dim=0)
-    grad_c_doubled = torch.cat([grad_c_new, torch.zeros_like(grad_c_new)], dim=0)
-
-    # Return modified gradients in format matching LSTMCell inputs: (x, (h, c))
-    return (grad_x_doubled, (grad_h_doubled, grad_c_doubled))
+    # For debugging: just return None (standard gradients) for now
+    # TODO: Implement proper SHAP calculation once we understand gradient format
+    return None
 
 
 op_handler = {}
