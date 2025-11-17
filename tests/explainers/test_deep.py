@@ -829,29 +829,32 @@ def test_pytorch_lstm_cell():
     
     # Calculate SHAP values
     shap_values = e.shap_values(test_input, check_additivity=False)
-    
+
     # Get model outputs
     with torch.no_grad():
         output = model(test_input).detach().cpu().numpy()
         output_base = model(baseline).detach().cpu().numpy()
-    
+
     # Check that SHAP values explain the difference
-    # Note: We expect this test to potentially have larger errors because
-    # PyTorch's DeepExplainer doesn't fully support LSTM cells yet.
-    # This test documents the current behavior.
+    # With the integrated LSTM handler, we expect perfect additivity
     output_diff = (output - output_base).sum()
-    
+
     if len(shap_values.shape) == 3:
         # Multi-output case
         shap_total = shap_values.sum()
     else:
         shap_total = shap_values.sum()
-    
-    # For now, we just check that SHAP runs without error
-    # Once LSTM support is integrated, we can tighten this assertion
+
+    # Check additivity - with the LSTM handler integrated, this should be very accurate
+    additivity_error = abs(shap_total - output_diff)
+
+    # Assert shape and basic properties
     assert shap_values is not None
     assert shap_values.shape[0] == 1  # batch size
     assert shap_values.shape[1] == input_size + 2 * hidden_size  # features
+
+    # Assert additivity (should be < 0.01 with LSTM handler)
+    assert additivity_error < 0.01, f"Additivity error too large: {additivity_error:.6f}"
 
 
 def test_tensorflow_lstm_cell():
