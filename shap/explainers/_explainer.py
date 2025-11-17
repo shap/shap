@@ -13,6 +13,7 @@ from .._explanation import Explanation
 from .._serializable import Deserializer, Serializable, Serializer
 from ..utils import safe_isinstance, show_progress
 from ..utils._exceptions import InvalidAlgorithmError
+from ..utils._types import _LinkFunction, _Model
 from ..utils.transformers import is_transformers_lm
 
 if TYPE_CHECKING:
@@ -27,18 +28,18 @@ class Explainer(Serializable):
     the particular estimation algorithm that was chosen.
     """
 
-    model: Any
+    model: _Model
     masker: Any
     output_names: list[str] | None
     feature_names: list[str] | list[list[str]] | None
-    link: Callable[..., Any]
+    link: _LinkFunction
     linearize_link: bool
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         masker: Any = None,
-        link: Callable[..., Any] = links.identity,
+        link: _LinkFunction = links.identity,
         algorithm: Literal["auto", "permutation", "partition", "tree", "linear", "deep", "exact", "additive"] = "auto",
         output_names: list[str] | None = None,
         feature_names: list[str] | list[list[str]] | None = None,
@@ -513,7 +514,7 @@ class Explainer(Serializable):
         return {}
 
     @staticmethod
-    def supports_model_with_masker(model: Any, masker: Any) -> bool:
+    def supports_model_with_masker(model: _Model, masker: Any) -> bool:
         """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
