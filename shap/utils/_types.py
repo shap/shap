@@ -37,7 +37,9 @@ class _ModelWithPredict(Protocol):
 _CallableModel: TypeAlias = Callable[[npt.NDArray[Any] | pd.DataFrame], npt.NDArray[Any]]
 
 # General model type - can be a model object with predict, or a callable
-_Model: TypeAlias = _ModelWithPredict | _CallableModel | Any  # Any for flexibility with various ML frameworks
+# Note: Use this for input parameters. Instance attributes after model wrapping may be typed as Callable or specific types.
+# Callable is listed first as most models are wrapped to be callable
+_Model: TypeAlias = _CallableModel | _ModelWithPredict | Any  # Any for flexibility with various ML frameworks
 
 # Link function type
 _LinkFunction: TypeAlias = Callable[[npt.NDArray[Any]], npt.NDArray[Any]]
