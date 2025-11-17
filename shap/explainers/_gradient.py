@@ -82,7 +82,7 @@ class GradientExplainer(Explainer):
                 framework = "tensorflow"
         else:
             try:
-                model.named_parameters()
+                model.named_parameters()  # type: ignore[union-attr]
                 framework = "pytorch"
             except Exception:
                 framework = "tensorflow"

@@ -370,9 +370,9 @@ class KernelExplainer(Explainer):
 
         # find f(x)
         if self.keep_index:
-            model_out = self.model.f(instance.convert_to_df())
+            model_out = self.model.f(instance.convert_to_df())  # type: ignore[union-attr]
         else:
-            model_out = self.model.f(instance.x)
+            model_out = self.model.f(instance.x)  # type: ignore[union-attr]
         if isinstance(model_out, (pd.DataFrame, pd.Series)):
             model_out = model_out.values
         elif safe_isinstance(model_out, "tensorflow.python.framework.ops.SymbolicTensor"):
@@ -675,7 +675,7 @@ class KernelExplainer(Explainer):
             data = pd.concat([index, data], axis=1).set_index(self.data.index_name)  # type: ignore[union-attr]
             if self.keep_index_ordered:
                 data = data.sort_index()
-        modelOut = self.model.f(data)
+        modelOut = self.model.f(data)  # type: ignore[union-attr]
         if isinstance(modelOut, (pd.DataFrame, pd.Series)):
             modelOut = modelOut.values
         elif safe_isinstance(modelOut, "tensorflow.python.framework.ops.SymbolicTensor"):

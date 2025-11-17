@@ -30,4 +30,4 @@ class TreeGain(Explainer):
         self.model = model
 
     def attributions(self, X):
-        return np.tile(self.model.feature_importances_, (X.shape[0], 1))
+        return np.tile(self.model.feature_importances_, (X.shape[0], 1))  # type: ignore[union-attr]

@@ -135,10 +135,10 @@ class Explainer(Serializable):
 
         # Check for transformer pipeline objects and wrap them
         if safe_isinstance(self.model, "transformers.pipelines.Pipeline"):
-            if is_transformers_lm(self.model.model):
+            if is_transformers_lm(self.model.model):  # type: ignore[union-attr]
                 return self.__init__(  # type: ignore[misc]
-                    self.model.model,
-                    self.model.tokenizer if self.masker is None else self.masker,
+                    self.model.model,  # type: ignore[union-attr]
+                    self.model.tokenizer if self.masker is None else self.masker,  # type: ignore[union-attr]
                     link=link,
                     algorithm=algorithm,
                     output_names=output_names,
@@ -161,11 +161,11 @@ class Explainer(Serializable):
         # wrap self.masker and self.model for output text explanation algorithm
         if is_transformers_lm(self.model):
             self.model = models.TeacherForcing(self.model, self.masker.tokenizer)
-            self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)
+            self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)  # type: ignore[union-attr]
         elif safe_isinstance(self.model, "shap.models.TeacherForcing") and safe_isinstance(
             self.masker, ["shap.maskers.Text", "shap.maskers.Image"]
         ):
-            self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)
+            self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)  # type: ignore[union-attr]
         elif safe_isinstance(self.model, "shap.models.TopKLM") and safe_isinstance(self.masker, "shap.maskers.Text"):
             self.masker = maskers.FixedComposite(self.masker)
 

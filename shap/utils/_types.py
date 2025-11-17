@@ -37,9 +37,30 @@ class _ModelWithPredict(Protocol):
 _CallableModel: TypeAlias = Callable[[npt.NDArray[Any] | pd.DataFrame], npt.NDArray[Any]]
 
 # General model type - can be a model object with predict, or a callable
-# Note: Use this for input parameters. Instance attributes after model wrapping may be typed as Callable or specific types.
-# Callable is listed first as most models are wrapped to be callable
+# Note: Union types cause mypy false positives. Use # type: ignore[union-attr] or # type: ignore[operator]
+# where model attributes are accessed, since runtime checks ensure the model is valid.
 _Model: TypeAlias = _CallableModel | _ModelWithPredict | Any  # Any for flexibility with various ML frameworks
 
 # Link function type
 _LinkFunction: TypeAlias = Callable[[npt.NDArray[Any]], npt.NDArray[Any]]
+
+
+# Masker protocols - for data masking strategies
+class _MaskerProtocol(Protocol):
+    """Protocol for masker objects."""
+
+    shape: tuple[int | None, int] | Callable[..., tuple[int | None, int]]
+    clustering: npt.NDArray[Any] | Callable[..., Any] | None
+
+    def __call__(self, mask: bool | npt.NDArray[Any], *args: Any) -> Any: ...
+
+
+# Masker type - accepts Masker objects, data matrices, or special dicts
+_MaskerLike: TypeAlias = (
+    _MaskerProtocol
+    | npt.NDArray[Any]
+    | pd.DataFrame
+    | scipy.sparse.spmatrix
+    | dict[str, Any]  # For mean/cov dicts
+    | None
+)

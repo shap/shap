@@ -98,9 +98,9 @@ class SamplingExplainer(KernelExplainer):
 
         # find f(x)
         if self.keep_index:
-            model_out = self.model.f(instance.convert_to_df())
+            model_out = self.model.f(instance.convert_to_df())  # type: ignore[union-attr]
         else:
-            model_out = self.model.f(instance.x)
+            model_out = self.model.f(instance.x)  # type: ignore[union-attr]
         if isinstance(model_out, (pd.DataFrame, pd.Series)):
             model_out = model_out.values[0]
         self.fx = model_out[0]
@@ -146,7 +146,7 @@ class SamplingExplainer(KernelExplainer):
             self.X_masked = np.zeros((nsamples_each1.max() * 2, self.data.data.shape[1]))
             for i, ind in enumerate(self.varyingInds):
                 phi[ind, :], phi_var[ind, :] = self.sampling_estimate(
-                    ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each1[i]
+                    ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each1[i]  # type: ignore[union-attr]
                 )
 
             # optimally allocate samples according to the variance
@@ -169,7 +169,7 @@ class SamplingExplainer(KernelExplainer):
             for i, ind in enumerate(self.varyingInds):
                 if nsamples_each2[i] > 0:
                     val, var = self.sampling_estimate(
-                        ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each2[i]
+                        ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each2[i]  # type: ignore[union-attr]
                     )
 
                     total_samples = nsamples_each1[i] + nsamples_each2[i]

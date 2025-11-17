@@ -48,10 +48,10 @@ class AdditiveExplainer(Explainer):
         super().__init__(model, masker, feature_names=feature_names, linearize_link=linearize_link)
 
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
-            self.model = model.decision_function
+            self.model = model.decision_function  # type: ignore[union-attr]
 
             if self.masker is None:
-                self._expected_value = model.intercept_
+                self._expected_value = model.intercept_  # type: ignore[union-attr]
                 # num_features = len(model.additive_terms_)
 
                 # fm = MaskedModel(self.model, self.masker, self.link, np.zeros(num_features))
@@ -114,7 +114,7 @@ class AdditiveExplainer(Explainer):
         This is an abstract static method meant to be implemented by each subclass.
         """
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
-            if model.interactions != 0:
+            if model.interactions != 0:  # type: ignore[union-attr]
                 raise NotImplementedError("Need to add support for interaction effects!")
             return True
 
@@ -136,7 +136,7 @@ class AdditiveExplainer(Explainer):
         for i in range(len(x)):
             inputs[i, i] = x[i]
 
-        phi = self.model(inputs) - self._zero_offset - self._input_offsets
+        phi = self.model(inputs) - self._zero_offset - self._input_offsets  # type: ignore[operator]
 
         return {
             "values": phi,
