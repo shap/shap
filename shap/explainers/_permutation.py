@@ -7,6 +7,7 @@ import numpy as np
 from .. import links
 from ..models import Model
 from ..utils import MaskedModel, partition_tree_shuffle
+from ..utils._types import _LinkFunction, _Model
 from ._explainer import Explainer
 
 if TYPE_CHECKING:
@@ -28,9 +29,9 @@ class PermutationExplainer(Explainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         masker: Any,
-        link: Any = links.identity,
+        link: _LinkFunction = links.identity,
         feature_names: list[str] | None = None,
         linearize_link: bool = True,
         seed: int | None = None,

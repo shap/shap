@@ -11,6 +11,7 @@ from tqdm.auto import tqdm
 from .. import Explanation, links
 from ..models import Model
 from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
+from ..utils._types import _LinkFunction, _Model
 from ._explainer import Explainer
 
 
@@ -48,11 +49,11 @@ class PartitionExplainer(Explainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         masker: Any,
         *,
         output_names: list[str] | None = None,
-        link: Callable[..., Any] = links.identity,
+        link: _LinkFunction = links.identity,
         linearize_link: bool = True,
         feature_names: list[str] | None = None,
         **call_args: Any,

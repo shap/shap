@@ -8,6 +8,7 @@ import pandas as pd
 from .._explanation import Explanation
 from ..utils._exceptions import ExplainerError
 from ..utils._legacy import convert_to_instance, match_instance_to_data
+from ..utils._types import _Model
 from ._kernel import KernelExplainer
 
 log = logging.getLogger("shap")
@@ -44,7 +45,7 @@ class SamplingExplainer(KernelExplainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         data: npt.NDArray[Any] | pd.DataFrame,
         **kwargs: Any,
     ) -> None:

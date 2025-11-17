@@ -15,6 +15,7 @@ from ..utils import (
     make_masks,
     shapley_coefficients,
 )
+from ..utils._types import _LinkFunction, _Model
 from ._explainer import Explainer
 
 log = logging.getLogger("shap")
@@ -39,9 +40,9 @@ class ExactExplainer(Explainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         masker: Any,
-        link: Any = links.identity,
+        link: _LinkFunction = links.identity,
         linearize_link: bool = True,
         feature_names: Any = None,
     ) -> None:
