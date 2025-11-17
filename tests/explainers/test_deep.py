@@ -775,18 +775,25 @@ def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
 
 
 def test_pytorch_lstm_cell():
-    """Test SHAP values for PyTorch LSTMCell with manual SHAP calculation."""
+    """Test SHAP values for PyTorch LSTMCell with integrated LSTM handler.
+
+    This test verifies that the LSTM handler in deep_pytorch.py correctly computes
+    SHAP values for LSTMCell layers. The handler uses DeepLift's rescale rule for
+    gate calculations and Shapley values for element-wise multiplications.
+
+    Expected: <1% additivity error
+    """
     torch = pytest.importorskip("torch")
     from torch import nn
-    
+
     # Set random seed
     torch.manual_seed(42)
-    
+
     # Model dimensions
     input_size = 3
     hidden_size = 2
     batch_size = 1
-    
+
     # Create LSTMCell
     lstm_cell = nn.LSTMCell(input_size, hidden_size)
     
@@ -845,7 +852,7 @@ def test_pytorch_lstm_cell():
     else:
         shap_total = shap_values.sum()
 
-    # Check additivity - with the LSTM handler integrated, this should be very accurate
+    # Check additivity - with the integrated LSTM handler, this should be very accurate
     additivity_error = abs(shap_total - output_diff)
 
     # Assert shape and basic properties
@@ -853,8 +860,13 @@ def test_pytorch_lstm_cell():
     assert shap_values.shape[0] == 1  # batch size
     assert shap_values.shape[1] == input_size + 2 * hidden_size  # features
 
-    # Assert additivity (should be < 0.01 with LSTM handler)
-    assert additivity_error < 0.01, f"Additivity error too large: {additivity_error:.6f}"
+    # Assert additivity: the integrated LSTM handler should achieve <1% error
+    # See LSTM_HANDLER_FIX.md for details on the fix that enables this accuracy
+    assert additivity_error < 0.01, (
+        f"LSTM handler additivity error too large: {additivity_error:.6f} "
+        f"(expected < 0.01). This indicates the LSTM handler may not be working correctly. "
+        f"Expected output diff: {output_diff:.6f}, SHAP total: {shap_total:.6f}"
+    )
 
 
 def test_tensorflow_lstm_cell():
