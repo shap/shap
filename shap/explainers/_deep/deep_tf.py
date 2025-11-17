@@ -490,8 +490,19 @@ def while_loop(explainer, op, *grads):
     """
     Handler for While loops (used by full LSTM layers).
 
-    EXPERIMENTAL: This tries to leverage TensorFlow's automatic While gradient
-    which should use the replaced gradients for operations inside the loop body.
+    Current Status: TensorFlow's While gradient does NOT use the gradient registry
+    for operations inside the loop body. The While gradient creates its own backward
+    loop and doesn't apply our custom gradients (Sigmoid→DeepLift, etc.) to body operations.
+
+    Evidence:
+    - custom_grad is called for While operation
+    - custom_grad is NEVER called for Sigmoid/Tanh inside the body
+    - This means the registry replacements don't affect the body gradient computation
+
+    Potential solutions:
+    1. Manually unroll the loop and apply custom gradients (very complex)
+    2. Intercept body function gradient computation (might not be possible)
+    3. Accept limitation (only LSTMCell works, not full LSTM)
     """
     import tensorflow as tf
 
@@ -507,6 +518,8 @@ def while_loop(explainer, op, *grads):
 
     try:
         # Call TensorFlow's original While gradient
+        # WARNING: This computes standard gradients, not DeepLift gradients!
+        # Result: All SHAP values will be zero.
         if orig_op_type in explainer.orig_grads and explainer.orig_grads[orig_op_type] is not None:
             result = explainer.orig_grads[orig_op_type](op, *grads)
         else:

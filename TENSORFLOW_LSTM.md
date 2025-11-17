@@ -11,7 +11,28 @@ Unlike PyTorch, **TensorFlow's native `LSTMCell` works perfectly with DeepExplai
 - ✅ **`tf.keras.layers.LSTMCell`** - Single timestep LSTM - **WORKS** (0% error)
 - ❌ **`tf.keras.layers.LSTM`** - Full sequence LSTM - **DOES NOT WORK**
 
-The full `LSTM` layer uses `While` loops to iterate over sequences, and DeepExplainer does not support control flow operations like `While` or `If`.
+## Why Full LSTM Doesn't Work
+
+The full `LSTM` layer uses `While` loops to iterate over sequences. While DeepExplainer can handle the While operation itself, **TensorFlow's While gradient mechanism does NOT use the gradient registry for operations inside the loop body**.
+
+### Technical Details
+
+When computing gradients through a While loop:
+1. TensorFlow's `_WhileGrad` creates a backward While loop
+2. This backward loop computes **standard backpropagation gradients** for operations inside (Sigmoid, Tanh, Mul)
+3. Our DeepLift gradient replacements are **never applied** to these internal operations
+4. Result: Standard gradients `∂f/∂x` instead of DeepLift gradients `(f(x)-f(r))/(x-r)`
+5. All SHAP values end up being exactly zero
+
+### Evidence From Investigation
+
+- `custom_grad()` is called for: `While`, `TensorListFromTensor`, `Transpose`
+- `custom_grad()` is **NEVER** called for: `Sigmoid`, `Tanh`, `Mul` inside the While loop body
+- Gradients flow through the operations but produce all-zero SHAP values
+
+### Potential Fix
+
+Would require manually unrolling the While loop and applying DeepLift gradients to each timestep - approximately 500+ lines of complex, fragile code. Not practical.
 
 **Same limitation exists for PyTorch:**
 - ✅ `nn.LSTMCell` - works with custom handler
