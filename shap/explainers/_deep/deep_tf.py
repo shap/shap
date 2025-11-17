@@ -743,6 +743,8 @@ op_handlers["Tile"] = passthrough
 op_handlers["TensorArrayScatterV3"] = passthrough
 op_handlers["TensorArrayReadV3"] = passthrough
 op_handlers["TensorArrayWriteV3"] = passthrough
+op_handlers["Split"] = passthrough
+op_handlers["SplitV"] = passthrough
 
 
 # ops that don't pass any attributions to their inputs

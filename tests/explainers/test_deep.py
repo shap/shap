@@ -869,6 +869,89 @@ def test_pytorch_lstm_cell():
     )
 
 
+def test_tensorflow_native_lstm_cell():
+    """Test SHAP values for TensorFlow native LSTMCell.
+
+    TensorFlow's native LSTMCell works with DeepExplainer using standard gradient
+    replacement (no custom handler needed). With the Split operation handler added,
+    it achieves perfect additivity (<1e-6 error).
+
+    Expected: Near-perfect additivity (error < 0.01)
+    """
+    tf = pytest.importorskip("tensorflow")
+
+    # Set random seed
+    tf.random.set_seed(42)
+    np.random.seed(42)
+
+    # Model dimensions
+    input_size = 3
+    hidden_size = 2
+
+    # Create native TensorFlow LSTMCell
+    lstm_cell = tf.keras.layers.LSTMCell(hidden_size)
+
+    # Build the cell by calling it once
+    x_dummy = tf.constant([[0.0, 0.0, 0.0]], dtype=tf.float32)
+    h_dummy = tf.constant([[0.0, 0.0]], dtype=tf.float32)
+    c_dummy = tf.constant([[0.0, 0.0]], dtype=tf.float32)
+    _ = lstm_cell(x_dummy, states=[h_dummy, c_dummy])
+
+    # Create wrapper to extract c_new
+    class ExtractCNew(tf.keras.layers.Layer):
+        def __init__(self, lstm_cell, input_size, hidden_size):
+            super().__init__()
+            self.lstm_cell = lstm_cell
+            self.input_size = input_size
+            self.hidden_size = hidden_size
+
+        def call(self, inputs):
+            x = inputs[:, :self.input_size]
+            h = inputs[:, self.input_size:self.input_size + self.hidden_size]
+            c = inputs[:, self.input_size + self.hidden_size:]
+            output, states = self.lstm_cell(x, states=[h, c])
+            return states[1]  # c_new
+
+    combined_input = tf.keras.Input(shape=(input_size + 2*hidden_size,))
+    new_c = ExtractCNew(lstm_cell, input_size, hidden_size)(combined_input)
+    model = tf.keras.Model(inputs=combined_input, outputs=new_c)
+
+    # Baseline and test inputs
+    x_base = np.array([[0.01, 0.02, 0.03]], dtype=np.float32)
+    h_base = np.array([[0.0, 0.01]], dtype=np.float32)
+    c_base = np.array([[0.1, 0.05]], dtype=np.float32)
+    baseline = np.concatenate([x_base, h_base, c_base], axis=1)
+
+    x = np.array([[0.1, 0.2, 0.3]], dtype=np.float32)
+    h = np.array([[0.0, 0.1]], dtype=np.float32)
+    c = np.array([[0.5, 0.3]], dtype=np.float32)
+    test_input = np.concatenate([x, h, c], axis=1)
+
+    # Create SHAP explainer
+    e = shap.DeepExplainer(model, baseline)
+
+    # Calculate SHAP values
+    shap_values = e.shap_values(test_input, check_additivity=False)
+
+    # Get model outputs
+    output = model(test_input).numpy()
+    output_base = model(baseline).numpy()
+    output_diff = (output - output_base).sum()
+
+    shap_total = shap_values.sum()
+    additivity_error = abs(output_diff - shap_total)
+
+    # Native LSTMCell should achieve near-perfect additivity
+    assert additivity_error < 0.01, (
+        f"TensorFlow native LSTMCell additivity error too large: {additivity_error:.6f} "
+        f"(expected < 0.01). Expected: {output_diff:.6f}, SHAP total: {shap_total:.6f}"
+    )
+
+    # Verify SHAP values have correct shape
+    assert shap_values.shape[0] == 1  # batch size
+    assert shap_values.shape[1] == input_size + 2 * hidden_size  # features
+
+
 def test_tensorflow_lstm_cell():
     """Test SHAP values for TensorFlow LSTM-like cell with manual SHAP calculation."""
     tf = pytest.importorskip("tensorflow")
