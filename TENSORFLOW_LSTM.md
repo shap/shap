@@ -2,19 +2,37 @@
 
 ## Summary
 
-Unlike PyTorch, **TensorFlow's native `LSTMCell` works perfectly with DeepExplainer** using standard gradient replacement. No custom LSTM handler is required. The only change needed was adding the `Split` and `SplitV` operations to the passthrough handlers.
+Unlike PyTorch, **TensorFlow's native `LSTMCell` works perfectly with DeepExplainer** using standard gradient replacement. No custom LSTM handler is required. The only changes needed were adding passthrough handlers for `Split`, `SplitV`, and `TensorList*` operations.
+
+## ⚠️ Important Limitation
+
+**ONLY `tf.keras.layers.LSTMCell` is supported (single timestep)**
+
+- ✅ **`tf.keras.layers.LSTMCell`** - Single timestep LSTM - **WORKS** (0% error)
+- ❌ **`tf.keras.layers.LSTM`** - Full sequence LSTM - **DOES NOT WORK**
+
+The full `LSTM` layer uses `While` loops to iterate over sequences, and DeepExplainer does not support control flow operations like `While` or `If`.
+
+**Same limitation exists for PyTorch:**
+- ✅ `nn.LSTMCell` - works with custom handler
+- ❌ `nn.LSTM` - does not work (no sequence support)
 
 ## Implementation
 
 **File**: `shap/explainers/_deep/deep_tf.py`
 
-**Change** (lines 746-747):
+**Changes** (lines 746-752):
 ```python
 op_handlers["Split"] = passthrough
 op_handlers["SplitV"] = passthrough
+op_handlers["TensorListStack"] = passthrough
+op_handlers["TensorListFromTensor"] = passthrough
+op_handlers["TensorListReserve"] = passthrough
+op_handlers["TensorListSetItem"] = passthrough
+op_handlers["TensorListGetItem"] = passthrough
 ```
 
-That's it! Just two lines.
+Just 7 lines of passthrough handlers for TensorFlow's internal operations.
 
 ## Test Results
 

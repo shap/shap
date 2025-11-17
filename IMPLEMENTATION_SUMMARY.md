@@ -66,6 +66,22 @@ All tests now pass with excellent additivity:
 
 **All errors < 1% threshold!**
 
+## ⚠️ Important Limitation
+
+**ONLY single-timestep LSTM cells are supported:**
+
+### PyTorch
+- ✅ **`nn.LSTMCell`** - Single timestep - **WORKS** with custom handler (<1% error)
+- ❌ **`nn.LSTM`** - Full sequence layer - **NOT SUPPORTED**
+
+### TensorFlow
+- ✅ **`tf.keras.layers.LSTMCell`** - Single timestep - **WORKS** automatically (~0% error)
+- ❌ **`tf.keras.layers.LSTM`** - Full sequence layer - **NOT SUPPORTED**
+
+**Reason**: Full LSTM layers use loops/control flow (`While`, `For`) to iterate over sequences. DeepExplainer does not currently support control flow operations, only feed-forward operations.
+
+**Workaround**: Manually unroll the LSTM over timesteps using LSTMCell in a loop at the Python level (not inside the model graph).
+
 ## Files Modified/Created
 
 ### Core Implementation
