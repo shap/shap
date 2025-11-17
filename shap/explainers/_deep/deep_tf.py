@@ -486,6 +486,37 @@ def forward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist, within_ops)
     return found_ops
 
 
+def while_loop(explainer, op, *grads):
+    """
+    Handler for While loops (used by full LSTM layers).
+
+    EXPERIMENTAL: This tries to leverage TensorFlow's automatic While gradient
+    which should use the replaced gradients for operations inside the loop body.
+    """
+    import tensorflow as tf
+
+    # Get the original operation type (remove shap_ prefix if present)
+    if op.type.startswith("shap_"):
+        orig_op_type = op.type[5:]
+    else:
+        orig_op_type = op.type
+
+    # Temporarily restore the operation's original type to call the gradient
+    original_type = op.type
+    op.type = orig_op_type
+
+    try:
+        # Call TensorFlow's original While gradient
+        if orig_op_type in explainer.orig_grads and explainer.orig_grads[orig_op_type] is not None:
+            result = explainer.orig_grads[orig_op_type](op, *grads)
+        else:
+            result = [None for _ in op.inputs]
+    finally:
+        op.type = original_type
+
+    return result
+
+
 def softmax(explainer, op, *grads):
     """Just decompose softmax into its components and recurse, we can handle all of them :)
 
@@ -796,6 +827,7 @@ op_handlers["GatherV2"] = gather
 op_handlers["ResourceGather"] = gather
 op_handlers["MaxPool"] = maxpool
 op_handlers["Softmax"] = softmax
+op_handlers["While"] = while_loop
 
 
 # TODO items
