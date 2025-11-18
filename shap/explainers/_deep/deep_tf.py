@@ -208,10 +208,71 @@ class TFDeep(Explainer):
         for t in model_inputs:
             self.between_tensors[t.name] = True
 
+        # Mark tensors inside While loop bodies as "between"
+        # This is needed for LSTM layers which use While loops to process sequences
+        self._mark_while_body_tensors_as_between()
+
         # save what types are being used
         self.used_types = {}
         for op in self.between_ops:
             self.used_types[op.type] = True
+
+    def _mark_while_body_tensors_as_between(self):
+        """
+        Mark all tensors inside While loop bodies as "between" operations.
+
+        While loops (used by tf.keras.layers.LSTM) have their body in a separate FuncGraph.
+        Operations inside the body need to be marked as "between" so that gradient handlers
+        can properly attribute values through the loop.
+        """
+        try:
+            from tensorflow.python.framework import function_def_to_graph
+        except ImportError:
+            # If we can't import this, skip While body marking
+            return
+
+        # Find all While operations in between_ops
+        while_ops = [op for op in self.between_ops if op.type == "While"]
+
+        if not while_ops:
+            return  # No While loops, nothing to do
+
+        for while_op in while_ops:
+            try:
+                # Get the body function attribute
+                body_func_attr = while_op.get_attr("body")
+
+                # Get the graph definition to access the function library
+                graph = while_op.graph
+                graph_def = graph.as_graph_def()
+
+                # Find the body function definition in the library
+                body_func_def = None
+                for func_def in graph_def.library.function:
+                    if func_def.signature.name == body_func_attr.name:
+                        body_func_def = func_def
+                        break
+
+                if body_func_def is None:
+                    continue
+
+                # Convert function definition to a FuncGraph
+                body_graph = function_def_to_graph.function_def_to_graph(body_func_def)
+
+                # Mark tensors in the body graph as "between"
+                # BUT: Skip parameters (ReadVariableOp, Const) - only mark data flow
+                for op in body_graph.get_operations():
+                    # Skip operations that produce parameters, not data
+                    if op.type in ["ReadVariableOp", "Const"]:
+                        continue
+
+                    for tensor in op.outputs:
+                        self.between_tensors[tensor.name] = True
+
+            except Exception:
+                # If we fail to process a While loop, continue with others
+                # Silent failure is okay here - we'll just have limited While support
+                continue
 
     def _variable_inputs(self, op):
         """Return which inputs of this operation are variable (i.e. depend on the model inputs)."""
