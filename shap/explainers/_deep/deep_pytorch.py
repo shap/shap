@@ -287,8 +287,11 @@ def add_interim_values(module, input, output):
                     c_in = input[2] if len(input) > 2 else None
 
                 # Save all inputs as a tuple
-                module.x = (x_in.detach(), h_in.detach() if h_in is not None else None,
-                           c_in.detach() if c_in is not None else None)
+                module.x = (
+                    x_in.detach(),
+                    h_in.detach() if h_in is not None else None,
+                    c_in.detach() if c_in is not None else None,
+                )
 
                 # Save outputs (h_new, c_new)
                 if type(output) is tuple:
@@ -402,7 +405,7 @@ def lstm_cell_handler(module, grad_input, grad_output):
     import torch
 
     # Check if we have saved tensors
-    if not hasattr(module, 'x') or not hasattr(module, 'y'):
+    if not hasattr(module, "x") or not hasattr(module, "y"):
         warnings.warn("LSTM handler: No saved tensors, using standard gradients")
         return None
 
@@ -449,11 +452,11 @@ def lstm_cell_handler(module, grad_input, grad_output):
         b_hi = b_hf = b_hg = b_ho = zeros
 
     # Helper function for gate SHAP - keep hidden dimension separate
-    def manual_shap_gate(W_i, W_h, b_i, b_h, x, h, x_base, h_base, activation='sigmoid'):
+    def manual_shap_gate(W_i, W_h, b_i, b_h, x, h, x_base, h_base, activation="sigmoid"):
         linear_current = torch.matmul(x, W_i.T) + torch.matmul(h, W_h.T) + b_i + b_h
         linear_base = torch.matmul(x_base, W_i.T) + torch.matmul(h_base, W_h.T) + b_i + b_h
 
-        act_fn = torch.sigmoid if activation == 'sigmoid' else torch.tanh
+        act_fn = torch.sigmoid if activation == "sigmoid" else torch.tanh
         output = act_fn(linear_current)
         output_base = act_fn(linear_base)
 
@@ -491,16 +494,12 @@ def lstm_cell_handler(module, grad_input, grad_output):
         return r_a, r_b
 
     # Calculate SHAP values for each gate (element-wise)
-    r_x_i, r_h_i, i_t, i_t_base = manual_shap_gate(
-        W_ii, W_hi, b_ii, b_hi, x, h, x_base, h_base, activation='sigmoid'
-    )
+    r_x_i, r_h_i, i_t, i_t_base = manual_shap_gate(W_ii, W_hi, b_ii, b_hi, x, h, x_base, h_base, activation="sigmoid")
 
-    r_x_f, r_h_f, f_t, f_t_base = manual_shap_gate(
-        W_if, W_hf, b_if, b_hf, x, h, x_base, h_base, activation='sigmoid'
-    )
+    r_x_f, r_h_f, f_t, f_t_base = manual_shap_gate(W_if, W_hf, b_if, b_hf, x, h, x_base, h_base, activation="sigmoid")
 
     r_x_g, r_h_g, c_tilde, c_tilde_base = manual_shap_gate(
-        W_ig, W_hg, b_ig, b_hg, x, h, x_base, h_base, activation='tanh'
+        W_ig, W_hg, b_ig, b_hg, x, h, x_base, h_base, activation="tanh"
     )
 
     # Cell state update: c_new = f_t ⊙ c + i_t ⊙ c_tilde
@@ -542,9 +541,7 @@ def lstm_cell_handler(module, grad_input, grad_output):
 
     # Avoid division by zero
     total_r_f_per_hidden = torch.where(
-        torch.abs(total_r_f_per_hidden) < 1e-10,
-        torch.ones_like(total_r_f_per_hidden),
-        total_r_f_per_hidden
+        torch.abs(total_r_f_per_hidden) < 1e-10, torch.ones_like(total_r_f_per_hidden), total_r_f_per_hidden
     )
 
     # Scale gate relevances by multiplication relevances
@@ -556,9 +553,7 @@ def lstm_cell_handler(module, grad_input, grad_output):
     # For input gate path
     total_r_i_per_hidden = r_x_i.sum(dim=2) + r_h_i.sum(dim=2)
     total_r_i_per_hidden = torch.where(
-        torch.abs(total_r_i_per_hidden) < 1e-10,
-        torch.ones_like(total_r_i_per_hidden),
-        total_r_i_per_hidden
+        torch.abs(total_r_i_per_hidden) < 1e-10, torch.ones_like(total_r_i_per_hidden), total_r_i_per_hidden
     )
     scale_i = (r_i_weighted / total_r_i_per_hidden).unsqueeze(-1)
     shap_x_from_i = (r_x_i * scale_i).sum(dim=1)
@@ -567,9 +562,7 @@ def lstm_cell_handler(module, grad_input, grad_output):
     # For candidate gate path
     total_r_g_per_hidden = r_x_g.sum(dim=2) + r_h_g.sum(dim=2)
     total_r_g_per_hidden = torch.where(
-        torch.abs(total_r_g_per_hidden) < 1e-10,
-        torch.ones_like(total_r_g_per_hidden),
-        total_r_g_per_hidden
+        torch.abs(total_r_g_per_hidden) < 1e-10, torch.ones_like(total_r_g_per_hidden), total_r_g_per_hidden
     )
     scale_g = (r_ctilde_weighted / total_r_g_per_hidden).unsqueeze(-1)
     shap_x_from_g = (r_x_g * scale_g).sum(dim=1)
@@ -578,7 +571,9 @@ def lstm_cell_handler(module, grad_input, grad_output):
     # Sum all contributions
     shap_x = shap_x_from_f + shap_x_from_i + shap_x_from_g  # (batch, input_size)
     shap_h = shap_h_from_f + shap_h_from_i + shap_h_from_g  # (batch, hidden_size)
-    shap_c = (r_c_from_f * c_output_selector).sum(dim=1, keepdim=True)  # (batch, 1) but broadcast to (batch, hidden_size)
+    shap_c = (r_c_from_f * c_output_selector).sum(
+        dim=1, keepdim=True
+    )  # (batch, 1) but broadcast to (batch, hidden_size)
 
     # Actually, shap_c should be (batch, hidden_size) with relevance for each c[k]
     # But we're explaining c_new, not c_in, so we need element-wise relevance
@@ -595,21 +590,9 @@ def lstm_cell_handler(module, grad_input, grad_output):
     # Where delta is very small, the SHAP value should also be very small (no change = no contribution)
     # So we can safely set gradient to 0 in those cases
     eps = 1e-6
-    grad_x_value = torch.where(
-        torch.abs(delta_x) < eps,
-        torch.zeros_like(shap_x),
-        shap_x / delta_x
-    )
-    grad_h_value = torch.where(
-        torch.abs(delta_h) < eps,
-        torch.zeros_like(shap_h),
-        shap_h / delta_h
-    )
-    grad_c_value = torch.where(
-        torch.abs(delta_c) < eps,
-        torch.zeros_like(shap_c),
-        shap_c / delta_c
-    )
+    grad_x_value = torch.where(torch.abs(delta_x) < eps, torch.zeros_like(shap_x), shap_x / delta_x)
+    grad_h_value = torch.where(torch.abs(delta_h) < eps, torch.zeros_like(shap_h), shap_h / delta_h)
+    grad_c_value = torch.where(torch.abs(delta_c) < eps, torch.zeros_like(shap_c), shap_c / delta_c)
 
     # Return gradients repeated for doubled batch
     # grad_input structure: (grad_x, (grad_h, grad_c))
