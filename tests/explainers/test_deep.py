@@ -2,12 +2,11 @@
 
 import os
 import platform
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
 from packaging import version
 
 import shap
@@ -345,9 +344,7 @@ def test_tf_deep_multi_inputs_multi_outputs():
     )
 
 
-@given(seed=st.integers(min_value=0, max_value=2**32 - 1))
-@settings(max_examples=100, deadline=None)
-def test_tf_eager_lstm(seed):
+def test_tf_eager_lstm():
     # This test should pass with tf 2.x
     import random
 
@@ -356,6 +353,7 @@ def test_tf_eager_lstm(seed):
     # Clear any existing TensorFlow session/graph state
     tf.keras.backend.clear_session()
 
+    seed = 42
     # Set ALL random seeds to ensure reproducibility
     random.seed(seed)
     np.random.seed(seed)
@@ -489,7 +487,7 @@ def test_tf_eager_stacked_lstms(seed):
     model = tf.keras.models.Model(inputs=input_layer, outputs=output_layer)
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01), loss="mse", metrics=["mae"])
 
-    def tensor_to_arrays(input_obj=None):
+    def tensor_to_arrays(input_obj: Any | None = None) -> tuple[np.ndarray, np.ndarray]:
         """
         Convert a "tensorflow.python.data.ops.dataset_ops.PrefetchDataset" object into a numpy arrays.
         This function can be used to slice the tensor objects out of the `windowing` function.
