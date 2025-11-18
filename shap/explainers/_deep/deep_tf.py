@@ -554,7 +554,8 @@ class TFDeep(Explainer):
         if not tf.executing_eagerly():
             return out
         else:
-            return [v.numpy() for v in out]
+            # Handle None gradients (which can occur for disconnected inputs)
+            return [v.numpy() if v is not None else None for v in out]
 
 
 def tensors_blocked_by_false(ops):
