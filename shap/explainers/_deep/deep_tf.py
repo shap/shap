@@ -95,6 +95,25 @@ class TFDeep(Explainer):
                 "Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion."
             )
 
+        # For Keras Sequential/Model that haven't been built yet, build them using background data
+        # This is necessary because model.inputs is not available until the model is built
+        if isinstance(model, tf.keras.Model) and not isinstance(model, (list, tuple)):
+            try:
+                # Try to access inputs - this will fail if model hasn't been built
+                _ = model.inputs
+            except AttributeError:
+                # Model hasn't been built yet, build it using background data
+                # Convert data to list format if needed for building
+                if not isinstance(data, list) and not hasattr(data, "__call__"):
+                    build_data = [data]
+                else:
+                    build_data = data
+
+                # Only build if we have actual data (not a callable)
+                if not hasattr(build_data, "__call__"):
+                    # Call the model to build it
+                    _ = model(build_data[0][:1] if len(build_data[0]) > 0 else build_data[0])
+
         # determine the model inputs and outputs
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
