@@ -245,6 +245,53 @@ def test_tf_keras_imdb_lstm(random_seed):
     np.testing.assert_allclose(sums, diff, atol=0.05), "Sum of SHAP values does not match difference!"
 
 
+def test_tf_keras_lstm_no_embedding():
+    """Test LSTM without embedding layer using continuous input data."""
+    tf = pytest.importorskip("tensorflow")
+
+    rs = np.random.RandomState(0)
+    tf.random.set_seed(0)
+
+    # Create synthetic time series data (e.g., sensor readings)
+    # Shape: (samples, timesteps, features)
+    X_train = rs.randn(100, 20, 5).astype(np.float32)
+    y_train = (X_train[:, :, 0].sum(axis=1) > 0).astype(np.float32)
+
+    X_test = rs.randn(20, 20, 5).astype(np.float32)
+
+    # Create a simple LSTM model without embeddings
+    mod = tf.keras.models.Sequential()
+    mod.add(tf.keras.layers.LSTM(10, input_shape=(20, 5)))
+    mod.add(tf.keras.layers.Dense(1, activation="sigmoid"))
+    mod.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
+
+    # select the background and test samples
+    inds = rs.choice(X_train.shape[0], 3, replace=False)
+    background = X_train[inds]
+    testx = X_test[0:1]
+
+    # explain a prediction
+    e = shap.DeepExplainer(mod, background)
+    shap_values = e.shap_values(testx, check_additivity=False)
+
+    # Basic checks
+    assert shap_values is not None
+    assert len(shap_values) == 1  # single output
+    # SHAP values shape should match input shape: (batch, timesteps, features)
+    expected_shape = (testx.shape[1], testx.shape[2], 1)  # (timesteps, features, outputs)
+    assert shap_values[0].shape == expected_shape, f"SHAP values shape {shap_values[0].shape} != expected shape {expected_shape}"
+
+    # Compute expected difference
+    output_test = mod(testx).numpy()
+    output_background = mod(background).numpy()
+    diff = output_test[0, :] - output_background.mean(0)
+
+    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+
+    # Check that SHAP values sum to the difference
+    np.testing.assert_allclose(sums, diff, atol=0.05), "Sum of SHAP values does not match difference!"
+
+
 @pytest.mark.skipif(
     platform.system() == "Darwin" and os.getenv("GITHUB_ACTIONS") == "true",
     reason="Skipping on GH MacOS runners due to memory error, see GH #3929",
