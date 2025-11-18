@@ -331,8 +331,10 @@ class TFDeep(Explainer):
                     if not is_constant_source or (is_constant_source and not is_weight):
                         # Check if we're inside a function (While loop body)
                         # by seeing if the graph name suggests a function context
-                        graph_name = str(op.graph)
-                        if "FuncGraph" in graph_name or "while" in op.name.lower():
+                        # Use getattr with default to handle _MockOp objects in eager mode
+                        graph_name = str(getattr(op, 'graph', ''))
+                        op_name = str(getattr(op, 'name', ''))
+                        if "FuncGraph" in graph_name or "while" in op_name.lower():
                             # Inside a function - be conservative
                             is_between = not is_weight
 
