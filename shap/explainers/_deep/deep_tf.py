@@ -663,6 +663,50 @@ def while_loop(explainer, op, *grads):
     return result
 
 
+def cudnn_rnn(explainer, op, *grads):
+    """
+    Handler for CUDA-optimized RNN operations (CudnnRNN, CudnnRNNV2, CudnnRNNV3).
+
+    CudnnRNN operations are fused CUDA kernels used by TensorFlow when running
+    LSTM/GRU/RNN layers on GPU. They replace the While loop implementation with
+    a single optimized kernel.
+
+    Implementation:
+    Similar to the While loop handler, this is a passthrough that calls TensorFlow's
+    original CudnnRNN gradient. The gradient correctly propagates through the RNN
+    in the same way as the While loop version.
+
+    Key points:
+    - CudnnRNN is linear in the input (given fixed weights)
+    - Used only when GPU is available and model runs on GPU
+    - Replaces the While loop implementation for better performance
+    - Gradient behavior should match the While loop version
+    """
+    import tensorflow as tf
+
+    # Get the original operation type (remove shap_ prefix if present)
+    if op.type.startswith("shap_"):
+        orig_op_type = op.type[5:]
+    else:
+        orig_op_type = op.type
+
+    # Temporarily restore the operation's original type to call the gradient
+    original_type = op.type
+    op.type = orig_op_type
+
+    try:
+        # Call TensorFlow's original CudnnRNN gradient
+        if orig_op_type in explainer.orig_grads and explainer.orig_grads[orig_op_type] is not None:
+            result = explainer.orig_grads[orig_op_type](op, *grads)
+        else:
+            # If no gradient registered, return None for all inputs
+            result = [None for _ in op.inputs]
+    finally:
+        op.type = original_type
+
+    return result
+
+
 def softmax(explainer, op, *grads):
     """Just decompose softmax into its components and recurse, we can handle all of them :)
 
@@ -974,6 +1018,9 @@ op_handlers["ResourceGather"] = gather
 op_handlers["MaxPool"] = maxpool
 op_handlers["Softmax"] = softmax
 op_handlers["While"] = while_loop
+op_handlers["CudnnRNN"] = cudnn_rnn
+op_handlers["CudnnRNNV2"] = cudnn_rnn
+op_handlers["CudnnRNNV3"] = cudnn_rnn
 
 
 # TODO items
