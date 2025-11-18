@@ -2,6 +2,7 @@
 
 import os
 import platform
+from collections.abc import Iterable
 from typing import Any
 
 import numpy as np
@@ -487,7 +488,7 @@ def test_tf_eager_stacked_lstms(seed):
     model = tf.keras.models.Model(inputs=input_layer, outputs=output_layer)
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01), loss="mse", metrics=["mae"])
 
-    def tensor_to_arrays(input_obj: Any | None = None) -> tuple[np.ndarray, np.ndarray]:
+    def tensor_to_arrays(input_obj: Iterable[Any] | None = None) -> tuple[list[Any], list[Any]]:
         """
         Convert a "tensorflow.python.data.ops.dataset_ops.PrefetchDataset" object into a numpy arrays.
         This function can be used to slice the tensor objects out of the `windowing` function.
