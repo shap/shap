@@ -488,19 +488,19 @@ def test_tf_eager_stacked_lstms(seed):
     model = tf.keras.models.Model(inputs=input_layer, outputs=output_layer)
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01), loss="mse", metrics=["mae"])
 
-    def tensor_to_arrays(input_obj: Iterable[Any] | None = None) -> tuple[list[Any], list[Any]]:
+    def tensor_to_arrays(input_obj: Iterable[Any]) -> tuple[np.ndarray, np.ndarray]:
         """
         Convert a "tensorflow.python.data.ops.dataset_ops.PrefetchDataset" object into a numpy arrays.
         This function can be used to slice the tensor objects out of the `windowing` function.
         """
-        x = list(map(lambda x: x[0], input_obj))
-        y = list(map(lambda x: x[1], input_obj))
-        x_ = [xtmp.numpy() for xtmp in x]
-        y_ = [ytmp.numpy() for ytmp in y]
+        x_list = list(map(lambda item: item[0], input_obj))
+        y_list = list(map(lambda item: item[1], input_obj))
+        x_arrays = [xtmp.numpy() for xtmp in x_list]
+        y_arrays = [ytmp.numpy() for ytmp in y_list]
         # Stack the arrays vertically
-        x = np.vstack(x_)
-        y = np.vstack(y_)
-        return x, y
+        x_final: np.ndarray = np.vstack(x_arrays)
+        y_final: np.ndarray = np.vstack(y_arrays)
+        return x_final, y_final
 
     xarr, yarr = tensor_to_arrays(input_obj=train_dataset)
     # Create an explainer object
