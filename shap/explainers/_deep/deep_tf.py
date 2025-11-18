@@ -95,25 +95,6 @@ class TFDeep(Explainer):
                 "Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion."
             )
 
-        # For Keras Sequential/Model that haven't been built yet, build them using background data
-        # This is necessary because model.inputs is not available until the model is built
-        if isinstance(model, tf.keras.Model) and not isinstance(model, (list, tuple)):
-            try:
-                # Try to access inputs - this will fail if model hasn't been built
-                _ = model.inputs
-            except AttributeError:
-                # Model hasn't been built yet, build it using background data
-                # Convert data to list format if needed for building
-                if not isinstance(data, list) and not hasattr(data, "__call__"):
-                    build_data = [data]
-                else:
-                    build_data = data
-
-                # Only build if we have actual data (not a callable)
-                if not hasattr(build_data, "__call__"):
-                    # Call the model to build it
-                    _ = model(build_data[0][:1] if len(build_data[0]) > 0 else build_data[0])
-
         # determine the model inputs and outputs
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
@@ -227,82 +208,10 @@ class TFDeep(Explainer):
         for t in model_inputs:
             self.between_tensors[t.name] = True
 
-        # Mark tensors inside While loop bodies as "between"
-        # This is needed for LSTM layers which use While loops to process sequences
-        self._mark_while_body_tensors_as_between()
-
         # save what types are being used
         self.used_types = {}
         for op in self.between_ops:
             self.used_types[op.type] = True
-
-    def _mark_while_body_tensors_as_between(self):
-        """
-        Attempt to mark tensors inside While loop bodies as "between" operations.
-
-        While loops (used by tf.keras.layers.LSTM) have their body in a separate FuncGraph.
-        This method attempts to mark body operations as "between" by extracting the body
-        FuncGraph and marking its tensor names in between_tensors.
-
-        IMPORTANT - Limitations in TF 2.x eager mode:
-        In eager mode, this method has NO EFFECT on gradient computation because:
-        1. Body graph tensor names are local to the FuncGraph
-        2. During gradient computation, these names don't exist in the main graph
-        3. _variable_inputs() can't find these names when queried during backprop
-
-        The real fix for eager mode is in _variable_inputs(), which detects FuncGraph
-        context and conservatively assumes non-weight tensors are variable.
-
-        This method may still be useful for TF 1.x non-eager mode or for debugging.
-        """
-        try:
-            from tensorflow.python.framework import function_def_to_graph
-        except ImportError:
-            # If we can't import this, skip While body marking
-            return
-
-        # Find all While operations in between_ops
-        while_ops = [op for op in self.between_ops if op.type == "While"]
-
-        if not while_ops:
-            return  # No While loops, nothing to do
-
-        for while_op in while_ops:
-            try:
-                # Get the body function attribute
-                body_func_attr = while_op.get_attr("body")
-
-                # Get the graph definition to access the function library
-                graph = while_op.graph
-                graph_def = graph.as_graph_def()
-
-                # Find the body function definition in the library
-                body_func_def = None
-                for func_def in graph_def.library.function:
-                    if func_def.signature.name == body_func_attr.name:
-                        body_func_def = func_def
-                        break
-
-                if body_func_def is None:
-                    continue
-
-                # Convert function definition to a FuncGraph
-                body_graph = function_def_to_graph.function_def_to_graph(body_func_def)
-
-                # Mark tensors in the body graph as "between"
-                # BUT: Skip parameters (ReadVariableOp, Const) - only mark data flow
-                for op in body_graph.get_operations():
-                    # Skip operations that produce parameters, not data
-                    if op.type in ["ReadVariableOp", "Const"]:
-                        continue
-
-                    for tensor in op.outputs:
-                        self.between_tensors[tensor.name] = True
-
-            except Exception:
-                # If we fail to process a While loop, continue with others
-                # Silent failure is okay here - we'll just have limited While support
-                continue
 
     def _variable_inputs(self, op):
         """Return which inputs of this operation are variable (i.e. depend on the model inputs)."""
@@ -323,8 +232,7 @@ class TFDeep(Explainer):
                     is_constant_source = producing_op.type in ["Const", "ReadVariableOp", "Placeholder"]
 
                     # Also check if this is clearly a weight tensor (rank 2 and from ReadVariableOp)
-                    is_weight = (producing_op.type == "ReadVariableOp" and
-                                len(t.shape) == 2)
+                    is_weight = producing_op.type == "ReadVariableOp" and len(t.shape) == 2
 
                     # If it's inside a FuncGraph (like While loop body) and not a constant,
                     # assume it's variable
@@ -332,8 +240,8 @@ class TFDeep(Explainer):
                         # Check if we're inside a function (While loop body)
                         # by seeing if the graph name suggests a function context
                         # Use getattr with default to handle _MockOp objects in eager mode
-                        graph_name = str(getattr(op, 'graph', ''))
-                        op_name = str(getattr(op, 'name', ''))
+                        graph_name = str(getattr(op, "graph", ""))
+                        op_name = str(getattr(op, "name", ""))
                         if "FuncGraph" in graph_name or "while" in op_name.lower():
                             # Inside a function - be conservative
                             is_between = not is_weight
@@ -554,8 +462,7 @@ class TFDeep(Explainer):
         if not tf.executing_eagerly():
             return out
         else:
-            # Handle None gradients (which can occur for disconnected inputs)
-            return [v.numpy() if v is not None else None for v in out]
+            return [v.numpy() for v in out]
 
 
 def tensors_blocked_by_false(ops):
@@ -607,62 +514,6 @@ def forward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist, within_ops)
     return found_ops
 
 
-def while_loop(explainer, op, *grads):
-    """
-    Handler for While loops (used by sequence LSTM layers like tf.keras.layers.LSTM).
-
-    Implementation:
-    This handler is a passthrough that calls TensorFlow's original While gradient.
-    The While gradient creates a backward loop that applies our custom gradient handlers
-    (Sigmoid→DeepLift, etc.) to operations inside the loop body.
-
-    How it works:
-    1. TensorFlow's While gradient creates a backward While loop
-    2. Operations inside the backward loop (Sigmoid, Tanh, etc.) DO use our gradient registry
-    3. Custom gradients (DeepLift) ARE correctly applied inside the loop body
-    4. The gradient propagates correctly through all timesteps
-
-    Critical requirement for correctness:
-    The _variable_inputs() method must detect when operations are inside FuncGraphs
-    (While loop bodies). Operations in FuncGraphs have tensor names that don't exist
-    in the main graph's between_tensors dictionary. The fix (in _variable_inputs):
-    - Detect FuncGraph context by checking graph type or "while" in operation name
-    - Conservatively assume all non-weight tensors are variable
-    - Only exclude clear weight tensors (rank-2 ReadVariableOp)
-
-    With this fix, sequence LSTMs achieve perfect accuracy (0.00% error).
-
-    Previous misconception (now corrected):
-    We initially thought the While gradient didn't use the registry for body operations.
-    Testing proved this was wrong - the registry IS used, but _variable_inputs() couldn't
-    detect FuncGraph tensors.
-    """
-    import tensorflow as tf
-
-    # Get the original operation type (remove shap_ prefix if present)
-    if op.type.startswith("shap_"):
-        orig_op_type = op.type[5:]
-    else:
-        orig_op_type = op.type
-
-    # Temporarily restore the operation's original type to call the gradient
-    original_type = op.type
-    op.type = orig_op_type
-
-    try:
-        # Call TensorFlow's original While gradient
-        # This creates a backward While loop that correctly applies our custom
-        # gradient handlers to operations inside the loop body
-        if orig_op_type in explainer.orig_grads and explainer.orig_grads[orig_op_type] is not None:
-            result = explainer.orig_grads[orig_op_type](op, *grads)
-        else:
-            result = [None for _ in op.inputs]
-    finally:
-        op.type = original_type
-
-    return result
-
-
 def cudnn_rnn(explainer, op, *grads):
     """
     Handler for CUDA-optimized RNN operations (CudnnRNN, CudnnRNNV2, CudnnRNNV3).
@@ -682,8 +533,6 @@ def cudnn_rnn(explainer, op, *grads):
     - Replaces the While loop implementation for better performance
     - Gradient behavior should match the While loop version
     """
-    import tensorflow as tf
-
     # Get the original operation type (remove shap_ prefix if present)
     if op.type.startswith("shap_"):
         orig_op_type = op.type[5:]
@@ -1017,7 +866,6 @@ op_handlers["GatherV2"] = gather
 op_handlers["ResourceGather"] = gather
 op_handlers["MaxPool"] = maxpool
 op_handlers["Softmax"] = softmax
-op_handlers["While"] = while_loop
 op_handlers["CudnnRNN"] = cudnn_rnn
 op_handlers["CudnnRNNV2"] = cudnn_rnn
 op_handlers["CudnnRNNV3"] = cudnn_rnn
