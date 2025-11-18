@@ -899,7 +899,7 @@ def test_tensorflow_native_lstm_cell():
     _ = lstm_cell(x_dummy, states=[h_dummy, c_dummy])
 
     # Create wrapper to extract c_new
-    class ExtractCNew(tf.keras.layers.Layer):
+    class ExtractCNew(tf.keras.layers.Layer):  # type: ignore[name-defined]
         def __init__(self, lstm_cell, input_size, hidden_size):
             super().__init__()
             self.lstm_cell = lstm_cell
@@ -971,7 +971,7 @@ def test_tensorflow_lstm_cell():
     hidden_size = 2
     
     # Create a simple LSTM cell model using Keras functional API
-    class LSTMCellTF(tf.keras.Model):
+    class LSTMCellTF(tf.keras.Model):  # type: ignore[name-defined]
         def __init__(self, input_size, hidden_size):
             super().__init__()
             self.input_size = input_size
