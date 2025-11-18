@@ -343,6 +343,141 @@ def test_tf_deep_multi_inputs_multi_outputs():
     )
 
 
+def test_tf_eager_lstm():
+    # This test should pass with tf 2.x
+    tf = pytest.importorskip("tensorflow")
+
+    # split a univariate sequence into samples
+    def split_sequence(sequence, n_steps):
+        X, y = list(), list()
+        for i in range(len(sequence)):
+            # find the end of this pattern
+            end_ix = i + n_steps
+            # check if we are beyond the sequence
+            if end_ix > len(sequence) - 1:
+                break
+            # gather input and output parts of the pattern
+            seq_x, seq_y = sequence[i:end_ix], sequence[end_ix]
+            X.append(seq_x)
+            y.append(seq_y)
+            return np.array(X), np.array(y)
+
+    # define input sequence
+    raw_seq = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+    # choose a number of time steps
+    n_steps = 3
+    # split into samples
+    X, y = split_sequence(raw_seq, n_steps)
+    # reshape from [samples, timesteps] into [samples, timesteps, features]
+    n_features = 1
+    X = X.reshape((X.shape[0], X.shape[1], n_features))
+    # define model
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.LSTM(50, activation="relu", input_shape=(n_steps, n_features)))
+    model.add(tf.keras.layers.Dense(1))
+    model.compile(optimizer="adam", loss="mse")
+    # fit model
+    model.fit(X, y, epochs=200, verbose=0)
+    # demonstrate prediction
+    x_input = np.array([70, 80, 90], dtype=np.float32)
+    x_input = x_input.reshape((1, n_steps, n_features))
+    e = shap.DeepExplainer(model, x_input)
+    sv = e.shap_values(x_input)
+    assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x_input)[:, 0]).max() < 1e-4
+
+
+@pytest.mark.xfail(
+    reason="Currently failing with a relatively high deviation, needs investigation. This passes with tolerance 0.1"
+)
+def test_tf_eager_stacked_lstms():
+    # this test should pass with tf 2.x
+    tf = pytest.importorskip("tensorflow")
+    # Define the start and end datetime
+    start_datetime = pd.to_datetime("2020-01-01 00:00:00")
+    end_datetime = pd.to_datetime("2023-03-31 23:00:00")
+    # Generate a DatetimeIndex with hourly frequency
+    date_rng = pd.date_range(start=start_datetime, end=end_datetime, freq="H")
+    # Create a DataFrame with random data for 7 features
+    num_samples = len(date_rng)
+    num_features = 7
+    # Generate random data for the DataFrame
+    data = np.random.rand(num_samples, num_features)
+    # Create the DataFrame with a DatetimeIndex
+    df = pd.DataFrame(data, index=date_rng, columns=[f"X{i}" for i in range(1, num_features + 1)])
+
+    def windowed_dataset(series=None, in_horizon=None, out_horizon=None, delay=None, batch_size=None):
+        """
+        Convert multivariate data into input and output sequences.
+        Convert NumPy arrays to TensorFlow tensors.
+        Arguments:
+        ===========
+        series: a list or array of time-series data.
+        total_horizon: an integer representing the size of the input window.
+        out_horizon: an integer representing the size of the output window.
+        delay: an integer representing the number of steps between each input window.
+        batch_size: an integer representing the batch size.
+        """
+        total_horizon = in_horizon + out_horizon
+        dataset = tf.data.Dataset.from_tensor_slices(series)
+        dataset = dataset.window(total_horizon, shift=delay, drop_remainder=True)
+        dataset = dataset.flat_map(lambda window: window.batch(total_horizon))
+        dataset = dataset.map(lambda window: (window[:-out_horizon, :], window[-out_horizon:, 0]))
+        dataset = dataset.batch(batch_size).prefetch(1)
+        return dataset
+
+    # Define the proportions for the splits (70:20:10)%
+    train_size = 0.4
+    valid_size = 0.5
+    # Calculate the split points
+    train_split = int(len(df) * train_size)
+    valid_split = int(len(df) * (train_size + valid_size))
+    # Split the DataFrame
+    df_train = df.iloc[:train_split]
+    df_valid = df.iloc[train_split:valid_split]
+    df_test = df.iloc[valid_split:]
+    # number of input features and output targets
+    n_features = df.shape[1]
+    # split the data into sliding sequential windows
+    train_dataset = windowed_dataset(series=df_train.values, in_horizon=100, out_horizon=3, delay=1, batch_size=32)
+    windowed_dataset(series=df_valid.values, in_horizon=100, out_horizon=3, delay=1, batch_size=32)
+    windowed_dataset(series=df_test.values, in_horizon=100, out_horizon=3, delay=1, batch_size=32)
+    input_layer = tf.keras.layers.Input(shape=(100, n_features))
+    lstm_layer1 = tf.keras.layers.LSTM(5, return_sequences=True)(input_layer)
+    lstm_layer2 = tf.keras.layers.LSTM(5, return_sequences=True)(lstm_layer1)
+    lstm_layer3 = tf.keras.layers.LSTM(5)(lstm_layer2)
+    output_layer = tf.keras.layers.Dense(3)(lstm_layer3)
+    model = tf.keras.models.Model(inputs=input_layer, outputs=output_layer)
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01), loss="mse", metrics=["mae"])
+
+    def tensor_to_arrays(input_obj=None):
+        """
+        Convert a "tensorflow.python.data.ops.dataset_ops.PrefetchDataset" object into a numpy arrays.
+        This function can be used to slice the tensor objects out of the `windowing` function.
+        """
+        x = list(map(lambda x: x[0], input_obj))
+        y = list(map(lambda x: x[1], input_obj))
+        x_ = [xtmp.numpy() for xtmp in x]
+        y_ = [ytmp.numpy() for ytmp in y]
+        # Stack the arrays vertically
+        x = np.vstack(x_)
+        y = np.vstack(y_)
+        return x, y
+
+    xarr, yarr = tensor_to_arrays(input_obj=train_dataset)
+    # Create an explainer object
+    e = shap.DeepExplainer(model, xarr[:100, :, :])
+    # Calculate SHAP values for the data
+    sv = e.shap_values(xarr[:100, :, :], check_additivity=False)
+    model_output_values = model(xarr[:100, :, :])
+    # todo: this might indicate an error in how the gradients are overwritten
+    for dim in range(3):
+        assert (
+            model_output_values[:, dim].numpy()
+            - e.expected_value[dim].numpy()
+            - sv[dim].sum(axis=tuple(range(1, sv[dim].ndim)))
+        ).max() < 0.02
+
+
 #######################
 # Torch related tests #
 #######################
