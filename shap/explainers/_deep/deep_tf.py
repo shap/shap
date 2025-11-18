@@ -279,7 +279,34 @@ class TFDeep(Explainer):
         if op not in self._vinputs:
             out = np.zeros(len(op.inputs), dtype=bool)
             for i, t in enumerate(op.inputs):
-                out[i] = t.name in self.between_tensors
+                # Check if this tensor is in between_tensors
+                is_between = t.name in self.between_tensors
+
+                # Special handling for operations that might be inside While loop bodies:
+                # If we can't find the tensor in between_tensors, but it's not a clear constant
+                # (weight/bias from ReadVariableOp or Const), assume it's variable.
+                # This is more conservative and prevents gradient handlers from incorrectly
+                # treating data tensors as constants inside While loops.
+                if not is_between and len(self.between_tensors) > 0:
+                    # Check if the producing op is a constant source
+                    producing_op = t.op
+                    is_constant_source = producing_op.type in ["Const", "ReadVariableOp", "Placeholder"]
+
+                    # Also check if this is clearly a weight tensor (rank 2 and from ReadVariableOp)
+                    is_weight = (producing_op.type == "ReadVariableOp" and
+                                len(t.shape) == 2)
+
+                    # If it's inside a FuncGraph (like While loop body) and not a constant,
+                    # assume it's variable
+                    if not is_constant_source or (is_constant_source and not is_weight):
+                        # Check if we're inside a function (While loop body)
+                        # by seeing if the graph name suggests a function context
+                        graph_name = str(op.graph)
+                        if "FuncGraph" in graph_name or "while" in op.name.lower():
+                            # Inside a function - be conservative
+                            is_between = not is_weight
+
+                out[i] = is_between
             self._vinputs[op] = out
         return self._vinputs[op]
 
