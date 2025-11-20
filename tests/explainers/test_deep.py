@@ -2,6 +2,8 @@
 
 import os
 import platform
+from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -244,6 +246,54 @@ def test_tf_keras_imdb_lstm(random_seed):
     np.testing.assert_allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
+def test_tf_keras_lstm_no_embedding():
+    """Test LSTM without embedding layer using continuous input data."""
+    tf = pytest.importorskip("tensorflow")
+
+    rs = np.random.RandomState(0)
+    tf.random.set_seed(0)
+
+    # Create synthetic time series data (e.g., sensor readings)
+    # Shape: (samples, timesteps, features)
+    X_train = rs.randn(100, 20, 5).astype(np.float32)
+
+    X_test = rs.randn(20, 20, 5).astype(np.float32)
+
+    # Create a simple LSTM model without embeddings
+    mod = tf.keras.models.Sequential()
+    mod.add(tf.keras.layers.LSTM(10, input_shape=(20, 5)))
+    mod.add(tf.keras.layers.Dense(1, activation="sigmoid"))
+    mod.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
+
+    # select the background and test samples
+    inds = rs.choice(X_train.shape[0], 3, replace=False)
+    background = X_train[inds]
+    testx = X_test[0:1]
+
+    # explain a prediction
+    e = shap.DeepExplainer(mod, background)
+    shap_values = e.shap_values(testx, check_additivity=False)
+
+    # Basic checks
+    assert shap_values is not None
+    assert len(shap_values) == 1  # single output
+    # SHAP values shape should match input shape: (batch, timesteps, features)
+    expected_shape = (testx.shape[1], testx.shape[2], 1)  # (timesteps, features, outputs)
+    assert shap_values[0].shape == expected_shape, (
+        f"SHAP values shape {shap_values[0].shape} != expected shape {expected_shape}"
+    )
+
+    # Compute expected difference
+    output_test = mod(testx).numpy()
+    output_background = mod(background).numpy()
+    diff = output_test[0, :] - output_background.mean(0)
+
+    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+
+    # Check that SHAP values sum to the difference
+    np.testing.assert_allclose(sums, diff, atol=0.05), "Sum of SHAP values does not match difference!"
+
+
 @pytest.mark.skipif(
     platform.system() == "Darwin" and os.getenv("GITHUB_ACTIONS") == "true",
     reason="Skipping on GH MacOS runners due to memory error, see GH #3929",
@@ -293,6 +343,186 @@ def test_tf_deep_multi_inputs_multi_outputs():
     np.testing.assert_allclose(
         shap_values[0].sum(1) + shap_values[1].sum(1) + explainer.expected_value, predicted, atol=1e-3
     )
+
+
+def test_tf_eager_lstm():
+    # This test should pass with tf 2.x
+    import random
+
+    tf = pytest.importorskip("tensorflow")
+
+    # Clear any existing TensorFlow session/graph state
+    tf.keras.backend.clear_session()
+
+    seed = 42
+    # Set ALL random seeds to ensure reproducibility
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+    if hasattr(tf.keras.utils, "set_random_seed"):
+        tf.keras.utils.set_random_seed(seed)
+
+    # split a univariate sequence into samples
+    def split_sequence(sequence, n_steps):
+        X, y = list(), list()
+        for i in range(len(sequence)):
+            # find the end of this pattern
+            end_ix = i + n_steps
+            # check if we are beyond the sequence
+            if end_ix > len(sequence) - 1:
+                break
+            # gather input and output parts of the pattern
+            seq_x, seq_y = sequence[i:end_ix], sequence[end_ix]
+            X.append(seq_x)
+            y.append(seq_y)
+            return np.array(X), np.array(y)
+
+    # define input sequence
+    raw_seq = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+    # choose a number of time steps
+    n_steps = 3
+    # split into samples
+    X, y = split_sequence(raw_seq, n_steps)
+    # reshape from [samples, timesteps] into [samples, timesteps, features]
+    n_features = 1
+    X = X.reshape((X.shape[0], X.shape[1], n_features))
+    # define model
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.LSTM(50, activation="relu", input_shape=(n_steps, n_features)))
+    model.add(tf.keras.layers.Dense(1))
+    model.compile(optimizer="adam", loss="mse")
+    # fit model
+    model.fit(X, y, epochs=200, verbose=0)
+    # demonstrate prediction
+    x_input = np.array([70, 80, 90], dtype=np.float32)
+    x_input = x_input.reshape((1, n_steps, n_features))
+    e = shap.DeepExplainer(model, x_input)
+    sv = e.shap_values(x_input)
+
+    try:
+        diff = np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x_input)[:, 0]).max()
+        assert diff < 1e-4, f"Max diff = {diff:.10f} (threshold: 1e-4)"
+    except AssertionError as err:
+        print(f"\n❌ FALSIFYING EXAMPLE FOUND! Seed: {seed}")
+        print(f"Error details: {err}")
+        raise
+
+
+@pytest.mark.parametrize("seed", [110, 32222])
+def test_tf_eager_stacked_lstms(seed):
+    # def test_tf_eager_stacked_lstms():
+    # this test should pass with tf 2.x
+    import random
+
+    tf = pytest.importorskip("tensorflow")
+
+    # Clear any existing TensorFlow session/graph state
+    tf.keras.backend.clear_session()
+    # bad seeds: 110 and 32222
+
+    # Set ALL random seeds to ensure reproducibility
+    # TensorFlow uses multiple random sources that all need to be seeded
+    random.seed(seed)  # Python random module
+    np.random.seed(seed)  # Legacy numpy global RNG (used by TF/Keras)
+    tf.random.set_seed(seed)  # TensorFlow random ops
+
+    # Try to set Keras random seed (available in TF 2.7+)
+    if hasattr(tf.keras.utils, "set_random_seed"):
+        tf.keras.utils.set_random_seed(seed)
+
+    # Use modern numpy generator for our data generation
+    rng = np.random.default_rng(seed)
+    start_datetime = pd.to_datetime("2020-01-01 00:00:00")
+    end_datetime = pd.to_datetime("2023-03-31 23:00:00")
+    # Generate a DatetimeIndex with hourly frequency
+    date_rng = pd.date_range(start=start_datetime, end=end_datetime, freq="H")
+    # Create a DataFrame with random data for 7 features
+    num_samples = len(date_rng)
+    num_features = 7
+    # Generate random data for the DataFrame using the generator
+    data = rng.random((num_samples, num_features))
+    # Create the DataFrame with a DatetimeIndex
+    df = pd.DataFrame(data, index=date_rng, columns=[f"X{i}" for i in range(1, num_features + 1)])
+
+    def windowed_dataset(series=None, in_horizon=None, out_horizon=None, delay=None, batch_size=None):
+        """
+        Convert multivariate data into input and output sequences.
+        Convert NumPy arrays to TensorFlow tensors.
+        Arguments:
+        ===========
+        series: a list or array of time-series data.
+        total_horizon: an integer representing the size of the input window.
+        out_horizon: an integer representing the size of the output window.
+        delay: an integer representing the number of steps between each input window.
+        batch_size: an integer representing the batch size.
+        """
+        total_horizon = in_horizon + out_horizon
+        dataset = tf.data.Dataset.from_tensor_slices(series)
+        dataset = dataset.window(total_horizon, shift=delay, drop_remainder=True)
+        dataset = dataset.flat_map(lambda window: window.batch(total_horizon))
+        dataset = dataset.map(lambda window: (window[:-out_horizon, :], window[-out_horizon:, 0]))
+        dataset = dataset.batch(batch_size).prefetch(1)
+        return dataset
+
+    # Define the proportions for the splits (70:20:10)%
+    train_size = 0.4
+    valid_size = 0.5
+    # Calculate the split points
+    train_split = int(len(df) * train_size)
+    valid_split = int(len(df) * (train_size + valid_size))
+    # Split the DataFrame
+    df_train = df.iloc[:train_split]
+    df_valid = df.iloc[train_split:valid_split]
+    df_test = df.iloc[valid_split:]
+    # number of input features and output targets
+    n_features = df.shape[1]
+    # split the data into sliding sequential windows
+    train_dataset = windowed_dataset(series=df_train.values, in_horizon=100, out_horizon=3, delay=1, batch_size=32)
+    windowed_dataset(series=df_valid.values, in_horizon=100, out_horizon=3, delay=1, batch_size=32)
+    windowed_dataset(series=df_test.values, in_horizon=100, out_horizon=3, delay=1, batch_size=32)
+    input_layer = tf.keras.layers.Input(shape=(100, n_features))
+    lstm_layer1 = tf.keras.layers.LSTM(5, return_sequences=True)(input_layer)
+    lstm_layer2 = tf.keras.layers.LSTM(5, return_sequences=True)(lstm_layer1)
+    lstm_layer3 = tf.keras.layers.LSTM(5)(lstm_layer2)
+    output_layer = tf.keras.layers.Dense(3)(lstm_layer3)
+    model = tf.keras.models.Model(inputs=input_layer, outputs=output_layer)
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01), loss="mse", metrics=["mae"])
+
+    def tensor_to_arrays(input_obj: Iterable[Any] | None = None) -> tuple[list[Any], list[Any]]:
+        """
+        Convert a "tensorflow.python.data.ops.dataset_ops.PrefetchDataset" object into a numpy arrays.
+        This function can be used to slice the tensor objects out of the `windowing` function.
+        """
+        x = list(map(lambda x: x[0], input_obj))
+        y = list(map(lambda x: x[1], input_obj))
+        x_ = [xtmp.numpy() for xtmp in x]
+        y_ = [ytmp.numpy() for ytmp in y]
+        # Stack the arrays vertically
+        x = np.vstack(x_)
+        y = np.vstack(y_)
+        return x, y
+
+    xarr, yarr = tensor_to_arrays(input_obj=train_dataset)
+    # Create an explainer object
+    e = shap.DeepExplainer(model, xarr[:100, :, :])
+    # Calculate SHAP values for the data
+    sv = e.shap_values(xarr[100:200, :, :], check_additivity=False)
+    model_output_values = model(xarr[100:200, :, :])
+    # todo: this might indicate an error in how the gradients are overwritten
+    try:
+        for dim in range(3):
+            diff = (
+                model_output_values[:, dim].numpy()
+                - e.expected_value[dim].numpy()
+                - sv[dim].sum(axis=tuple(range(1, sv[dim].ndim)))
+            )
+            max_diff = diff.max()
+            print(max_diff)
+            assert max_diff < 0.08, f"Dimension {dim}: max diff = {max_diff:.6f} (threshold: 0.05)"
+    except AssertionError as err:
+        print(f"\n❌ FALSIFYING EXAMPLE FOUND! Seed: {seed}")
+        print(f"Error details: {err}")
+        raise
 
 
 #######################
