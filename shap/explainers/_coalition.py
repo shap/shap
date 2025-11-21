@@ -12,6 +12,7 @@ from .. import links  # shap modules
 from ..explainers._explainer import Explainer
 from ..models import Model
 from ..utils import MaskedModel, make_masks, safe_isinstance
+from ..utils._types import _LinkFunction, _Model
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -84,11 +85,11 @@ class CoalitionExplainer(Explainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         masker: Any,
         *,
         output_names: list[str] | None = None,
-        link: Any = links.identity,
+        link: _LinkFunction = links.identity,
         linearize_link: bool = True,
         feature_names: list[str] | None = None,
         partition_tree: dict[str, Any] | None = None,

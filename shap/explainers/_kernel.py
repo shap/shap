@@ -33,6 +33,7 @@ from ..utils._legacy import (
     match_instance_to_data,
     match_model_to_data,
 )
+from ..utils._types import _Model
 from ._explainer import Explainer
 
 log = logging.getLogger("shap")
@@ -88,7 +89,7 @@ class KernelExplainer(Explainer):
     link: Any
     keep_index: bool
     keep_index_ordered: bool
-    model: Any
+    model: _Model
     data: DenseData | SparseData
     N: int
     P: int
@@ -116,7 +117,7 @@ class KernelExplainer(Explainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         data: Any,
         feature_names: list[str] | None = None,
         link: Literal["identity", "logit"] | Any = "identity",
@@ -369,9 +370,9 @@ class KernelExplainer(Explainer):
 
         # find f(x)
         if self.keep_index:
-            model_out = self.model.f(instance.convert_to_df())
+            model_out = self.model.f(instance.convert_to_df())  # type: ignore[union-attr]
         else:
-            model_out = self.model.f(instance.x)
+            model_out = self.model.f(instance.x)  # type: ignore[union-attr]
         if isinstance(model_out, (pd.DataFrame, pd.Series)):
             model_out = model_out.values
         elif safe_isinstance(model_out, "tensorflow.python.framework.ops.SymbolicTensor"):
@@ -674,7 +675,7 @@ class KernelExplainer(Explainer):
             data = pd.concat([index, data], axis=1).set_index(self.data.index_name)  # type: ignore[union-attr]
             if self.keep_index_ordered:
                 data = data.sort_index()
-        modelOut = self.model.f(data)
+        modelOut = self.model.f(data)  # type: ignore[union-attr]
         if isinstance(modelOut, (pd.DataFrame, pd.Series)):
             modelOut = modelOut.values
         elif safe_isinstance(modelOut, "tensorflow.python.framework.ops.SymbolicTensor"):
