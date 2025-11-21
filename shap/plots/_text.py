@@ -548,7 +548,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
     ### Positive value marks ###
 
-    red = tuple(colors.red_rgb * 255)
+    red = tuple((colors.red_rgb * 255).tolist())
     light_red = (255, 195, 213)
 
     # draw base red bar
@@ -646,7 +646,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
     ### Negative value marks ###
 
-    blue = tuple(colors.blue_rgb * 255)
+    blue = tuple((colors.blue_rgb * 255).tolist())
     light_blue = (208, 230, 250)
 
     # draw base blue bar
