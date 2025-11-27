@@ -315,13 +315,13 @@ class Explanation(metaclass=MetaExplanation):
         return out
 
     # =================== Helper Methods for __getitem__ ===================
-    
+
     def _ensure_item_is_tuple(self, item):
         """Convert item to tuple if it isn't already."""
         if not isinstance(item, tuple):
             return (item,)
         return item
-    
+
     def _convert_numpy_index(self, index):
         """Convert numpy integer types to Python int for slicing compatibility."""
         if isinstance(index, (np.int64, np.int32)):
@@ -329,43 +329,43 @@ class Explanation(metaclass=MetaExplanation):
         elif isinstance(index, np.ndarray):
             return [int(v) for v in index]
         return index
-    
+
     def _get_output_names_dims(self):
         """Get the dimensions of output_names from slicer objects or aliases."""
         output_names_dims = []
         has_output_names_in_objects = "output_names" in self._s._objects
         has_output_names_in_aliases = "output_names" in self._s._aliases
-        
+
         if has_output_names_in_objects:
             output_names_dims = self._s._objects["output_names"].dim
         elif has_output_names_in_aliases:
             output_names_dims = self._s._aliases["output_names"].dim
-        
+
         return output_names_dims
-    
+
     def _get_feature_names_dims(self):
         """Get the dimensions of feature_names from slicer objects."""
         feature_names_dims = []
         has_feature_names_in_objects = "feature_names" in self._s._objects
-        
+
         if has_feature_names_in_objects:
             feature_names_dims = self._s._objects["feature_names"].dim
-        
+
         return feature_names_dims
-    
+
     def _handle_2d_output_names_indexing(self, target_name):
         """Handle string indexing for 2D output_names arrays."""
         new_values = []
         new_base_values = []
         new_data = []
-        
+
         for i, v in enumerate(self.values):
             for j, s in enumerate(self.output_names[i]):
                 if s == target_name:
                     new_values.append(np.array(v[:, j]))
                     new_data.append(np.array(self.data[i]))
                     new_base_values.append(self.base_values[i][j])
-        
+
         new_self = Explanation(
             np.array(new_values),
             base_values=np.array(new_base_values),
@@ -384,18 +384,18 @@ class Explanation(metaclass=MetaExplanation):
         )
         new_self.op_history = copy.copy(self.op_history)
         return new_self
-    
+
     def _handle_2d_feature_names_indexing(self, target_name):
         """Handle string indexing for 2D feature_names arrays."""
         new_values = []
         new_data = []
-        
+
         for i, val_i in enumerate(self.values):
             for s, v, d in zip(self.feature_names[i], val_i, self.data[i]):
                 if s == target_name:
                     new_values.append(v)
                     new_data.append(d)
-        
+
         new_self = copy.deepcopy(self)
         new_self.values = new_values
         new_self.data = new_data
@@ -429,9 +429,9 @@ class Explanation(metaclass=MetaExplanation):
             elif isinstance(t, str):
                 # work around for 2D output_names since they are not yet slicer supported
                 output_names_dims = self._get_output_names_dims()
-                
+
                 is_valid_position = pos != 0 and pos in output_names_dims
-                
+
                 if is_valid_position:
                     if len(output_names_dims) == 1:
                         t = np.argwhere(np.array(self.output_names) == t)[0][0]
@@ -440,13 +440,9 @@ class Explanation(metaclass=MetaExplanation):
 
                 # work around for 2D feature_names since they are not yet slicer supported
                 feature_names_dims = self._get_feature_names_dims()
-                
-                is_2d_feature_name = (
-                    pos != 0 and 
-                    pos in feature_names_dims and 
-                    len(feature_names_dims) == 2
-                )
-                
+
+                is_2d_feature_name = pos != 0 and pos in feature_names_dims and len(feature_names_dims) == 2
+
                 if is_2d_feature_name:
                     new_self = self._handle_2d_feature_names_indexing(t)
 
