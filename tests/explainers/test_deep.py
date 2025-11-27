@@ -293,14 +293,13 @@ def test_tf_keras_lstm_no_embedding():
     # Check that SHAP values sum to the difference
     np.testing.assert_allclose(sums, diff, atol=0.05), "Sum of SHAP values does not match difference!"
 
+
 def test_lstm_manual_vs_tf():
     tf = pytest.importorskip("tensorflow")
 
-    def build_tf_lstm_and_set_weights(units, in_dim,
-                                    W_ii, b_ii, W_hi, b_hi,
-                                    W_if, b_if, W_hf, b_hf,
-                                    W_ig, b_ig, W_hg, b_hg,
-                                    W_io, b_io, W_ho, b_ho):
+    def build_tf_lstm_and_set_weights(
+        units, in_dim, W_ii, b_ii, W_hi, b_hi, W_if, b_if, W_hf, b_hf, W_ig, b_ig, W_hg, b_hg, W_io, b_io, W_ho, b_ho
+    ):
         """
         Build a tf.keras.layers.LSTM(units) and set kernel/recurrent_kernel/bias so that:
         gate pre-activations equal those from the manual equations.
@@ -311,44 +310,45 @@ def test_lstm_manual_vs_tf():
         bias partitions: [i, f, c, o]
         """
         lstm = tf.keras.layers.LSTM(units, return_sequences=True, return_state=True)
-        
+
         # Build the layer to initialize weights
         lstm.build((None, None, in_dim))
 
         # kernel shape: (in_dim, 4*units)
-        kernel = np.zeros((in_dim, 4*units), dtype=np.float32)
+        kernel = np.zeros((in_dim, 4 * units), dtype=np.float32)
         # recurrent_kernel shape: (units, 4*units)
-        recurrent_kernel = np.zeros((units, 4*units), dtype=np.float32)
+        recurrent_kernel = np.zeros((units, 4 * units), dtype=np.float32)
         # bias shape: (4*units,)
-        bias = np.zeros((4*units,), dtype=np.float32)
+        bias = np.zeros((4 * units,), dtype=np.float32)
 
         # Map manual weights to TF partitions
         # NOTE: Manual has separate biases (b_ii + b_hi), TF LSTM has single bias per gate
         # So we combine: b_gate_tf = b_ii + b_hi
         # i gate
-        kernel[:, 0*units:1*units] = W_ii.T  # (in_dim, units)
-        recurrent_kernel[:, 0*units:1*units] = W_hi.T
-        bias[0*units:1*units] = b_ii + b_hi  # Combine both biases
+        kernel[:, 0 * units : 1 * units] = W_ii.T  # (in_dim, units)
+        recurrent_kernel[:, 0 * units : 1 * units] = W_hi.T
+        bias[0 * units : 1 * units] = b_ii + b_hi  # Combine both biases
         # f gate
-        kernel[:, 1*units:2*units] = W_if.T
-        recurrent_kernel[:, 1*units:2*units] = W_hf.T
-        bias[1*units:2*units] = b_if + b_hf  # Combine both biases
+        kernel[:, 1 * units : 2 * units] = W_if.T
+        recurrent_kernel[:, 1 * units : 2 * units] = W_hf.T
+        bias[1 * units : 2 * units] = b_if + b_hf  # Combine both biases
         # c (cell candidate)
-        kernel[:, 2*units:3*units] = W_ig.T
-        recurrent_kernel[:, 2*units:3*units] = W_hg.T
-        bias[2*units:3*units] = b_ig + b_hg  # Combine both biases
+        kernel[:, 2 * units : 3 * units] = W_ig.T
+        recurrent_kernel[:, 2 * units : 3 * units] = W_hg.T
+        bias[2 * units : 3 * units] = b_ig + b_hg  # Combine both biases
         # o gate
-        kernel[:, 3*units:4*units] = W_io.T
-        recurrent_kernel[:, 3*units:4*units] = W_ho.T
-        bias[3*units:4*units] = b_io + b_ho  # Combine both biases
+        kernel[:, 3 * units : 4 * units] = W_io.T
+        recurrent_kernel[:, 3 * units : 4 * units] = W_ho.T
+        bias[3 * units : 4 * units] = b_io + b_ho  # Combine both biases
 
         # Set weights
         lstm.set_weights([kernel, recurrent_kernel, bias])
         return lstm
+
     class LSTMModel(tf.keras.Model):
         def __init__(self):
             super().__init__()
-            self.sigmoid = tf.keras.layers.Activation('sigmoid')
+            self.sigmoid = tf.keras.layers.Activation("sigmoid")
             # input gate layers
             self.fc_ii = tf.keras.layers.Dense(2, use_bias=True, activation=None)
             self.fc_hi = tf.keras.layers.Dense(2, use_bias=True, activation=None)
@@ -399,36 +399,28 @@ def test_lstm_manual_vs_tf():
 
     _ = model((x, h, c))
     # input gate weights
-    weights_ii = np.array([[1., 1., 0.],
-                        [0.0, 0.0, 0.0]], dtype=np.float32)
+    weights_ii = np.array([[1.0, 1.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32)
     bias_ii = np.array([0.2, 0.0], dtype=np.float32)
-    weights_hi = np.array([[2., 1.],
-                        [0.1, 1.0]], dtype=np.float32)
+    weights_hi = np.array([[2.0, 1.0], [0.1, 1.0]], dtype=np.float32)
     bias_hi = np.array([0.32, 0.0], dtype=np.float32)
 
     # forget gate weights
-    weights_if = np.array([[1., 1., 0.],
-                        [0.0, 0.0, 0.0]], dtype=np.float32)
+    weights_if = np.array([[1.0, 1.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32)
     bias_if = np.array([0.2, 0.0], dtype=np.float32)
-    weights_hf = np.array([[2., 1.],
-                        [0.1, 1.0]], dtype=np.float32)
+    weights_hf = np.array([[2.0, 1.0], [0.1, 1.0]], dtype=np.float32)
     bias_hf = np.array([0.32, 0.0], dtype=np.float32)
 
     # cell state update weights
-    weights_ig = np.array([[1., 1., 0.],
-                        [0.0, 0.0, 0.0]], dtype=np.float32)
+    weights_ig = np.array([[1.0, 1.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32)
     bias_ig = np.array([0.2, 0.0], dtype=np.float32)
-    weights_hg = np.array([[2., 1.],
-                        [0.1, 1.3]], dtype=np.float32)
+    weights_hg = np.array([[2.0, 1.0], [0.1, 1.3]], dtype=np.float32)
     bias_hg = np.array([0.32, 0.0], dtype=np.float32)
     # output gate weights
-    weights_io = np.array([[1., 1., 0.],
-                            [0.0, 0.0, 0.1]], dtype=np.float32)
+    weights_io = np.array([[1.0, 1.0, 0.0], [0.0, 0.0, 0.1]], dtype=np.float32)
     bias_io = np.array([0.2, 0.0], dtype=np.float32)
-    weights_ho = np.array([[2., 1.],
-                        [0.2, 0.2]], dtype=np.float32)
+    weights_ho = np.array([[2.0, 1.0], [0.2, 0.2]], dtype=np.float32)
     bias_ho = np.array([0.32, 0.0], dtype=np.float32)
-                        
+
     # Input Gate
     model.fc_ii.set_weights([weights_ii.T, bias_ii.T])  # No .T (no transpose)
     model.fc_hi.set_weights([weights_hi.T, bias_hi.T])  # No .T (no transpose)
@@ -439,7 +431,7 @@ def test_lstm_manual_vs_tf():
 
     # Cell State Update
     model.fc_ig.set_weights([weights_ig.T, bias_ig.T])  # No .T (no transpose)
-    model.fc_hg.set_weights([weights_hg.T, bias_hg.T])  #No .T (no transpose)
+    model.fc_hg.set_weights([weights_hg.T, bias_hg.T])  # No .T (no transpose)
 
     # Output Gate
     model.fc_io.set_weights([weights_io.T, bias_io.T])  # No .T (no transpose)
@@ -448,36 +440,93 @@ def test_lstm_manual_vs_tf():
     lstm = build_tf_lstm_and_set_weights(
         units=2,
         in_dim=3,
-        W_ii=weights_ii, b_ii=bias_ii, W_hi=weights_hi, b_hi=bias_hi,
-        W_if=weights_if, b_if=bias_if, W_hf=weights_hf, b_hf=bias_hf,
-        W_ig=weights_ig, b_ig=bias_ig, W_hg=weights_hg, b_hg=bias_hg,
-        W_io=weights_io, b_io=bias_io, W_ho=weights_ho, b_ho=bias_ho
+        W_ii=weights_ii,
+        b_ii=bias_ii,
+        W_hi=weights_hi,
+        b_hi=bias_hi,
+        W_if=weights_if,
+        b_if=bias_if,
+        W_hf=weights_hf,
+        b_hf=bias_hf,
+        W_ig=weights_ig,
+        b_ig=bias_ig,
+        W_hg=weights_hg,
+        b_hg=bias_hg,
+        W_io=weights_io,
+        b_io=bias_io,
+        W_ho=weights_ho,
+        b_ho=bias_ho,
     )
 
     # Forward pass
     output = model((x, h, c))
     output_base = model((x_base, h_base, c_base))
 
-    output_lstm, h_out, c_out = lstm(tf.convert_to_tensor(x.reshape(1,1,3)), initial_state=[tf.convert_to_tensor(h.reshape(1,2)), tf.convert_to_tensor(c.reshape(1,2))])
-    output_lstm_base, h_out_base, c_out_base = lstm(tf.convert_to_tensor(x_base.reshape(1,1,3)), initial_state=[tf.convert_to_tensor(h_base.reshape(1,2)), tf.convert_to_tensor(c_base.reshape(1,2))])  
+    output_lstm, h_out, c_out = lstm(
+        tf.convert_to_tensor(x.reshape(1, 1, 3)),
+        initial_state=[tf.convert_to_tensor(h.reshape(1, 2)), tf.convert_to_tensor(c.reshape(1, 2))],
+    )
+    output_lstm_base, h_out_base, c_out_base = lstm(
+        tf.convert_to_tensor(x_base.reshape(1, 1, 3)),
+        initial_state=[tf.convert_to_tensor(h_base.reshape(1, 2)), tf.convert_to_tensor(c_base.reshape(1, 2))],
+    )
     # Assert outputs of our manual class and tf.keras.layers.LSTM match
     assert np.allclose(output.numpy(), output_lstm.numpy(), atol=1e-5)
     assert np.allclose(output_base.numpy(), output_lstm_base.numpy(), atol=1e-5)
 
     # zii in vector notation
-    Z_ii = (weights_ii * (x - x_base)) / (tf.matmul(weights_ii, x.T) + tf.matmul(weights_hi, h.T) - tf.matmul(weights_hi, h_base.T) - tf.matmul(weights_ii, x_base.T))
-    Z_hi = (weights_hi * (h - h_base)) / (tf.matmul(weights_ii, x.T) + tf.matmul(weights_hi, h.T) - tf.matmul(weights_hi, h_base.T) - tf.matmul(weights_ii, x_base.T))
+    Z_ii = (weights_ii * (x - x_base)) / (
+        tf.matmul(weights_ii, x.T)
+        + tf.matmul(weights_hi, h.T)
+        - tf.matmul(weights_hi, h_base.T)
+        - tf.matmul(weights_ii, x_base.T)
+    )
+    Z_hi = (weights_hi * (h - h_base)) / (
+        tf.matmul(weights_ii, x.T)
+        + tf.matmul(weights_hi, h.T)
+        - tf.matmul(weights_hi, h_base.T)
+        - tf.matmul(weights_ii, x_base.T)
+    )
 
-    Z_if = (weights_if * (x - x_base)) / (tf.matmul(weights_if, x.T) + tf.matmul(weights_hf, h.T) - tf.matmul(weights_hf, h_base.T) - tf.matmul(weights_if, x_base.T))
-    Z_hf = (weights_hf * (h - h_base)) / (tf.matmul(weights_if, x.T) + tf.matmul(weights_hf, h.T) - tf.matmul(weights_hf, h_base.T) - tf.matmul(weights_if, x_base.T))
+    Z_if = (weights_if * (x - x_base)) / (
+        tf.matmul(weights_if, x.T)
+        + tf.matmul(weights_hf, h.T)
+        - tf.matmul(weights_hf, h_base.T)
+        - tf.matmul(weights_if, x_base.T)
+    )
+    Z_hf = (weights_hf * (h - h_base)) / (
+        tf.matmul(weights_if, x.T)
+        + tf.matmul(weights_hf, h.T)
+        - tf.matmul(weights_hf, h_base.T)
+        - tf.matmul(weights_if, x_base.T)
+    )
 
-    Z_ig = (weights_ig * (x - x_base)) / (tf.matmul(weights_ig, x.T) + tf.matmul(weights_hg, h.T) - tf.matmul(weights_hg, h_base.T) - tf.matmul(weights_ig, x_base.T))
-    Z_hg = (weights_hg * (h - h_base)) / (tf.matmul(weights_ig, x.T) + tf.matmul(weights_hg, h.T) - tf.matmul(weights_hg, h_base.T) - tf.matmul(weights_ig, x_base.T))
+    Z_ig = (weights_ig * (x - x_base)) / (
+        tf.matmul(weights_ig, x.T)
+        + tf.matmul(weights_hg, h.T)
+        - tf.matmul(weights_hg, h_base.T)
+        - tf.matmul(weights_ig, x_base.T)
+    )
+    Z_hg = (weights_hg * (h - h_base)) / (
+        tf.matmul(weights_ig, x.T)
+        + tf.matmul(weights_hg, h.T)
+        - tf.matmul(weights_hg, h_base.T)
+        - tf.matmul(weights_ig, x_base.T)
+    )
 
     # Output gate Z-matrices
-    Z_io = (weights_io * (x - x_base)) / (tf.matmul(weights_io, x.T) + tf.matmul(weights_ho, h.T) - tf.matmul(weights_ho, h_base.T) - tf.matmul(weights_io, x_base.T))
-    Z_ho = (weights_ho * (h - h_base)) / (tf.matmul(weights_io, x.T) + tf.matmul(weights_ho, h.T) - tf.matmul(weights_ho, h_base.T) - tf.matmul(weights_io, x_base.T))
-
+    Z_io = (weights_io * (x - x_base)) / (
+        tf.matmul(weights_io, x.T)
+        + tf.matmul(weights_ho, h.T)
+        - tf.matmul(weights_ho, h_base.T)
+        - tf.matmul(weights_io, x_base.T)
+    )
+    Z_ho = (weights_ho * (h - h_base)) / (
+        tf.matmul(weights_io, x.T)
+        + tf.matmul(weights_ho, h.T)
+        - tf.matmul(weights_ho, h_base.T)
+        - tf.matmul(weights_io, x_base.T)
+    )
 
     def calculate_ft_ct_tilde(x, h):
         it_inner = tf.matmul(x, weights_ii.T) + bias_ii + tf.matmul(h, weights_hi.T) + bias_hi
@@ -521,7 +570,9 @@ def test_lstm_manual_vs_tf():
     total_relevance = R_prod1_it + R_prod1_ct_tilde + R_prod2_ft + R_prod2_c
 
     # Verify that total relevance for ct equals ct change
-    assert np.allclose(total_relevance.numpy(), (ct_manual - ct_base_manual).numpy()), "Shapley decomposition for ct failed"
+    assert np.allclose(total_relevance.numpy(), (ct_manual - ct_base_manual).numpy()), (
+        "Shapley decomposition for ct failed"
+    )
 
     # Now propagate these relevances back to inputs using the Z matrices
     # R_prod1_it goes through the input gate path (using Z_ii and Z_hi)
@@ -574,8 +625,16 @@ def test_lstm_manual_vs_tf():
     r_ct_from_c_to_ht = R_prod2_c * m * ot_avg
 
     # Now propagate these ht-level per-gate relevances to inputs
-    r_x_via_ct_to_ht = tf.matmul(r_ct_from_it_to_ht, Z_ii) + tf.matmul(r_ct_from_ct_tilde_to_ht, Z_ig) + tf.matmul(r_ct_from_ft_to_ht, Z_if)
-    r_h_via_ct_to_ht = tf.matmul(r_ct_from_it_to_ht, Z_hi) + tf.matmul(r_ct_from_ct_tilde_to_ht, Z_hg) + tf.matmul(r_ct_from_ft_to_ht, Z_hf)
+    r_x_via_ct_to_ht = (
+        tf.matmul(r_ct_from_it_to_ht, Z_ii)
+        + tf.matmul(r_ct_from_ct_tilde_to_ht, Z_ig)
+        + tf.matmul(r_ct_from_ft_to_ht, Z_if)
+    )
+    r_h_via_ct_to_ht = (
+        tf.matmul(r_ct_from_it_to_ht, Z_hi)
+        + tf.matmul(r_ct_from_ct_tilde_to_ht, Z_hg)
+        + tf.matmul(r_ct_from_ft_to_ht, Z_hf)
+    )
     r_c_via_ct_to_ht = r_ct_from_c_to_ht
 
     # Total SHAP values to ht
@@ -591,9 +650,11 @@ def test_lstm_manual_vs_tf():
     assert np.allclose(r_h.numpy().squeeze(), shap_values[1].squeeze()), "r_h doesn't match shap_values[1]"
     assert np.allclose(r_c.numpy().squeeze(), shap_values[2].squeeze()), "r_c doesn't match shap_values[2]"
 
+
 ###############################
 # Pytorch related tests #
 ###############################
+
 
 @pytest.mark.skipif(
     platform.system() == "Darwin" and os.getenv("GITHUB_ACTIONS") == "true",
