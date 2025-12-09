@@ -1,5 +1,4 @@
 import warnings
-from collections.abc import Callable
 from typing import Any, Literal
 
 import numpy as np
@@ -14,6 +13,7 @@ from ..utils._exceptions import (
     InvalidFeaturePerturbationError,
     InvalidModelError,
 )
+from ..utils._types import _LinkFunction, _Model
 from ._explainer import Explainer
 
 
@@ -104,9 +104,9 @@ class LinearExplainer(Explainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         masker: Any,
-        link: Callable[[Any], Any] = links.identity,
+        link: _LinkFunction = links.identity,
         nsamples: int = 1000,
         feature_perturbation: None | Literal["interventional", "correlation_dependent"] = None,
         **kwargs: Any,
@@ -314,7 +314,7 @@ class LinearExplainer(Explainer):
         return mean_transform, x_transform
 
     @staticmethod
-    def _parse_model(model: Any) -> tuple[Any, Any]:
+    def _parse_model(model: _Model) -> tuple[Any, Any]:
         """Attempt to pull out the coefficients and intercept from the given model object."""
         # raw coefficients
         if isinstance(model, tuple) and len(model) == 2:
@@ -339,7 +339,7 @@ class LinearExplainer(Explainer):
         return coef, intercept
 
     @staticmethod
-    def supports_model_with_masker(model: Any, masker: Any) -> bool:
+    def supports_model_with_masker(model: _Model, masker: Any) -> bool:
         """Determines if we can parse the given model."""
         if not isinstance(masker, (maskers.Independent, maskers.Partition, maskers.Impute)):
             return False

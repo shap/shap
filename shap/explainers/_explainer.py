@@ -13,6 +13,7 @@ from .._explanation import Explanation
 from .._serializable import Deserializer, Serializable, Serializer
 from ..utils import safe_isinstance, show_progress
 from ..utils._exceptions import InvalidAlgorithmError
+from ..utils._types import _LinkFunction, _Model
 from ..utils.transformers import is_transformers_lm
 
 if TYPE_CHECKING:
@@ -27,18 +28,18 @@ class Explainer(Serializable):
     the particular estimation algorithm that was chosen.
     """
 
-    model: Any
+    model: _Model
     masker: Any
     output_names: list[str] | None
     feature_names: list[str] | list[list[str]] | None
-    link: Callable[..., Any]
+    link: _LinkFunction
     linearize_link: bool
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         masker: Any = None,
-        link: Callable[..., Any] = links.identity,
+        link: _LinkFunction = links.identity,
         algorithm: Literal["auto", "permutation", "partition", "tree", "linear", "deep", "exact", "additive"] = "auto",
         output_names: list[str] | None = None,
         feature_names: list[str] | list[list[str]] | None = None,
@@ -134,10 +135,10 @@ class Explainer(Serializable):
 
         # Check for transformer pipeline objects and wrap them
         if safe_isinstance(self.model, "transformers.pipelines.Pipeline"):
-            if is_transformers_lm(self.model.model):
+            if is_transformers_lm(self.model.model):  # type: ignore[union-attr]
                 return self.__init__(  # type: ignore[misc]
-                    self.model.model,
-                    self.model.tokenizer if self.masker is None else self.masker,
+                    self.model.model,  # type: ignore[union-attr]
+                    self.model.tokenizer if self.masker is None else self.masker,  # type: ignore[union-attr]
                     link=link,
                     algorithm=algorithm,
                     output_names=output_names,
@@ -160,11 +161,11 @@ class Explainer(Serializable):
         # wrap self.masker and self.model for output text explanation algorithm
         if is_transformers_lm(self.model):
             self.model = models.TeacherForcing(self.model, self.masker.tokenizer)
-            self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)
+            self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)  # type: ignore[union-attr]
         elif safe_isinstance(self.model, "shap.models.TeacherForcing") and safe_isinstance(
             self.masker, ["shap.maskers.Text", "shap.maskers.Image"]
         ):
-            self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)
+            self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)  # type: ignore[union-attr]
         elif safe_isinstance(self.model, "shap.models.TopKLM") and safe_isinstance(self.masker, "shap.maskers.Text"):
             self.masker = maskers.FixedComposite(self.masker)
 
@@ -513,7 +514,7 @@ class Explainer(Serializable):
         return {}
 
     @staticmethod
-    def supports_model_with_masker(model: Any, masker: Any) -> bool:
+    def supports_model_with_masker(model: _Model, masker: Any) -> bool:
         """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.

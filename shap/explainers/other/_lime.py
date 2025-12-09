@@ -47,7 +47,7 @@ class LimeTabular(Explainer):
             if mode == "classification":
 
                 def pred(X):  # assume that 1d outputs are probabilities
-                    preds = self.model(X).reshape(-1, 1)
+                    preds = self.model(X).reshape(-1, 1)  # type: ignore[operator]
                     p0 = 1 - preds
                     return np.hstack((p0, preds))
 

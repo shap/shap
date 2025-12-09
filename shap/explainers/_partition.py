@@ -11,6 +11,7 @@ from tqdm.auto import tqdm
 from .. import Explanation, links
 from ..models import Model
 from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
+from ..utils._types import _LinkFunction, _Model
 from ._explainer import Explainer
 
 
@@ -48,11 +49,11 @@ class PartitionExplainer(Explainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         masker: Any,
         *,
         output_names: list[str] | None = None,
-        link: Callable[..., Any] = links.identity,
+        link: _LinkFunction = links.identity,
         linearize_link: bool = True,
         feature_names: list[str] | None = None,
         **call_args: Any,
@@ -127,9 +128,9 @@ class PartitionExplainer(Explainer):
 
         # handle higher dimensional tensor inputs
         if self.input_shape is not None and len(self.input_shape) > 1:
-            self._reshaped_model = lambda x: self.model(x.reshape(x.shape[0], *self.input_shape))
+            self._reshaped_model = lambda x: self.model(x.reshape(x.shape[0], *self.input_shape))  # type: ignore[operator]
         else:
-            self._reshaped_model = self.model
+            self._reshaped_model = self.model  # type: ignore[assignment]
 
         # if we don't have a dynamic clustering algorithm then can precowe mpute
         # a lot of information

@@ -4,6 +4,7 @@ import numpy as np
 import numpy.typing as npt
 
 from ..utils import MaskedModel, safe_isinstance
+from ..utils._types import _LinkFunction, _Model
 from ._explainer import Explainer
 
 
@@ -21,9 +22,9 @@ class AdditiveExplainer(Explainer):
 
     def __init__(
         self,
-        model: Any,
+        model: _Model,
         masker: Any,
-        link: Any = None,
+        link: _LinkFunction | None = None,
         feature_names: list[str] | None = None,
         linearize_link: bool = True,
     ) -> None:
@@ -47,10 +48,10 @@ class AdditiveExplainer(Explainer):
         super().__init__(model, masker, feature_names=feature_names, linearize_link=linearize_link)
 
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
-            self.model = model.decision_function
+            self.model = model.decision_function  # type: ignore[union-attr]
 
             if self.masker is None:
-                self._expected_value = model.intercept_
+                self._expected_value = model.intercept_  # type: ignore[union-attr]
                 # num_features = len(model.additive_terms_)
 
                 # fm = MaskedModel(self.model, self.masker, self.link, np.zeros(num_features))
@@ -107,13 +108,13 @@ class AdditiveExplainer(Explainer):
         )
 
     @staticmethod
-    def supports_model_with_masker(model: Any, masker: Any) -> bool:
+    def supports_model_with_masker(model: _Model, masker: Any) -> bool:
         """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
         """
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
-            if model.interactions != 0:
+            if model.interactions != 0:  # type: ignore[union-attr]
                 raise NotImplementedError("Need to add support for interaction effects!")
             return True
 
@@ -135,7 +136,7 @@ class AdditiveExplainer(Explainer):
         for i in range(len(x)):
             inputs[i, i] = x[i]
 
-        phi = self.model(inputs) - self._zero_offset - self._input_offsets
+        phi = self.model(inputs) - self._zero_offset - self._input_offsets  # type: ignore[operator]
 
         return {
             "values": phi,
