@@ -41,7 +41,7 @@ executing==2.1.0
     # via stack-data
 fastjsonschema==2.20.0
     # via nbformat
-fonttools==4.54.1
+fonttools==4.61.0
     # via matplotlib
 idna==3.10
     # via requests
