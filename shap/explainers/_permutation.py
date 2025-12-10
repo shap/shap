@@ -1,9 +1,16 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Literal
+
 import numpy as np
 
 from .. import links
 from ..models import Model
 from ..utils import MaskedModel, partition_tree_shuffle
 from ._explainer import Explainer
+
+if TYPE_CHECKING:
+    from .._explanation import Explanation
 
 
 class PermutationExplainer(Explainer):
@@ -20,8 +27,15 @@ class PermutationExplainer(Explainer):
     """
 
     def __init__(
-        self, model, masker, link=links.identity, feature_names=None, linearize_link=True, seed=None, **call_args
-    ):
+        self,
+        model: Any,
+        masker: Any,
+        link: Any = links.identity,
+        feature_names: list[str] | None = None,
+        linearize_link: bool = True,
+        seed: int | None = None,
+        **call_args: Any,
+    ) -> None:
         """Build an explainers.Permutation object for the given model using the given masker object.
 
         Parameters
@@ -59,17 +73,18 @@ class PermutationExplainer(Explainer):
         # has a call function with those new default arguments
         if len(call_args) > 0:
             # this signature should match the __call__ signature of the class defined below
-            class PermutationExplainer(self.__class__):
+            class PermutationExplainer(self.__class__):  # type: ignore[name-defined]
                 def __call__(
                     self,
-                    *args,
-                    max_evals=500,
-                    main_effects=False,
-                    error_bounds=False,
-                    batch_size="auto",
-                    outputs=None,
-                    silent=False,
-                ):
+                    *args: Any,
+                    max_evals: int | Literal["auto"] = 500,
+                    main_effects: bool = False,
+                    error_bounds: bool = False,
+                    batch_size: int | Literal["auto"] = "auto",
+                    outputs: Any = None,
+                    silent: bool = False,
+                    **kwargs: Any,
+                ) -> Explanation | list[Explanation]:
                     return super().__call__(
                         *args,
                         max_evals=max_evals,
@@ -78,24 +93,26 @@ class PermutationExplainer(Explainer):
                         batch_size=batch_size,
                         outputs=outputs,
                         silent=silent,
+                        **kwargs,
                     )
 
             PermutationExplainer.__call__.__doc__ = self.__class__.__call__.__doc__
             self.__class__ = PermutationExplainer
             for k, v in call_args.items():
-                self.__call__.__kwdefaults__[k] = v
+                self.__call__.__kwdefaults__[k] = v  # type: ignore[index]
 
     # note that changes to this function signature should be copied to the default call argument wrapper above
     def __call__(
         self,
-        *args,
-        max_evals=500,
-        main_effects=False,
-        error_bounds=False,
-        batch_size="auto",
-        outputs=None,
-        silent=False,
-    ):
+        *args: Any,
+        max_evals: int | Literal["auto"] = 500,
+        main_effects: bool = False,
+        error_bounds: bool = False,
+        batch_size: int | Literal["auto"] = "auto",
+        outputs: Any = None,
+        silent: bool = False,
+        **kwargs: Any,
+    ) -> Explanation | list[Explanation]:
         """Explain the output of the model on the given arguments."""
         return super().__call__(
             *args,
@@ -105,9 +122,20 @@ class PermutationExplainer(Explainer):
             batch_size=batch_size,
             outputs=outputs,
             silent=silent,
+            **kwargs,
         )
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
+    def explain_row(  # type: ignore[override]
+        self,
+        *row_args: Any,
+        max_evals: int | Literal["auto"],
+        main_effects: bool,
+        error_bounds: bool,
+        batch_size: int | Literal["auto"],
+        outputs: Any,
+        silent: bool,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
@@ -178,13 +206,13 @@ class PermutationExplainer(Explainer):
                 for ind in inds:  # forward
                     row_values[ind] += outputs[i + 1] - outputs[i]
                     if error_bounds:
-                        row_values_history[history_pos][ind] = outputs[i + 1] - outputs[i]
+                        row_values_history[history_pos][ind] = outputs[i + 1] - outputs[i]  # type: ignore[index]
                     i += 1
                 history_pos += 1
                 for ind in inds:  # backward
                     row_values[ind] += outputs[i] - outputs[i + 1]
                     if error_bounds:
-                        row_values_history[history_pos][ind] = outputs[i] - outputs[i + 1]
+                        row_values_history[history_pos][ind] = outputs[i] - outputs[i + 1]  # type: ignore[index]
                     i += 1
                 history_pos += 1
 
@@ -213,7 +241,7 @@ class PermutationExplainer(Explainer):
                 )
 
         return {
-            "values": row_values / (2 * npermutations),
+            "values": row_values / (2 * npermutations),  # type: ignore[operator]
             "expected_values": expected_value,
             "mask_shapes": fm.mask_shapes,
             "main_effects": main_effect_values,
@@ -222,7 +250,15 @@ class PermutationExplainer(Explainer):
             "output_names": self.model.output_names if hasattr(self.model, "output_names") else None,
         }
 
-    def shap_values(self, X, npermutations=10, main_effects=False, error_bounds=False, batch_evals=True, silent=False):
+    def shap_values(
+        self,
+        X: Any,
+        npermutations: int = 10,
+        main_effects: bool = False,
+        error_bounds: bool = False,
+        batch_evals: bool = True,
+        silent: bool = False,
+    ) -> Any:
         """Legacy interface to estimate the SHAP values for a set of samples.
 
         Parameters
@@ -248,7 +284,7 @@ class PermutationExplainer(Explainer):
 
         """
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
-        return explanation.values
+        return explanation.values  # type: ignore[union-attr]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "shap.explainers.PermutationExplainer()"

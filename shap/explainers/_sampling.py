@@ -1,6 +1,8 @@
 import logging
+from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from .._explanation import Explanation
@@ -40,7 +42,12 @@ class SamplingExplainer(KernelExplainer):
 
     """
 
-    def __init__(self, model, data, **kwargs):
+    def __init__(
+        self,
+        model: Any,
+        data: npt.NDArray[Any] | pd.DataFrame,
+        **kwargs: Any,
+    ) -> None:
         # silence warning about large datasets
         level = log.level
         log.setLevel(logging.ERROR)
@@ -51,7 +58,12 @@ class SamplingExplainer(KernelExplainer):
             emsg = f"SamplingExplainer only supports the identity link, not {self.link}"
             raise ValueError(emsg)
 
-    def __call__(self, X, y=None, nsamples=2000):
+    def __call__(  # type: ignore[override]
+        self,
+        X: npt.NDArray[Any] | pd.DataFrame,
+        y: Any = None,
+        nsamples: int = 2000,
+    ) -> Explanation:
         if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
             X = X.values
@@ -64,12 +76,16 @@ class SamplingExplainer(KernelExplainer):
         e = Explanation(v, self.expected_value, X, feature_names=feature_names)
         return e
 
-    def explain(self, incoming_instance, **kwargs):
+    def explain(
+        self,
+        incoming_instance: Any,
+        **kwargs: Any,
+    ) -> npt.NDArray[np.floating[Any]]:
         # convert incoming input to a standardized iml object
         instance = convert_to_instance(incoming_instance)
         match_instance_to_data(instance, self.data)
 
-        if len(self.data.groups) != self.P:
+        if len(self.data.groups) != self.P:  # type: ignore[arg-type]
             emsg = "SamplingExplainer does not support feature groups!"
             raise ExplainerError(emsg)
 
@@ -95,13 +111,13 @@ class SamplingExplainer(KernelExplainer):
 
         # if no features vary then there no feature has an effect
         if self.M == 0:
-            phi = np.zeros((len(self.data.groups), self.D))
-            phi_var = np.zeros((len(self.data.groups), self.D))
+            phi = np.zeros((len(self.data.groups), self.D))  # type: ignore[arg-type]
+            phi_var = np.zeros((len(self.data.groups), self.D))  # type: ignore[arg-type]
 
         # if only one feature varies then it has all the effect
         elif self.M == 1:
-            phi = np.zeros((len(self.data.groups), self.D))
-            phi_var = np.zeros((len(self.data.groups), self.D))
+            phi = np.zeros((len(self.data.groups), self.D))  # type: ignore[arg-type]
+            phi_var = np.zeros((len(self.data.groups), self.D))  # type: ignore[arg-type]
             diff = self.fx - self.fnull
             for d in range(self.D):
                 phi[self.varyingInds[0], d] = diff[d]
@@ -183,7 +199,14 @@ class SamplingExplainer(KernelExplainer):
 
         return phi
 
-    def sampling_estimate(self, j, f, x, X, nsamples=10):
+    def sampling_estimate(
+        self,
+        j: int,
+        f: Any,
+        x: npt.NDArray[Any],
+        X: npt.NDArray[Any],
+        nsamples: int = 10,
+    ) -> tuple[npt.NDArray[np.floating[Any]], npt.NDArray[np.floating[Any]]]:
         X_masked = self.X_masked[: nsamples * 2, :]
         inds = np.arange(X.shape[1])
 
