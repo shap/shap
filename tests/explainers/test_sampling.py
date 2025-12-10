@@ -13,6 +13,12 @@ def test_null_model_small():
     assert np.sum(np.abs(shap_values)) < 1e-8
 
 
+def test_null_model_small_pandas_dataframe():
+    explainer = shap.SamplingExplainer(lambda x: pd.DataFrame(np.zeros(x.shape[0])), np.ones((2, 4)), nsamples=100)
+    shap_values = explainer.shap_values(np.ones((1, 4)))
+    assert np.sum(np.abs(shap_values)) < 1e-8
+
+
 def test_null_model_small_pandas_series():
     explainer = shap.SamplingExplainer(lambda x: pd.Series(np.zeros(x.shape[0])), np.ones((2, 4)), nsamples=100)
     shap_values = explainer.shap_values(np.ones((1, 4)))
