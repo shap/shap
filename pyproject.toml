@@ -22,9 +22,10 @@ dependencies = [
   'tqdm>=4.27.0',
   'packaging>20.9',
   'slicer==0.0.8',
-  'numba==0.63.0b1; python_version >= "3.14"',  # todo: remove once numba officially releases support for 3.14
-  'llvmlite==0.46.0b1; python_version >= "3.14"',  # todo: remove once llvmlite officially releases support for 3.14
-  'numba>=0.54; python_version < "3.14"',
+  'numba',  # todo: remove once numba officially releases support for 3.14
+  'llvmlite',
+  # 'llvmlite==0.46.0b1; python_version >= "3.14"',  # todo: remove once llvmlite officially releases support for 3.14
+  # 'numba>=0.54; python_version < "3.14"',
   'cloudpickle',
   'typing-extensions',
 ]
@@ -94,7 +95,8 @@ test = [
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
   # See GH #3707, #3768, 3922
   "numpy>=2.0",
-  "scikit-learn<=1.6.1",  # needed since causalml doesn't support scikit-learn 1.7.0 and above as of 2025-06-11
+  "numba==0.63.0", # needed since causalml fails when importing causalml.datasets when built with numba==0.63.1, see https://github.com/uber/causalml/issues/859
+  # "scikit-learn<=1.6.1",  # needed since causalml doesn't support scikit-learn 1.7.0 and above as of 2025-06-11
   "causalml",
   "selenium",  # needed to test the javascript based plots
 ]
