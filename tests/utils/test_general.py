@@ -118,7 +118,7 @@ def test_format_value_string_input():
     # Test with non-empty string
     result = shap.utils._general.format_value("test_string", "%0.03f")
     assert result == "test_string"
-    
+
     # Test with string that starts with minus
     result = shap.utils._general.format_value("-123", "%0.03f")
     assert result == "\u2212" + "123"
