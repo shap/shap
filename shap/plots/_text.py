@@ -337,7 +337,7 @@ def text(
         color = colors.red_transparent_blue(scaled_value)
         color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
         color = tuple(map(float, color))
-        
+
         # display the labels for the most important words
         label_display = "none"
         wrapper_display = "inline"
