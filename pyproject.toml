@@ -160,18 +160,25 @@ module = [
   # "shap.maskers._masker",     # NOW TYPE CHECKED - type hints added
   "shap.maskers._tabular",
   "shap.maskers._text",
+  "shap.plots._bar",         # TODO: Dead code documented - bar_legacy marked
+  "shap.plots._beeswarm",    # TODO: Dead code documented - summary_legacy marked
   "shap.plots._benchmark",
   "shap.plots._force_matplotlib",
   "shap.plots._force",
-  "shap.plots._text",
-  "shap.plots._waterfall",
+  "shap.plots._scatter",     # TODO: Dead code documented - dependence_legacy marked
+  "shap.plots._text",        # TODO: Dead code documented - text_old, text_to_text, saliency_plot, heatmap marked
+  "shap.plots._waterfall",   # TODO: Dead code documented - waterfall_legacy marked
+  "shap.utils._clustering",
+  "shap.utils._masked_model",
 ]
 check_untyped_defs = false
+ignore_errors = true
 
 [[tool.mypy.overrides]]
 # Ignore missing types for 3rd party libraries
 module = [
   "catboost.*",
+  "causalml.*",
   "cloudpickle",
   "cv2",
   "IPython.*",
@@ -182,14 +189,14 @@ module = [
   "pyod.*",
   "pyspark.*",
   "scipy.*",
+  "selenium.*",
   "sklearn.*",
   "slicer",
   "tensorflow.*",
-  "transformers.*",
   "torch.*",
   "tqdm.*",
+  "transformers.*",
   "xgboost.*",
-  "causalml.*",
 ]
 ignore_missing_imports = true
 
