@@ -7,6 +7,15 @@ import numpy as np
 import shap
 
 
+def test_fixed_masker_init():
+    """Test Fixed masker initialization."""
+    masker = shap.maskers.Fixed()
+
+    assert masker.shape == (None, 0)
+    assert isinstance(masker.clustering, np.ndarray)
+    assert masker.clustering.shape == (0, 4)
+
+
 def test_fixed_masker_call():
     """Test that Fixed masker returns input unchanged regardless of mask."""
     masker = shap.maskers.Fixed()
@@ -34,6 +43,17 @@ def test_fixed_masker_mask_shapes():
     masker = shap.maskers.Fixed()
     assert masker.mask_shapes(42) == [(0,)]
     assert masker.mask_shapes(np.array([1, 2, 3])) == [(0,)]
+
+
+def test_fixed_masker_mask_shapes_with_various_inputs():
+    """Test mask_shapes with different inputs (input should not affect output)."""
+    masker = shap.maskers.Fixed()
+
+    # The input to mask_shapes doesn't matter for Fixed masker
+    assert masker.mask_shapes(np.array([1, 2, 3])) == [(0,)]
+    assert masker.mask_shapes([1, 2, 3]) == [(0,)]
+    assert masker.mask_shapes("test") == [(0,)]
+    assert masker.mask_shapes(42) == [(0,)]
 
 
 def test_fixed_masker_serialization():
