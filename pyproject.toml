@@ -218,6 +218,7 @@ local_scheme = "no-local-version"
 [tool.pytest.ini_options]
 addopts = "--mpl -m 'not xslow'"
 testpaths = ["tests"]
+mpl-default-style = "default"
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
   "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:.*pandas.*",
