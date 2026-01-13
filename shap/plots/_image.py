@@ -36,6 +36,7 @@ def image(
     cmap: str | Colormap | None = colors.red_transparent_blue,
     vmax: float | None = None,
     show: bool | None = True,
+    plot_channels: list[int] | None = None
 ):
     """Plots SHAP values for image inputs.
 
@@ -76,6 +77,9 @@ def image(
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 
+    plot_channels : None or [int]
+        List of image channel indices to plot separately. If None, will summ all bands for a single plot (default behavior).
+
     Examples
     --------
     See `image plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/image.html>`_.
@@ -110,6 +114,14 @@ def image(
         shap_values = [v.reshape(1, *v.shape) for v in shap_values]
         pixel_values = pixel_values.reshape(1, *pixel_values.shape)
 
+    # make sure that each requested channel exists (cannot plot '8' if only 3 channels)
+    nchannels = 1
+    if plot_channels is not None:
+        for c in plot_channels:
+            assert c in list(range(shap_values[0].shape[-1]))
+        nchannels = len(plot_channels)
+        
+
     # labels: (rows (images), columns (top_k classes) ) or (1, columns (top_k classes) )
     if labels is not None:
         if isinstance(labels, list):
@@ -130,10 +142,10 @@ def image(
 
     # plot our explanations
     x: np.ndarray = pixel_values
-    fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)])
+    fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + ((nchannels - 1) * 3))])
     if fig_size[0] > width:
         fig_size *= width / fig_size[0]
-    fig, axes = plt.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size, squeeze=False)
+    fig, axes = plt.subplots(nrows=x.shape[0] * nchannels, ncols=len(shap_values) + 1, figsize=fig_size, squeeze=False)
     for row in range(x.shape[0]):
         x_curr = x[row].copy()
 
@@ -164,10 +176,13 @@ def image(
             x_curr_gray = x_curr
             x_curr_disp = x_curr
 
-        axes[row, 0].imshow(x_curr_disp, cmap=plt.get_cmap("gray"))
+        axes[row*nchannels,0].imshow(x_curr_disp, cmap=plt.get_cmap('gray'))
+        axes[row*nchannels,0].axis('off')
+        for c in range(1, nchannels):
+            axes[row*nchannels+c, 0].set_visible(False)
         if true_labels:
-            axes[row, 0].set_title(true_labels[row], **label_kwargs)
-        axes[row, 0].axis("off")
+            axes[row*nchannels, 0].set_title(true_labels[row], **label_kwargs)
+
         if len(shap_values[0][row].shape) == 2:
             abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
         else:
@@ -179,13 +194,23 @@ def image(
             if labels is not None:
                 # Add labels if there are labels for each sample, or if not, only for the first row
                 if labels.shape[0] > 1 or row == 0:
-                    axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
-            sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
-            axes[row, i + 1].imshow(
-                x_curr_gray, cmap=plt.get_cmap("gray"), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1)
-            )
-            im = axes[row, i + 1].imshow(sv, cmap=cmap, vmin=-max_val, vmax=max_val)
-            axes[row, i + 1].axis("off")
+                    axes[row*nchannels, i + 1].set_title(labels[row, i], **label_kwargs)
+
+
+            if plot_channels is not None:
+                for c in range(nchannels):
+                    sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row][..., plot_channels[c]]
+                    axes[row*nchannels+c,i+1].imshow(x_curr_gray, cmap=plt.get_cmap('gray'), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1))
+                    im = axes[row*nchannels+c,i+1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
+                    axes[row*nchannels+c,i+1].axis('off')
+
+            else:
+                sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
+                axes[row, i + 1].imshow(
+                    x_curr_gray, cmap=plt.get_cmap("gray"), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1)
+                )
+                im = axes[row, i + 1].imshow(sv, cmap=cmap, vmin=-max_val, vmax=max_val)
+                axes[row, i + 1].axis("off")
     if hspace == "auto":
         fig.tight_layout()
     else:
