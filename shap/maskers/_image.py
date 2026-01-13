@@ -153,7 +153,9 @@ class Image(Masker):
         M = int((xmax - xmin) * (ymax - ymin) * (zmax - zmin))
         clustering = np.zeros((M - 1, 4))
         partition_scheme = self.partition_scheme
-        _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q, partition_scheme)
+        _jit_build_partition_tree(
+            xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q, partition_scheme
+        )
         self.clustering = clustering
 
     def save(self, out_file):
@@ -179,7 +181,9 @@ class Image(Masker):
 
 
 @njit
-def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q, partition_scheme):
+def _jit_build_partition_tree(
+    xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q, partition_scheme
+):
     """This partitions an image into a herarchical clustering based on axis-aligned splits."""
     # heapq.heappush(q, (0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
 
@@ -216,7 +220,6 @@ def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, 
 
             # Partition scheme 0: xaxis and yaxis fully partitioned before zaxis
             if partition_scheme == 0:
-
                 # split the xaxis if it is the largest dimension
                 if xwidth >= ywidth and xwidth > 1:
                     xmid = xmin + xwidth // 2
@@ -237,7 +240,6 @@ def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, 
 
             # Partition scheme 1: zaxis partitioned first
             if partition_scheme == 1:
-
                 # split the zaxis if it is larger than 1
                 if zwidth > 1:
                     zmid = zmin + zwidth // 2
