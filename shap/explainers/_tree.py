@@ -549,7 +549,9 @@ class TreeExplainer(Explainer):
 
             For each output, the SHAP values (summed across all features) plus the
             expected value equals the model's output for that sample:
-            ``shap_values[i, :, j].sum() + expected_value[j] = model_output[i, j]``
+
+            * Single output: ``shap_values[i, :].sum() + expected_value = model_output[i]``
+            * Multiple outputs: ``shap_values[i, :, j].sum() + expected_value[j] = model_output[i, j]``
 
             The shape of the returned array depends on the number of model outputs:
 
