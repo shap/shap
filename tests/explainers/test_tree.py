@@ -2558,8 +2558,10 @@ def test_tree_explainer_with_xgboost_classifier():
     assert shap_values.shape == (10, 4)
 
     # Check additivity - XGBoost outputs log-odds for binary classification
-    predictions = model.predict_proba(X[:10])[:, 1]
-    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
+    # SHAP values are in log-odds space, so transform probabilities to log-odds
+    proba = model.predict_proba(X[:10])[:, 1]
+    log_odds = np.log(proba / (1 - proba))
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - log_odds).max() < 1e-4
 
 
 def test_tree_explainer_with_lightgbm_regressor():
