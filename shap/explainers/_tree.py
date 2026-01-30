@@ -556,12 +556,16 @@ class TreeExplainer(Explainer):
             * multiple outputs: array of shape ``(#num_samples, *X.shape[1:],
               #num_outputs)``.
 
-            **Note for binary classification:** Models like scikit-learn's classifiers
-            output probabilities for each class, so binary classification is treated as
-            having 2 outputs. For example, a ``RandomForestClassifier`` will return
-            SHAP values of shape ``(#num_samples, #num_features, 2)`` where the last
-            dimension corresponds to the two classes. The ``expected_value`` will also
-            be an array of length 2.
+            **Examples:**
+
+            * **Regression (1 output):** A ``RandomForestRegressor`` returns SHAP values
+              of shape ``(#num_samples, #num_features)`` with a scalar ``expected_value``.
+
+            * **Binary classification (2 outputs):** Models like scikit-learn's
+              ``RandomForestClassifier`` output probabilities for each class, so they are
+              treated as having 2 outputs. SHAP values will have shape
+              ``(#num_samples, #num_features, 2)`` where the last dimension corresponds
+              to the two classes, and ``expected_value`` will be an array of length 2.
 
             .. versionchanged:: 0.45.0
                 Return type for models with multiple outputs changed from list to np.ndarray.
