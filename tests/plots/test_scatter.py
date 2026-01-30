@@ -72,7 +72,7 @@ def categorical_explanation():
     X, y = shap.datasets.diabetes()
 
     # Swap the input data from a "float-category" to categorical
-    # Note: XGBoost with enable_categorical=True requires integer categories (not string)
+    # Note: XGBoost with enable_categorical=True requires integer categories
     # when using pandas 3.0+, so we use integer categories to test categorical handling
     X.loc[X["sex"] < 0, "sex"] = 0
     X.loc[X["sex"] > 0, "sex"] = 1
