@@ -544,15 +544,33 @@ class TreeExplainer(Explainer):
         np.array
             Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
-            Each row sums to the difference between the model output for that
-            sample and the expected value of the model output (which is stored
-            as the ``expected_value`` attribute of the explainer).
+            For each output, the SHAP values (summed across all features) plus the
+            expected value equals the model's output for that sample:
+
+            * Single output: ``shap_values[i, :].sum() + expected_value = model_output[i]``
+            * Multiple outputs: ``shap_values[i, :, j].sum() + expected_value[j] = model_output[i, j]``
 
             The shape of the returned array depends on the number of model outputs:
 
             * one output: array of shape ``(#num_samples, *X.shape[1:])``.
             * multiple outputs: array of shape ``(#num_samples, *X.shape[1:],
               #num_outputs)``.
+
+            **Examples:**
+
+            * **Regression:** A ``RandomForestRegressor`` returns SHAP values of shape
+              ``(#num_samples, #num_features)`` with a scalar ``expected_value``.
+
+            * **Binary classification:** Output behavior varies by model:
+
+              - **Scikit-learn models** (e.g., ``RandomForestClassifier``) output
+                probabilities for both classes, resulting in SHAP values of shape
+                ``(#num_samples, #num_features, 2)`` and ``expected_value`` as an
+                array of length 2.
+
+              - **XGBoost and LightGBM** (with default ``model_output="raw"``) output
+                a single value (raw margin/log-odds), resulting in SHAP values of shape
+                ``(#num_samples, #num_features)`` and ``expected_value`` as a scalar.
 
             .. versionchanged:: 0.45.0
                 Return type for models with multiple outputs changed from list to np.ndarray.
