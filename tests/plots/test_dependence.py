@@ -38,6 +38,6 @@ def test_dependence_use_line_collection_bug():
         model_expected_value=True,
         feature_expected_value=True,
         ice=False,
-        shap_values=shap_values[:1, :],
+        shap_values=shap_values[:1, :],  # type: ignore[call-overload]
         show=False,
     )

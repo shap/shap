@@ -93,5 +93,5 @@ def test_explainer_xgboost():
     explanation = explainer(X)
 
     # check the properties of Explanation object
-    assert explanation.values.shape == (*X.shape,)
-    assert explanation.base_values.shape == (len(X),)
+    assert explanation.values.shape == (*X.shape,)  # type: ignore[union-attr]
+    assert explanation.base_values.shape == (len(X),)  # type: ignore[union-attr]

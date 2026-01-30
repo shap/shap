@@ -22,9 +22,10 @@ dependencies = [
   'tqdm>=4.27.0',
   'packaging>20.9',
   'slicer==0.0.8',
-  'numba==0.63.0b1; python_version >= "3.14"',  # todo: remove once numba officially releases support for 3.14
-  'llvmlite==0.46.0b1; python_version >= "3.14"',  # todo: remove once llvmlite officially releases support for 3.14
-  'numba>=0.54; python_version < "3.14"',
+  'numba',  # todo: remove once numba officially releases support for 3.14
+  'llvmlite',
+  # 'llvmlite==0.46.0b1; python_version >= "3.14"',  # todo: remove once llvmlite officially releases support for 3.14
+  # 'numba>=0.54; python_version < "3.14"',
   'cloudpickle',
   'typing-extensions',
 ]
@@ -79,7 +80,7 @@ test = [
   "xgboost",
   "lightgbm",
   'catboost; python_version < "3.14"',  # TODO: pending 3.14 support
-  'gpboost; python_version < "3.14"',  # TODO: pending 3.14 support
+  'gpboost==1.6.3.1; python_version < "3.14"',  # TODO: pending 3.14 support, see GH #4210
   "ngboost",
   "pyspark",
   "pyod",
@@ -94,7 +95,8 @@ test = [
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
   # See GH #3707, #3768, 3922
   "numpy>=2.0",
-  "scikit-learn<=1.6.1",  # needed since causalml doesn't support scikit-learn 1.7.0 and above as of 2025-06-11
+  "numba==0.63.0", # needed since causalml fails when importing causalml.datasets when built with numba==0.63.1, see https://github.com/uber/causalml/issues/859
+  # "scikit-learn<=1.6.1",  # needed since causalml doesn't support scikit-learn 1.7.0 and above as of 2025-06-11
   "causalml",
   "selenium",  # needed to test the javascript based plots
 ]
@@ -128,32 +130,34 @@ disallow_incomplete_defs = false
 exclude = ["shap/benchmark/*", "tests/benchmark/*"]
 mypy_path = "stubs"
 
-plugins = ["numpy.typing.mypy_plugin"]
+# NOTE: numpy.typing.mypy_plugin is deprecated in NumPy 2.3+ and will be removed in a future release
+# plugins = ["numpy.typing.mypy_plugin"]
 
 [[tool.mypy.overrides]]
 # Disable some checks from certain shap modules
 # TODO: get these passing!
+# NOTE: Modules with added type hints have been removed from this list
 module = [
-  "shap.explainers._additive",
+  # "shap.explainers._additive",       # NOW TYPE CHECKED - type hints added
   "shap.explainers._deep.deep_pytorch",
   "shap.explainers._deep.deep_tf",
-  "shap.explainers._exact",
-  "shap.explainers._explainer",
-  "shap.explainers._gradient",
-  "shap.explainers._kernel",
-  "shap.explainers._linear",
-  "shap.explainers._partition",
-  "shap.explainers._partition",
-  "shap.explainers._permutation",
-  "shap.explainers._sampling",
-  "shap.explainers._tree",
+  # "shap.explainers._exact",          # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._explainer",      # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._gradient",       # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._kernel",         # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._linear",         # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._partition",      # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._permutation",    # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._sampling",       # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._tree",           # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._coalition",      # NOW TYPE CHECKED - type hints added
   "shap.explainers.other._random",
   "shap.explainers.pytree",
   "shap.explainers.tf_utils",
-  "shap.maskers._composite",
-  "shap.maskers._fixed",
+  # "shap.maskers._composite",  # NOW TYPE CHECKED - type hints added
+  # "shap.maskers._fixed",      # NOW TYPE CHECKED - type hints added
   "shap.maskers._image",
-  "shap.maskers._masker",
+  # "shap.maskers._masker",     # NOW TYPE CHECKED - type hints added
   "shap.maskers._tabular",
   "shap.maskers._text",
   "shap.plots._benchmark",

@@ -101,7 +101,7 @@ class GPUTreeExplainer(TreeExplainer):
 
         out = self._get_shap_output(phi, flat_output)
         if check_additivity and self.model.model_output == "raw":
-            self.assert_additivity(out, self.model.predict(X))
+            self.assert_additivity(out, self.model.predict(X))  # type: ignore[arg-type]
 
         return out
 
