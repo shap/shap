@@ -558,14 +558,19 @@ class TreeExplainer(Explainer):
 
             **Examples:**
 
-            * **Regression (1 output):** A ``RandomForestRegressor`` returns SHAP values
-              of shape ``(#num_samples, #num_features)`` with a scalar ``expected_value``.
+            * **Regression:** A ``RandomForestRegressor`` returns SHAP values of shape
+              ``(#num_samples, #num_features)`` with a scalar ``expected_value``.
 
-            * **Binary classification (2 outputs):** Models like scikit-learn's
-              ``RandomForestClassifier`` output probabilities for each class, so they are
-              treated as having 2 outputs. SHAP values will have shape
-              ``(#num_samples, #num_features, 2)`` where the last dimension corresponds
-              to the two classes, and ``expected_value`` will be an array of length 2.
+            * **Binary classification:** Output behavior varies by model:
+
+              - **Scikit-learn models** (e.g., ``RandomForestClassifier``) output
+                probabilities for both classes, resulting in SHAP values of shape
+                ``(#num_samples, #num_features, 2)`` and ``expected_value`` as an
+                array of length 2.
+
+              - **XGBoost and LightGBM** (with default ``model_output="raw"``) output
+                a single value (raw margin/log-odds), resulting in SHAP values of shape
+                ``(#num_samples, #num_features)`` and ``expected_value`` as a scalar.
 
             .. versionchanged:: 0.45.0
                 Return type for models with multiple outputs changed from list to np.ndarray.
