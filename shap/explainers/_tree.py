@@ -521,9 +521,6 @@ class TreeExplainer(Explainer):
             Can be a dataframe like object, e.g. numpy.array, pandas.DataFrame or catboost.Pool (for catboost).
             A matrix of samples (# samples x # features) on which to explain the model's output.
 
-            **Note:** If a pandas Series or 1D numpy array is passed, it will be treated as a single
-            sample and automatically reshaped to ``(1, #num_features)``.
-
         y : numpy.array
             An array of label values for each sample. Used when explaining loss functions.
 
