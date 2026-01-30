@@ -521,6 +521,9 @@ class TreeExplainer(Explainer):
             Can be a dataframe like object, e.g. numpy.array, pandas.DataFrame or catboost.Pool (for catboost).
             A matrix of samples (# samples x # features) on which to explain the model's output.
 
+            **Note:** If a pandas Series or 1D numpy array is passed, it will be treated as a single
+            sample and automatically reshaped to ``(1, #num_features)``.
+
         y : numpy.array
             An array of label values for each sample. Used when explaining loss functions.
 
@@ -544,15 +547,22 @@ class TreeExplainer(Explainer):
         np.array
             Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
-            Each row sums to the difference between the model output for that
-            sample and the expected value of the model output (which is stored
-            as the ``expected_value`` attribute of the explainer).
+            For each output, the SHAP values (summed across all features) plus the
+            expected value equals the model's output for that sample:
+            ``shap_values[i, :, j].sum() + expected_value[j] = model_output[i, j]``
 
             The shape of the returned array depends on the number of model outputs:
 
             * one output: array of shape ``(#num_samples, *X.shape[1:])``.
             * multiple outputs: array of shape ``(#num_samples, *X.shape[1:],
               #num_outputs)``.
+
+            **Note for binary classification:** Models like scikit-learn's classifiers
+            output probabilities for each class, so binary classification is treated as
+            having 2 outputs. For example, a ``RandomForestClassifier`` will return
+            SHAP values of shape ``(#num_samples, #num_features, 2)`` where the last
+            dimension corresponds to the two classes. The ``expected_value`` will also
+            be an array of length 2.
 
             .. versionchanged:: 0.45.0
                 Return type for models with multiple outputs changed from list to np.ndarray.
