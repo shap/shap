@@ -261,8 +261,8 @@ def test_tf_deep_imbdb_transformers():
     pmodel = models.TransformersPipeline(classifier, rescale_to_logits=True)
     explainer3 = shap.Explainer(pmodel, classifier.tokenizer)
     shap_values3 = explainer3(short_data[:10])
-    shap.plots.text(shap_values3[:, :, 1])
-    shap.plots.bar(shap_values3[:, :, 1].mean(0))
+    shap.plots.text(shap_values3[:, :, 1])  # type: ignore[call-overload]
+    shap.plots.bar(shap_values3[:, :, 1].mean(0))  # type: ignore[call-overload]
 
 
 def test_tf_deep_multi_inputs_multi_outputs():

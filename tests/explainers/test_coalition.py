@@ -76,7 +76,7 @@ def test_tabular_coalition_partition_match():
     hierarchy_binary = create_partition_hierarchy(partition_tree, features)
 
     coalition_masker = shap.maskers.Partition(data)
-    partition_explainer_b = shap.CoalitionExplainer(model.predict, coalition_masker, partition_tree=hierarchy_binary)
+    partition_explainer_b = shap.CoalitionExplainer(model.predict, coalition_masker, partition_tree=hierarchy_binary)  # type: ignore[arg-type]
     binary_winter_values = partition_explainer_b(data)
 
-    assert np.allclose(binary_values.values, binary_winter_values.values)
+    assert np.allclose(binary_values.values, binary_winter_values.values)  # type: ignore[union-attr]

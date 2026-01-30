@@ -47,7 +47,7 @@ def test_front_page_model_agnostic():
 
     # plot the SHAP values for the Setosa output of the first instance
     # this is a multi output model so we index to get the zero-th output (Setosa)
-    shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")
+    shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")  # type: ignore[index]
 
 
 def test_front_page_model_agnostic_rank():
@@ -67,7 +67,7 @@ def test_front_page_model_agnostic_rank():
     shap_values = explainer.shap_values(X_test)
 
     # plot the SHAP values for the Setosa output of the first instance
-    shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")
+    shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")  # type: ignore[index]
 
 
 def test_kernel_shap_with_call_method():
@@ -93,7 +93,7 @@ def test_kernel_shap_with_call_method():
     # Call sigm since we use logit link
     np.testing.assert_allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), outputs)
 
-    shap_values = explainer.shap_values(X_test)
+    shap_values = explainer.shap_values(X_test)  # type: ignore[assignment]
     np.testing.assert_allclose(sigm(shap_values.sum(1) + explainer.expected_value), outputs)
 
 

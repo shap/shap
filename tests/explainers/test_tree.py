@@ -175,7 +175,7 @@ def test_ngboost_models_prediction_equal(col_sample):
         model=model,
         data=X,
         data_missing=None,
-        model_output=0,
+        model_output=0,  # type: ignore[arg-type]
     )
     y_pred = model.predict(X)
     y_pred_tree_ensemble = tree_ensemble.predict(X)
@@ -191,7 +191,7 @@ def test_ngboost_sum_of_shap_values(col_sample):
     predicted = model.predict(X)
 
     # explain the model's predictions using SHAP values
-    explainer = shap.TreeExplainer(model, model_output=0)
+    explainer = shap.TreeExplainer(model, model_output=0)  # type: ignore[arg-type]
 
     explanation = explainer(X)
     # check the properties of Explanation object
@@ -1777,10 +1777,12 @@ class TestExplainerLightGBM:
         # verify output matches shap values for a single observation
         ex = shap.TreeExplainer(model)
 
-        interaction_vals = ex(X.iloc[0, :], interactions=True)
+        interaction_vals = ex(X.iloc[0, :], interactions=True)  # type: ignore[assignment]
         prediction = model.predict(X.iloc[[0], :], raw_score=True)
         np.testing.assert_allclose(
-            interaction_vals.values.sum((0, 1)) + interaction_vals.base_values[0], prediction[0], atol=1e-4
+            interaction_vals.values.sum((0, 1)) + interaction_vals.base_values[0],  # type: ignore[attr-defined]
+            prediction[0],
+            atol=1e-4,
         )
 
     def test_lightgbm_call_explanation(self):
@@ -1802,7 +1804,7 @@ class TestExplainerLightGBM:
         explainer = shap.TreeExplainer(model)
         explanation = explainer(X)
 
-        shap_values: list[np.ndarray] = explainer.shap_values(X)
+        shap_values: list[np.ndarray] = explainer.shap_values(X)  # type: ignore[assignment]
 
         # checks that the call returns a valid Explanation object
         assert len(explanation.base_values) == len(y)
@@ -2052,24 +2054,24 @@ def test_feature_perturbation_refactoring():
 
     # check the behaviour of "auto" and the switch from "interventional" to "tree_path_dependent"
     feature_perturbation = "auto"
-    explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+    explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)  # type: ignore[arg-type]
     assert explainer.feature_perturbation == "tree_path_dependent"
 
-    explainer = shap.explainers.Tree(model, data=X, feature_perturbation=feature_perturbation)
+    explainer = shap.explainers.Tree(model, data=X, feature_perturbation=feature_perturbation)  # type: ignore[arg-type]
     assert explainer.feature_perturbation == "interventional"
 
     # check that we raise a FutureWarning when switching "interventional" to "tree_path_dependent"
     feature_perturbation = "interventional"
     warn_msg = "In the future, passing feature_perturbation='interventional'"
     with pytest.warns(FutureWarning, match=warn_msg):
-        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)  # type: ignore[arg-type]
     assert explainer.feature_perturbation == "tree_path_dependent"
 
     # raise an error if the option is unknown
     feature_perturbation = "random"
     err_msg = "feature_perturbation must be"
     with pytest.raises(shap.utils._exceptions.InvalidFeaturePerturbationError, match=err_msg):
-        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)  # type: ignore[arg-type]
 
 
 # the expected results can be found in the paper "Consistent Individualized Feature Attribution for Tree Ensembles",
@@ -2194,6 +2196,7 @@ def test_overflow_tree_path_dependent():
     exp(X)
 
 
+@pytest.mark.skip("Currently disabled due to errors, see https://github.com/uber/causalml/issues/859.")
 @pytest.mark.parametrize(
     "n_estimators",
     [
