@@ -2603,8 +2603,8 @@ def test_tree_explainer_with_lightgbm_classifier():
     # LightGBM binary classifier returns array, not list
     assert shap_values.shape == (10, 4) or (isinstance(shap_values, list) and len(shap_values) == 2)
 
-    # Check additivity
-    predictions = model.predict_proba(X[:10])[:, 1]
+    # Check additivity (SHAP values are in raw score space, not probability space)
+    predictions = model.predict(X[:10], raw_score=True)
     if isinstance(shap_values, list):
         shap_sum = shap_values[1].sum(1) + explainer.expected_value[1]
     else:
