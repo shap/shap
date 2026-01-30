@@ -86,3 +86,39 @@ def test_opchain_repr():
     expected_repr = "shap.DummyExplanation.foo.foo(0, 'big_blue_bear').foo(0, v1=10).foo(k1='alpha', k2='beta').baz"
 
     assert repr(opchain) == expected_repr
+
+
+def test_format_value_empty_string():
+    """Tests that format_value() handles empty strings without raising IndexError."""
+    # Test with empty string
+    result = shap.utils._general.format_value("", "%0.03f")
+    assert result == ""
+
+
+def test_format_value_negative_number():
+    """Tests that format_value() correctly formats negative numbers with unicode minus sign."""
+    result = shap.utils._general.format_value(-1.5, "%0.03f")
+    assert result == "\u2212" + "1.5"
+
+
+def test_format_value_positive_number():
+    """Tests that format_value() correctly formats positive numbers."""
+    result = shap.utils._general.format_value(1.5, "%0.03f")
+    assert result == "1.5"
+
+
+def test_format_value_trailing_zeros():
+    """Tests that format_value() removes trailing zeros."""
+    result = shap.utils._general.format_value(1.5000, "%0.03f")
+    assert result == "1.5"
+
+
+def test_format_value_string_input():
+    """Tests that format_value() handles string inputs correctly."""
+    # Test with non-empty string
+    result = shap.utils._general.format_value("test_string", "%0.03f")
+    assert result == "test_string"
+
+    # Test with string that starts with minus
+    result = shap.utils._general.format_value("-123", "%0.03f")
+    assert result == "\u2212" + "123"

@@ -41,7 +41,7 @@ executing==2.1.0
     # via stack-data
 fastjsonschema==2.20.0
     # via nbformat
-fonttools==4.54.1
+fonttools==4.61.0
     # via matplotlib
 idna==3.10
     # via requests
@@ -256,7 +256,7 @@ typing-extensions==4.12.2
     #   ipython
 tzdata==2024.2
     # via pandas
-urllib3==2.5.0
+urllib3==2.6.3
     # via requests
 wcwidth==0.2.13
     # via prompt-toolkit

@@ -104,7 +104,7 @@ def test_tf_keras_mnist_cnn_tf216_and_above(random_seed):
     # background = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]})
     expected_value = background.mean(0)
 
-    sums = shap_values.sum((1, 2, 3))
+    sums = shap_values.sum((1, 2, 3))  # type: ignore[union-attr, union-attr]
     np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-4)
     sess.close()
 
@@ -205,7 +205,7 @@ def test_tf_keras_mnist_cnn_tf215_and_lower(random_seed):
     background = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]})
     expected_value = background.mean(0)
 
-    sums = shap_values.sum((1, 2, 3))
+    sums = shap_values.sum((1, 2, 3))  # type: ignore[union-attr, union-attr]
     np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-4)
     sess.close()
 
@@ -354,7 +354,7 @@ def test_pytorch_mnist_cnn():
             with torch.no_grad():
                 outputs = model(test_x[:1]).detach().numpy()
                 expected_value = model(next_x[inds, :, :, :]).detach().numpy().mean(0)
-            sums = shap_values.sum(axis=(1, 2, 3))
+            sums = shap_values.sum(axis=(1, 2, 3))  # type: ignore[union-attr, union-attr]
             np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-2)
 
     print("Running test from interim layer")

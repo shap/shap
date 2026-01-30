@@ -41,7 +41,7 @@ def test_falcon():
 
     explainer = shap.Explainer(shap_model, tokenizer)
     shap_values = explainer(s)
-    assert not np.isnan(np.sum(shap_values.values))
+    assert not np.isnan(np.sum(shap_values.values))  # type: ignore[union-attr]
 
 
 @pytest.mark.skipif(
