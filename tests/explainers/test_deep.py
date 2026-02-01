@@ -768,3 +768,263 @@ def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
         np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3),
         "Sum of SHAP values does not match difference!",
     )
+
+
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
+@pytest.mark.parametrize("torch_device", TORCH_DEVICES)
+def test_pytorch_layernorm_transformer(torch_device):
+    """Test LayerNorm support with a Transformer-based model (reproduces GH issue)."""
+    torch = pytest.importorskip("torch")
+    from torch import nn
+
+    class ToyTransformer(nn.Module):
+        """Simple FT-Transformer style toy model."""
+
+        def __init__(self, num_features):
+            super().__init__()
+            self.embedding = nn.Linear(num_features, 16)
+            encoder_layer = nn.TransformerEncoderLayer(d_model=16, nhead=2, batch_first=True)
+            self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
+            self.bin_head = nn.Linear(16, 2)
+
+        def forward(self, x):
+            """Run the model."""
+            x = self.embedding(x).unsqueeze(1)  # add sequence dimension
+            x = self.encoder(x)
+            x = x[:, 0, :]
+            return self.bin_head(x)
+
+    random_seed = 42
+    torch.manual_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
+    num_features = 10
+    X_train = torch.randn(50, num_features)
+    X_test = torch.randn(5, num_features)
+
+    model = ToyTransformer(num_features=num_features)
+    device = torch.device(torch_device)
+    model.to(device)
+    model.eval()
+
+    X_train = X_train.to(device)
+    X_test = X_test.to(device)
+
+    # This should not raise "unrecognized nn.Module: LayerNorm" warning
+    # or "SHAP values do not sum up" assertion error
+    explainer = shap.DeepExplainer(model, X_train)
+    shap_values = explainer.shap_values(X_test, check_additivity=True)
+
+    # Verify additivity
+    with torch.no_grad():
+        outputs = model(X_test).detach().cpu().numpy()
+
+    sums = shap_values.sum(axis=1)
+    np.testing.assert_allclose(sums + explainer.expected_value, outputs, atol=1e-2)
+
+
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
+@pytest.mark.parametrize("torch_device", TORCH_DEVICES)
+@pytest.mark.parametrize("normalized_shape", [(10,), (5, 10), (2, 5, 10)])
+def test_pytorch_layernorm_shapes(torch_device, normalized_shape):
+    """Test LayerNorm with different normalized shape configurations."""
+    torch = pytest.importorskip("torch")
+    from torch import nn
+
+    # Determine input shape based on normalized_shape
+    if len(normalized_shape) == 1:
+        input_shape = (20,)  # Just features
+        batch_dim = 1
+    elif len(normalized_shape) == 2:
+        input_shape = (20, normalized_shape[0])  # (features, sequence_len)
+        batch_dim = 2
+    else:
+        input_shape = (20, normalized_shape[0], normalized_shape[1])  # (features, d1, d2)
+        batch_dim = 3
+
+    class Net(nn.Module):
+        """Model with LayerNorm."""
+
+        def __init__(self):
+            super().__init__()
+            self.ln = nn.LayerNorm(normalized_shape)
+            self.output = nn.Linear(normalized_shape[-1], 2)
+
+        def forward(self, x):
+            """Run the model."""
+            x = self.ln(x)
+            # Flatten all dims except batch and last feature dim for Linear layer
+            if x.dim() > 2:
+                x = x.reshape(x.shape[0], -1, x.shape[-1])
+                x = x[:, 0, :]  # Take first position
+            return self.output(x)
+
+    random_seed = 42
+    torch.manual_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
+    X_train = torch.randn(30, *input_shape)
+    X_test = torch.randn(3, *input_shape)
+
+    model = Net()
+    device = torch.device(torch_device)
+    model.to(device)
+    model.eval()
+
+    X_train = X_train.to(device)
+    X_test = X_test.to(device)
+
+    explainer = shap.DeepExplainer(model, X_train)
+    shap_values = explainer.shap_values(X_test, check_additivity=True)
+
+    # Verify additivity
+    with torch.no_grad():
+        outputs = model(X_test).detach().cpu().numpy()
+
+    sums = shap_values.sum(axis=tuple(range(1, shap_values.ndim - 1)))
+    np.testing.assert_allclose(sums + explainer.expected_value, outputs, atol=1e-2)
+
+
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
+@pytest.mark.parametrize("torch_device", TORCH_DEVICES)
+def test_pytorch_layernorm_additivity(torch_device):
+    """Exhaustive test to ensure LayerNorm preserves additivity."""
+    torch = pytest.importorskip("torch")
+    from torch import nn
+
+    class LayerNormNet(nn.Module):
+        """Model with multiple LayerNorm layers."""
+
+        def __init__(self, num_features):
+            super().__init__()
+            self.ln1 = nn.LayerNorm(num_features)
+            self.linear1 = nn.Linear(num_features, 16)
+            self.ln2 = nn.LayerNorm(16)
+            self.linear2 = nn.Linear(16, 8)
+            self.ln3 = nn.LayerNorm(8)
+            self.output = nn.Linear(8, 1)
+
+        def forward(self, x):
+            """Run the model."""
+            x = self.ln1(x)
+            x = self.linear1(x)
+            x = self.ln2(x)
+            x = torch.relu(x)
+            x = self.linear2(x)
+            x = self.ln3(x)
+            x = self.output(x)
+            return x
+
+    random_seed = 42
+    torch.manual_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
+    num_features = 10
+    X_train = torch.randn(40, num_features)
+    X_test = torch.randn(8, num_features)
+
+    model = LayerNormNet(num_features=num_features)
+    device = torch.device(torch_device)
+    model.to(device)
+    model.eval()
+
+    X_train = X_train.to(device)
+    X_test = X_test.to(device)
+
+    explainer = shap.DeepExplainer(model, X_train)
+    
+    # Check additivity is enforced by default
+    shap_values = explainer.shap_values(X_test, check_additivity=True)
+
+    # Manually verify additivity
+    with torch.no_grad():
+        outputs = model(X_test).detach().cpu().numpy()
+
+    sums = shap_values.sum(axis=1)
+    
+    # The Taylor approximation should maintain additivity within tolerance
+    np.testing.assert_allclose(sums + explainer.expected_value, outputs, atol=1e-2)
+    
+    # Also test that differences are small (good approximation)
+    max_diff = np.abs(sums + explainer.expected_value - outputs).max()
+    assert max_diff < 1e-2, f"Max difference {max_diff} exceeds tolerance"
+
+
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
+@pytest.mark.parametrize("torch_device", TORCH_DEVICES)
+def test_pytorch_layernorm_vs_batchnorm(torch_device):
+    """Compare LayerNorm behavior with BatchNorm (which already works)."""
+    torch = pytest.importorskip("torch")
+    from torch import nn
+
+    class NormNet(nn.Module):
+        """Model with normalization layer."""
+
+        def __init__(self, num_features, use_layer_norm=True):
+            super().__init__()
+            self.linear1 = nn.Linear(num_features, 16)
+            if use_layer_norm:
+                self.norm = nn.LayerNorm(16)
+            else:
+                self.norm = nn.BatchNorm1d(16)
+            self.linear2 = nn.Linear(16, 2)
+
+        def forward(self, x):
+            """Run the model."""
+            x = self.linear1(x)
+            x = self.norm(x)
+            x = torch.relu(x)
+            x = self.linear2(x)
+            return x
+
+    random_seed = 42
+    torch.manual_seed(random_seed)
+
+    num_features = 10
+    X_train = torch.randn(50, num_features)
+    X_test = torch.randn(5, num_features)
+
+    device = torch.device(torch_device)
+    X_train = X_train.to(device)
+    X_test = X_test.to(device)
+
+    # Test LayerNorm
+    model_ln = NormNet(num_features, use_layer_norm=True)
+    model_ln.to(device)
+    model_ln.eval()
+
+    explainer_ln = shap.DeepExplainer(model_ln, X_train)
+    shap_values_ln = explainer_ln.shap_values(X_test, check_additivity=True)
+
+    with torch.no_grad():
+        outputs_ln = model_ln(X_test).detach().cpu().numpy()
+
+    sums_ln = shap_values_ln.sum(axis=1)
+    np.testing.assert_allclose(sums_ln + explainer_ln.expected_value, outputs_ln, atol=1e-2)
+
+    # Test BatchNorm (should also pass)
+    model_bn = NormNet(num_features, use_layer_norm=False)
+    model_bn.to(device)
+    model_bn.eval()
+
+    explainer_bn = shap.DeepExplainer(model_bn, X_train)
+    shap_values_bn = explainer_bn.shap_values(X_test, check_additivity=True)
+
+    with torch.no_grad():
+        outputs_bn = model_bn(X_test).detach().cpu().numpy()
+
+    sums_bn = shap_values_bn.sum(axis=1)
+    np.testing.assert_allclose(sums_bn + explainer_bn.expected_value, outputs_bn, atol=1e-2)
+
