@@ -884,6 +884,7 @@ def test_pytorch_layernorm_shapes(torch_device, normalized_shape):
     with torch.no_grad():
         outputs = model(X_test).detach().cpu().numpy()
 
+    # Sum over all dimensions except batch (0) and output class (-1)
     sums = shap_values.sum(axis=tuple(range(1, shap_values.ndim - 1)))
     np.testing.assert_allclose(sums + explainer.expected_value, outputs, atol=1e-2)
 
@@ -944,10 +945,6 @@ def test_pytorch_layernorm_additivity(torch_device):
     
     # The Taylor approximation should maintain additivity within tolerance
     np.testing.assert_allclose(sums + explainer.expected_value, outputs, atol=1e-2)
-    
-    # Also test that differences are small (good approximation)
-    max_diff = np.abs(sums + explainer.expected_value - outputs).max()
-    assert max_diff < 1e-2, f"Max difference {max_diff} exceeds tolerance"
 
 
 @pytest.mark.skipif(
