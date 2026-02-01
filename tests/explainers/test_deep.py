@@ -933,7 +933,7 @@ def test_pytorch_layernorm_additivity(torch_device):
     X_test = X_test.to(device)
 
     explainer = shap.DeepExplainer(model, X_train)
-    
+
     # Check additivity is enforced by default
     shap_values = explainer.shap_values(X_test, check_additivity=True)
 
@@ -942,7 +942,7 @@ def test_pytorch_layernorm_additivity(torch_device):
         outputs = model(X_test).detach().cpu().numpy()
 
     sums = shap_values.sum(axis=1)
-    
+
     # The Taylor approximation should maintain additivity within tolerance
     np.testing.assert_allclose(sums + explainer.expected_value, outputs, atol=1e-2)
 
@@ -999,4 +999,3 @@ def test_pytorch_layernorm_with_relu(torch_device):
 
     sums = shap_values.sum(axis=1)
     np.testing.assert_allclose(sums + explainer.expected_value, outputs, atol=1e-2)
-

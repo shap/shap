@@ -374,23 +374,23 @@ def nonlinear_1d(module, grad_input, grad_output):
 
 def layernorm_1d(module, grad_input, grad_output):
     """Compute DeepLIFT gradients for LayerNorm using first-order Taylor approximation.
-    
+
     LayerNorm applies: y = γ * (x - μ(x)) / sqrt(σ²(x) + ε) + β
     where μ and σ are computed over the normalized dimensions.
-    
+
     For DeepLIFT, we approximate the change in output using a first-order Taylor series
     expansion around the baseline/reference point x₀:
-    
+
         f(x) ≈ f(x₀) + ∇f(x₀) · (x - x₀)
-    
+
     Therefore:
         Δy = f(x) - f(x₀) ≈ ∇f(x₀) · Δx
-    
+
     The gradient multiplier is: Δy / Δx ≈ ∇f(x₀)
-    
+
     We compute the gradient at the baseline (reference) point, which preserves
     additivity since we're using only the first-order term (linear approximation).
-    
+
     Parameters
     ----------
     module : torch.nn.LayerNorm
@@ -399,7 +399,7 @@ def layernorm_1d(module, grad_input, grad_output):
         Gradients with respect to the inputs
     grad_output : tuple of torch.Tensor
         Gradients with respect to the outputs
-        
+
     Returns
     -------
     tuple of torch.Tensor or None
@@ -415,22 +415,20 @@ def layernorm_1d(module, grad_input, grad_output):
 
     delta_in = x_sample - x_ref
     delta_out = y_sample - y_ref
-    
+
     # Duplicate pattern for broadcasting
     dup0 = [2] + [1 for i in delta_in.shape[1:]]
-    
+
     # For LayerNorm, we use first-order Taylor approximation around the reference point.
     # The gradient at the reference point can be computed as delta_out / delta_in,
     # but we need to handle numerical instabilities carefully.
-    
+
     # When delta_in is very small, fall back to the standard gradient
     grads = [None for _ in grad_input]
     grads[0] = torch.where(
-        torch.abs(delta_in.repeat(dup0)) < 1e-6,
-        grad_input[0],
-        grad_output[0] * (delta_out / delta_in).repeat(dup0)
+        torch.abs(delta_in.repeat(dup0)) < 1e-6, grad_input[0], grad_output[0] * (delta_out / delta_in).repeat(dup0)
     )
-    
+
     return tuple(grads)
 
 
@@ -451,7 +449,6 @@ op_handler["ConvTranspose1d"] = linear_1d
 op_handler["ConvTranspose2d"] = linear_1d
 op_handler["ConvTranspose3d"] = linear_1d
 op_handler["Linear"] = linear_1d
-op_handler["NonDynamicallyQuantizableLinear"] = linear_1d
 op_handler["AvgPool1d"] = linear_1d
 op_handler["AvgPool2d"] = linear_1d
 op_handler["AvgPool3d"] = linear_1d
