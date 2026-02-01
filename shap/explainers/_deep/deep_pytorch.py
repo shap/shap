@@ -451,6 +451,7 @@ op_handler["ConvTranspose1d"] = linear_1d
 op_handler["ConvTranspose2d"] = linear_1d
 op_handler["ConvTranspose3d"] = linear_1d
 op_handler["Linear"] = linear_1d
+op_handler["NonDynamicallyQuantizableLinear"] = linear_1d
 op_handler["AvgPool1d"] = linear_1d
 op_handler["AvgPool2d"] = linear_1d
 op_handler["AvgPool3d"] = linear_1d
