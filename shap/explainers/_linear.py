@@ -106,7 +106,7 @@ class LinearExplainer(Explainer):
         self,
         model: Any,
         masker: Any,
-        link: Callable[[Any], Any] = links.identity,
+        link: Callable[[Any], Any] | Literal["auto"] = "auto",
         nsamples: int = 1000,
         feature_perturbation: None | Literal["interventional", "correlation_dependent"] = None,
         **kwargs: Any,
@@ -114,6 +114,23 @@ class LinearExplainer(Explainer):
         if "feature_dependence" in kwargs:
             emsg = "The option feature_dependence has been renamed to feature_perturbation!"
             raise ValueError(emsg)
+
+        # Auto-detect appropriate link for classifiers (issue #3767)
+        # For logistic regression, coefficients are in log-odds space
+        if link == "auto":
+            if hasattr(model, "predict_proba"):
+                link = links.logit
+            else:
+                link = links.identity
+        elif link == links.identity and hasattr(model, "predict_proba"):
+            warnings.warn(
+                "Using link=identity with a classifier model. LinearExplainer computes SHAP values "
+                "using model coefficients, which are in log-odds space for logistic regression. "
+                "The explanations will be in log-odds space, not probability space. "
+                "For probability-space explanations, use ExactExplainer or PermutationExplainer with "
+                "model.predict_proba, or use link=shap.links.logit (default for classifiers).",
+                UserWarning,
+            )
 
         if feature_perturbation is not None:  # pragma: no cover
             wmsg = (
