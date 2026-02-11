@@ -2942,15 +2942,20 @@ def test_tree_explainer_random_forest_regressor():
 # --- Interventional SHAP interaction values tests ---
 
 
-def test_interventional_interaction_values_brute_force():
-    """Verify interventional interactions match brute-force Shapley computation."""
+@pytest.mark.parametrize("n_features", [3, 4, 5, 6])
+def test_interventional_interaction_values_brute_force(n_features):
+    """Verify interventional interactions match brute-force Shapley computation.
+
+    Computes exact Shapley interaction indices by definition (O(2^n) per pair)
+    and compares against our C++ implementation. Parametrized over feature counts
+    to test different set-interval configurations.
+    """
     from itertools import combinations
     from math import comb
 
     np.random.seed(42)
-    n_features = 5
     X_train = np.random.randn(200, n_features)
-    y_train = X_train[:, 0] * X_train[:, 1] + X_train[:, 2]
+    y_train = X_train[:, 0] * X_train[:, 1] + X_train[:, 2 % n_features]
     model = DecisionTreeRegressor(max_depth=3, random_state=42)
     model.fit(X_train, y_train)
 
