@@ -3147,6 +3147,53 @@ def test_interventional_interaction_values_multiclass():
                 )
 
 
+def test_interventional_categorical():
+    """Verify interventional SHAP values and interactions work with categorical splits."""
+    lightgbm = pytest.importorskip("lightgbm")
+
+    np.random.seed(42)
+    n = 200
+    # Two categorical features (1-based to avoid pre-existing category_in_threshold
+    # issue with category 0) and one continuous feature
+    cat0 = np.random.randint(1, 5, n).astype(np.float64)
+    cat1 = np.random.randint(1, 4, n).astype(np.float64)
+    cont = np.random.randn(n)
+    y = (cat0 == 2).astype(float) * 2 + cont * 0.5 + (cat1 == 3).astype(float)
+    X = np.column_stack([cat0, cat1, cont])
+
+    ds = lightgbm.Dataset(X, label=y, categorical_feature=[0, 1], free_raw_data=False)
+    model = lightgbm.train(
+        {"objective": "regression", "verbose": -1, "n_estimators": 20, "max_depth": 4},
+        ds, num_boost_round=20,
+    )
+
+    X_test = X[:10]
+    bg = X[:50]
+
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+
+    # --- SHAP values ---
+    sv = explainer.shap_values(X_test)
+    preds = model.predict(X_test)
+    # Prediction additivity: sum of SHAP values + expected value ≈ prediction
+    np.testing.assert_allclose(sv.sum(axis=1) + explainer.expected_value, preds, atol=1e-4)
+
+    # --- Interaction values ---
+    interactions = explainer.shap_interaction_values(X_test)
+    n_feats = X_test.shape[1]
+
+    # Symmetry
+    np.testing.assert_allclose(interactions, np.swapaxes(interactions, 1, 2), atol=1e-6)
+
+    # Row-sum additivity: interactions[i, j, :].sum() == sv[i, j]
+    row_sums = interactions.sum(axis=2)
+    np.testing.assert_allclose(row_sums[:, :n_feats], sv, atol=1e-4)
+
+    # Prediction additivity
+    total = interactions.sum(axis=(1, 2))
+    np.testing.assert_allclose(total + explainer.expected_value, preds, atol=1e-4)
+
+
 def test_interventional_vs_path_dependent_uncorrelated():
     """On uncorrelated data, both modes should approximately agree."""
     np.random.seed(42)

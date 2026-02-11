@@ -125,9 +125,9 @@ def test_xgboost_cat_unsupported() -> None:
     with pytest.raises(NotImplementedError, match="Categorical"):
         gpu_ex.shap_values(X)
 
+    # CPU TreeExplainer now supports categorical splits in interventional mode
     ex = shap.TreeExplainer(clf, X, feature_perturbation="interventional")
-    with pytest.raises(NotImplementedError, match="Categorical"):
-        ex.shap_values(X)
+    ex.shap_values(X)
 
 
 def lightgbm_base():
