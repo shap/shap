@@ -15,7 +15,7 @@
 | `18983ca1` | Add categorical split support to GPU TreeSHAP |
 | `ef45a45c` | Fix `category_in_threshold` 0-based encoding bug + XGBoost `dmatrix_props` for interaction values |
 | `e04629a2` | Add categorical split support to pure Python `tree_shap_recursive` |
-| *(pending)* | Fix zero-weight leaf NaN in path-dependent mode (epsilon weight fix) |
+| `020e5275` | Fix zero-weight leaf NaN in path-dependent mode (epsilon weight fix) |
 
 ---
 
@@ -85,7 +85,7 @@
 | **Affects** | LightGBM multiclass classification with `tree_path_dependent` interaction values |
 | **Root cause** | Two-part issue: (1) `fully_defined_weighting` check (`np.min(node_sample_weight) <= 0`) rejects any model where the background dataset doesn't cover every leaf, blocking path-dependent mode entirely. (2) The underlying reason the check exists: `unwind_path()` in `tree_shap_recursive` divides by `zero_fraction`, which is 0 when a leaf has no background coverage. This causes NaN even when only leaves (not internal nodes) have zero weight. This is a **pre-existing bug** in the path-dependent algorithm affecting ALL tree models with small backgrounds, not just LightGBM multiclass. |
 | **Fix** | After background weight recomputation in `SingleTree.__init__`, replace zero weights with epsilon (1e-6). This gives uncovered nodes negligible probability, preventing division by zero while maintaining near-correct SHAP values. Additivity holds to < 1e-7 precision, and values converge as background size increases. |
-| **Status** | **FIXED** by commit *(pending)* |
+| **Status** | **FIXED** by commit `020e5275` |
 | **Verified** | LightGBM multiclass with 50/150 bg samples: SHAP values finite, interaction symmetry holds, additivity < 1e-6. sklearn DecisionTree with small bg also works. |
 
 ---
