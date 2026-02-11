@@ -180,7 +180,7 @@ inline transform_f get_transform(unsigned model_transform) {
 }
 
 inline bool category_in_threshold(float threshold, float category) {
-    int category_flag = (1 << (int(category) - 1));
+    int category_flag = (1 << int(category));
     return (int(threshold) & category_flag) != 0;
 }
 
