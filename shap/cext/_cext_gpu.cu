@@ -44,8 +44,8 @@ struct ShapSplitCondition {
       return is_missing_branch;
     }
     if (is_categorical) {
-      // Uses same 1-based encoding as category_in_threshold() in tree_shap.h
-      int category_flag = (1 << (int(x) - 1));
+      // Uses same 0-based encoding as category_in_threshold() in tree_shap.h
+      int category_flag = (1 << int(x));
       return (category_mask & category_flag) != 0;
     }
     return x > feature_lower_bound && x <= feature_upper_bound;

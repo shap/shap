@@ -3153,12 +3153,12 @@ def test_interventional_categorical():
 
     np.random.seed(42)
     n = 200
-    # Two categorical features (1-based to avoid pre-existing category_in_threshold
-    # issue with category 0) and one continuous feature
-    cat0 = np.random.randint(1, 5, n).astype(np.float64)
-    cat1 = np.random.randint(1, 4, n).astype(np.float64)
+    # Two categorical features (0-based, verifying category 0 works correctly)
+    # and one continuous feature
+    cat0 = np.random.randint(0, 4, n).astype(np.float64)
+    cat1 = np.random.randint(0, 3, n).astype(np.float64)
     cont = np.random.randn(n)
-    y = (cat0 == 2).astype(float) * 2 + cont * 0.5 + (cat1 == 3).astype(float)
+    y = (cat0 == 1).astype(float) * 2 + cont * 0.5 + (cat1 == 2).astype(float)
     X = np.column_stack([cat0, cat1, cont])
 
     ds = lightgbm.Dataset(X, label=y, categorical_feature=[0, 1], free_raw_data=False)

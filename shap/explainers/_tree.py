@@ -784,7 +784,8 @@ class TreeExplainer(Explainer):
             import xgboost
 
             if not isinstance(X, xgboost.core.DMatrix):
-                X = xgboost.DMatrix(X)
+                dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
+                X = xgboost.DMatrix(X, **dmatrix_props)
 
             n_iterations = _xgboost_n_iterations(tree_limit, self.model.num_stacked_models)
             phi = self.model.original_model.predict(
@@ -1949,7 +1950,7 @@ class SingleTree:
                         threshold = 0.0
                         categories = [int(x) for x in vertex["threshold"].split("||")]
                         for cat in categories:
-                            threshold += 2 ** (cat - 1)
+                            threshold += 2 ** cat
                         self.thresholds[vsplit_idx] = threshold
                         self.threshold_types[vsplit_idx] = 1  # Indicates that this is a categorical split
                     else:
