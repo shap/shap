@@ -677,7 +677,6 @@ class TreeExplainer(Explainer):
             X, y, tree_limit, check_additivity
         )
         transform = self.model.get_transform()
-        _xgboost_cat_unsupported(self.model)
 
         # run the core algorithm using the C extension
         assert_import("cext")
