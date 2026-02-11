@@ -1357,7 +1357,7 @@ class TreeEnsemble:
             try:
                 self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
             except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
+                self.trees = None  # we get here because SingleTree parsing failed
 
             self.objective = objective_name_map.get(model.params.get("objective", "regression"), None)
             self.tree_output = tree_output_name_map.get(model.params.get("objective", "regression"), None)
@@ -1370,7 +1370,7 @@ class TreeEnsemble:
             try:
                 self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
             except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
+                self.trees = None  # we get here because SingleTree parsing failed
 
             self.objective = objective_name_map.get(model.params.get("objective", "regression"), None)
             self.tree_output = tree_output_name_map.get(model.params.get("objective", "regression"), None)
@@ -1383,7 +1383,7 @@ class TreeEnsemble:
             try:
                 self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
             except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
+                self.trees = None  # we get here because SingleTree parsing failed
             self.objective = objective_name_map.get(model.objective, None)
             self.tree_output = tree_output_name_map.get(model.objective, None)
             if model.objective is None:
@@ -1397,7 +1397,7 @@ class TreeEnsemble:
             try:
                 self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
             except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
+                self.trees = None  # we get here because SingleTree parsing failed
             # Note: for ranker, leaving tree_output and objective as None as they
             # are not implemented in native code yet
         elif safe_isinstance(model, "lightgbm.sklearn.LGBMClassifier"):
@@ -1410,7 +1410,7 @@ class TreeEnsemble:
             try:
                 self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
             except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
+                self.trees = None  # we get here because SingleTree parsing failed
             self.objective = objective_name_map.get(model.objective, None)
             self.tree_output = tree_output_name_map.get(model.objective, None)
             if model.objective is None:
@@ -1425,7 +1425,7 @@ class TreeEnsemble:
                 cb_loader = CatBoostTreeModelLoader(model)
                 self.trees = cb_loader.get_trees(data=data, data_missing=data_missing)
             except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
+                self.trees = None  # we get here because SingleTree parsing failed
         elif safe_isinstance(model, "catboost.core.CatBoostClassifier"):
             assert_import("catboost")
             self.model_type = "catboost"
@@ -1435,7 +1435,7 @@ class TreeEnsemble:
                 cb_loader = CatBoostTreeModelLoader(model)
                 self.trees = cb_loader.get_trees(data=data, data_missing=data_missing)
             except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
+                self.trees = None  # we get here because SingleTree parsing failed
             self.tree_output = "log_odds"
             self.objective = "binary_crossentropy"
             self.cat_feature_indices = model.get_cat_feature_indices()

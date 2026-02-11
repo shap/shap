@@ -3213,3 +3213,96 @@ def test_interventional_vs_path_dependent_uncorrelated():
 
     # Loose tolerance since finite-sample effects and slight correlation in random data
     np.testing.assert_allclose(interactions_iv, interactions_pd, atol=0.15, rtol=0.3)
+
+
+def test_pytree_categorical_split():
+    """Verify the pure Python tree_shap_recursive handles categorical splits."""
+    from shap.explainers.pytree import tree_shap_recursive
+
+    # Build a tree: node 0 splits on feature 0 (categorical, bitmask=6 = categories {1,2})
+    #   left (node 1): leaf, value=10
+    #   right (node 2): leaf, value=20
+    children_left = np.array([1, -1, -1], dtype=np.int32)
+    children_right = np.array([2, -1, -1], dtype=np.int32)
+    children_default = np.array([1, -1, -1], dtype=np.int32)
+    features = np.array([0, -1, -1], dtype=np.int32)
+    thresholds = np.array([6.0, 0.0, 0.0], dtype=np.float64)  # 6 = 0b110 = categories {1,2}
+    threshold_types = np.array([1, 0, 0], dtype=np.int32)
+    values = np.array([[14.0], [10.0], [20.0]], dtype=np.float64)  # root = weighted avg
+    node_sample_weight = np.array([100.0, 60.0, 40.0], dtype=np.float64)
+
+    s = 10
+    fi = np.zeros(s, dtype=np.int32)
+    zf = np.zeros(s, dtype=np.float64)
+    of = np.zeros(s, dtype=np.float64)
+    pw = np.zeros(s, dtype=np.float64)
+
+    # x=1 should go left (category 1 in bitmask 110), prediction=10
+    phi1 = np.zeros((2, 1))
+    phi1[-1, :] += values[0, :]
+    tree_shap_recursive(
+        children_left, children_right, children_default, features, thresholds,
+        values, node_sample_weight, np.array([1.0]), np.array([False]), phi1,
+        0, 0, fi, zf, of, pw, 1, 1, -1, 0, 0, 1, threshold_types=threshold_types,
+    )
+    assert phi1[-1, 0] + phi1[0, 0] == pytest.approx(10.0)
+
+    # x=0 should go right (category 0 NOT in bitmask 110), prediction=20
+    phi2 = np.zeros((2, 1))
+    phi2[-1, :] += values[0, :]
+    tree_shap_recursive(
+        children_left, children_right, children_default, features, thresholds,
+        values, node_sample_weight, np.array([0.0]), np.array([False]), phi2,
+        0, 0, fi, zf, of, pw, 1, 1, -1, 0, 0, 1, threshold_types=threshold_types,
+    )
+    assert phi2[-1, 0] + phi2[0, 0] == pytest.approx(20.0)
+
+    # x=2 should go left (category 2 in bitmask 110), prediction=10
+    phi3 = np.zeros((2, 1))
+    phi3[-1, :] += values[0, :]
+    tree_shap_recursive(
+        children_left, children_right, children_default, features, thresholds,
+        values, node_sample_weight, np.array([2.0]), np.array([False]), phi3,
+        0, 0, fi, zf, of, pw, 1, 1, -1, 0, 0, 1, threshold_types=threshold_types,
+    )
+    assert phi3[-1, 0] + phi3[0, 0] == pytest.approx(10.0)
+
+    # x=3 should go right (category 3 NOT in bitmask 110), prediction=20
+    phi4 = np.zeros((2, 1))
+    phi4[-1, :] += values[0, :]
+    tree_shap_recursive(
+        children_left, children_right, children_default, features, thresholds,
+        values, node_sample_weight, np.array([3.0]), np.array([False]), phi4,
+        0, 0, fi, zf, of, pw, 1, 1, -1, 0, 0, 1, threshold_types=threshold_types,
+    )
+    assert phi4[-1, 0] + phi4[0, 0] == pytest.approx(20.0)
+
+
+def test_path_dependent_categorical():
+    """Verify path-dependent mode works with LightGBM categorical features."""
+    lightgbm = pytest.importorskip("lightgbm")
+
+    np.random.seed(42)
+    n = 200
+    cat0 = np.random.randint(0, 4, n).astype(np.float64)
+    cat1 = np.random.randint(0, 3, n).astype(np.float64)
+    cont = np.random.randn(n)
+    y = (cat0 == 1).astype(float) * 2 + cont * 0.5 + (cat1 == 2).astype(float)
+    X = np.column_stack([cat0, cat1, cont])
+
+    ds = lightgbm.Dataset(X, label=y, categorical_feature=[0, 1], free_raw_data=False)
+    model = lightgbm.train({"verbose": -1, "num_leaves": 8}, ds, num_boost_round=10)
+
+    # Path-dependent SHAP values (no background data, uses LightGBM native)
+    explainer = shap.TreeExplainer(model, feature_perturbation="tree_path_dependent")
+    sv = explainer.shap_values(X[:5])
+    assert sv.shape == (5, 3)
+    assert np.count_nonzero(sv) > 0
+
+    # Path-dependent interaction values (uses C++ tree_shap_recursive)
+    iv = explainer.shap_interaction_values(X[:5])
+    assert iv.shape == (5, 3, 3)
+    # Symmetry
+    np.testing.assert_allclose(iv, np.swapaxes(iv, 1, 2))
+    # Row-sum equals SHAP values
+    np.testing.assert_allclose(iv.sum(axis=2), sv, atol=1e-10)

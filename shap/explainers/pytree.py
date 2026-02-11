@@ -257,6 +257,7 @@ class TreeExplainer:
             condition,
             condition_feature,
             1,
+            getattr(tree, "threshold_types", None),
         )
 
 
@@ -398,6 +399,7 @@ def tree_shap_recursive(
     condition,
     condition_feature,
     condition_fraction,
+    threshold_types=None,
 ):
     # stop if we have no weight coming down to us
     if condition_fraction == 0.0:
@@ -443,6 +445,13 @@ def tree_shap_recursive(
         cright = children_right[node_index]
         if x_missing[split_index] == 1:
             hot_index = children_default[node_index]
+        elif threshold_types is not None and threshold_types[node_index] == 1:
+            # categorical split: check if category is in the bitmask threshold
+            category_flag = 1 << int(x[split_index])
+            if int(thresholds[node_index]) & category_flag:
+                hot_index = cleft
+            else:
+                hot_index = cright
         elif x[split_index] < thresholds[node_index]:
             hot_index = cleft
         else:
@@ -502,6 +511,7 @@ def tree_shap_recursive(
             condition,
             condition_feature,
             hot_condition_fraction,
+            threshold_types,
         )
 
         tree_shap_recursive(
@@ -527,4 +537,5 @@ def tree_shap_recursive(
             condition,
             condition_feature,
             cold_condition_fraction,
+            threshold_types,
         )
