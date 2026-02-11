@@ -69,12 +69,6 @@ class GPUTreeExplainer(TreeExplainer):
         )
 
         model = self.model
-        if np.any(model.threshold_types != 0):
-            raise NotImplementedError(
-                "Categorical splits are not yet supported by GPUTreeExplainer. Use"
-                " TreeExplainer (CPU) with feature_perturbation='interventional'"
-                " or feature_perturbation='tree_path_dependent' instead."
-            )
         transform = model.get_transform()
 
         # run the core algorithm using the C extension
