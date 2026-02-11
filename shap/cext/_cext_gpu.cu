@@ -7,19 +7,35 @@ const float inf = std::numeric_limits<tfloat>::infinity();
 
 struct ShapSplitCondition {
   ShapSplitCondition() = default;
+
+  // Constructor for numeric splits
   ShapSplitCondition(tfloat feature_lower_bound, tfloat feature_upper_bound,
                      bool is_missing_branch)
       : feature_lower_bound(feature_lower_bound),
         feature_upper_bound(feature_upper_bound),
-        is_missing_branch(is_missing_branch) {
+        is_missing_branch(is_missing_branch),
+        is_categorical(false),
+        category_mask(0) {
     assert(feature_lower_bound <= feature_upper_bound);
   }
 
-  /*! Feature values >= lower and < upper flow down this path. */
+  // Constructor for categorical splits
+  ShapSplitCondition(int category_mask, bool is_missing_branch)
+      : feature_lower_bound(0),
+        feature_upper_bound(0),
+        is_missing_branch(is_missing_branch),
+        is_categorical(true),
+        category_mask(category_mask) {}
+
+  /*! Feature values >= lower and < upper flow down this path (numeric). */
   tfloat feature_lower_bound;
   tfloat feature_upper_bound;
   /*! Do missing values flow down this path? */
   bool is_missing_branch;
+  /*! Is this a categorical split? */
+  bool is_categorical;
+  /*! Bitmask of categories that flow down this path (categorical). */
+  int category_mask;
 
   // Does this instance flow down this path?
   __host__ __device__ bool EvaluateSplit(float x) const {
@@ -27,14 +43,23 @@ struct ShapSplitCondition {
     if (isnan(x)) {
       return is_missing_branch;
     }
+    if (is_categorical) {
+      // Uses same 1-based encoding as category_in_threshold() in tree_shap.h
+      int category_flag = (1 << (int(x) - 1));
+      return (category_mask & category_flag) != 0;
+    }
     return x > feature_lower_bound && x <= feature_upper_bound;
   }
 
   // Combine two split conditions on the same feature
   __host__ __device__ void
   Merge(const ShapSplitCondition &other) {  // Combine duplicate features
-    feature_lower_bound = max(feature_lower_bound, other.feature_lower_bound);
-    feature_upper_bound = min(feature_upper_bound, other.feature_upper_bound);
+    if (is_categorical) {
+      category_mask &= other.category_mask;
+    } else {
+      feature_lower_bound = max(feature_lower_bound, other.feature_lower_bound);
+      feature_upper_bound = min(feature_upper_bound, other.feature_upper_bound);
+    }
     is_missing_branch = is_missing_branch && other.is_missing_branch;
   }
 };
@@ -78,18 +103,34 @@ void RecurseTree(
   unsigned left_child = tree.children_left[pos];
   double left_zero_fraction =
       tree.node_sample_weights[left_child] / tree.node_sample_weights[pos];
-  // Encode the range of feature values that flow down this path
-  tmp_path->emplace_back(0, tree.features[pos], 0,
-                         ShapSplitCondition{-inf, tree.thresholds[pos], false},
-                         left_zero_fraction, 0.0f);
 
-  RecurseTree(left_child, tree, tmp_path, paths, path_idx, num_outputs);
+  if (tree.threshold_types[pos] == 1) {
+    // Categorical split: threshold is a bitmask of categories that go left
+    int cat_mask = (int)tree.thresholds[pos];
+    tmp_path->emplace_back(0, tree.features[pos], 0,
+                           ShapSplitCondition{cat_mask, false},
+                           left_zero_fraction, 0.0f);
 
-  // Add left split to the path
-  tmp_path->back() = gpu_treeshap::PathElement<ShapSplitCondition>(
-      0, tree.features[pos], 0,
-      ShapSplitCondition{tree.thresholds[pos], inf, false},
-      1.0 - left_zero_fraction, 0.0f);
+    RecurseTree(left_child, tree, tmp_path, paths, path_idx, num_outputs);
+
+    // Right child: categories NOT in the mask
+    tmp_path->back() = gpu_treeshap::PathElement<ShapSplitCondition>(
+        0, tree.features[pos], 0,
+        ShapSplitCondition{~cat_mask, false},
+        1.0 - left_zero_fraction, 0.0f);
+  } else {
+    // Numeric split: encode the range of feature values
+    tmp_path->emplace_back(0, tree.features[pos], 0,
+                           ShapSplitCondition{-inf, tree.thresholds[pos], false},
+                           left_zero_fraction, 0.0f);
+
+    RecurseTree(left_child, tree, tmp_path, paths, path_idx, num_outputs);
+
+    tmp_path->back() = gpu_treeshap::PathElement<ShapSplitCondition>(
+        0, tree.features[pos], 0,
+        ShapSplitCondition{tree.thresholds[pos], inf, false},
+        1.0 - left_zero_fraction, 0.0f);
+  }
 
   RecurseTree(tree.children_right[pos], tree, tmp_path, paths, path_idx,
               num_outputs);
@@ -320,19 +361,6 @@ void dense_tree_shap_gpu(const TreeEnsemble &trees,
                          const ExplanationDataset &data, tfloat *out_contribs,
                          const int feature_dependence, unsigned model_transform,
                          bool interactions) {
-  // Check for categorical features
-  bool has_categorical = false;
-  for (unsigned i = 0; i < trees.tree_limit * trees.max_nodes; i++) {
-    if (trees.threshold_types[i] != 0) {
-      has_categorical = true;
-      break;
-    }
-  }
-  if (has_categorical) {
-    std::cerr << "Warning: Categorical features detected. GPU TreeSHAP currently "
-                 "only supports numerical features. Results may be incorrect.\n";
-  }
-
   // see what transform (if any) we have
   transform_f transform = get_transform(model_transform);
 
