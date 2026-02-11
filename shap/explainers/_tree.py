@@ -782,7 +782,6 @@ class TreeExplainer(Explainer):
         assert self.model.model_output == "raw", (
             'Only model_output = "raw" is supported for SHAP interaction values right now!'
         )
-        # assert self.feature_perturbation == "tree_path_dependent", "Only feature_perturbation = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
         transform = "identity"
 
         # see if we have a default tree_limit in place.
