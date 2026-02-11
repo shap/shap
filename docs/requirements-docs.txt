@@ -12,7 +12,7 @@ babel==2.16.0
     # via sphinx
 beautifulsoup4==4.12.3
     # via nbconvert
-bleach==6.1.0
+bleach==6.3.0
     # via nbconvert
 certifi==2024.8.30
     # via requests
