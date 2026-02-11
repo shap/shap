@@ -93,8 +93,9 @@
 | **GitHub** | [#292](https://github.com/shap/shap/issues/292), [#248](https://github.com/shap/shap/issues/248), [#1644](https://github.com/shap/shap/issues/1644) |
 | **Severity** | HIGH — crash (`ValueError: could not convert string to float`) |
 | **Affects** | LightGBM with categorical features, path-dependent interaction values |
-| **Root cause** | LightGBM represents categorical thresholds as pipe-delimited strings (`'2\|\|4\|\|5'`). The old `SingleTree` parsing code tries `float()` on these strings. |
-| **Status** | **WORKAROUND**: Our interventional mode correctly handles categorical splits via the `threshold_types` / `category_in_threshold` mechanism in the C++ backend. Users can switch to `feature_perturbation="interventional"` to avoid the crash. Root cause in path-dependent tree parsing code is NOT fixed. |
+| **Root cause** | LightGBM represents categorical thresholds as pipe-delimited strings (`'2\|\|4\|\|5'`). The old `SingleTree` parsing code tried `float()` on these strings. The pure Python `pytree.py` also lacked categorical support. |
+| **Status** | **FIXED**: `SingleTree` parsing already handles `\|\|` format correctly. C++ `tree_shap_recursive` already handles `threshold_types`. Pure Python `pytree.py` fixed by commit `e04629a2`. All code paths (path-dependent and interventional, C++ and Python) now support categorical splits. |
+| **Verified** | Path-dependent SHAP values and interaction values work for LightGBM with categorical features (0-based categories). |
 
 ---
 
@@ -107,7 +108,7 @@
 | #3 XGBoost dmatrix_props | MEDIUM | **FIXED** | `ef45a45c` |
 | #4 Categorical in interventional | HIGH | **FIXED** | `9ef0e88b`, `18983ca1` |
 | #5 LightGBM multiclass interactions | MEDIUM | **WORKAROUND** | Use interventional mode |
-| #6 LightGBM categorical crash | HIGH | **WORKAROUND** | Use interventional mode |
+| #6 LightGBM categorical crash | HIGH | **FIXED** | `e04629a2` (pytree), pre-existing (C++) |
 
 ---
 
