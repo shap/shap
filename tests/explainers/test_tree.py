@@ -2196,7 +2196,6 @@ def test_overflow_tree_path_dependent():
     exp(X)
 
 
-@pytest.mark.skip("Currently disabled due to errors, see https://github.com/uber/causalml/issues/859.")
 @pytest.mark.parametrize(
     "n_estimators",
     [
