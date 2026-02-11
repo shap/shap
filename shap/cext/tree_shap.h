@@ -731,6 +731,7 @@ struct Node {
     long feat, pfeat;
     float thres, value;
     char from_flag;
+    char threshold_type; // 0 = numeric, 1 = categorical
 };
 
 #define FROM_NEITHER 0
@@ -800,18 +801,18 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
 
     if (x_missing[feat]) {
         next_xnode = cd;
-    } else if (x[feat] > thres) {
-        next_xnode = cr;
-    } else if (x[feat] <= thres) {
+    } else if (curr_node.threshold_type == 1 ? category_in_threshold(thres, x[feat]) : x[feat] <= thres) {
         next_xnode = cl;
+    } else {
+        next_xnode = cr;
     }
 
     if (r_missing[feat]) {
         next_rnode = cd;
-    } else if (r[feat] > thres) {
-        next_rnode = cr;
-    } else if (r[feat] <= thres) {
+    } else if (curr_node.threshold_type == 1 ? category_in_threshold(thres, r[feat]) : r[feat] <= thres) {
         next_rnode = cl;
+    } else {
+        next_rnode = cr;
     }
 
     if (next_xnode != next_rnode) {
@@ -907,8 +908,14 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
             continue;
         }
 
-        const bool x_right = x[feat] > thres;
-        const bool r_right = r[feat] > thres;
+        bool x_right, r_right;
+        if (curr_node.threshold_type == 1) {
+            x_right = !category_in_threshold(thres, x[feat]);
+            r_right = !category_in_threshold(thres, r[feat]);
+        } else {
+            x_right = x[feat] > thres;
+            r_right = r[feat] > thres;
+        }
 
         if (x_missing[feat]) {
             next_xnode = cd;
@@ -1227,18 +1234,18 @@ inline void tree_shap_indep_interactions(
 
     if (x_missing[feat]) {
         next_xnode = cd;
-    } else if (x[feat] > thres) {
-        next_xnode = cr;
-    } else if (x[feat] <= thres) {
+    } else if (curr_node.threshold_type == 1 ? category_in_threshold(thres, x[feat]) : x[feat] <= thres) {
         next_xnode = cl;
+    } else {
+        next_xnode = cr;
     }
 
     if (r_missing[feat]) {
         next_rnode = cd;
-    } else if (r[feat] > thres) {
-        next_rnode = cr;
-    } else if (r[feat] <= thres) {
+    } else if (curr_node.threshold_type == 1 ? category_in_threshold(thres, r[feat]) : r[feat] <= thres) {
         next_rnode = cl;
+    } else {
+        next_rnode = cr;
     }
 
     if (next_xnode != next_rnode) {
@@ -1321,8 +1328,14 @@ inline void tree_shap_indep_interactions(
             continue;
         }
 
-        const bool x_right = x[feat] > thres;
-        const bool r_right = r[feat] > thres;
+        bool x_right, r_right;
+        if (curr_node.threshold_type == 1) {
+            x_right = !category_in_threshold(thres, x[feat]);
+            r_right = !category_in_threshold(thres, r[feat]);
+        } else {
+            x_right = x[feat] > thres;
+            r_right = r[feat] > thres;
+        }
 
         if (x_missing[feat]) {
             next_xnode = cd;
@@ -1528,6 +1541,7 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
 
             node_tree[j].thres = trees.thresholds[en_ind];
             node_tree[j].feat = trees.features[en_ind];
+            node_tree[j].threshold_type = trees.threshold_types[en_ind];
         }
     }
 
@@ -1678,6 +1692,7 @@ inline void dense_independent_interactions(const TreeEnsemble& trees, const Expl
 
             node_tree[j].thres = trees.thresholds[en_ind];
             node_tree[j].feat = trees.features[en_ind];
+            node_tree[j].threshold_type = trees.threshold_types[en_ind];
         }
     }
 
