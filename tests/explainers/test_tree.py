@@ -2937,3 +2937,32 @@ def test_tree_explainer_random_forest_regressor():
         else:
             shap_sum = shap_values.sum(1) + explainer.expected_value
         assert np.abs(shap_sum - predictions).max() < 1e-4
+
+def test_path_dependent_small_background():
+    """Path-dependent SHAP with small background that has uncovered leaves.
+
+    LightGBM multiclass on iris with 20-sample background deterministically
+    produces zero-weight leaves. Without the epsilon fix, unwind_path()
+    divides by zero, producing NaN. Addresses #3574.
+    """
+    lightgbm = pytest.importorskip("lightgbm")
+
+    X, y = sklearn.datasets.load_iris(return_X_y=True)
+    model = lightgbm.LGBMClassifier(n_estimators=10, num_leaves=8, verbose=-1, random_state=0)
+    model.fit(X, y)
+
+    bg = X[:20]  # small background — guarantees uncovered leaves
+    explainer = shap.TreeExplainer(model, data=bg, feature_perturbation="tree_path_dependent")
+
+    # Confirm zero-weight nodes were present and got epsilon-replaced
+    assert any(np.any(t.node_sample_weight == 1e-6) for t in explainer.model.trees)
+
+    sv = explainer.shap_values(X[:5], check_additivity=False)
+    assert not np.any(np.isnan(sv)), "SHAP values contain NaN"
+
+    # Additivity
+    pred = explainer.model.predict(X[:5])
+    for c in range(3):
+        shap_sum = explainer.expected_value[c] + sv[:, :, c].sum(axis=1)
+        np.testing.assert_allclose(shap_sum, pred[:, c], atol=1e-6)
+
