@@ -141,7 +141,7 @@ parso==0.8.4
     # via jedi
 pexpect==4.9.0
     # via ipython
-pillow==10.4.0
+pillow==12.1.1
     # via matplotlib
 platformdirs==4.3.6
     # via jupyter-core
