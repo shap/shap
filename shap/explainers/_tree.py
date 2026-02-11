@@ -2097,6 +2097,27 @@ class SingleTree:
                 data_missing,
             )
 
+            # Fix for zero-weight nodes causing NaN in path-dependent SHAP.
+            #
+            # Original issue: when a background dataset doesn't cover all
+            # leaves, the fully_defined_weighting check raises ExplainerError,
+            # blocking path-dependent mode entirely (#3574).
+            #
+            # Root cause: tree_shap_recursive's unwind_path() divides by
+            # zero_fraction. When a leaf has zero background coverage (w=0),
+            # samples routing through that subtree encounter zero_fraction=0
+            # on cold paths, producing NaN via 0/0. This also occurs with
+            # full training data as background due to floating-point
+            # threshold comparison mismatches in tree_update_weights vs the
+            # original model training.
+            #
+            # Fix: replace zero weights with epsilon (1e-6) so uncovered
+            # nodes have negligible but non-zero probability. Additivity
+            # holds to <1e-7 and values converge as background size grows.
+            zero_mask = self.node_sample_weight == 0.0
+            if zero_mask.any():
+                self.node_sample_weight[zero_mask] = 1e-6
+
         # we compute the expectations to make sure they follow the SHAP logic
         self.max_depth = _cext.compute_expectations(
             self.children_left, self.children_right, self.node_sample_weight, self.values

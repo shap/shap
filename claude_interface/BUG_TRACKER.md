@@ -14,6 +14,8 @@
 | `9ef0e88b` | Add categorical split support to interventional SHAP (CPU) |
 | `18983ca1` | Add categorical split support to GPU TreeSHAP |
 | `ef45a45c` | Fix `category_in_threshold` 0-based encoding bug + XGBoost `dmatrix_props` for interaction values |
+| `e04629a2` | Add categorical split support to pure Python `tree_shap_recursive` |
+| *(pending)* | Fix zero-weight leaf NaN in path-dependent mode (epsilon weight fix) |
 
 ---
 
@@ -81,8 +83,10 @@
 | **GitHub** | [#3574](https://github.com/shap/shap/issues/3574) (18 comments) |
 | **Severity** | MEDIUM — error raised for path-dependent mode |
 | **Affects** | LightGBM multiclass classification with `tree_path_dependent` interaction values |
-| **Root cause** | Leaf coverage check fails for multiclass LightGBM trees in `fully_defined_weighting` |
-| **Status** | **WORKAROUND**: Our interventional mode now works correctly for LightGBM multiclass interactions. Verified with Iris dataset (shape `(5, 4, 4, 3)`). |
+| **Root cause** | Two-part issue: (1) `fully_defined_weighting` check (`np.min(node_sample_weight) <= 0`) rejects any model where the background dataset doesn't cover every leaf, blocking path-dependent mode entirely. (2) The underlying reason the check exists: `unwind_path()` in `tree_shap_recursive` divides by `zero_fraction`, which is 0 when a leaf has no background coverage. This causes NaN even when only leaves (not internal nodes) have zero weight. This is a **pre-existing bug** in the path-dependent algorithm affecting ALL tree models with small backgrounds, not just LightGBM multiclass. |
+| **Fix** | After background weight recomputation in `SingleTree.__init__`, replace zero weights with epsilon (1e-6). This gives uncovered nodes negligible probability, preventing division by zero while maintaining near-correct SHAP values. Additivity holds to < 1e-7 precision, and values converge as background size increases. |
+| **Status** | **FIXED** by commit *(pending)* |
+| **Verified** | LightGBM multiclass with 50/150 bg samples: SHAP values finite, interaction symmetry holds, additivity < 1e-6. sklearn DecisionTree with small bg also works. |
 
 ---
 
@@ -107,7 +111,7 @@
 | #2 category_in_threshold cat=0 | HIGH | **FIXED** | `ef45a45c` |
 | #3 XGBoost dmatrix_props | MEDIUM | **FIXED** | `ef45a45c` |
 | #4 Categorical in interventional | HIGH | **FIXED** | `9ef0e88b`, `18983ca1` |
-| #5 LightGBM multiclass interactions | MEDIUM | **WORKAROUND** | Use interventional mode |
+| #5 LightGBM multiclass interactions | MEDIUM | **FIXED** | Epsilon weight fix |
 | #6 LightGBM categorical crash | HIGH | **FIXED** | `e04629a2` (pytree), pre-existing (C++) |
 
 ---

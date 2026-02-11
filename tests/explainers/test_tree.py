@@ -3306,3 +3306,50 @@ def test_path_dependent_categorical():
     np.testing.assert_allclose(iv, np.swapaxes(iv, 1, 2))
     # Row-sum equals SHAP values
     np.testing.assert_allclose(iv.sum(axis=2), sv, atol=1e-10)
+
+
+def test_path_dependent_small_background():
+    """Verify path-dependent mode works with small background datasets.
+
+    Previously, small backgrounds caused ExplainerError because some leaves
+    had zero coverage. The epsilon weight fix allows these to work.
+    Addresses #3574 (LightGBM multiclass + path-dependent interactions).
+    """
+    lightgbm = pytest.importorskip("lightgbm")
+
+    # LightGBM multiclass (the Bug 5 scenario)
+    X, y = sklearn.datasets.load_iris(return_X_y=True)
+    model = lightgbm.LGBMClassifier(n_estimators=10, num_leaves=8, verbose=-1)
+    model.fit(X, y)
+
+    # Small background — previously caused ExplainerError
+    explainer = shap.TreeExplainer(model, data=X[:50], feature_perturbation="tree_path_dependent")
+    assert explainer.model.fully_defined_weighting is True
+
+    # SHAP values should be finite
+    sv = explainer.shap_values(X[:5], check_additivity=False)
+    assert not np.any(np.isnan(sv))
+
+    # Interaction values should be finite, symmetric, and row-sum consistent
+    iv = explainer.shap_interaction_values(X[:5])
+    assert not np.any(np.isnan(iv))
+    np.testing.assert_allclose(iv, np.swapaxes(iv, 1, 2), atol=1e-10)
+    np.testing.assert_allclose(iv.sum(axis=2), sv, atol=1e-6)
+
+    # Additivity: SHAP values sum to prediction - expected_value
+    pred = explainer.model.predict(X[:5])
+    for c in range(3):
+        shap_sum = explainer.expected_value[c] + sv[:, :, c].sum(axis=1)
+        np.testing.assert_allclose(shap_sum, pred[:, c], atol=1e-6)
+
+    # Values should converge toward full-background results
+    explainer_full = shap.TreeExplainer(
+        model, data=X, feature_perturbation="tree_path_dependent"
+    )
+    sv_full = explainer_full.shap_values(X[:5], check_additivity=False)
+    # Not exact but reasonably close (large background → more accurate)
+    explainer_120 = shap.TreeExplainer(
+        model, data=X[:120], feature_perturbation="tree_path_dependent"
+    )
+    sv_120 = explainer_120.shap_values(X[:5], check_additivity=False)
+    assert np.max(np.abs(sv_120 - sv_full)) < np.max(np.abs(sv - sv_full))
