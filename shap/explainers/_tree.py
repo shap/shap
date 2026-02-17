@@ -1512,13 +1512,17 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(shap_trees[0].criterion, None)
             self.tree_output = "raw_value"
             self.base_offset = model.init_params[param_idx]
-        elif safe_isinstance(model, [
-            "sklearn.ensemble.AdaBoostClassifier",
-            "sklearn.ensemble._weight_boosting.AdaBoostClassifier",
-        ]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.AdaBoostClassifier",
+                "sklearn.ensemble._weight_boosting.AdaBoostClassifier",
+            ],
+        ):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
-            assert all(hasattr(est, "tree_") for est in model.estimators_), \
+            assert all(hasattr(est, "tree_") for est in model.estimators_), (
                 "AdaBoostClassifier is only supported with DecisionTree base estimators."
+            )
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
             self.original_model = model
@@ -1535,15 +1539,21 @@ class TreeEnsemble:
                     for node in range(tree.node_count):
                         if tree.children_left[node] == -1:  # leaf
                             leaf_values[node, 0] = (2 * w / S) if np.argmax(raw[node]) == 1 else (-2 * w / S)
-                    self.trees.append(SingleTree({
-                        "children_left": tree.children_left,
-                        "children_right": tree.children_right,
-                        "children_default": tree.children_left,
-                        "features": tree.feature,
-                        "thresholds": tree.threshold.astype(np.float64),
-                        "values": leaf_values,
-                        "node_sample_weight": tree.weighted_n_node_samples,
-                    }, data=data, data_missing=data_missing))
+                    self.trees.append(
+                        SingleTree(
+                            {
+                                "children_left": tree.children_left,
+                                "children_right": tree.children_right,
+                                "children_default": tree.children_left,
+                                "features": tree.feature,
+                                "thresholds": tree.threshold.astype(np.float64),
+                                "values": leaf_values,
+                                "node_sample_weight": tree.weighted_n_node_samples,
+                            },
+                            data=data,
+                            data_missing=data_missing,
+                        )
+                    )
                 self.base_offset = np.float64(0)
                 self.tree_output = "log_odds"
                 self.objective = "binary_crossentropy"
@@ -1562,15 +1572,21 @@ class TreeEnsemble:
                             c_maj = np.argmax(raw[node])
                             for c in range(K):
                                 leaf_values[node, c] = (w / S) if c == c_maj else (-w / ((K - 1) * S))
-                    self.trees.append(SingleTree({
-                        "children_left": tree.children_left,
-                        "children_right": tree.children_right,
-                        "children_default": tree.children_left,
-                        "features": tree.feature,
-                        "thresholds": tree.threshold.astype(np.float64),
-                        "values": leaf_values,
-                        "node_sample_weight": tree.weighted_n_node_samples,
-                    }, data=data, data_missing=data_missing))
+                    self.trees.append(
+                        SingleTree(
+                            {
+                                "children_left": tree.children_left,
+                                "children_right": tree.children_right,
+                                "children_default": tree.children_left,
+                                "features": tree.feature,
+                                "thresholds": tree.threshold.astype(np.float64),
+                                "values": leaf_values,
+                                "node_sample_weight": tree.weighted_n_node_samples,
+                            },
+                            data=data,
+                            data_missing=data_missing,
+                        )
+                    )
                 self.base_offset = np.zeros(K)
                 self.tree_output = "adaboost_decision"
                 self.objective = None

@@ -2972,8 +2972,9 @@ def test_adaboost_binary_proba():
     # Binary AdaBoost uses probability_doubled -> sv shape is (n, features, 2)
     for c in range(2):
         shap_sum = sv[:, :, c].sum(axis=1) + explainer.expected_value[c]
-        assert np.abs(shap_sum - proba[:, c]).max() < 1e-3, \
+        assert np.abs(shap_sum - proba[:, c]).max() < 1e-3, (
             f"class {c} max error: {np.abs(shap_sum - proba[:, c]).max()}"
+        )
 
 
 def test_adaboost_multiclass_raw():
@@ -2992,8 +2993,9 @@ def test_adaboost_multiclass_raw():
     expected = model.decision_function(X[:10])
     for c in range(3):
         shap_sum = sv[:, :, c].sum(axis=1) + explainer.expected_value[c]
-        assert np.abs(shap_sum - expected[:, c]).max() < 1e-4, \
+        assert np.abs(shap_sum - expected[:, c]).max() < 1e-4, (
             f"class {c} max error: {np.abs(shap_sum - expected[:, c]).max()}"
+        )
 
 
 def test_adaboost_multiclass_proba():
@@ -3012,5 +3014,6 @@ def test_adaboost_multiclass_proba():
     proba = model.predict_proba(X[:10])
     for c in range(3):
         shap_sum = sv[:, :, c].sum(axis=1) + explainer.expected_value[c]
-        assert np.abs(shap_sum - proba[:, c]).max() < 1e-3, \
+        assert np.abs(shap_sum - proba[:, c]).max() < 1e-3, (
             f"class {c} max error: {np.abs(shap_sum - proba[:, c]).max()}"
+        )
