@@ -5,7 +5,6 @@ import numpy as np
 from ..utils import assert_import, record_import_error
 from ._tree import (
     TreeExplainer,
-    _xgboost_cat_unsupported,
     feature_perturbation_codes,
     output_transform_codes,
 )
