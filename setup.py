@@ -100,10 +100,15 @@ def run_setup(*, with_binary, with_cuda):
     ext_modules = []
     if with_binary:
         compile_args = []
+        link_args = []
         if sys.platform == "zos":
             compile_args.append("-qlonglong")
-        if sys.platform == "win32":
+        elif sys.platform == "win32":
             compile_args.append("/MD")
+            compile_args.append("/openmp")
+        else:
+            compile_args.append("-fopenmp")
+            link_args.append("-fopenmp")
 
         ext_modules.append(
             Extension(
@@ -111,6 +116,7 @@ def run_setup(*, with_binary, with_cuda):
                 sources=["shap/cext/_cext.cc"],
                 include_dirs=[np.get_include()],
                 extra_compile_args=compile_args,
+                extra_link_args=link_args,
             )
         )
     if with_cuda:

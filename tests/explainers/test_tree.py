@@ -2,6 +2,7 @@
 
 import itertools
 import math
+import os
 import pickle
 import sys
 
@@ -3242,3 +3243,130 @@ def test_interventional_vs_path_dependent_uncorrelated():
 
     # Loose tolerance since finite-sample effects and slight correlation in random data
     np.testing.assert_allclose(interactions_iv, interactions_pd, atol=0.15, rtol=0.3)
+
+def test_path_dependent_categorical():
+    """Verify path-dependent mode works with LightGBM categorical features."""
+    lightgbm = pytest.importorskip("lightgbm")
+
+    np.random.seed(42)
+    n = 200
+    cat0 = np.random.randint(0, 4, n).astype(np.float64)
+    cat1 = np.random.randint(0, 3, n).astype(np.float64)
+    cont = np.random.randn(n)
+    y = (cat0 == 1).astype(float) * 2 + cont * 0.5 + (cat1 == 2).astype(float)
+    X = np.column_stack([cat0, cat1, cont])
+
+    ds = lightgbm.Dataset(X, label=y, categorical_feature=[0, 1], free_raw_data=False)
+    model = lightgbm.train({"verbose": -1, "num_leaves": 8}, ds, num_boost_round=10)
+
+    # Path-dependent SHAP values (no background data, uses LightGBM native)
+    explainer = shap.TreeExplainer(model, feature_perturbation="tree_path_dependent")
+    sv = explainer.shap_values(X[:5])
+    assert sv.shape == (5, 3)
+    assert np.count_nonzero(sv) > 0
+
+    # Path-dependent interaction values (uses C++ tree_shap_recursive)
+    iv = explainer.shap_interaction_values(X[:5])
+    assert iv.shape == (5, 3, 3)
+    # Symmetry
+    np.testing.assert_allclose(iv, np.swapaxes(iv, 1, 2))
+    # Row-sum equals SHAP values
+    np.testing.assert_allclose(iv.sum(axis=2), sv, atol=1e-10)
+
+    assert np.max(np.abs(sv_120 - sv_full)) < np.max(np.abs(sv - sv_full))
+
+
+def _compute_shap_with_threads(model, X, background, n_threads, **kwargs):
+    """Helper to compute SHAP values with a specific thread count."""
+    old_val = os.environ.get("OMP_NUM_THREADS")
+    os.environ["OMP_NUM_THREADS"] = str(n_threads)
+    try:
+        explainer = shap.TreeExplainer(model, data=background, feature_perturbation="interventional", **kwargs)
+        result = explainer.shap_values(X)
+    finally:
+        if old_val is None:
+            del os.environ["OMP_NUM_THREADS"]
+        else:
+            os.environ["OMP_NUM_THREADS"] = old_val
+    return result, explainer.expected_value
+
+
+def test_openmp_interventional_shap_values():
+    """Multi-threaded interventional SHAP values should match single-threaded."""
+    from sklearn.ensemble import RandomForestRegressor
+    X, y = shap.datasets.california(n_points=200)
+    model = RandomForestRegressor(n_estimators=20, max_depth=5, random_state=42)
+    model.fit(X, y)
+
+    background = X[:50]
+    X_test = X[50:80]
+
+    sv_1, ev_1 = _compute_shap_with_threads(model, X_test, background, n_threads=1)
+    sv_4, ev_4 = _compute_shap_with_threads(model, X_test, background, n_threads=4)
+
+    # Results should be identical (same accumulation order)
+    np.testing.assert_allclose(sv_1, sv_4, atol=1e-10,
+                               err_msg="SHAP values differ between 1 and 4 threads")
+
+    # Verify additivity: sum of shap values + expected_value == prediction
+    pred = model.predict(X_test.values)
+    shap_sum = ev_4 + sv_4.sum(axis=1)
+    np.testing.assert_allclose(shap_sum, pred, atol=1e-6)
+
+
+def test_openmp_interventional_interaction_values():
+    """Multi-threaded interventional interaction values should match single-threaded."""
+    X, y = shap.datasets.iris()
+    model = GradientBoostingRegressor(n_estimators=10, max_depth=3, random_state=42)
+    model.fit(X.values, y)
+
+    background = X.values[:30]
+    X_test = X.values[:10]
+
+    old_val = os.environ.get("OMP_NUM_THREADS")
+    try:
+        os.environ["OMP_NUM_THREADS"] = "1"
+        ex1 = shap.TreeExplainer(model, data=background, feature_perturbation="interventional")
+        iv_1 = ex1.shap_interaction_values(X_test)
+
+        os.environ["OMP_NUM_THREADS"] = "4"
+        ex4 = shap.TreeExplainer(model, data=background, feature_perturbation="interventional")
+        iv_4 = ex4.shap_interaction_values(X_test)
+    finally:
+        if old_val is None:
+            os.environ.pop("OMP_NUM_THREADS", None)
+        else:
+            os.environ["OMP_NUM_THREADS"] = old_val
+
+    np.testing.assert_allclose(iv_1, iv_4, atol=1e-10,
+                               err_msg="Interaction values differ between 1 and 4 threads")
+
+    # Verify symmetry
+    for i in range(iv_4.shape[0]):
+        np.testing.assert_allclose(iv_4[i], iv_4[i].T, atol=1e-10)
+
+
+def test_openmp_interventional_with_transform():
+    """Multi-threaded interventional SHAP with transform should match single-threaded."""
+    pytest.importorskip("xgboost")
+    import xgboost as xgb
+
+    X, y = shap.datasets.adult()
+    X = X[:200]
+    y = y[:200]
+
+    model = xgb.XGBClassifier(n_estimators=10, max_depth=3, random_state=42,
+                               use_label_encoder=False, eval_metric="logloss")
+    model.fit(X, y)
+
+    background = X[:50]
+    X_test = X[50:70]
+
+    sv_1, ev_1 = _compute_shap_with_threads(model, X_test, background, n_threads=1,
+                                             model_output="probability")
+    sv_4, ev_4 = _compute_shap_with_threads(model, X_test, background, n_threads=4,
+                                             model_output="probability")
+
+    np.testing.assert_allclose(sv_1, sv_4, atol=1e-8,
+                               err_msg="SHAP values with transform differ between threads")
+
