@@ -2937,3 +2937,80 @@ def test_tree_explainer_random_forest_regressor():
         else:
             shap_sum = shap_values.sum(1) + explainer.expected_value
         assert np.abs(shap_sum - predictions).max() < 1e-4
+
+
+def test_adaboost_binary_raw():
+    """AdaBoost binary classifier: raw SHAP values sum to decision_function."""
+    from sklearn.datasets import make_classification
+    from sklearn.ensemble import AdaBoostClassifier
+
+    X, y = make_classification(n_samples=200, n_features=5, random_state=0)
+    model = AdaBoostClassifier(n_estimators=20, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model, X[:50], model_output="raw")
+    sv = explainer.shap_values(X[:10])
+
+    expected = model.decision_function(X[:10])
+    shap_sum = sv.sum(axis=1) + explainer.expected_value
+    assert np.abs(shap_sum - expected).max() < 1e-4, f"max error: {np.abs(shap_sum - expected).max()}"
+
+
+def test_adaboost_binary_proba():
+    """AdaBoost binary classifier: probability SHAP values sum to predict_proba."""
+    from sklearn.datasets import make_classification
+    from sklearn.ensemble import AdaBoostClassifier
+
+    X, y = make_classification(n_samples=200, n_features=5, random_state=0)
+    model = AdaBoostClassifier(n_estimators=20, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model, X[:50], model_output="predict_proba")
+    sv = explainer.shap_values(X[:10])
+
+    proba = model.predict_proba(X[:10])
+    # Binary AdaBoost uses probability_doubled -> sv shape is (n, features, 2)
+    for c in range(2):
+        shap_sum = sv[:, :, c].sum(axis=1) + explainer.expected_value[c]
+        assert np.abs(shap_sum - proba[:, c]).max() < 1e-3, \
+            f"class {c} max error: {np.abs(shap_sum - proba[:, c]).max()}"
+
+
+def test_adaboost_multiclass_raw():
+    """AdaBoost multiclass classifier: raw SHAP values sum to decision_function."""
+    from sklearn.datasets import load_iris
+    from sklearn.ensemble import AdaBoostClassifier
+
+    data = load_iris()
+    X, y = data.data, data.target
+    model = AdaBoostClassifier(n_estimators=20, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model, X[:50], model_output="raw")
+    sv = explainer.shap_values(X[:10])
+
+    expected = model.decision_function(X[:10])
+    for c in range(3):
+        shap_sum = sv[:, :, c].sum(axis=1) + explainer.expected_value[c]
+        assert np.abs(shap_sum - expected[:, c]).max() < 1e-4, \
+            f"class {c} max error: {np.abs(shap_sum - expected[:, c]).max()}"
+
+
+def test_adaboost_multiclass_proba():
+    """AdaBoost multiclass classifier: probability SHAP values sum to predict_proba."""
+    from sklearn.datasets import load_iris
+    from sklearn.ensemble import AdaBoostClassifier
+
+    data = load_iris()
+    X, y = data.data, data.target
+    model = AdaBoostClassifier(n_estimators=20, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model, X[:50], model_output="predict_proba")
+    sv = explainer.shap_values(X[:10])
+
+    proba = model.predict_proba(X[:10])
+    for c in range(3):
+        shap_sum = sv[:, :, c].sum(axis=1) + explainer.expected_value[c]
+        assert np.abs(shap_sum - proba[:, c]).max() < 1e-3, \
+            f"class {c} max error: {np.abs(shap_sum - proba[:, c]).max()}"

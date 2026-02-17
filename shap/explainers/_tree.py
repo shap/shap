@@ -47,6 +47,7 @@ output_transform_codes = {
     "logistic": 1,
     "logistic_nlogloss": 2,
     "squared_loss": 3,
+    "softmax": 4,
 }
 
 feature_perturbation_codes = {
@@ -1511,6 +1512,70 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(shap_trees[0].criterion, None)
             self.tree_output = "raw_value"
             self.base_offset = model.init_params[param_idx]
+        elif safe_isinstance(model, [
+            "sklearn.ensemble.AdaBoostClassifier",
+            "sklearn.ensemble._weight_boosting.AdaBoostClassifier",
+        ]):
+            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
+            assert all(hasattr(est, "tree_") for est in model.estimators_), \
+                "AdaBoostClassifier is only supported with DecisionTree base estimators."
+            self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
+            self.input_dtype = np.float32
+            self.original_model = model
+            K = model.n_classes_
+
+            if K == 2:
+                # Binary: scalar decision function, logistic transform
+                S = model.estimator_weights_.sum()
+                self.trees = []
+                for est, w in zip(model.estimators_, model.estimator_weights_):
+                    tree = est.tree_
+                    raw = tree.value.reshape(tree.value.shape[0], -1)
+                    leaf_values = np.zeros((tree.node_count, 1), dtype=np.float64)
+                    for node in range(tree.node_count):
+                        if tree.children_left[node] == -1:  # leaf
+                            leaf_values[node, 0] = (2 * w / S) if np.argmax(raw[node]) == 1 else (-2 * w / S)
+                    self.trees.append(SingleTree({
+                        "children_left": tree.children_left,
+                        "children_right": tree.children_right,
+                        "children_default": tree.children_left,
+                        "features": tree.feature,
+                        "thresholds": tree.threshold.astype(np.float64),
+                        "values": leaf_values,
+                        "node_sample_weight": tree.weighted_n_node_samples,
+                    }, data=data, data_missing=data_missing))
+                self.base_offset = np.float64(0)
+                self.tree_output = "log_odds"
+                self.objective = "binary_crossentropy"
+                if self.model_output == "predict_proba":
+                    self.model_output = "probability_doubled"
+            else:
+                # Multiclass: K-dim decision function, softmax transform
+                S = model.estimator_weights_.sum()
+                self.trees = []
+                for est, w in zip(model.estimators_, model.estimator_weights_):
+                    tree = est.tree_
+                    raw = tree.value.reshape(tree.value.shape[0], -1)
+                    leaf_values = np.zeros((tree.node_count, K), dtype=np.float64)
+                    for node in range(tree.node_count):
+                        if tree.children_left[node] == -1:  # leaf
+                            c_maj = np.argmax(raw[node])
+                            for c in range(K):
+                                leaf_values[node, c] = (w / S) if c == c_maj else (-w / ((K - 1) * S))
+                    self.trees.append(SingleTree({
+                        "children_left": tree.children_left,
+                        "children_right": tree.children_right,
+                        "children_default": tree.children_left,
+                        "features": tree.feature,
+                        "thresholds": tree.threshold.astype(np.float64),
+                        "values": leaf_values,
+                        "node_sample_weight": tree.weighted_n_node_samples,
+                    }, data=data, data_missing=data_missing))
+                self.base_offset = np.zeros(K)
+                self.tree_output = "adaboost_decision"
+                self.objective = None
+                if self.model_output == "predict_proba":
+                    self.model_output = "probability"
         else:
             raise InvalidModelError("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
@@ -1619,6 +1684,8 @@ class TreeEnsemble:
                 transform = "logistic"
             elif self.tree_output == "probability":
                 transform = "identity"
+            elif self.tree_output == "adaboost_decision":
+                transform = "softmax"
             else:
                 emsg = (
                     f'model_output = "probability" is not yet supported when model.tree_output = "{self.tree_output}"!'
