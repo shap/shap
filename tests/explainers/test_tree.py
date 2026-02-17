@@ -3461,6 +3461,7 @@ def _compute_shap_with_threads(model, X, background, n_threads, **kwargs):
 def test_openmp_interventional_shap_values():
     """Multi-threaded interventional SHAP values should match single-threaded."""
     from sklearn.ensemble import RandomForestRegressor
+
     X, y = shap.datasets.california(n_points=200)
     model = RandomForestRegressor(n_estimators=20, max_depth=5, random_state=42)
     model.fit(X, y)
@@ -3472,8 +3473,7 @@ def test_openmp_interventional_shap_values():
     sv_4, ev_4 = _compute_shap_with_threads(model, X_test, background, n_threads=4)
 
     # Results should be identical (same accumulation order)
-    np.testing.assert_allclose(sv_1, sv_4, atol=1e-10,
-                               err_msg="SHAP values differ between 1 and 4 threads")
+    np.testing.assert_allclose(sv_1, sv_4, atol=1e-10, err_msg="SHAP values differ between 1 and 4 threads")
 
     # Verify additivity: sum of shap values + expected_value == prediction
     pred = model.predict(X_test.values)
@@ -3505,8 +3505,7 @@ def test_openmp_interventional_interaction_values():
         else:
             os.environ["OMP_NUM_THREADS"] = old_val
 
-    np.testing.assert_allclose(iv_1, iv_4, atol=1e-10,
-                               err_msg="Interaction values differ between 1 and 4 threads")
+    np.testing.assert_allclose(iv_1, iv_4, atol=1e-10, err_msg="Interaction values differ between 1 and 4 threads")
 
     # Verify symmetry
     for i in range(iv_4.shape[0]):
@@ -3522,17 +3521,15 @@ def test_openmp_interventional_with_transform():
     X = X[:200]
     y = y[:200]
 
-    model = xgb.XGBClassifier(n_estimators=10, max_depth=3, random_state=42,
-                               use_label_encoder=False, eval_metric="logloss")
+    model = xgb.XGBClassifier(
+        n_estimators=10, max_depth=3, random_state=42, use_label_encoder=False, eval_metric="logloss"
+    )
     model.fit(X, y)
 
     background = X[:50]
     X_test = X[50:70]
 
-    sv_1, ev_1 = _compute_shap_with_threads(model, X_test, background, n_threads=1,
-                                             model_output="probability")
-    sv_4, ev_4 = _compute_shap_with_threads(model, X_test, background, n_threads=4,
-                                             model_output="probability")
+    sv_1, ev_1 = _compute_shap_with_threads(model, X_test, background, n_threads=1, model_output="probability")
+    sv_4, ev_4 = _compute_shap_with_threads(model, X_test, background, n_threads=4, model_output="probability")
 
-    np.testing.assert_allclose(sv_1, sv_4, atol=1e-8,
-                               err_msg="SHAP values with transform differ between threads")
+    np.testing.assert_allclose(sv_1, sv_4, atol=1e-8, err_msg="SHAP values with transform differ between threads")
