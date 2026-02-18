@@ -104,14 +104,6 @@ def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
     return n_iterations
 
 
-def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
-    if model.model_type == "xgboost" and model.cat_feature_indices is not None:
-        raise NotImplementedError(
-            "Categorical split is not yet supported. You can still use"
-            " TreeExplainer with `feature_perturbation=tree_path_dependent`."
-        )
-
-
 class TreeExplainer(Explainer):
     """Uses Tree SHAP algorithms to explain the output of ensemble tree models.
 
@@ -658,7 +650,6 @@ class TreeExplainer(Explainer):
             X, y, tree_limit, check_additivity
         )
         transform = self.model.get_transform()
-        _xgboost_cat_unsupported(self.model)
 
         # run the core algorithm using the C extension
         assert_import("cext")
@@ -782,7 +773,6 @@ class TreeExplainer(Explainer):
         assert self.model.model_output == "raw", (
             'Only model_output = "raw" is supported for SHAP interaction values right now!'
         )
-        # assert self.feature_perturbation == "tree_path_dependent", "Only feature_perturbation = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
         transform = "identity"
 
         # see if we have a default tree_limit in place.
@@ -794,7 +784,8 @@ class TreeExplainer(Explainer):
             import xgboost
 
             if not isinstance(X, xgboost.core.DMatrix):
-                X = xgboost.DMatrix(X)
+                dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
+                X = xgboost.DMatrix(X, **dmatrix_props)
 
             n_iterations = _xgboost_n_iterations(tree_limit, self.model.num_stacked_models)
             phi = self.model.original_model.predict(
@@ -1959,7 +1950,7 @@ class SingleTree:
                         threshold = 0.0
                         categories = [int(x) for x in vertex["threshold"].split("||")]
                         for cat in categories:
-                            threshold += 2 ** (cat - 1)
+                            threshold += 2**cat
                         self.thresholds[vsplit_idx] = threshold
                         self.threshold_types[vsplit_idx] = 1  # Indicates that this is a categorical split
                     else:

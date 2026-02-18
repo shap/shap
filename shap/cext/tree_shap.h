@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <cmath>
 #include <ctime>
+#include <vector>
 #if defined(_WIN32) || defined(WIN32)
     #include <malloc.h>
 #elif defined(__MVS__)
@@ -179,7 +180,7 @@ inline transform_f get_transform(unsigned model_transform) {
 }
 
 inline bool category_in_threshold(float threshold, float category) {
-    int category_flag = (1 << (int(category) - 1));
+    int category_flag = (1 << int(category));
     return (int(threshold) & category_flag) != 0;
 }
 
@@ -730,6 +731,7 @@ struct Node {
     long feat, pfeat;
     float thres, value;
     char from_flag;
+    char threshold_type; // 0 = numeric, 1 = categorical
 };
 
 #define FROM_NEITHER 0
@@ -746,6 +748,12 @@ inline int bin_coeff(int n, int k) {
         res /= (i + 1);
     }
     return res;
+}
+
+// omega(a, b) = 1 / ((a+b+1) * C(a+b, a))
+// Used by interventional SHAP interaction values (Zern et al. AAAI 2023)
+inline tfloat omega_weight(int a, int b) {
+    return 1.0 / ((a + b + 1) * bin_coeff(a + b, a));
 }
 
 // note this only handles single output models, so multi-output models get explained using multiple passes
@@ -793,18 +801,18 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
 
     if (x_missing[feat]) {
         next_xnode = cd;
-    } else if (x[feat] > thres) {
-        next_xnode = cr;
-    } else if (x[feat] <= thres) {
+    } else if (curr_node.threshold_type == 1 ? category_in_threshold(thres, x[feat]) : x[feat] <= thres) {
         next_xnode = cl;
+    } else {
+        next_xnode = cr;
     }
 
     if (r_missing[feat]) {
         next_rnode = cd;
-    } else if (r[feat] > thres) {
-        next_rnode = cr;
-    } else if (r[feat] <= thres) {
+    } else if (curr_node.threshold_type == 1 ? category_in_threshold(thres, r[feat]) : r[feat] <= thres) {
         next_rnode = cl;
+    } else {
+        next_rnode = cr;
     }
 
     if (next_xnode != next_rnode) {
@@ -900,8 +908,14 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
             continue;
         }
 
-        const bool x_right = x[feat] > thres;
-        const bool r_right = r[feat] > thres;
+        bool x_right, r_right;
+        if (curr_node.threshold_type == 1) {
+            x_right = !category_in_threshold(thres, x[feat]);
+            r_right = !category_in_threshold(thres, r[feat]);
+        } else {
+            x_right = x[feat] > thres;
+            r_right = r[feat] > thres;
+        }
 
         if (x_missing[feat]) {
             next_xnode = cd;
@@ -1107,6 +1121,371 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
 }
 
 
+// Implements Corollary 1 (Eq. 14b) from Zern et al. (AAAI 2023) for a constant leaf value.
+// Updates the interaction matrix out_contribs for a leaf node with the given A and N\B feature sets.
+inline void shapley_interaction_const_leaf(
+    const tfloat value,          // leaf value (scaled by 1/|D| or cover)
+    const int *A_feats,          // array of feature indices in A
+    const int nA,                // |A|
+    const int *NB_feats,         // array of feature indices in N\B
+    const int nNB,               // |N\B|
+    const unsigned num_feats,    // M (total features)
+    tfloat *out_contribs,        // output: (num_feats+1) x (num_feats+1) interaction matrix
+    const tfloat *omega_table,   // precomputed omega table
+    const unsigned omega_stride  // stride for omega_table (max_depth+2)
+) {
+    const unsigned S = num_feats + 1; // stride for interaction matrix rows
+
+    // 1. Diagonal updates (SHAP main effects)
+    // For each j in A: phi[j,j] += value * omega(|A|-1, |N\B|)
+    if (nA >= 1) {
+        const tfloat diag_A = value * omega_table[(nA - 1) * omega_stride + nNB];
+        for (int i = 0; i < nA; ++i) {
+            out_contribs[A_feats[i] * S + A_feats[i]] += diag_A;
+        }
+    }
+
+    // For each j in N\B: phi[j,j] += -value * omega(|A|, |N\B|-1)
+    if (nNB >= 1) {
+        const tfloat diag_NB = -value * omega_table[nA * omega_stride + (nNB - 1)];
+        for (int i = 0; i < nNB; ++i) {
+            out_contribs[NB_feats[i] * S + NB_feats[i]] += diag_NB;
+        }
+    }
+
+    // 2. A x A pairs (when |A| >= 2)
+    if (nA >= 2) {
+        const tfloat phi_update = 0.5 * value * omega_table[(nA - 2) * omega_stride + nNB];
+        for (int i = 0; i < nA; ++i) {
+            for (int j = i + 1; j < nA; ++j) {
+                out_contribs[A_feats[i] * S + A_feats[j]] += phi_update;
+                out_contribs[A_feats[j] * S + A_feats[i]] += phi_update;
+                // Diagonal correction: phi[k,k] -= phi_update for each off-diag entry
+                out_contribs[A_feats[i] * S + A_feats[i]] -= phi_update;
+                out_contribs[A_feats[j] * S + A_feats[j]] -= phi_update;
+            }
+        }
+    }
+
+    // 3. A x N\B cross pairs (when |A| >= 1 and |N\B| >= 1)
+    if (nA >= 1 && nNB >= 1) {
+        const tfloat phi_update = -0.5 * value * omega_table[(nA - 1) * omega_stride + (nNB - 1)];
+        for (int i = 0; i < nA; ++i) {
+            for (int j = 0; j < nNB; ++j) {
+                out_contribs[A_feats[i] * S + NB_feats[j]] += phi_update;
+                out_contribs[NB_feats[j] * S + A_feats[i]] += phi_update;
+                // Diagonal correction
+                out_contribs[A_feats[i] * S + A_feats[i]] -= phi_update;
+                out_contribs[NB_feats[j] * S + NB_feats[j]] -= phi_update;
+            }
+        }
+    }
+
+    // 4. N\B x N\B pairs (when |N\B| >= 2)
+    if (nNB >= 2) {
+        const tfloat phi_update = 0.5 * value * omega_table[nA * omega_stride + (nNB - 2)];
+        for (int i = 0; i < nNB; ++i) {
+            for (int j = i + 1; j < nNB; ++j) {
+                out_contribs[NB_feats[i] * S + NB_feats[j]] += phi_update;
+                out_contribs[NB_feats[j] * S + NB_feats[i]] += phi_update;
+                // Diagonal correction
+                out_contribs[NB_feats[i] * S + NB_feats[i]] -= phi_update;
+                out_contribs[NB_feats[j] * S + NB_feats[j]] -= phi_update;
+            }
+        }
+    }
+}
+
+// Per-tree per-sample-pair interventional SHAP interaction values.
+// Based on tree_shap_indep() traversal but computes interaction matrix at leaves
+// using Corollary 1 (Eq. 14b) from Zern et al. (AAAI 2023).
+inline void tree_shap_indep_interactions(
+    const unsigned max_depth, const unsigned num_feats,
+    const unsigned num_nodes, const tfloat *x,
+    const bool *x_missing, const tfloat *r,
+    const bool *r_missing, tfloat *out_contribs,
+    signed short *feat_hist,
+    const tfloat *omega_table, const unsigned omega_stride,
+    int *node_stack, Node *mytree,
+    int *A_feats_buf, int *NB_feats_buf
+) {
+    int ns_ctr = 0;
+    std::fill_n(feat_hist, num_feats, 0);
+    short node = 0, cl, cr, cd, pnode;
+    long feat, pfeat = -1;
+    short next_xnode = -1, next_rnode = -1;
+    short next_node = -1, from_child = -1;
+    float thres;
+    char from_flag;
+    unsigned M = 0, N = 0;
+
+    Node curr_node = mytree[node];
+    feat = curr_node.feat;
+    thres = curr_node.thres;
+    cl = curr_node.cl;
+    cr = curr_node.cr;
+    cd = curr_node.cd;
+
+    // short circuit when this is a stump tree (with no splits)
+    if (cl < 0) {
+        out_contribs[num_feats * (num_feats + 1) + num_feats] += curr_node.value;
+        return;
+    }
+
+    if (x_missing[feat]) {
+        next_xnode = cd;
+    } else if (curr_node.threshold_type == 1 ? category_in_threshold(thres, x[feat]) : x[feat] <= thres) {
+        next_xnode = cl;
+    } else {
+        next_xnode = cr;
+    }
+
+    if (r_missing[feat]) {
+        next_rnode = cd;
+    } else if (curr_node.threshold_type == 1 ? category_in_threshold(thres, r[feat]) : r[feat] <= thres) {
+        next_rnode = cl;
+    } else {
+        next_rnode = cr;
+    }
+
+    if (next_xnode != next_rnode) {
+        mytree[next_xnode].from_flag = FROM_X_NOT_R;
+        mytree[next_rnode].from_flag = FROM_R_NOT_X;
+    } else {
+        mytree[next_xnode].from_flag = FROM_NEITHER;
+    }
+
+    // Check if x and r go the same way
+    if (next_xnode == next_rnode) {
+        next_node = next_xnode;
+    }
+
+    // If not, go left
+    if (next_node < 0) {
+        next_node = cl;
+        if (next_rnode == next_node) { // rpath
+            N = N+1;
+            feat_hist[feat] -= 1;
+        } else if (next_xnode == next_node) { // xpath
+            M = M+1;
+            N = N+1;
+            feat_hist[feat] += 1;
+        }
+    }
+    node_stack[ns_ctr] = node;
+    ns_ctr += 1;
+    while (true) {
+        node = next_node;
+        curr_node = mytree[node];
+        feat = curr_node.feat;
+        thres = curr_node.thres;
+        cl = curr_node.cl;
+        cr = curr_node.cr;
+        cd = curr_node.cd;
+        pnode = curr_node.pnode;
+        pfeat = curr_node.pfeat;
+        from_flag = curr_node.from_flag;
+
+        // At a leaf
+        if (cl < 0) {
+            if (N == 0) {
+                // No divergence at all: add to bias term (2D position)
+                out_contribs[num_feats * (num_feats + 1) + num_feats] += mytree[node].value;
+            } else {
+                // Build A_feats and NB_feats arrays from feat_hist
+                int nA = 0, nNB = 0;
+                for (unsigned f = 0; f < num_feats; ++f) {
+                    if (feat_hist[f] > 0) {
+                        A_feats_buf[nA++] = f;
+                    } else if (feat_hist[f] < 0) {
+                        NB_feats_buf[nNB++] = f;
+                    }
+                }
+                shapley_interaction_const_leaf(
+                    mytree[node].value, A_feats_buf, nA, NB_feats_buf, nNB,
+                    num_feats, out_contribs, omega_table, omega_stride
+                );
+            }
+
+            // Pop from node_stack
+            ns_ctr -= 1;
+            next_node = node_stack[ns_ctr];
+            from_child = node;
+            // Unwind
+            if (feat_hist[pfeat] > 0) {
+                feat_hist[pfeat] -= 1;
+            } else if (feat_hist[pfeat] < 0) {
+                feat_hist[pfeat] += 1;
+            }
+            if (feat_hist[pfeat] == 0) {
+                if (from_flag == FROM_X_NOT_R) {
+                    N = N-1;
+                    M = M-1;
+                } else if (from_flag == FROM_R_NOT_X) {
+                    N = N-1;
+                }
+            }
+            continue;
+        }
+
+        bool x_right, r_right;
+        if (curr_node.threshold_type == 1) {
+            x_right = !category_in_threshold(thres, x[feat]);
+            r_right = !category_in_threshold(thres, r[feat]);
+        } else {
+            x_right = x[feat] > thres;
+            r_right = r[feat] > thres;
+        }
+
+        if (x_missing[feat]) {
+            next_xnode = cd;
+        } else if (x_right) {
+            next_xnode = cr;
+        } else if (!x_right) {
+            next_xnode = cl;
+        }
+
+        if (r_missing[feat]) {
+            next_rnode = cd;
+        } else if (r_right) {
+            next_rnode = cr;
+        } else if (!r_right) {
+            next_rnode = cl;
+        }
+
+        if (next_xnode >= 0) {
+          if (next_xnode != next_rnode) {
+              mytree[next_xnode].from_flag = FROM_X_NOT_R;
+              mytree[next_rnode].from_flag = FROM_R_NOT_X;
+          } else {
+              mytree[next_xnode].from_flag = FROM_NEITHER;
+          }
+        }
+
+        // Arriving at node from parent
+        if (from_child == -1) {
+            node_stack[ns_ctr] = node;
+            ns_ctr += 1;
+            next_node = -1;
+
+            // Feature is set upstream
+            if (feat_hist[feat] > 0) {
+                next_node = next_xnode;
+                feat_hist[feat] += 1;
+            } else if (feat_hist[feat] < 0) {
+                next_node = next_rnode;
+                feat_hist[feat] -= 1;
+            }
+
+            // x and r go the same way
+            if (next_node < 0) {
+                if (next_xnode == next_rnode) {
+                    next_node = next_xnode;
+                }
+            }
+
+            // Go down one path
+            if (next_node >= 0) {
+                continue;
+            }
+
+            // Go down both paths, but go left first
+            next_node = cl;
+            if (next_rnode == next_node) {
+                N = N+1;
+                feat_hist[feat] -= 1;
+            } else if (next_xnode == next_node) {
+                M = M+1;
+                N = N+1;
+                feat_hist[feat] += 1;
+            }
+            from_child = -1;
+            continue;
+        }
+
+        // Arriving at node from child
+        if (from_child != -1) {
+            next_node = -1;
+            // Check if we should unroll immediately
+            if ((next_rnode == next_xnode) || (feat_hist[feat] != 0)) {
+                next_node = pnode;
+            }
+
+            // Came from a single path, so unroll
+            if (next_node >= 0) {
+                // At the root node
+                if (node == 0) {
+                    break;
+                }
+                // Unroll (no pos_lst/neg_lst propagation needed for interactions)
+                from_child = node;
+                ns_ctr -= 1;
+
+                // Unwind
+                if (feat_hist[pfeat] > 0) {
+                    feat_hist[pfeat] -= 1;
+                } else if (feat_hist[pfeat] < 0) {
+                    feat_hist[pfeat] += 1;
+                }
+                if (feat_hist[pfeat] == 0) {
+                    if (from_flag == FROM_X_NOT_R) {
+                        N = N-1;
+                        M = M-1;
+                    } else if (from_flag == FROM_R_NOT_X) {
+                        N = N-1;
+                    }
+                }
+                continue;
+                // Go right - Arriving from the left child
+            } else if (from_child == cl) {
+                node_stack[ns_ctr] = node;
+                ns_ctr += 1;
+                next_node = cr;
+                if (next_xnode == next_node) {
+                    M = M+1;
+                    N = N+1;
+                    feat_hist[feat] += 1;
+                } else if (next_rnode == next_node) {
+                    N = N+1;
+                    feat_hist[feat] -= 1;
+                }
+                from_child = -1;
+                continue;
+                // Unroll - Arriving from the right child
+            } else if (from_child == cr) {
+                // No pos_lst/neg_lst combining needed for interactions;
+                // all contributions were written at leaf nodes.
+
+                // Check if at root
+                if (node == 0) {
+                    break;
+                }
+
+                // Pop
+                ns_ctr -= 1;
+                next_node = node_stack[ns_ctr];
+                from_child = node;
+
+                // Unwind
+                if (feat_hist[pfeat] > 0) {
+                    feat_hist[pfeat] -= 1;
+                } else if (feat_hist[pfeat] < 0) {
+                    feat_hist[pfeat] += 1;
+                }
+                if (feat_hist[pfeat] == 0) {
+                    if (from_flag == FROM_X_NOT_R) {
+                        N = N-1;
+                        M = M-1;
+                    } else if (from_flag == FROM_R_NOT_X) {
+                        N = N-1;
+                    }
+                }
+                continue;
+            }
+        }
+    }
+}
+
 inline void print_progress_bar(tfloat &last_print, tfloat start_time, unsigned i, unsigned total_count) {
     const tfloat elapsed_seconds = difftime(time(NULL), start_time);
 
@@ -1162,6 +1541,7 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
 
             node_tree[j].thres = trees.thresholds[en_ind];
             node_tree[j].feat = trees.features[en_ind];
+            node_tree[j].threshold_type = trees.threshold_types[en_ind];
         }
     }
 
@@ -1278,6 +1658,160 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
     delete[] node_stack;
     delete[] feat_hist;
     delete[] memoized_weights;
+}
+
+
+/**
+ * Runs interventional Tree SHAP interaction values on dense data.
+ * Implements Algorithm 1 from Zern et al. (AAAI 2023).
+ */
+inline void dense_independent_interactions(const TreeEnsemble& trees, const ExplanationDataset &data,
+                       tfloat *out_contribs, tfloat transform(const tfloat, const tfloat)) {
+
+    // reformat the trees for faster access
+    std::vector<Node> node_trees_vec(trees.tree_limit * trees.max_nodes);
+    Node *node_trees = node_trees_vec.data();
+    for (unsigned i = 0; i < trees.tree_limit; ++i) {
+        Node *node_tree = node_trees + i * trees.max_nodes;
+        for (unsigned j = 0; j < trees.max_nodes; ++j) {
+            const unsigned en_ind = i * trees.max_nodes + j;
+            node_tree[j].cl = trees.children_left[en_ind];
+            node_tree[j].cr = trees.children_right[en_ind];
+            node_tree[j].cd = trees.children_default[en_ind];
+            if (j == 0) {
+                node_tree[j].pnode = 0;
+            }
+            if (trees.children_left[en_ind] >= 0) {
+                node_tree[trees.children_left[en_ind]].pnode = j;
+                node_tree[trees.children_left[en_ind]].pfeat = trees.features[en_ind];
+            }
+            if (trees.children_right[en_ind] >= 0) {
+                node_tree[trees.children_right[en_ind]].pnode = j;
+                node_tree[trees.children_right[en_ind]].pfeat = trees.features[en_ind];
+            }
+
+            node_tree[j].thres = trees.thresholds[en_ind];
+            node_tree[j].feat = trees.features[en_ind];
+            node_tree[j].threshold_type = trees.threshold_types[en_ind];
+        }
+    }
+
+    // preallocate arrays needed by the algorithm
+    const unsigned interaction_size = (data.M + 1) * (data.M + 1);
+    std::vector<int> node_stack_vec((unsigned)trees.max_depth);
+    std::vector<signed short> feat_hist_vec(data.M);
+    std::vector<tfloat> tmp_out_contribs_vec(interaction_size);
+    std::vector<int> A_feats_buf_vec(trees.max_depth + 1);
+    std::vector<int> NB_feats_buf_vec(trees.max_depth + 1);
+
+    int *node_stack = node_stack_vec.data();
+    signed short *feat_hist = feat_hist_vec.data();
+    tfloat *tmp_out_contribs = tmp_out_contribs_vec.data();
+    int *A_feats_buf = A_feats_buf_vec.data();
+    int *NB_feats_buf = NB_feats_buf_vec.data();
+
+    // precompute omega weight table
+    const unsigned omega_stride = trees.max_depth + 2;
+    std::vector<tfloat> omega_table_vec(omega_stride * omega_stride);
+    tfloat *omega_table = omega_table_vec.data();
+    for (unsigned a = 0; a <= trees.max_depth; ++a) {
+        for (unsigned b = 0; b <= trees.max_depth; ++b) {
+            omega_table[a * omega_stride + b] = omega_weight(a, b);
+        }
+    }
+
+    // compute the explanations for each sample
+    tfloat *instance_out_contribs;
+    tfloat rescale_factor = 1.0;
+    tfloat margin_x = 0;
+    tfloat margin_r = 0;
+    const unsigned no = trees.num_outputs;
+    time_t start_time = time(NULL);
+    tfloat last_print = 0;
+    for (unsigned oind = 0; oind < no; ++oind) {
+        // set the values in the reformatted tree to the current output index
+        for (unsigned i = 0; i < trees.tree_limit; ++i) {
+            Node *node_tree = node_trees + i * trees.max_nodes;
+            for (unsigned j = 0; j < trees.max_nodes; ++j) {
+                const unsigned en_ind = i * trees.max_nodes + j;
+                node_tree[j].value = trees.values[en_ind * no + oind];
+            }
+        }
+
+        // loop over all the samples
+        for (unsigned i = 0; i < data.num_X; ++i) {
+            const tfloat *x = data.X + i * data.M;
+            const bool *x_missing = data.X_missing + i * data.M;
+            instance_out_contribs = out_contribs + i * interaction_size * no;
+            const tfloat y_i = data.y == NULL ? 0 : data.y[i];
+
+            print_progress_bar(last_print, start_time, oind * data.num_X + i, data.num_X * no);
+
+            // compute the model's margin output for x
+            if (transform != NULL) {
+                margin_x = trees.base_offset[oind];
+                for (unsigned k = 0; k < trees.tree_limit; ++k) {
+                    margin_x += tree_predict(k, trees, x, x_missing)[oind];
+                }
+            }
+
+            for (unsigned j = 0; j < data.num_R; ++j) {
+                const tfloat *r = data.R + j * data.M;
+                const bool *r_missing = data.R_missing + j * data.M;
+                std::fill_n(tmp_out_contribs, interaction_size, 0);
+
+                // compute the model's margin output for r
+                if (transform != NULL) {
+                    margin_r = trees.base_offset[oind];
+                    for (unsigned k = 0; k < trees.tree_limit; ++k) {
+                        margin_r += tree_predict(k, trees, r, r_missing)[oind];
+                    }
+                }
+
+                for (unsigned k = 0; k < trees.tree_limit; ++k) {
+                    tree_shap_indep_interactions(
+                        trees.max_depth, data.M, trees.max_nodes, x, x_missing, r, r_missing,
+                        tmp_out_contribs, feat_hist, omega_table, omega_stride,
+                        node_stack, node_trees + k * trees.max_nodes,
+                        A_feats_buf, NB_feats_buf
+                    );
+                }
+
+                // compute the rescale factor
+                if (transform != NULL) {
+                    if (margin_x == margin_r) {
+                        rescale_factor = 1.0;
+                    } else {
+                        rescale_factor = (*transform)(margin_x, y_i) - (*transform)(margin_r, y_i);
+                        rescale_factor /= margin_x - margin_r;
+                    }
+                }
+
+                // add the effect of the current reference to our running total
+                // (skip the bias entry, handle it separately)
+                const unsigned bias_2d_idx = data.M * (data.M + 1) + data.M;
+                for (unsigned jj = 0; jj < interaction_size; ++jj) {
+                    if (jj == bias_2d_idx) continue;
+                    instance_out_contribs[jj * no + oind] +=
+                        tmp_out_contribs[jj] * rescale_factor;
+                }
+
+                // Add the base offset
+                if (transform != NULL) {
+                    instance_out_contribs[bias_2d_idx * no + oind] +=
+                        (*transform)(trees.base_offset[oind] + tmp_out_contribs[bias_2d_idx], 0);
+                } else {
+                    instance_out_contribs[bias_2d_idx * no + oind] +=
+                        trees.base_offset[oind] + tmp_out_contribs[bias_2d_idx];
+                }
+            }
+
+            // average the results over all the references
+            for (unsigned jj = 0; jj < interaction_size; ++jj) {
+                instance_out_contribs[jj * no + oind] /= data.num_R;
+            }
+        }
+    }
 }
 
 
@@ -1461,8 +1995,10 @@ inline void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset 
     switch (feature_dependence) {
         case FEATURE_DEPENDENCE::independent:
             if (interactions) {
-                std::cerr << "FEATURE_DEPENDENCE::independent does not support interactions!\n";
-            } else dense_independent(trees, data, out_contribs, transform);
+                dense_independent_interactions(trees, data, out_contribs, transform);
+            } else {
+                dense_independent(trees, data, out_contribs, transform);
+            }
             return;
 
         case FEATURE_DEPENDENCE::tree_path_dependent:
