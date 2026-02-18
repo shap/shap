@@ -3008,10 +3008,21 @@ def test_interventional_interaction_values_brute_force(n_features):
                     for S_tuple in combinations(rest, size):
                         S = set(S_tuple)
                         feats = np.arange(n_features)
-                        v_S = np.mean([model.predict(np.where(np.isin(feats, list(S)), x, r).reshape(1, -1))[0] for r in bg])
-                        v_Si = np.mean([model.predict(np.where(np.isin(feats, list(S | {i})), x, r).reshape(1, -1))[0] for r in bg])
-                        v_Sj = np.mean([model.predict(np.where(np.isin(feats, list(S | {j})), x, r).reshape(1, -1))[0] for r in bg])
-                        v_Sij = np.mean([model.predict(np.where(np.isin(feats, list(S | {i, j})), x, r).reshape(1, -1))[0] for r in bg])
+                        v_S = np.mean(
+                            [model.predict(np.where(np.isin(feats, list(S)), x, r).reshape(1, -1))[0] for r in bg]
+                        )
+                        v_Si = np.mean(
+                            [model.predict(np.where(np.isin(feats, list(S | {i})), x, r).reshape(1, -1))[0] for r in bg]
+                        )
+                        v_Sj = np.mean(
+                            [model.predict(np.where(np.isin(feats, list(S | {j})), x, r).reshape(1, -1))[0] for r in bg]
+                        )
+                        v_Sij = np.mean(
+                            [
+                                model.predict(np.where(np.isin(feats, list(S | {i, j})), x, r).reshape(1, -1))[0]
+                                for r in bg
+                            ]
+                        )
 
                         weight = 1.0 / ((n_features - 1) * comb(n_features - 2, len(S)))
                         val += weight * (v_Sij - v_Si - v_Sj + v_S)
@@ -3108,6 +3119,7 @@ def test_interventional_interaction_values_models(model_name):
         model = GradientBoostingRegressor(n_estimators=20, max_depth=3, random_state=42)
     elif model_name == "RandomForestRegressor":
         from sklearn.ensemble import RandomForestRegressor
+
         model = RandomForestRegressor(n_estimators=20, max_depth=3, random_state=42)
     else:
         raise ValueError(f"Unknown model: {model_name}")
@@ -3147,6 +3159,7 @@ def test_interventional_interaction_values_nonzero():
 def test_interventional_interaction_values_multiclass():
     """Verify interventional interactions work for multi-class models."""
     from sklearn.datasets import load_iris
+
     iris = load_iris()
     model = RandomForestClassifier(n_estimators=10, max_depth=3, random_state=42)
     model.fit(iris.data, iris.target)
@@ -3162,9 +3175,7 @@ def test_interventional_interaction_values_multiclass():
     if isinstance(interactions, list):
         for cls_interactions in interactions:
             assert cls_interactions.shape == (5, 4, 4)
-            np.testing.assert_allclose(
-                cls_interactions, np.swapaxes(cls_interactions, 1, 2), atol=1e-4
-            )
+            np.testing.assert_allclose(cls_interactions, np.swapaxes(cls_interactions, 1, 2), atol=1e-4)
     else:
         assert interactions.shape == (5, 4, 4, 3) or interactions.shape == (5, 4, 4)
         if interactions.ndim == 4:
@@ -3193,7 +3204,8 @@ def test_interventional_categorical():
     ds = lightgbm.Dataset(X, label=y, categorical_feature=[0, 1], free_raw_data=False)
     model = lightgbm.train(
         {"objective": "regression", "verbose": -1, "n_estimators": 20, "max_depth": 4},
-        ds, num_boost_round=20,
+        ds,
+        num_boost_round=20,
     )
 
     X_test = X[:10]
