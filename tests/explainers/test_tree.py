@@ -2938,6 +2938,7 @@ def test_tree_explainer_random_forest_regressor():
             shap_sum = shap_values.sum(1) + explainer.expected_value
         assert np.abs(shap_sum - predictions).max() < 1e-4
 
+
 def test_path_dependent_small_background():
     """Path-dependent SHAP with small background that has uncovered leaves.
 
@@ -2965,4 +2966,3 @@ def test_path_dependent_small_background():
     for c in range(3):
         shap_sum = explainer.expected_value[c] + sv[:, :, c].sum(axis=1)
         np.testing.assert_allclose(shap_sum, pred[:, c], atol=1e-6)
-
