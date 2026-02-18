@@ -320,11 +320,11 @@ def test_gpu_cpu_match_with_transform_gh3655():
     sv_cpu = explainer_cpu.shap_values(X_test)
     sv_gpu = explainer_gpu.shap_values(X_test)
 
-    np.testing.assert_allclose(sv_cpu, sv_gpu, atol=1e-4,
-                               err_msg="GPU vs CPU SHAP values differ with model_output='probability'")
+    np.testing.assert_allclose(
+        sv_cpu, sv_gpu, atol=1e-4, err_msg="GPU vs CPU SHAP values differ with model_output='probability'"
+    )
 
     # Verify additivity: sum(shap) + expected_value ≈ predict_proba
     proba = model.predict_proba(X_test)[:, 1]
     gpu_sum = sv_gpu.sum(axis=1) + explainer_gpu.expected_value
-    np.testing.assert_allclose(gpu_sum, proba, atol=1e-3,
-                               err_msg="GPU SHAP values don't sum to predict_proba")
+    np.testing.assert_allclose(gpu_sum, proba, atol=1e-3, err_msg="GPU SHAP values don't sum to predict_proba")
