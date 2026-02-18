@@ -3009,10 +3009,21 @@ def test_interventional_interaction_values_brute_force(n_features):
                     for S_tuple in combinations(rest, size):
                         S = set(S_tuple)
                         feats = np.arange(n_features)
-                        v_S = np.mean([model.predict(np.where(np.isin(feats, list(S)), x, r).reshape(1, -1))[0] for r in bg])
-                        v_Si = np.mean([model.predict(np.where(np.isin(feats, list(S | {i})), x, r).reshape(1, -1))[0] for r in bg])
-                        v_Sj = np.mean([model.predict(np.where(np.isin(feats, list(S | {j})), x, r).reshape(1, -1))[0] for r in bg])
-                        v_Sij = np.mean([model.predict(np.where(np.isin(feats, list(S | {i, j})), x, r).reshape(1, -1))[0] for r in bg])
+                        v_S = np.mean(
+                            [model.predict(np.where(np.isin(feats, list(S)), x, r).reshape(1, -1))[0] for r in bg]
+                        )
+                        v_Si = np.mean(
+                            [model.predict(np.where(np.isin(feats, list(S | {i})), x, r).reshape(1, -1))[0] for r in bg]
+                        )
+                        v_Sj = np.mean(
+                            [model.predict(np.where(np.isin(feats, list(S | {j})), x, r).reshape(1, -1))[0] for r in bg]
+                        )
+                        v_Sij = np.mean(
+                            [
+                                model.predict(np.where(np.isin(feats, list(S | {i, j})), x, r).reshape(1, -1))[0]
+                                for r in bg
+                            ]
+                        )
 
                         weight = 1.0 / ((n_features - 1) * comb(n_features - 2, len(S)))
                         val += weight * (v_Sij - v_Si - v_Sj + v_S)
@@ -3109,6 +3120,7 @@ def test_interventional_interaction_values_models(model_name):
         model = GradientBoostingRegressor(n_estimators=20, max_depth=3, random_state=42)
     elif model_name == "RandomForestRegressor":
         from sklearn.ensemble import RandomForestRegressor
+
         model = RandomForestRegressor(n_estimators=20, max_depth=3, random_state=42)
     else:
         raise ValueError(f"Unknown model: {model_name}")
@@ -3148,6 +3160,7 @@ def test_interventional_interaction_values_nonzero():
 def test_interventional_interaction_values_multiclass():
     """Verify interventional interactions work for multi-class models."""
     from sklearn.datasets import load_iris
+
     iris = load_iris()
     model = RandomForestClassifier(n_estimators=10, max_depth=3, random_state=42)
     model.fit(iris.data, iris.target)
@@ -3163,9 +3176,7 @@ def test_interventional_interaction_values_multiclass():
     if isinstance(interactions, list):
         for cls_interactions in interactions:
             assert cls_interactions.shape == (5, 4, 4)
-            np.testing.assert_allclose(
-                cls_interactions, np.swapaxes(cls_interactions, 1, 2), atol=1e-4
-            )
+            np.testing.assert_allclose(cls_interactions, np.swapaxes(cls_interactions, 1, 2), atol=1e-4)
     else:
         assert interactions.shape == (5, 4, 4, 3) or interactions.shape == (5, 4, 4)
         if interactions.ndim == 4:
@@ -3194,7 +3205,8 @@ def test_interventional_categorical():
     ds = lightgbm.Dataset(X, label=y, categorical_feature=[0, 1], free_raw_data=False)
     model = lightgbm.train(
         {"objective": "regression", "verbose": -1, "n_estimators": 20, "max_depth": 4},
-        ds, num_boost_round=20,
+        ds,
+        num_boost_round=20,
     )
 
     X_test = X[:10]
@@ -3243,6 +3255,7 @@ def test_interventional_vs_path_dependent_uncorrelated():
 
     # Loose tolerance since finite-sample effects and slight correlation in random data
     np.testing.assert_allclose(interactions_iv, interactions_pd, atol=0.15, rtol=0.3)
+
 
 def test_path_dependent_categorical():
     """Verify path-dependent mode works with LightGBM categorical features."""
@@ -3294,6 +3307,7 @@ def _compute_shap_with_threads(model, X, background, n_threads, **kwargs):
 def test_openmp_interventional_shap_values():
     """Multi-threaded interventional SHAP values should match single-threaded."""
     from sklearn.ensemble import RandomForestRegressor
+
     X, y = shap.datasets.california(n_points=200)
     model = RandomForestRegressor(n_estimators=20, max_depth=5, random_state=42)
     model.fit(X, y)
@@ -3305,8 +3319,7 @@ def test_openmp_interventional_shap_values():
     sv_4, ev_4 = _compute_shap_with_threads(model, X_test, background, n_threads=4)
 
     # Results should be identical (same accumulation order)
-    np.testing.assert_allclose(sv_1, sv_4, atol=1e-10,
-                               err_msg="SHAP values differ between 1 and 4 threads")
+    np.testing.assert_allclose(sv_1, sv_4, atol=1e-10, err_msg="SHAP values differ between 1 and 4 threads")
 
     # Verify additivity: sum of shap values + expected_value == prediction
     pred = model.predict(X_test.values)
@@ -3338,8 +3351,7 @@ def test_openmp_interventional_interaction_values():
         else:
             os.environ["OMP_NUM_THREADS"] = old_val
 
-    np.testing.assert_allclose(iv_1, iv_4, atol=1e-10,
-                               err_msg="Interaction values differ between 1 and 4 threads")
+    np.testing.assert_allclose(iv_1, iv_4, atol=1e-10, err_msg="Interaction values differ between 1 and 4 threads")
 
     # Verify symmetry
     for i in range(iv_4.shape[0]):
@@ -3355,18 +3367,15 @@ def test_openmp_interventional_with_transform():
     X = X[:200]
     y = y[:200]
 
-    model = xgb.XGBClassifier(n_estimators=10, max_depth=3, random_state=42,
-                               use_label_encoder=False, eval_metric="logloss")
+    model = xgb.XGBClassifier(
+        n_estimators=10, max_depth=3, random_state=42, use_label_encoder=False, eval_metric="logloss"
+    )
     model.fit(X, y)
 
     background = X[:50]
     X_test = X[50:70]
 
-    sv_1, ev_1 = _compute_shap_with_threads(model, X_test, background, n_threads=1,
-                                             model_output="probability")
-    sv_4, ev_4 = _compute_shap_with_threads(model, X_test, background, n_threads=4,
-                                             model_output="probability")
+    sv_1, ev_1 = _compute_shap_with_threads(model, X_test, background, n_threads=1, model_output="probability")
+    sv_4, ev_4 = _compute_shap_with_threads(model, X_test, background, n_threads=4, model_output="probability")
 
-    np.testing.assert_allclose(sv_1, sv_4, atol=1e-8,
-                               err_msg="SHAP values with transform differ between threads")
-
+    np.testing.assert_allclose(sv_1, sv_4, atol=1e-8, err_msg="SHAP values with transform differ between threads")
