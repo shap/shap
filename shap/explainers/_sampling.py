@@ -100,8 +100,10 @@ class SamplingExplainer(KernelExplainer):
             model_out = self.model.f(instance.convert_to_df())
         else:
             model_out = self.model.f(instance.x)
-        if isinstance(model_out, (pd.DataFrame, pd.Series)):
+        if isinstance(model_out, pd.DataFrame):
             model_out = model_out.values[0]
+        elif isinstance(model_out, pd.Series):
+            model_out = model_out.values
         self.fx = model_out[0]
 
         if not self.vector_out:
