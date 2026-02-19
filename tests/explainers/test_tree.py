@@ -2946,6 +2946,8 @@ def test_path_dependent_small_background():
     produces zero-weight leaves. Without the epsilon fix, unwind_path()
     divides by zero, producing NaN. Addresses #3574.
     """
+    from shap.explainers._tree import SingleTree, TreeEnsemble
+
     lightgbm = pytest.importorskip("lightgbm")
 
     X, y = sklearn.datasets.load_iris(return_X_y=True)
@@ -2955,6 +2957,9 @@ def test_path_dependent_small_background():
     bg = X[:20]  # small background — guarantees uncovered leaves
     explainer = shap.TreeExplainer(model, data=bg, feature_perturbation="tree_path_dependent")
 
+    assert isinstance(explainer.model, TreeEnsemble)  # make mypy happy
+    assert isinstance(explainer.model.trees, list)  # make mypy happy
+    assert all(isinstance(t, SingleTree) for t in explainer.model.trees)  # make mypy happy
     # Confirm zero-weight nodes were present and got epsilon-replaced
     assert any(np.any(t.node_sample_weight == 1e-6) for t in explainer.model.trees)
 
@@ -2963,6 +2968,7 @@ def test_path_dependent_small_background():
 
     # Additivity
     pred = explainer.model.predict(X[:5])
+    assert isinstance(pred, np.ndarray)  # make mypy happy
     for c in range(3):
         shap_sum = explainer.expected_value[c] + sv[:, :, c].sum(axis=1)
         np.testing.assert_allclose(shap_sum, pred[:, c], atol=1e-6)
