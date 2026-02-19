@@ -76,7 +76,7 @@ def categorical_explanation():
     # when using pandas 3.0+, so we use integer categories to test categorical handling
     X.loc[X["sex"] < 0, "sex"] = 0
     X.loc[X["sex"] > 0, "sex"] = 1
-    X["sex"] = X["sex"].astype("category")
+    X["sex"] = X["sex"].astype(int).astype("category")
 
     # train an XGBoost model (but any other model type would also work)
     model = xgboost.XGBRegressor(random_state=0, enable_categorical=True, max_cat_to_onehot=1, base_score=0.5)
