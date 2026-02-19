@@ -5,7 +5,7 @@ exclude: '.*tree_shap_paper.*|.*user_studies.*|.*__snapshots__.*'
 
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.14.10
+  rev: v0.14.14
   hooks:
   - id: ruff
     types_or: [python, pyi, jupyter]
@@ -23,6 +23,7 @@ repos:
   - id: mixed-line-ending
   - id: trailing-whitespace
   - id: end-of-file-fixer
+    exclude: tests/gpu_tree_tests.ipynb
 
 - repo: https://github.com/stefsmeets/nbcheckorder/
   rev: v0.3.0
