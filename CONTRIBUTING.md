@@ -212,6 +212,7 @@ This repository accepts PRs written by LLMs in any capacity. When filing a PR, p
  - Most of the work on a feature happens after the merge, so maintainers need to understand the code thoroughly. As someone filing the PR it is your responsibility to help them so maintainers can confidently own the code.
  - LLMs can reproduce copyrighted code. As a contributor, you are responsible for ensuring your submission does not violate copyright.
  - PRs can be closed if any of these points are not met.
+ - This policy is experimental and can change any time.
 
 ## Documentation
 
