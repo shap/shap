@@ -33,7 +33,7 @@ conda install -c conda-forge shap
 
 ## Contributing
 
-We welcome highly contributions. Feel free to file an issue. Before opening a PR make sure you've read our [CONTRIBUTING.md](CONTRIBUTING.md) guideline.
+We welcome contributions highly. Feel free to file an issue. Before opening a PR make sure you've read our [CONTRIBUTING.md](CONTRIBUTING.md) guideline.
 
 ## Tree ensemble example (XGBoost/LightGBM/CatBoost/scikit-learn/pyspark models)
 
