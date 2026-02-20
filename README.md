@@ -31,6 +31,10 @@ pip install shap
 conda install -c conda-forge shap
 </pre>
 
+## Contributing
+
+We welcome highly contributions. Feel free to file an issue. Before opening a PR make sure you've read our [CONTRIBUTING.md](CONTRIBUTING.md) guideline.
+
 ## Tree ensemble example (XGBoost/LightGBM/CatBoost/scikit-learn/pyspark models)
 
 While SHAP can explain the output of any machine learning model, we have developed a high-speed exact algorithm for tree ensemble methods (see our [Nature MI paper](https://rdcu.be/b0z70)). Fast C++ implementations are supported for *XGBoost*, *LightGBM*, *CatBoost*, *scikit-learn* and *pyspark* tree models:
