@@ -12,6 +12,7 @@
 - [Pull Requests (PRs)](#pull-requests-prs)
   - [Etiquette for creating PRs](#etiquette-for-creating-prs)
   - [Checklist for publishing PRs](#checklist-for-publishing-prs)
+  - [AI Usage Policy](#ai-usage-policy)
 - [Documentation](#documentation)
   - [Previewing changes on Pull Requests](#previewing-changes-on-pull-requests)
   - [Building the docs locally](#building-the-docs-locally)
@@ -201,6 +202,17 @@ please ensure:
 - Your feature branch is up-to-date with the master branch,
 - All [pre-commit hooks](#code-checks-with-precommit) pass, and
 - Unit tests have been added (if your PR adds any new features or fixes a bug).
+
+### AI Usage Policy
+
+This repository accepts PRs written by LLMs in any capacity. When filing a PR, please keep the following in mind:
+ - Disclose your AI usage. A disclosure skill is available at [.claude/skills/ai-disclosure](.claude/skills/ai-disclosure) — not mandatory, but a good guideline for what we expect. Explain what the agent did, where it acted autonomously, where it assisted, and where it advised.
+ - Make sure you understand each and every line in your PR as if you've written it yourself. Explain what you understood during working on the issue in the PR description and the rationale behind your changes.
+ - This repository is maintained by humans, so write your PR documentation in a clean, minimal and human-oriented way without AI bloat.
+ - Most of the work on a feature happens after the merge, so maintainers need to understand the code thoroughly. As someone filing the PR it is your responsibility to help them so maintainers can confidently own the code.
+ - LLMs can reproduce copyrighted code. As a contributor, you are responsible for ensuring your submission does not violate copyright.
+ - PRs can be closed if any of these points are not met.
+ - This policy is experimental and can change any time.
 
 ## Documentation
 
@@ -411,13 +423,3 @@ the right section. It also helps to ensure each PR has a descriptive name.
 
 The notes can be edited (both before and after release) to remove information
 that is unlikely to be of high interest to users, such as maintenance updates.
-
-### AI Usage Policy
-
-This repository accepts PRs written by LLMs in any capacity. When filing a PR, please keep the following in mind:
- - Disclose your AI usage. A disclosure skill is available at [.claude/skills/ai-disclosure] — not mandatory, but a good guideline for what we expect. Explain what the agent did, where it acted autonomously, where it assisted, and where it advised.
- - Make sure you understand each and every line in your PR as if you've written it yourself. Explain what you understood during working on the issue in the PR description and the rationale behind your changes.
- - This repository is maintained by humans, so write your PR documentation in a clean, minimal and human-oriented way without AI bloat.
- - Most of the work on a feature happens after the merge, so maintainers need to understand the code thoroughly. As someone filing the PR it is your responsibility to help them so maintainers can confidently own the code.
- - LLMs can reproduce copyrighted code. As a contributor, you are responsible for ensuring your submission does not violate copyright.
- - PRs can be closed if any of these points are not met.
