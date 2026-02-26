@@ -296,6 +296,7 @@ convention = "numpy"
 
 [tool.coverage.run]
 source_pkgs = ["shap"]
+omit = ["shap/benchmark/*"]
 
 [tool.coverage.paths]
 combine = ["shap", "*/site-packages/shap"]
