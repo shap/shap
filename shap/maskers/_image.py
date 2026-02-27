@@ -19,7 +19,7 @@ except ImportError as e:
 class Image(Masker):
     """Masks out image regions with blurring or inpainting."""
 
-    def __init__(self, mask_value, shape=None):
+    def __init__(self, mask_value, shape=None, partition_scheme=0):
         """Build a new Image masker with the given masking value.
 
         Parameters
@@ -29,6 +29,10 @@ class Image(Masker):
         shape : None or tuple
             If the mask_value is an auto-generated masker instead of a dataset then the input
             image shape needs to be provided.
+        partition_scheme: 0 or 1
+            Selects partitioning scheme. If the partition_scheme is 0, then all row, column
+            splits are performed before channel splits (default behavior). If the partition_scheme
+            is 1, then all channels are split before splitting along rows and columns.
 
         """
         if shape is None:
@@ -41,6 +45,8 @@ class Image(Masker):
             self.input_shape = shape
 
         self.input_mask_value = mask_value
+
+        self.partition_scheme = partition_scheme
 
         # This is the shape of the masks we expect
         self.shape = (
@@ -146,7 +152,10 @@ class Image(Masker):
         q = numba.typed.List([(0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False)])
         M = int((xmax - xmin) * (ymax - ymin) * (zmax - zmin))
         clustering = np.zeros((M - 1, 4))
-        _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q)
+        partition_scheme = self.partition_scheme
+        _jit_build_partition_tree(
+            xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q, partition_scheme
+        )
         self.clustering = clustering
 
     def save(self, out_file):
@@ -172,7 +181,9 @@ class Image(Masker):
 
 
 @njit
-def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q):
+def _jit_build_partition_tree(
+    xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q, partition_scheme
+):
     """This partitions an image into a herarchical clustering based on axis-aligned splits."""
     # heapq.heappush(q, (0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
 
@@ -189,6 +200,10 @@ def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, 
         if ind < 0:
             assert -ind - 1 == xmin * total_ywidth * total_zwidth + ymin * total_zwidth + zmin
 
+        # make sure the partition schme is supported
+        nschemes = [0, 1]
+        assert partition_scheme in nschemes
+
         xwidth = xmax - xmin
         ywidth = ymax - ymin
         zwidth = zmax - zmin
@@ -203,23 +218,45 @@ def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, 
             lzmin = rzmin = zmin
             lzmax = rzmax = zmax
 
-            # split the xaxis if it is the largest dimension
-            if xwidth >= ywidth and xwidth > 1:
-                xmid = xmin + xwidth // 2
-                lxmax = xmid
-                rxmin = xmid
+            # Partition scheme 0: xaxis and yaxis fully partitioned before zaxis
+            if partition_scheme == 0:
+                # split the xaxis if it is the largest dimension
+                if xwidth >= ywidth and xwidth > 1:
+                    xmid = xmin + xwidth // 2
+                    lxmax = xmid
+                    rxmin = xmid
 
-            # split the yaxis
-            elif ywidth > 1:
-                ymid = ymin + ywidth // 2
-                lymax = ymid
-                rymin = ymid
+                # split the yaxis
+                elif ywidth > 1:
+                    ymid = ymin + ywidth // 2
+                    lymax = ymid
+                    rymin = ymid
 
-            # split the zaxis only when the other ranges are already width 1
-            else:
-                zmid = zmin + zwidth // 2
-                lzmax = zmid
-                rzmin = zmid
+                # split the zaxis only when the other ranges are already width 1
+                else:
+                    zmid = zmin + zwidth // 2
+                    lzmax = zmid
+                    rzmin = zmid
+
+            # Partition scheme 1: zaxis partitioned first
+            if partition_scheme == 1:
+                # split the zaxis if it is larger than 1
+                if zwidth > 1:
+                    zmid = zmin + zwidth // 2
+                    lzmax = zmid
+                    rzmin = zmid
+
+                # split the xaxis if it is larger than the yaxis
+                elif xwidth >= ywidth and xwidth > 1:
+                    xmid = xmin + xwidth // 2
+                    lxmax = xmid
+                    rxmin = xmid
+
+                # split the yaxis
+                elif ywidth > 1:
+                    ymid = ymin + ywidth // 2
+                    lymax = ymid
+                    rymin = ymid
 
             lsize = (lxmax - lxmin) * (lymax - lymin) * (lzmax - lzmin)
             rsize = (rxmax - rxmin) * (rymax - rymin) * (rzmax - rzmin)
