@@ -237,8 +237,19 @@ def test_gpu_tree_explainer_shap(task, feature_perturbation):
     else:
         gpu_shap = np.array(gpu_shap, copy=False)
     # Check outputs roughly the same as CPU algorithm
-    assert np.allclose(ex.expected_value, gpu_ex.expected_value, 1e-3, 1e-3)
-    assert np.allclose(host_shap, gpu_shap, 1e-3, 1e-3)
+    assert np.allclose(ex.expected_value, gpu_ex.expected_value, 1e-3, 1e-3), "Expected values don't match!"
+    assert np.allclose(host_shap, gpu_shap, 1e-3, 1e-3), "SHAP values don't match!"
+
+    # verify that the behaviour doesn't change when
+    # part of the input is maksed with NaNs
+    X_nan = X.copy()
+    nan_col = np.random.choice(X.shape[1], 1, replace=False)
+    nan_row = np.random.choice(X.shape[0], int(0.1 * X.shape[0]), replace=False)
+    X_nan[nan_row, nan_col] = np.nan
+    host_shap_nan = ex.shap_values(X_nan, check_additivity=True)
+    gpu_shap_nan = gpu_ex.shap_values(X_nan, check_additivity=True)
+
+    assert np.allclose(host_shap_nan, gpu_shap_nan, 1e-3, 1e-3), "SHAP values don't match when input has NaNs!"
 
 
 @pytest.mark.parametrize("task", tasks, ids=idfn)
