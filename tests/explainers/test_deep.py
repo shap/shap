@@ -2,6 +2,8 @@
 
 import os
 import platform
+from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -244,6 +246,416 @@ def test_tf_keras_imdb_lstm(random_seed):
     np.testing.assert_allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
+def test_tf_keras_lstm_no_embedding():
+    """Test LSTM without embedding layer using continuous input data."""
+    tf = pytest.importorskip("tensorflow")
+
+    rs = np.random.RandomState(0)
+    tf.random.set_seed(0)
+
+    # Create synthetic time series data (e.g., sensor readings)
+    # Shape: (samples, timesteps, features)
+    X_train = rs.randn(100, 20, 5).astype(np.float32)
+
+    X_test = rs.randn(20, 20, 5).astype(np.float32)
+
+    # Create a simple LSTM model without embeddings
+    mod = tf.keras.models.Sequential()
+    mod.add(tf.keras.layers.LSTM(10, input_shape=(20, 5)))
+    mod.add(tf.keras.layers.Dense(1, activation="sigmoid"))
+    mod.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
+
+    # select the background and test samples
+    inds = rs.choice(X_train.shape[0], 3, replace=False)
+    background = X_train[inds]
+    testx = X_test[0:1]
+
+    # explain a prediction
+    e = shap.DeepExplainer(mod, background)
+    shap_values = e.shap_values(testx, check_additivity=False)
+
+    # Basic checks
+    assert shap_values is not None
+    assert len(shap_values) == 1  # single output
+    # SHAP values shape should match input shape: (batch, timesteps, features)
+    expected_shape = (testx.shape[1], testx.shape[2], 1)  # (timesteps, features, outputs)
+    assert shap_values[0].shape == expected_shape, (
+        f"SHAP values shape {shap_values[0].shape} != expected shape {expected_shape}"
+    )
+
+    # Compute expected difference
+    output_test = mod(testx).numpy()
+    output_background = mod(background).numpy()
+    diff = output_test[0, :] - output_background.mean(0)
+
+    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+
+    # Check that SHAP values sum to the difference
+    np.testing.assert_allclose(sums, diff, atol=0.05), "Sum of SHAP values does not match difference!"
+
+
+def test_lstm_manual_vs_tf():
+    tf = pytest.importorskip("tensorflow")
+
+    def build_tf_lstm_and_set_weights(
+        units, in_dim, W_ii, b_ii, W_hi, b_hi, W_if, b_if, W_hf, b_hf, W_ig, b_ig, W_hg, b_hg, W_io, b_io, W_ho, b_ho
+    ):
+        """
+        Build a tf.keras.layers.LSTM(units) and set kernel/recurrent_kernel/bias so that:
+        gate pre-activations equal those from the manual equations.
+
+        TF LSTM uses: z = x @ kernel + h @ recurrent_kernel + bias
+        kernel partitions: [i, f, c, o] along columns
+        recurrent_kernel partitions: [i, f, c, o]
+        bias partitions: [i, f, c, o]
+        """
+        lstm = tf.keras.layers.LSTM(units, return_sequences=True, return_state=True)
+
+        # Build the layer to initialize weights
+        lstm.build((None, None, in_dim))
+
+        # kernel shape: (in_dim, 4*units)
+        kernel = np.zeros((in_dim, 4 * units), dtype=np.float32)
+        # recurrent_kernel shape: (units, 4*units)
+        recurrent_kernel = np.zeros((units, 4 * units), dtype=np.float32)
+        # bias shape: (4*units,)
+        bias = np.zeros((4 * units,), dtype=np.float32)
+
+        # Map manual weights to TF partitions
+        # NOTE: Manual has separate biases (b_ii + b_hi), TF LSTM has single bias per gate
+        # So we combine: b_gate_tf = b_ii + b_hi
+        # i gate
+        kernel[:, 0 * units : 1 * units] = W_ii.T  # (in_dim, units)
+        recurrent_kernel[:, 0 * units : 1 * units] = W_hi.T
+        bias[0 * units : 1 * units] = b_ii + b_hi  # Combine both biases
+        # f gate
+        kernel[:, 1 * units : 2 * units] = W_if.T
+        recurrent_kernel[:, 1 * units : 2 * units] = W_hf.T
+        bias[1 * units : 2 * units] = b_if + b_hf  # Combine both biases
+        # c (cell candidate)
+        kernel[:, 2 * units : 3 * units] = W_ig.T
+        recurrent_kernel[:, 2 * units : 3 * units] = W_hg.T
+        bias[2 * units : 3 * units] = b_ig + b_hg  # Combine both biases
+        # o gate
+        kernel[:, 3 * units : 4 * units] = W_io.T
+        recurrent_kernel[:, 3 * units : 4 * units] = W_ho.T
+        bias[3 * units : 4 * units] = b_io + b_ho  # Combine both biases
+
+        # Set weights
+        lstm.set_weights([kernel, recurrent_kernel, bias])
+        return lstm
+
+    class LSTMModel(tf.keras.Model):
+        def __init__(self):
+            super().__init__()
+            self.sigmoid = tf.keras.layers.Activation("sigmoid")
+            # input gate layers
+            self.fc_ii = tf.keras.layers.Dense(2, use_bias=True, activation=None)
+            self.fc_hi = tf.keras.layers.Dense(2, use_bias=True, activation=None)
+
+            # forget gate layers
+            self.fc_if = tf.keras.layers.Dense(2, use_bias=True, activation=None)
+            self.fc_hf = tf.keras.layers.Dense(2, use_bias=True, activation=None)
+
+            # cell state update layers
+            self.fc_ig = tf.keras.layers.Dense(2, use_bias=True, activation=None)
+            self.fc_hg = tf.keras.layers.Dense(2, use_bias=True, activation=None)
+
+            # output gate layers
+            self.fc_io = tf.keras.layers.Dense(2, use_bias=True, activation=None)
+            self.fc_ho = tf.keras.layers.Dense(2, use_bias=True, activation=None)
+
+            self.inputs = None
+            self.outputs = None
+
+        def call(self, inputs):
+            x, h, c = inputs
+            self.inputs = list(inputs)
+            it_inner = self.fc_ii(x) + self.fc_hi(h)
+            it = self.sigmoid(it_inner)
+
+            ft_inner = self.fc_if(x) + self.fc_hf(h)
+            ft = self.sigmoid(ft_inner)
+
+            ct_inner = self.fc_ig(x) + self.fc_hg(h)
+            ct_tilde = tf.tanh(ct_inner)
+            ct = it * ct_tilde + ft * c
+
+            ot_inner = self.fc_io(x) + self.fc_ho(h)
+            ot = self.sigmoid(ot_inner)
+
+            self.outputs = ot * tf.tanh(ct)
+            return self.outputs
+
+    # Create model and set weights
+    model = LSTMModel()
+    # Input data
+    x = np.array([[0.1, 0.2, 0.3]], dtype=np.float32)
+    h = np.array([[0.0, 0.1]], dtype=np.float32)
+    c = np.array([[0.0, 0.1]], dtype=np.float32)
+    x_base = np.array([[0.01, 0.02, 0.03]], dtype=np.float32)
+    h_base = np.array([[0.0, 0.001]], dtype=np.float32)
+    c_base = np.array([[0.0, 0.0]], dtype=np.float32)
+
+    _ = model((x, h, c))
+    # input gate weights
+    weights_ii = np.array([[1.0, 1.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32)
+    bias_ii = np.array([0.2, 0.0], dtype=np.float32)
+    weights_hi = np.array([[2.0, 1.0], [0.1, 1.0]], dtype=np.float32)
+    bias_hi = np.array([0.32, 0.0], dtype=np.float32)
+
+    # forget gate weights
+    weights_if = np.array([[1.0, 1.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32)
+    bias_if = np.array([0.2, 0.0], dtype=np.float32)
+    weights_hf = np.array([[2.0, 1.0], [0.1, 1.0]], dtype=np.float32)
+    bias_hf = np.array([0.32, 0.0], dtype=np.float32)
+
+    # cell state update weights
+    weights_ig = np.array([[1.0, 1.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32)
+    bias_ig = np.array([0.2, 0.0], dtype=np.float32)
+    weights_hg = np.array([[2.0, 1.0], [0.1, 1.3]], dtype=np.float32)
+    bias_hg = np.array([0.32, 0.0], dtype=np.float32)
+    # output gate weights
+    weights_io = np.array([[1.0, 1.0, 0.0], [0.0, 0.0, 0.1]], dtype=np.float32)
+    bias_io = np.array([0.2, 0.0], dtype=np.float32)
+    weights_ho = np.array([[2.0, 1.0], [0.2, 0.2]], dtype=np.float32)
+    bias_ho = np.array([0.32, 0.0], dtype=np.float32)
+
+    # Input Gate
+    model.fc_ii.set_weights([weights_ii.T, bias_ii.T])  # No .T (no transpose)
+    model.fc_hi.set_weights([weights_hi.T, bias_hi.T])  # No .T (no transpose)
+
+    # Forget Gate
+    model.fc_if.set_weights([weights_if.T, bias_if.T])  # No .T (no transpose)
+    model.fc_hf.set_weights([weights_hf.T, bias_hf.T])  # No .T (no transpose)
+
+    # Cell State Update
+    model.fc_ig.set_weights([weights_ig.T, bias_ig.T])  # No .T (no transpose)
+    model.fc_hg.set_weights([weights_hg.T, bias_hg.T])  # No .T (no transpose)
+
+    # Output Gate
+    model.fc_io.set_weights([weights_io.T, bias_io.T])  # No .T (no transpose)
+    model.fc_ho.set_weights([weights_ho.T, bias_ho.T])  # No .T (no transpose)
+
+    lstm = build_tf_lstm_and_set_weights(
+        units=2,
+        in_dim=3,
+        W_ii=weights_ii,
+        b_ii=bias_ii,
+        W_hi=weights_hi,
+        b_hi=bias_hi,
+        W_if=weights_if,
+        b_if=bias_if,
+        W_hf=weights_hf,
+        b_hf=bias_hf,
+        W_ig=weights_ig,
+        b_ig=bias_ig,
+        W_hg=weights_hg,
+        b_hg=bias_hg,
+        W_io=weights_io,
+        b_io=bias_io,
+        W_ho=weights_ho,
+        b_ho=bias_ho,
+    )
+
+    # Forward pass
+    output = model((x, h, c))
+    output_base = model((x_base, h_base, c_base))
+
+    output_lstm, h_out, c_out = lstm(
+        tf.convert_to_tensor(x.reshape(1, 1, 3)),
+        initial_state=[tf.convert_to_tensor(h.reshape(1, 2)), tf.convert_to_tensor(c.reshape(1, 2))],
+    )
+    output_lstm_base, h_out_base, c_out_base = lstm(
+        tf.convert_to_tensor(x_base.reshape(1, 1, 3)),
+        initial_state=[tf.convert_to_tensor(h_base.reshape(1, 2)), tf.convert_to_tensor(c_base.reshape(1, 2))],
+    )
+    # Assert outputs of our manual class and tf.keras.layers.LSTM match
+    assert np.allclose(output.numpy(), output_lstm.numpy(), atol=1e-5)
+    assert np.allclose(output_base.numpy(), output_lstm_base.numpy(), atol=1e-5)
+
+    # zii in vector notation
+    Z_ii = (weights_ii * (x - x_base)) / (
+        tf.matmul(weights_ii, x.T)
+        + tf.matmul(weights_hi, h.T)
+        - tf.matmul(weights_hi, h_base.T)
+        - tf.matmul(weights_ii, x_base.T)
+    )
+    Z_hi = (weights_hi * (h - h_base)) / (
+        tf.matmul(weights_ii, x.T)
+        + tf.matmul(weights_hi, h.T)
+        - tf.matmul(weights_hi, h_base.T)
+        - tf.matmul(weights_ii, x_base.T)
+    )
+
+    Z_if = (weights_if * (x - x_base)) / (
+        tf.matmul(weights_if, x.T)
+        + tf.matmul(weights_hf, h.T)
+        - tf.matmul(weights_hf, h_base.T)
+        - tf.matmul(weights_if, x_base.T)
+    )
+    Z_hf = (weights_hf * (h - h_base)) / (
+        tf.matmul(weights_if, x.T)
+        + tf.matmul(weights_hf, h.T)
+        - tf.matmul(weights_hf, h_base.T)
+        - tf.matmul(weights_if, x_base.T)
+    )
+
+    Z_ig = (weights_ig * (x - x_base)) / (
+        tf.matmul(weights_ig, x.T)
+        + tf.matmul(weights_hg, h.T)
+        - tf.matmul(weights_hg, h_base.T)
+        - tf.matmul(weights_ig, x_base.T)
+    )
+    Z_hg = (weights_hg * (h - h_base)) / (
+        tf.matmul(weights_ig, x.T)
+        + tf.matmul(weights_hg, h.T)
+        - tf.matmul(weights_hg, h_base.T)
+        - tf.matmul(weights_ig, x_base.T)
+    )
+
+    # Output gate Z-matrices
+    Z_io = (weights_io * (x - x_base)) / (
+        tf.matmul(weights_io, x.T)
+        + tf.matmul(weights_ho, h.T)
+        - tf.matmul(weights_ho, h_base.T)
+        - tf.matmul(weights_io, x_base.T)
+    )
+    Z_ho = (weights_ho * (h - h_base)) / (
+        tf.matmul(weights_io, x.T)
+        + tf.matmul(weights_ho, h.T)
+        - tf.matmul(weights_ho, h_base.T)
+        - tf.matmul(weights_io, x_base.T)
+    )
+
+    def calculate_ft_ct_tilde(x, h):
+        it_inner = tf.matmul(x, weights_ii.T) + bias_ii + tf.matmul(h, weights_hi.T) + bias_hi
+        it = tf.sigmoid(it_inner)
+
+        ft_inner = tf.matmul(x, weights_if.T) + bias_if + tf.matmul(h, weights_hf.T) + bias_hf
+        ft = tf.sigmoid(ft_inner)
+
+        ct_inner = tf.matmul(x, weights_ig.T) + bias_ig + tf.matmul(h, weights_hg.T) + bias_hg
+        ct_tilde = tf.tanh(ct_inner)
+        return it, ft, ct_tilde
+
+    def calculate_ot(x, h):
+        ot_inner = tf.matmul(x, weights_io.T) + bias_io + tf.matmul(h, weights_ho.T) + bias_ho
+        ot = tf.sigmoid(ot_inner)
+        return ot
+
+    it, ft, ct_tilde = calculate_ft_ct_tilde(x, h)
+    it_base, ft_base, ct_tilde_base = calculate_ft_ct_tilde(x_base, h_base)
+
+    ct_manual = it * ct_tilde + ft * c
+    ct_base_manual = it_base * ct_tilde_base + ft_base * c_base
+    ot = calculate_ot(x, h)
+    ot_base = calculate_ot(x_base, h_base)
+
+    # Product 1: it * ct_tilde
+    # R[it] = 1/2 * [(it * ct_tilde - it_base * ct_tilde) + (it * ct_tilde_base - it_base * ct_tilde_base)]
+    R_prod1_it = 0.5 * (it * ct_tilde - it_base * ct_tilde + it * ct_tilde_base - it_base * ct_tilde_base)
+
+    # R[ct_tilde] = 1/2 * [(it * ct_tilde - it * ct_tilde_base) + (it_base * ct_tilde - it_base * ct_tilde_base)]
+    R_prod1_ct_tilde = 0.5 * (it * ct_tilde - it * ct_tilde_base + it_base * ct_tilde - it_base * ct_tilde_base)
+
+    # Product 2: ft * c
+    # R[ft] = 1/2 * [(ft * c - ft_base * c) + (ft * c_base - ft_base * c_base)]
+    R_prod2_ft = 0.5 * (ft * c - ft_base * c + ft * c_base - ft_base * c_base)
+
+    # R[c] = 1/2 * [(ft * c - ft * c_base) + (ft_base * c - ft_base * c_base)]
+    R_prod2_c = 0.5 * (ft * c - ft * c_base + ft_base * c - ft_base * c_base)
+
+    # Total relevance = sum of all Shapley values
+    total_relevance = R_prod1_it + R_prod1_ct_tilde + R_prod2_ft + R_prod2_c
+
+    # Verify that total relevance for ct equals ct change
+    assert np.allclose(total_relevance.numpy(), (ct_manual - ct_base_manual).numpy()), (
+        "Shapley decomposition for ct failed"
+    )
+
+    # Now propagate these relevances back to inputs using the Z matrices
+    # R_prod1_it goes through the input gate path (using Z_ii and Z_hi)
+    # R_prod1_ct_tilde goes through the cell state update path (using Z_ig and Z_hg)
+    # R_prod2_ft goes through the forget gate path (using Z_if and Z_hf)
+    # R_prod2_c stays at the cell state level (SHAP value for previous cell state c)
+
+    # Propagate R_prod1_it through input gate to inputs
+    # Shape: (1, output_dims) @ (output_dims, input_dims) = (1, input_dims)
+    r_x_via_it = tf.matmul(R_prod1_it, Z_ii)
+    r_h_via_it = tf.matmul(R_prod1_it, Z_hi)
+
+    # Propagate R_prod1_ct_tilde through cell state update to inputs
+    r_x_via_ct_tilde = tf.matmul(R_prod1_ct_tilde, Z_ig)
+    r_h_via_ct_tilde = tf.matmul(R_prod1_ct_tilde, Z_hg)
+
+    # Propagate R_prod2_ft through forget gate to inputs
+    r_x_via_ft = tf.matmul(R_prod2_ft, Z_if)
+    r_h_via_ft = tf.matmul(R_prod2_ft, Z_hf)
+
+    # R_prod2_c is the SHAP value for the previous cell state c
+    r_c = R_prod2_c
+
+    # Total SHAP values to ct are the sum of contributions through all paths
+    r_x_ct = r_x_via_it + r_x_via_ct_tilde + r_x_via_ft
+    r_h_ct = r_h_via_it + r_h_via_ct_tilde + r_h_via_ft
+
+    # Now handle output gate contribution to ht = ot * tanh(ct)
+    # Shapley for product of ot and g=tanh(ct)
+    g = tf.tanh(ct_manual)
+    g_base = tf.tanh(ct_base_manual)
+    R_ot = 0.5 * (ot * g - ot_base * g + ot * g_base - ot_base * g_base)
+    R_g = 0.5 * (ot * g - ot * g_base + ot_base * g - ot_base * g_base)
+
+    # Propagate R_ot to inputs via output gate path
+    r_x_via_ot = tf.matmul(R_ot, Z_io)
+    r_h_via_ot = tf.matmul(R_ot, Z_ho)
+
+    # Rescale R_g back to ct using DeepLIFT rescale multiplier (chain rule)
+    # m = (g - g_base) / (ct - ct_base), handle zero denominators
+    denom = ct_manual - ct_base_manual
+    m = tf.where(tf.abs(denom) > 1e-12, (g - g_base) / denom, tf.zeros_like(denom))
+    ot_avg = 0.5 * (ot + ot_base)
+
+    # Distribute ct-level relevances to ht via the multiplier and average ot factor from product ot * g(ct)
+    # IMPORTANT: apply m at ct level first (shape [1,2]) and then map to inputs via Z matrices
+    r_ct_from_it_to_ht = R_prod1_it * m * ot_avg
+    r_ct_from_ct_tilde_to_ht = R_prod1_ct_tilde * m * ot_avg
+    r_ct_from_ft_to_ht = R_prod2_ft * m * ot_avg
+    r_ct_from_c_to_ht = R_prod2_c * m * ot_avg
+
+    # Now propagate these ht-level per-gate relevances to inputs
+    r_x_via_ct_to_ht = (
+        tf.matmul(r_ct_from_it_to_ht, Z_ii)
+        + tf.matmul(r_ct_from_ct_tilde_to_ht, Z_ig)
+        + tf.matmul(r_ct_from_ft_to_ht, Z_if)
+    )
+    r_h_via_ct_to_ht = (
+        tf.matmul(r_ct_from_it_to_ht, Z_hi)
+        + tf.matmul(r_ct_from_ct_tilde_to_ht, Z_hg)
+        + tf.matmul(r_ct_from_ft_to_ht, Z_hf)
+    )
+    r_c_via_ct_to_ht = r_ct_from_c_to_ht
+
+    # Total SHAP values to ht
+    r_x = r_x_via_ot + r_x_via_ct_to_ht
+    r_h = r_h_via_ot + r_h_via_ct_to_ht
+    r_c = r_c_via_ct_to_ht
+
+    # SHAP Explainer
+    exp = shap.DeepExplainer(model, data=[x_base, h_base, c_base])
+    shap_values = exp.shap_values([x, h, c], check_additivity=False)
+
+    assert np.allclose(r_x.numpy().squeeze(), shap_values[0].squeeze()), "r_x doesn't match shap_values[0]"
+    assert np.allclose(r_h.numpy().squeeze(), shap_values[1].squeeze()), "r_h doesn't match shap_values[1]"
+    assert np.allclose(r_c.numpy().squeeze(), shap_values[2].squeeze()), "r_c doesn't match shap_values[2]"
+
+
+###############################
+# Pytorch related tests #
+###############################
+
+
 @pytest.mark.skipif(
     platform.system() == "Darwin" and os.getenv("GITHUB_ACTIONS") == "true",
     reason="Skipping on GH MacOS runners due to memory error, see GH #3929",
@@ -293,6 +705,186 @@ def test_tf_deep_multi_inputs_multi_outputs():
     np.testing.assert_allclose(
         shap_values[0].sum(1) + shap_values[1].sum(1) + explainer.expected_value, predicted, atol=1e-3
     )
+
+
+def test_tf_eager_lstm():
+    # This test should pass with tf 2.x
+    import random
+
+    tf = pytest.importorskip("tensorflow")
+
+    # Clear any existing TensorFlow session/graph state
+    tf.keras.backend.clear_session()
+
+    seed = 42
+    # Set ALL random seeds to ensure reproducibility
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+    if hasattr(tf.keras.utils, "set_random_seed"):
+        tf.keras.utils.set_random_seed(seed)
+
+    # split a univariate sequence into samples
+    def split_sequence(sequence, n_steps):
+        X, y = list(), list()
+        for i in range(len(sequence)):
+            # find the end of this pattern
+            end_ix = i + n_steps
+            # check if we are beyond the sequence
+            if end_ix > len(sequence) - 1:
+                break
+            # gather input and output parts of the pattern
+            seq_x, seq_y = sequence[i:end_ix], sequence[end_ix]
+            X.append(seq_x)
+            y.append(seq_y)
+            return np.array(X), np.array(y)
+
+    # define input sequence
+    raw_seq = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+    # choose a number of time steps
+    n_steps = 3
+    # split into samples
+    X, y = split_sequence(raw_seq, n_steps)
+    # reshape from [samples, timesteps] into [samples, timesteps, features]
+    n_features = 1
+    X = X.reshape((X.shape[0], X.shape[1], n_features))
+    # define model
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.LSTM(50, activation="relu", input_shape=(n_steps, n_features)))
+    model.add(tf.keras.layers.Dense(1))
+    model.compile(optimizer="adam", loss="mse")
+    # fit model
+    model.fit(X, y, epochs=200, verbose=0)
+    # demonstrate prediction
+    x_input = np.array([70, 80, 90], dtype=np.float32)
+    x_input = x_input.reshape((1, n_steps, n_features))
+    e = shap.DeepExplainer(model, x_input)
+    sv = e.shap_values(x_input)
+
+    try:
+        diff = np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x_input)[:, 0]).max()
+        assert diff < 1e-4, f"Max diff = {diff:.10f} (threshold: 1e-4)"
+    except AssertionError as err:
+        print(f"\n❌ FALSIFYING EXAMPLE FOUND! Seed: {seed}")
+        print(f"Error details: {err}")
+        raise
+
+
+@pytest.mark.parametrize("seed", [110, 32222])
+def test_tf_eager_stacked_lstms(seed):
+    # def test_tf_eager_stacked_lstms():
+    # this test should pass with tf 2.x
+    import random
+
+    tf = pytest.importorskip("tensorflow")
+
+    # Clear any existing TensorFlow session/graph state
+    tf.keras.backend.clear_session()
+    # bad seeds: 110 and 32222
+
+    # Set ALL random seeds to ensure reproducibility
+    # TensorFlow uses multiple random sources that all need to be seeded
+    random.seed(seed)  # Python random module
+    np.random.seed(seed)  # Legacy numpy global RNG (used by TF/Keras)
+    tf.random.set_seed(seed)  # TensorFlow random ops
+
+    # Try to set Keras random seed (available in TF 2.7+)
+    if hasattr(tf.keras.utils, "set_random_seed"):
+        tf.keras.utils.set_random_seed(seed)
+
+    # Use modern numpy generator for our data generation
+    rng = np.random.default_rng(seed)
+    start_datetime = pd.to_datetime("2020-01-01 00:00:00")
+    end_datetime = pd.to_datetime("2023-03-31 23:00:00")
+    # Generate a DatetimeIndex with hourly frequency
+    date_rng = pd.date_range(start=start_datetime, end=end_datetime, freq="H")
+    # Create a DataFrame with random data for 7 features
+    num_samples = len(date_rng)
+    num_features = 7
+    # Generate random data for the DataFrame using the generator
+    data = rng.random((num_samples, num_features))
+    # Create the DataFrame with a DatetimeIndex
+    df = pd.DataFrame(data, index=date_rng, columns=[f"X{i}" for i in range(1, num_features + 1)])
+
+    def windowed_dataset(series=None, in_horizon=None, out_horizon=None, delay=None, batch_size=None):
+        """
+        Convert multivariate data into input and output sequences.
+        Convert NumPy arrays to TensorFlow tensors.
+        Arguments:
+        ===========
+        series: a list or array of time-series data.
+        total_horizon: an integer representing the size of the input window.
+        out_horizon: an integer representing the size of the output window.
+        delay: an integer representing the number of steps between each input window.
+        batch_size: an integer representing the batch size.
+        """
+        total_horizon = in_horizon + out_horizon
+        dataset = tf.data.Dataset.from_tensor_slices(series)
+        dataset = dataset.window(total_horizon, shift=delay, drop_remainder=True)
+        dataset = dataset.flat_map(lambda window: window.batch(total_horizon))
+        dataset = dataset.map(lambda window: (window[:-out_horizon, :], window[-out_horizon:, 0]))
+        dataset = dataset.batch(batch_size).prefetch(1)
+        return dataset
+
+    # Define the proportions for the splits (70:20:10)%
+    train_size = 0.4
+    valid_size = 0.5
+    # Calculate the split points
+    train_split = int(len(df) * train_size)
+    valid_split = int(len(df) * (train_size + valid_size))
+    # Split the DataFrame
+    df_train = df.iloc[:train_split]
+    df_valid = df.iloc[train_split:valid_split]
+    df_test = df.iloc[valid_split:]
+    # number of input features and output targets
+    n_features = df.shape[1]
+    # split the data into sliding sequential windows
+    train_dataset = windowed_dataset(series=df_train.values, in_horizon=100, out_horizon=3, delay=1, batch_size=32)
+    windowed_dataset(series=df_valid.values, in_horizon=100, out_horizon=3, delay=1, batch_size=32)
+    windowed_dataset(series=df_test.values, in_horizon=100, out_horizon=3, delay=1, batch_size=32)
+    input_layer = tf.keras.layers.Input(shape=(100, n_features))
+    lstm_layer1 = tf.keras.layers.LSTM(5, return_sequences=True)(input_layer)
+    lstm_layer2 = tf.keras.layers.LSTM(5, return_sequences=True)(lstm_layer1)
+    lstm_layer3 = tf.keras.layers.LSTM(5)(lstm_layer2)
+    output_layer = tf.keras.layers.Dense(3)(lstm_layer3)
+    model = tf.keras.models.Model(inputs=input_layer, outputs=output_layer)
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01), loss="mse", metrics=["mae"])
+
+    def tensor_to_arrays(input_obj: Iterable[Any]) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Convert a "tensorflow.python.data.ops.dataset_ops.PrefetchDataset" object into a numpy arrays.
+        This function can be used to slice the tensor objects out of the `windowing` function.
+        """
+        x_list = list(map(lambda item: item[0], input_obj))
+        y_list = list(map(lambda item: item[1], input_obj))
+        x_arrays = [xtmp.numpy() for xtmp in x_list]
+        y_arrays = [ytmp.numpy() for ytmp in y_list]
+        # Stack the arrays vertically
+        x_final: np.ndarray = np.vstack(x_arrays)
+        y_final: np.ndarray = np.vstack(y_arrays)
+        return x_final, y_final
+
+    xarr, yarr = tensor_to_arrays(input_obj=train_dataset)
+    # Create an explainer object
+    e = shap.DeepExplainer(model, xarr[:100, :, :])
+    # Calculate SHAP values for the data
+    sv = e.shap_values(xarr[100:200, :, :], check_additivity=False)
+    model_output_values = model(xarr[100:200, :, :])
+    # todo: this might indicate an error in how the gradients are overwritten
+    try:
+        for dim in range(3):
+            diff = (
+                model_output_values[:, dim].numpy()
+                - e.expected_value[dim].numpy()
+                - sv[dim].sum(axis=tuple(range(1, sv[dim].ndim)))
+            )
+            max_diff = diff.max()
+            print(max_diff)
+            assert max_diff < 0.08, f"Dimension {dim}: max diff = {max_diff:.6f} (threshold: 0.05)"
+    except AssertionError as err:
+        print(f"\n❌ FALSIFYING EXAMPLE FOUND! Seed: {seed}")
+        print(f"Error details: {err}")
+        raise
 
 
 #######################
