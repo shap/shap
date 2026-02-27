@@ -234,3 +234,14 @@ def test_cohorts_multi_class():
 
     cohorts = shap_values[..., 0].cohorts(2)
     isinstance(cohorts, shap.Cohorts)
+
+
+def test_cohorts_generation_with_one_feature():
+    exp = shap.Explanation(
+        values=np.random.uniform(low=-1, high=1, size=(500, 1)),
+        data=np.random.normal(loc=1, scale=3, size=(500, 1)),
+        feature_names=list("a"),
+    )
+    cohorts = exp.cohorts(3)
+    assert isinstance(cohorts, shap.Cohorts)
+    assert len(cohorts.cohorts) == 3
