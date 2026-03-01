@@ -257,7 +257,7 @@ def test_tf_deep_imbdb_transformers():
 
     # data from datasets imdb dataset
     short_data = ["I lov", "Worth", "its a", "STAR ", "First", "I had", "Isaac", "It ac", "Techn", "Hones"]
-    classifier = transformers.pipeline("sentiment-analysis", return_all_scores=True)
+    classifier = transformers.pipeline("sentiment-analysis", top_k=None)
     pmodel = models.TransformersPipeline(classifier, rescale_to_logits=True)
     explainer3 = shap.Explainer(pmodel, classifier.tokenizer)
     shap_values3 = explainer3(short_data[:10])
