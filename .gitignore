@@ -18,6 +18,7 @@ __pycache__
 .python-version
 *.pyc
 *.so
+*.pyd
 **/.coverage*
 /build
 /data/*
