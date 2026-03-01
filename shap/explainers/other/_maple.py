@@ -244,7 +244,7 @@ class MAPLE:
                 # Local linear model
                 lr_model = Ridge(alpha=regularization)
                 lr_model.fit(X_train_p, MR_train, weights)
-                lr_predictions[i] = lr_model.predict(X_val_p[i].reshape(1, -1))
+                lr_predictions[i] = lr_model.predict(X_val_p[i].reshape(1, -1))[0]
 
             rmse_curr = np.sqrt(mean_squared_error(lr_predictions, MR_val))
 
