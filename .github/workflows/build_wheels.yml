@@ -1,6 +1,9 @@
 name: Build wheels
 
 on:
+  schedule:
+    # Nightly build at 4:12 A.M.
+    - cron: "12 4 */1 * *"
   release:
     types: [published]
 
@@ -182,7 +185,7 @@ jobs:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     # Only publish tagged releases to PyPI
-    if: startsWith(github.ref, 'refs/tags')
+    if: github.event_name == 'release'
     environment:
       name: pypi
       url: https://pypi.org/p/shap
@@ -202,3 +205,31 @@ jobs:
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  upload_anaconda:
+    name: Upload to Anaconda
+    runs-on: ubuntu-latest
+    needs: [build_wheels, build_sdist]
+    # The artifacts cannot be uploaded on PRs
+    if: github.event_name == 'schedule'
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: bdist_files_*
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist_files
+          path: dist
+
+      - name: Upload artifacts
+        env:
+          # Secret variables need to be mapped to environment variables explicitly
+          SHAP_NIGHTLY_UPLOAD_TOKEN: ${{ secrets.SHAP_NIGHTLY_UPLOAD_TOKEN }}
+          SHAP_STAGING_UPLOAD_TOKEN: ${{ secrets.SHAP_STAGING_UPLOAD_TOKEN }}
+          ARTIFACTS_PATH: dist/artifact
+        # Force a replacement if the remote file already exists
+        run: bash build_tools/github/upload_anaconda.sh
