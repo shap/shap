@@ -552,7 +552,7 @@ class KernelExplainer(Explainer):
                 return 0 if np.allclose(i, j, equal_nan=True) else 1
             return 0 if all(i == j) else 1
         else:
-            return 0 if i == j else 1
+            return 0 if np.array_equal(i, j) else 1
 
     def varying_groups(self, x: npt.NDArray[Any] | scipy.sparse.spmatrix) -> npt.NDArray[np.intp]:
         if not scipy.sparse.issparse(x):
