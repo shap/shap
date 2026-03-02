@@ -142,7 +142,7 @@ jobs:
 
       - name: Build sdist (pep517)
         run: |
-          python -m pip install build
+          python -m pip install build setuptools>=70.1
           python -m build --sdist
       - name: Upload sdist
         uses: actions/upload-artifact@v4
