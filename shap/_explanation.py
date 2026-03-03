@@ -975,8 +975,8 @@ def _auto_cohorts(shap_values: Explanation, max_cohorts: int) -> Cohorts:
             if paths[i, j] > 0:
                 feature = m.tree_.feature[j]
                 threshold = m.tree_.threshold[j]
-                val = shap_values.data[i, feature]
                 if feature >= 0:
+                    val = shap_values.data[i, feature]
                     name += str(shap_values.feature_names[feature])
                     if val < threshold:
                         name += " < "
