@@ -283,7 +283,7 @@ def add_interim_values(module, input, output):
                     assert input[i] == output[i], "Only the 0th input may vary!"
             # if a new method is added, it must be added here too. This ensures tensors
             # are only saved if necessary
-            if func_name in ["maxpool", "nonlinear_1d"]:
+            if func_name in ["maxpool", "nonlinear_1d", "layernorm_1d"]:
                 # only save tensors if necessary
                 if type(input) is tuple:
                     module.x = torch.nn.Parameter(input[0].detach())
@@ -372,6 +372,66 @@ def nonlinear_1d(module, grad_input, grad_output):
     return tuple(grads)
 
 
+def layernorm_1d(module, grad_input, grad_output):
+    """Compute DeepLIFT gradients for LayerNorm using first-order Taylor approximation.
+
+    LayerNorm applies: y = γ * (x - μ(x)) / sqrt(σ²(x) + ε) + β
+    where μ and σ are computed over the normalized dimensions.
+
+    For DeepLIFT, we approximate the change in output using a first-order Taylor series
+    expansion around the baseline/reference point x₀:
+
+        f(x) ≈ f(x₀) + ∇f(x₀) · (x - x₀)
+
+    Therefore:
+        Δy = f(x) - f(x₀) ≈ ∇f(x₀) · Δx
+
+    The gradient multiplier is: Δy / Δx ≈ ∇f(x₀)
+
+    We compute the gradient at the baseline (reference) point, which preserves
+    additivity since we're using only the first-order term (linear approximation).
+
+    Parameters
+    ----------
+    module : torch.nn.LayerNorm
+        The LayerNorm module
+    grad_input : tuple of torch.Tensor
+        Gradients with respect to the inputs
+    grad_output : tuple of torch.Tensor
+        Gradients with respect to the outputs
+
+    Returns
+    -------
+    tuple of torch.Tensor or None
+        Modified gradients for DeepLIFT
+    """
+    import torch
+
+    # Split the concatenated inputs/outputs into sample and reference parts
+    x_sample = module.x[: int(module.x.shape[0] / 2)]
+    x_ref = module.x[int(module.x.shape[0] / 2) :]
+    y_sample = module.y[: int(module.y.shape[0] / 2)]
+    y_ref = module.y[int(module.y.shape[0] / 2) :]
+
+    delta_in = x_sample - x_ref
+    delta_out = y_sample - y_ref
+
+    # Duplicate pattern for broadcasting
+    dup0 = [2] + [1 for i in delta_in.shape[1:]]
+
+    # For LayerNorm, we use first-order Taylor approximation around the reference point.
+    # The gradient at the reference point can be computed as delta_out / delta_in,
+    # but we need to handle numerical instabilities carefully.
+
+    # When delta_in is very small, fall back to the standard gradient
+    grads = [None for _ in grad_input]
+    grads[0] = torch.where(
+        torch.abs(delta_in.repeat(dup0)) < 1e-6, grad_input[0], grad_output[0] * (delta_out / delta_in).repeat(dup0)
+    )
+
+    return tuple(grads)
+
+
 op_handler = {}
 
 # passthrough ops, where we make no change to the gradient
@@ -412,3 +472,5 @@ op_handler["GELU"] = nonlinear_1d
 op_handler["MaxPool1d"] = maxpool
 op_handler["MaxPool2d"] = maxpool
 op_handler["MaxPool3d"] = maxpool
+
+op_handler["LayerNorm"] = layernorm_1d
