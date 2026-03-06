@@ -289,10 +289,10 @@ class CoalitionExplainer(Explainer):
                     off_result = np.asarray(off_result).reshape(-1)
                     on_result = np.asarray(on_result).reshape(-1)
                     for i in range(num_outputs):
-                        marginal_contribution = float((on_result[i] - off_result[i]) * weight)
+                        marginal_contribution = ((on_result[i] - off_result[i]) * weight).item()
                         shap_values[feature_name_to_index[last_key], i] += marginal_contribution
                 else:
-                    marginal_contribution = float((on_result - off_result) * weight)
+                    marginal_contribution = ((on_result - off_result) * weight).item()
                     shap_values[feature_name_to_index[last_key]] += marginal_contribution
 
         # Step 5: Return results
