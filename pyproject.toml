@@ -22,10 +22,10 @@ dependencies = [
   'tqdm>=4.27.0',
   'packaging>20.9',
   'slicer==0.0.8',
-  'numba',  # todo: remove once numba officially releases support for 3.14
-  'llvmlite',
-  # 'llvmlite==0.46.0b1; python_version >= "3.14"',  # todo: remove once llvmlite officially releases support for 3.14
-  # 'numba>=0.54; python_version < "3.14"',
+  'numba<0.63; sys_platform == "darwin" and platform_machine == "x86_64"',  # numba 0.63+ dropped macOS x86_64 wheels, see numba/numba#10187
+  'numba; sys_platform != "darwin" or platform_machine != "x86_64"',
+  'llvmlite<0.46; sys_platform == "darwin" and platform_machine == "x86_64"',  # llvmlite 0.46+ dropped macOS x86_64 wheels, see numba/numba#10187
+  'llvmlite; sys_platform != "darwin" or platform_machine != "x86_64"',
   'cloudpickle',
   'typing-extensions',
 ]
