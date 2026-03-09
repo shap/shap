@@ -443,7 +443,7 @@ class TreeExplainer(Explainer):
 
     def _validate_inputs(
         self,
-        X: npt.NDArray[Any] | pd.Series | pd.DataFrame,
+        X: npt.NDArray[Any] | pd.Series | pd.DataFrame | scipy.sparse.sparray | scipy.sparse.spmatrix,
         y: npt.NDArray[Any] | pd.Series | None,
         tree_limit: int | None,
         check_additivity: bool,
@@ -457,6 +457,10 @@ class TreeExplainer(Explainer):
         # convert dataframes
         if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
+
+        if scipy.sparse.issparse(X):
+            X = X.toarray()
+
         flat_output = False
         if len(X.shape) == 1:
             flat_output = True
