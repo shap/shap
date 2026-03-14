@@ -19,9 +19,7 @@ from shap.utils._exceptions import DimensionError
 )
 def test_input_shap_values_type(unsupported_inputs):
     """Check that a TypeError is raised when shap_values is not a valid input type."""
-    emsg = (
-        "The shap_values argument must be an Explanation object, Cohorts object, or dictionary of Explanation objects!"
-    )
+    emsg = "The shap_values argument must be an Explanation object, Cohorts object, or dictionary of Explanation objects!"
     with pytest.raises(TypeError, match=emsg):
         shap.plots.bar(unsupported_inputs, show=False)
 
@@ -110,3 +108,91 @@ def test_bar_raises_error_for_empty_explanation(explainer):
     shap_values = explainer(explainer.data)
     with pytest.raises(ValueError, match="The passed Explanation is empty"):
         shap.plots.bar(shap_values[0:0], show=False)
+
+
+# --- vertical=True tests ---
+
+
+@pytest.mark.mpl_image_compare
+def test_bar_vertical(explainer):
+    """Check that the vertical bar plot is unchanged."""
+    shap_values = explainer(explainer.data)
+    fig = plt.figure()
+    shap.plots.bar(shap_values, vertical=True, show=False)
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_bar_vertical_with_cohorts_dict():
+    """Ensure vertical bar plot supports a dictionary of Explanations as input."""
+    rs = np.random.RandomState(42)
+    fig = plt.figure()
+    shap.plots.bar(
+        {
+            "t1": shap.Explanation(
+                values=rs.randn(40, 5),
+                base_values=np.ones(40) * 0.5,
+            ),
+            "t2": shap.Explanation(
+                values=rs.randn(20, 5),
+                base_values=np.ones(20) * 0.5,
+            ),
+        },
+        vertical=True,
+        show=False,
+    )
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_bar_vertical_local_feature_importance(explainer):
+    """Vertical bar plot with a single row of SHAP values (local explanation)."""
+    shap_values = explainer(explainer.data)
+    fig = plt.figure()
+    shap.plots.bar(shap_values[0], vertical=True, show=False)
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_bar_vertical_negative_values():
+    """Vertical bar plot with mixed positive and negative values exercises the axhline(0) branch."""
+    rs = np.random.RandomState(7)
+    values = rs.randn(30, 5)  # mix of positive and negative
+    fig = plt.figure()
+    shap.plots.bar(
+        shap.Explanation(values=values, base_values=np.zeros(30)),
+        vertical=True,
+        show=False,
+    )
+    plt.tight_layout()
+    return fig
+
+
+def test_bar_vertical_returns_ax(explainer):
+    """Ensure that vertical=True returns the Axes object when show=False."""
+    shap_values = explainer(explainer.data)
+    ax = shap.plots.bar(shap_values, vertical=True, show=False)
+    assert ax is not None
+    assert hasattr(ax, "get_figure")
+
+
+def test_bar_vertical_only_positive_values():
+    """Vertical bar plot with all-positive values should not draw an axhline at 0."""
+    rs = np.random.RandomState(1)
+    values = np.abs(rs.randn(20, 4))
+    ax = shap.plots.bar(
+        shap.Explanation(values=values, base_values=np.zeros(20)),
+        vertical=True,
+        show=False,
+    )
+    # no horizontal line at y=0 should have been added (only the bar containers)
+    assert len(ax.containers) > 0
+    hlines = [
+        line
+        for line in ax.lines
+        if line.get_ydata()[0] == 0 and line.get_xdata()[0] == ax.get_xlim()[0]
+    ]
+    assert len(hlines) == 0
