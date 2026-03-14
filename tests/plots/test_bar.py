@@ -19,7 +19,9 @@ from shap.utils._exceptions import DimensionError
 )
 def test_input_shap_values_type(unsupported_inputs):
     """Check that a TypeError is raised when shap_values is not a valid input type."""
-    emsg = "The shap_values argument must be an Explanation object, Cohorts object, or dictionary of Explanation objects!"
+    emsg = (
+        "The shap_values argument must be an Explanation object, Cohorts object, or dictionary of Explanation objects!"
+    )
     with pytest.raises(TypeError, match=emsg):
         shap.plots.bar(unsupported_inputs, show=False)
 
@@ -212,9 +214,5 @@ def test_bar_vertical_only_positive_values():
     )
     # no horizontal line at y=0 should have been added (only the bar containers)
     assert len(ax.containers) > 0
-    hlines = [
-        line
-        for line in ax.lines
-        if line.get_ydata()[0] == 0 and line.get_xdata()[0] == ax.get_xlim()[0]
-    ]
+    hlines = [line for line in ax.lines if line.get_ydata()[0] == 0 and line.get_xdata()[0] == ax.get_xlim()[0]]
     assert len(hlines) == 0
