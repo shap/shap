@@ -114,11 +114,20 @@ def test_bar_raises_error_for_empty_explanation(explainer):
 
 
 @pytest.mark.mpl_image_compare
-def test_bar_vertical(explainer):
+def test_bar_vertical():
     """Check that the vertical bar plot is unchanged."""
-    shap_values = explainer(explainer.data)
+    rs = np.random.RandomState(42)
+    feature_names = [f"feature_{i}" for i in range(12)]
     fig = plt.figure()
-    shap.plots.bar(shap_values, vertical=True, show=False)
+    shap.plots.bar(
+        shap.Explanation(
+            values=rs.randn(50, 12),
+            base_values=np.zeros(50),
+            feature_names=feature_names,
+        ),
+        vertical=True,
+        show=False,
+    )
     plt.tight_layout()
     return fig
 
@@ -147,11 +156,20 @@ def test_bar_vertical_with_cohorts_dict():
 
 
 @pytest.mark.mpl_image_compare
-def test_bar_vertical_local_feature_importance(explainer):
+def test_bar_vertical_local_feature_importance():
     """Vertical bar plot with a single row of SHAP values (local explanation)."""
-    shap_values = explainer(explainer.data)
+    rs = np.random.RandomState(0)
+    feature_names = [f"feature_{i}" for i in range(8)]
     fig = plt.figure()
-    shap.plots.bar(shap_values[0], vertical=True, show=False)
+    shap.plots.bar(
+        shap.Explanation(
+            values=rs.randn(8),
+            base_values=0.5,
+            feature_names=feature_names,
+        ),
+        vertical=True,
+        show=False,
+    )
     plt.tight_layout()
     return fig
 
@@ -171,10 +189,14 @@ def test_bar_vertical_negative_values():
     return fig
 
 
-def test_bar_vertical_returns_ax(explainer):
+def test_bar_vertical_returns_ax():
     """Ensure that vertical=True returns the Axes object when show=False."""
-    shap_values = explainer(explainer.data)
-    ax = shap.plots.bar(shap_values, vertical=True, show=False)
+    rs = np.random.RandomState(0)
+    ax = shap.plots.bar(
+        shap.Explanation(values=rs.randn(20, 5), base_values=np.zeros(20)),
+        vertical=True,
+        show=False,
+    )
     assert ax is not None
     assert hasattr(ax, "get_figure")
 
