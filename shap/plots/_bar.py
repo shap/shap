@@ -417,7 +417,19 @@ def bar(
         return ax
 
 
-def _bar_vertical(ax, values, feature_inds, feature_names, feature_order, num_features, cohort_labels, cohort_sizes, xlabel, style, show):
+def _bar_vertical(
+    ax,
+    values,
+    feature_inds,
+    feature_names,
+    feature_order,
+    num_features,
+    cohort_labels,
+    cohort_sizes,
+    xlabel,
+    style,
+    show,
+):
     """Draw vertical bars with features on the x-axis."""
     negative_values_present = np.sum(values[:, feature_order[:num_features]] < 0) > 0
     if negative_values_present:
