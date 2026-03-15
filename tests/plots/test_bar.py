@@ -395,11 +395,13 @@ def _make_merge_partition_tree():
     This guarantees the while-loop merge condition triggers when max_display=3.
     Tree: features 0+1 merge at 0.1, features 2+3 merge at 0.2, both groups merge at 0.5.
     """
-    return np.array([
-        [0.0, 1.0, 0.1, 2.0],
-        [2.0, 3.0, 0.2, 2.0],
-        [4.0, 5.0, 0.5, 4.0],
-    ])
+    return np.array(
+        [
+            [0.0, 1.0, 0.1, 2.0],
+            [2.0, 3.0, 0.2, 2.0],
+            [4.0, 5.0, 0.5, 4.0],
+        ]
+    )
 
 
 def test_bar_vertical_clustering_merge_loop():
@@ -412,12 +414,14 @@ def test_bar_vertical_clustering_merge_loop():
     """
     rs = np.random.RandomState(11)
     n = 20
-    values = np.column_stack([
-        rs.randn(n) * 0.05,  # f0 – tiny effect
-        rs.randn(n) * 0.05,  # f1 – tiny effect, clusters with f0
-        rs.randn(n) * 2.0,   # f2 – large effect
-        rs.randn(n) * 1.5,   # f3 – medium effect
-    ])
+    values = np.column_stack(
+        [
+            rs.randn(n) * 0.05,  # f0 – tiny effect
+            rs.randn(n) * 0.05,  # f1 – tiny effect, clusters with f0
+            rs.randn(n) * 2.0,  # f2 – large effect
+            rs.randn(n) * 1.5,  # f3 – medium effect
+        ]
+    )
     ax = shap.plots.bar(
         shap.Explanation(
             values=values,
@@ -437,12 +441,14 @@ def test_bar_vertical_clustering_merged_short_name():
     """Merged feature with short combined name covers feature_names_new branch (line 224)."""
     rs = np.random.RandomState(12)
     n = 20
-    values = np.column_stack([
-        rs.randn(n) * 0.05,
-        rs.randn(n) * 0.05,
-        rs.randn(n) * 2.0,
-        rs.randn(n) * 1.5,
-    ])
+    values = np.column_stack(
+        [
+            rs.randn(n) * 0.05,
+            rs.randn(n) * 0.05,
+            rs.randn(n) * 2.0,
+            rs.randn(n) * 1.5,
+        ]
+    )
     # short names -> "f0 + f1" (7 chars) <= 40 -> line 224
     ax = shap.plots.bar(
         shap.Explanation(
@@ -463,12 +469,14 @@ def test_bar_vertical_clustering_merged_long_name():
     """Merged feature with long combined name covers the truncated-name branch (lines 226-227)."""
     rs = np.random.RandomState(13)
     n = 20
-    values = np.column_stack([
-        rs.randn(n) * 0.05,
-        rs.randn(n) * 0.05,
-        rs.randn(n) * 2.0,
-        rs.randn(n) * 1.5,
-    ])
+    values = np.column_stack(
+        [
+            rs.randn(n) * 0.05,
+            rs.randn(n) * 0.05,
+            rs.randn(n) * 2.0,
+            rs.randn(n) * 1.5,
+        ]
+    )
     # "very_long_feature_name_alpha + very_long_feature_name_beta" = 58 chars > 40 -> line 226-227
     long_names = [
         "very_long_feature_name_alpha",
