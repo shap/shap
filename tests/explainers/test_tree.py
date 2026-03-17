@@ -3001,9 +3001,11 @@ def test_openmp_path_dependent():
         else:
             os.environ["OMP_NUM_THREADS"] = old_val
 
-    np.testing.assert_allclose(sv_1, sv_4, atol=1e-10,
-                               err_msg="Path-dependent SHAP values differ between 1 and 4 threads")
-    np.testing.assert_allclose(iv_1, iv_4, atol=1e-10,
-                               err_msg="Path-dependent interaction values differ between 1 and 4 threads")
+    np.testing.assert_allclose(
+        sv_1, sv_4, atol=1e-10, err_msg="Path-dependent SHAP values differ between 1 and 4 threads"
+    )
+    np.testing.assert_allclose(
+        iv_1, iv_4, atol=1e-10, err_msg="Path-dependent interaction values differ between 1 and 4 threads"
+    )
     # Verify symmetry
     np.testing.assert_allclose(iv_4, np.swapaxes(iv_4, 1, 2), atol=1e-10)
