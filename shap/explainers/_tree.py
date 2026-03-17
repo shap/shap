@@ -1950,7 +1950,7 @@ class SingleTree:
                         threshold = 0.0
                         categories = [int(x) for x in vertex["threshold"].split("||")]
                         for cat in categories:
-                            threshold += 2 ** cat
+                            threshold += 2**cat
                         self.thresholds[vsplit_idx] = threshold
                         self.threshold_types[vsplit_idx] = 1  # Indicates that this is a categorical split
                     else:

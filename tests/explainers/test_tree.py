@@ -3405,4 +3405,3 @@ def test_openmp_interventional_with_transform():
 
     np.testing.assert_allclose(sv_1, sv_4, atol=1e-8,
                                err_msg="SHAP values with transform differ between threads")
-
