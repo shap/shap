@@ -2982,10 +2982,12 @@ def test_nullable_pandas_dtype():
         TypeError: float() argument must be a string or a real number, not 'NAType'
     Addresses #4011.
     """
-    X = pd.DataFrame({
-        "x1": pd.array([1.0, 2.0, 3.0, 4.0, 5.0] * 20, dtype="Float64"),
-        "x2": pd.array([10, 20, 30, 40, 50] * 20, dtype="Int64"),
-    })
+    X = pd.DataFrame(
+        {
+            "x1": pd.array([1.0, 2.0, 3.0, 4.0, 5.0] * 20, dtype="Float64"),
+            "x2": pd.array([10, 20, 30, 40, 50] * 20, dtype="Int64"),
+        }
+    )
     y = np.array([0, 1, 0, 1, 0] * 20)
 
     model = DecisionTreeClassifier(max_depth=2, random_state=0)
