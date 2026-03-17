@@ -1115,6 +1115,9 @@ inline void print_progress_bar(tfloat &last_print, tfloat start_time, unsigned i
         const double total_seconds = elapsed_seconds / fraction;
         last_print = elapsed_seconds;
 
+        // Re-acquire the GIL for Python stderr calls (may be called without GIL held)
+        PyGILState_STATE gstate = PyGILState_Ensure();
+
         PySys_WriteStderr(
             "\r%3.0f%%|%.*s%.*s| %d/%d [%02d:%02d<%02d:%02d]       ",
             fraction * 100, int(0.5 + fraction*20), "===================",
@@ -1130,6 +1133,8 @@ inline void print_progress_bar(tfloat &last_print, tfloat start_time, unsigned i
             PyObject *result = PyObject_CallMethod(pyStderr, "flush", NULL);
             Py_XDECREF(result);
         }
+
+        PyGILState_Release(gstate);
     }
 }
 

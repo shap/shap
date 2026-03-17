@@ -221,7 +221,9 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     );
     ExplanationDataset data = ExplanationDataset(X, X_missing, y, R, R_missing, num_X, M, num_R);
 
+    Py_BEGIN_ALLOW_THREADS
     dense_tree_shap(trees, data, out_contribs, feature_dependence, model_output, interactions);
+    Py_END_ALLOW_THREADS
 
     // retrieve return value before python cleanup of objects
     tfloat ret_value = (double)values[0];
@@ -346,7 +348,9 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     );
     ExplanationDataset data = ExplanationDataset(X, X_missing, y, NULL, NULL, num_X, M, 0);
 
+    Py_BEGIN_ALLOW_THREADS
     dense_tree_predict(out_pred, trees, data, model_output);
+    Py_END_ALLOW_THREADS
 
     // clean up the created python objects
     Py_XDECREF(children_left_array);
@@ -445,7 +449,9 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
     );
     ExplanationDataset data = ExplanationDataset(X, X_missing, NULL, NULL, NULL, num_X, M, 0);
 
+    Py_BEGIN_ALLOW_THREADS
     dense_tree_update_weights(trees, data);
+    Py_END_ALLOW_THREADS
 
     // clean up the created python objects
     Py_XDECREF(children_left_array);
@@ -557,7 +563,9 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
     );
     ExplanationDataset data = ExplanationDataset(X, X_missing, y, NULL, NULL, num_X, M, 0);
 
+    Py_BEGIN_ALLOW_THREADS
     dense_tree_saabas(out_pred, trees, data);
+    Py_END_ALLOW_THREADS
 
     // clean up the created python objects
     Py_XDECREF(children_left_array);
