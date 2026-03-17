@@ -2972,3 +2972,40 @@ def test_path_dependent_small_background():
     for c in range(3):
         shap_sum = explainer.expected_value[c] + sv[:, :, c].sum(axis=1)
         np.testing.assert_allclose(shap_sum, pred[:, c], atol=1e-6)
+
+
+def test_openmp_path_dependent():
+    """Multi-threaded path-dependent SHAP values should match single-threaded."""
+    import os
+
+    np.random.seed(42)
+    X = np.random.randn(200, 8)
+    y = X[:, 0] * X[:, 1] + X[:, 2]
+    model = GradientBoostingRegressor(n_estimators=20, max_depth=3, random_state=42)
+    model.fit(X, y)
+
+    old_val = os.environ.get("OMP_NUM_THREADS")
+    try:
+        os.environ["OMP_NUM_THREADS"] = "1"
+        ex1 = shap.TreeExplainer(model)
+        sv_1 = ex1.shap_values(X[:50])
+        iv_1 = ex1.shap_interaction_values(X[:20])
+
+        os.environ["OMP_NUM_THREADS"] = "4"
+        ex4 = shap.TreeExplainer(model)
+        sv_4 = ex4.shap_values(X[:50])
+        iv_4 = ex4.shap_interaction_values(X[:20])
+    finally:
+        if old_val is None:
+            os.environ.pop("OMP_NUM_THREADS", None)
+        else:
+            os.environ["OMP_NUM_THREADS"] = old_val
+
+    np.testing.assert_allclose(
+        sv_1, sv_4, atol=1e-10, err_msg="Path-dependent SHAP values differ between 1 and 4 threads"
+    )
+    np.testing.assert_allclose(
+        iv_1, iv_4, atol=1e-10, err_msg="Path-dependent interaction values differ between 1 and 4 threads"
+    )
+    # Verify symmetry
+    np.testing.assert_allclose(iv_4, np.swapaxes(iv_4, 1, 2), atol=1e-10)
