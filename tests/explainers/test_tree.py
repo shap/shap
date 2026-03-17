@@ -2972,3 +2972,44 @@ def test_path_dependent_small_background():
     for c in range(3):
         shap_sum = explainer.expected_value[c] + sv[:, :, c].sum(axis=1)
         np.testing.assert_allclose(shap_sum, pred[:, c], atol=1e-6)
+
+
+def test_gil_released_during_shap_computation():
+    """GIL is released during C++ SHAP computation, allowing other threads to run.
+
+    Previously, the GIL was held for the entire duration of the C++ call,
+    blocking all other Python threads. Addresses #4162.
+    """
+    import threading
+    import time
+
+    np.random.seed(0)
+    X = np.random.randn(500, 10)
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+    model = RandomForestClassifier(n_estimators=100, max_depth=8, random_state=0)
+    model.fit(X, y)
+
+    counter_ticks = 0
+    shap_done = threading.Event()
+
+    def counter():
+        nonlocal counter_ticks
+        while not shap_done.is_set():
+            counter_ticks += 1
+            time.sleep(0.005)
+
+    def shap_compute():
+        explainer = shap.TreeExplainer(model)
+        explainer.shap_values(X)
+        shap_done.set()
+
+    t1 = threading.Thread(target=counter)
+    t2 = threading.Thread(target=shap_compute)
+    t1.start()
+    t2.start()
+    t2.join(timeout=30)
+    t1.join(timeout=1)
+
+    # If GIL is released, counter thread runs concurrently and gets many ticks.
+    # If GIL is held, counter is starved and gets 0-1 ticks.
+    assert counter_ticks > 5, f"Counter only ticked {counter_ticks} times — GIL likely not released"
