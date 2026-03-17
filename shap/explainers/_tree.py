@@ -454,9 +454,9 @@ class TreeExplainer(Explainer):
 
         if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
             tree_limit = self.model.values.shape[0]
-        # convert dataframes
+        # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
         if isinstance(X, (pd.Series, pd.DataFrame)):
-            X = X.values
+            X = X.to_numpy(dtype=self.model.input_dtype, na_value=np.nan)
         flat_output = False
         if len(X.shape) == 1:
             flat_output = True
@@ -1675,9 +1675,9 @@ class TreeEnsemble:
         if tree_limit is None:
             tree_limit = -1 if self.tree_limit is None else self.tree_limit
 
-        # convert dataframes
+        # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
         if isinstance(X, (pd.Series, pd.DataFrame)):
-            X = X.values
+            X = X.to_numpy(dtype=self.input_dtype, na_value=np.nan)
         flat_output = False
         if len(X.shape) == 1:
             flat_output = True

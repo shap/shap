@@ -2972,3 +2972,34 @@ def test_path_dependent_small_background():
     for c in range(3):
         shap_sum = explainer.expected_value[c] + sv[:, :, c].sum(axis=1)
         np.testing.assert_allclose(shap_sum, pred[:, c], atol=1e-6)
+
+
+def test_nullable_pandas_dtype():
+    """TreeExplainer handles pandas nullable dtypes (Int64, Float64) with NA values.
+
+    Previously, DataFrame.values on nullable dtypes produced object arrays,
+    and astype(np.float32) failed on pd.NA with:
+        TypeError: float() argument must be a string or a real number, not 'NAType'
+    Addresses #4011.
+    """
+    X = pd.DataFrame({
+        "x1": pd.array([1.0, 2.0, 3.0, 4.0, 5.0] * 20, dtype="Float64"),
+        "x2": pd.array([10, 20, 30, 40, 50] * 20, dtype="Int64"),
+    })
+    y = np.array([0, 1, 0, 1, 0] * 20)
+
+    model = DecisionTreeClassifier(max_depth=2, random_state=0)
+    model.fit(X, y)
+
+    # Introduce NA values in test data
+    X_test = X.iloc[:5].copy()
+    X_test.iloc[2, 0] = pd.NA
+    X_test.iloc[3, 1] = pd.NA
+
+    # Confirm nullable dtypes are present (precondition)
+    assert X_test["x1"].dtype == pd.Float64Dtype()
+    assert X_test["x2"].dtype == pd.Int64Dtype()
+
+    explainer = shap.TreeExplainer(model)
+    sv = explainer.shap_values(X_test)
+    assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
