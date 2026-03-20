@@ -770,10 +770,13 @@ class TreeExplainer(Explainer):
                 Return type for models with multiple outputs changed from list to np.ndarray.
 
         """
-        assert self.model.model_output == "raw", (
-            'Only model_output = "raw" is supported for SHAP interaction values right now!'
-        )
-        transform = "identity"
+        if self.feature_perturbation == "interventional":
+            transform = self.model.get_transform()
+        else:
+            assert self.model.model_output == "raw", (
+                'Only model_output = "raw" is supported for SHAP interaction values with tree_path_dependent!'
+            )
+            transform = "identity"
 
         # see if we have a default tree_limit in place.
         if tree_limit is None:

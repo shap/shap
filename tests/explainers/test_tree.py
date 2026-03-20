@@ -2968,7 +2968,6 @@ def test_tree_explainer_random_forest_regressor():
         assert np.abs(shap_sum - predictions).max() < 1e-4
 
 
-<<<<<<< HEAD
 def test_path_dependent_small_background():
     """Path-dependent SHAP with small background that has uncovered leaves.
 
@@ -3278,3 +3277,38 @@ def test_interventional_vs_path_dependent_uncorrelated():
 
     # Loose tolerance since finite-sample effects and slight correlation in random data
     np.testing.assert_allclose(interactions_iv, interactions_pd, atol=0.15, rtol=0.3)
+
+
+
+def test_interventional_interaction_values_with_transform():
+    """Interventional interaction values with logistic transform (probability output).
+
+    Verifies that interaction values in probability space satisfy:
+    1. Row-sum additivity: sum_j(phi[i,j]) == shap_value[i]
+    2. Prediction additivity: sum(phi) + expected_value == predict_proba
+    3. Symmetry: phi[i,j] == phi[j,i]
+    """
+    np.random.seed(42)
+    X = np.random.randn(200, 5)
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+    model = GradientBoostingClassifier(n_estimators=10, max_depth=3, random_state=42)
+    model.fit(X, y)
+
+    bg = X[:50]
+    X_test = X[50:55]
+
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional",
+                                   model_output="probability")
+    iv = explainer.shap_interaction_values(X_test)
+    sv = explainer.shap_values(X_test)
+
+    # Row-sum: interaction values sum to SHAP values per feature
+    np.testing.assert_allclose(iv.sum(axis=2), sv, atol=1e-4)
+
+    # Prediction additivity
+    pred = model.predict_proba(X_test)[:, 1]
+    total = iv.sum(axis=(1, 2)) + explainer.expected_value
+    np.testing.assert_allclose(total, pred, atol=1e-4)
+
+    # Symmetry
+    np.testing.assert_allclose(iv, np.swapaxes(iv, 1, 2), atol=1e-10)
