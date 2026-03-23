@@ -377,7 +377,7 @@ def test_kernel_logits_zeros_ones_probs(nsamples):
     np.testing.assert_allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), pred, atol=1e-04)
 
 
-@pytest.mark.parametrize("dt", [np.bool_, np.object_])
+@pytest.mark.parametrize("dt", [bool, object])
 def test_explainer_non_number_dtype(dt):
     seed = 45479
     rng = np.random.default_rng(seed)
