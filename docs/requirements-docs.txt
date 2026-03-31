@@ -151,7 +151,7 @@ ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
-pygments==2.18.0
+pygments==2.20.0
     # via
     #   ipython
     #   nbconvert
