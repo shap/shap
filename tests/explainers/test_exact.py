@@ -2,54 +2,69 @@
 
 import pickle
 
+from conftest import compare_numpy_outputs_against_baseline
+
 import shap
 
 from . import common
 
 
+@compare_numpy_outputs_against_baseline
 def test_interactions():
     model, data = common.basic_xgboost_scenario(100)
-    common.test_interactions_additivity(shap.explainers.ExactExplainer, model.predict, data, data)
+    return common.test_interactions_additivity(shap.explainers.ExactExplainer, model.predict, data, data)
 
 
+@compare_numpy_outputs_against_baseline
 def test_tabular_single_output_auto_masker():
     model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.ExactExplainer, model.predict, data, data)
+    return common.test_additivity(shap.explainers.ExactExplainer, model.predict, data, data)
 
 
+@compare_numpy_outputs_against_baseline
 def test_tabular_multi_output_auto_masker():
     model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.ExactExplainer, model.predict_proba, data, data)
+    return common.test_additivity(shap.explainers.ExactExplainer, model.predict_proba, data, data)
 
 
+@compare_numpy_outputs_against_baseline
 def test_tabular_single_output_partition_masker():
     model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.ExactExplainer, model.predict, shap.maskers.Partition(data), data)
+    return common.test_additivity(shap.explainers.ExactExplainer, model.predict, shap.maskers.Partition(data), data)
 
 
+@compare_numpy_outputs_against_baseline
 def test_tabular_multi_output_partition_masker():
     model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.ExactExplainer, model.predict_proba, shap.maskers.Partition(data), data)
+    return common.test_additivity(
+        shap.explainers.ExactExplainer, model.predict_proba, shap.maskers.Partition(data), data
+    )
 
 
+@compare_numpy_outputs_against_baseline
 def test_tabular_single_output_independent_masker():
     model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.ExactExplainer, model.predict, shap.maskers.Independent(data), data)
+    return common.test_additivity(shap.explainers.ExactExplainer, model.predict, shap.maskers.Independent(data), data)
 
 
+@compare_numpy_outputs_against_baseline
 def test_tabular_multi_output_independent_masker():
     model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.ExactExplainer, model.predict_proba, shap.maskers.Independent(data), data)
+    return common.test_additivity(
+        shap.explainers.ExactExplainer, model.predict_proba, shap.maskers.Independent(data), data
+    )
 
 
+@compare_numpy_outputs_against_baseline
 def test_serialization():
     model, data = common.basic_xgboost_scenario()
-    common.test_serialization(shap.explainers.ExactExplainer, model.predict, data, data)
+    return common.test_serialization(shap.explainers.ExactExplainer, model.predict, data, data)
 
 
+@compare_numpy_outputs_against_baseline
 def test_serialization_no_model_or_masker():
     model, data = common.basic_xgboost_scenario()
-    common.test_serialization(
+    return common.test_serialization(
         shap.explainers.ExactExplainer,
         model.predict,
         data,
@@ -61,8 +76,9 @@ def test_serialization_no_model_or_masker():
     )
 
 
+@compare_numpy_outputs_against_baseline
 def test_serialization_custom_model_save():
     model, data = common.basic_xgboost_scenario()
-    common.test_serialization(
+    return common.test_serialization(
         shap.explainers.ExactExplainer, model.predict, data, data, model_saver=pickle.dump, model_loader=pickle.load
     )

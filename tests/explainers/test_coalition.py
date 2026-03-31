@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+from conftest import compare_numpy_outputs_against_baseline
 
 import shap
 from shap.explainers._coalition import create_partition_hierarchy
@@ -9,6 +10,7 @@ from shap.explainers._coalition import create_partition_hierarchy
 from . import common
 
 
+@compare_numpy_outputs_against_baseline
 def test_tabular_coalition_single_output():
     coalition_tree = {
         "Demographics": ["Sex", "Age", "Race", "Marital Status", "Education-Num"],
@@ -21,11 +23,12 @@ def test_tabular_coalition_single_output():
     features = X.columns.tolist()
     masker = shap.maskers.Partition(data)
     masker.feature_names = features
-    common.test_additivity(
+    return common.test_additivity(
         shap.explainers.CoalitionExplainer, model.predict, masker, data, partition_tree=coalition_tree
     )
 
 
+@compare_numpy_outputs_against_baseline
 def test_tabular_coalition_multiple_output():
     coalition_tree = {
         "Demographics": ["Sex", "Age", "Race", "Marital Status", "Education-Num"],
@@ -38,7 +41,7 @@ def test_tabular_coalition_multiple_output():
     features = X.columns.tolist()
     masker = shap.maskers.Partition(data)
     masker.feature_names = features
-    common.test_additivity(
+    return common.test_additivity(
         shap.explainers.CoalitionExplainer, model.predict_proba, masker, data, partition_tree=coalition_tree
     )
 

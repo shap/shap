@@ -8,6 +8,9 @@ try:
 except ImportError:
     pass
 
+import functools
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -73,3 +76,34 @@ def mpl_test_cleanup():
     with plt.rc_context():
         yield
     plt.close("all")
+
+
+def compare_numpy_outputs_against_baseline(func=None, *, baseline_dir=None):
+    if baseline_dir is None:
+        baseline_dir = Path(__file__).parent / "shap_values_baselines"
+    elif isinstance(baseline_dir, str):
+        baseline_dir = Path(baseline_dir)
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            output = func(*args, **kwargs)
+            baseline_file = baseline_dir / f"{func.__name__}_baseline.npz"
+            if hasattr(output, "values"):
+                arrays = {"values": output.values, "base_values": np.asarray(output.base_values)}
+            else:
+                arrays = {"values": output}
+            if baseline_file.exists():
+                baseline = np.load(baseline_file, allow_pickle=False)
+                for key in arrays:
+                    np.testing.assert_allclose(arrays[key], baseline[key])
+            else:
+                baseline_dir.mkdir(parents=True, exist_ok=True)
+                np.savez(baseline_file, **arrays)
+            return output
+
+        return wrapper
+
+    if func is not None:
+        return decorator(func)
+    return decorator

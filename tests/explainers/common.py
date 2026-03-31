@@ -58,6 +58,7 @@ def test_additivity(explainer_type, model, masker, data, **kwargs):
             assert np.max(np.abs(row.base_values + row.values.sum(0) - out) < 1e6)
     else:
         assert np.max(np.abs(shap_values.base_values + shap_values.values.sum(1) - model(data)) < 1e6)
+    return shap_values
 
 
 def test_interactions_additivity(explainer_type, model, masker, data, **kwargs):
@@ -66,6 +67,7 @@ def test_interactions_additivity(explainer_type, model, masker, data, **kwargs):
     shap_values = explainer(data, interactions=True)
 
     assert np.max(np.abs(shap_values.base_values + shap_values.values.sum((1, 2)) - model(data)) < 1e6)
+    return shap_values
 
 
 # def test_multi_class(explainer_type, model, masker, data, **kwargs):
@@ -113,3 +115,4 @@ def test_serialization(explainer_type, model, masker, data, rtol=1e-05, atol=1e-
     assert isinstance(explainer_original, type(explainer_new))
     if hasattr(explainer_original, "masker"):
         assert isinstance(explainer_original.masker, type(explainer_new.masker))
+    return shap_values_new
