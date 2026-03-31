@@ -4,6 +4,7 @@ import pickle
 import platform
 
 import pytest
+from conftest import compare_numpy_outputs_against_baseline
 
 import shap
 
@@ -16,7 +17,7 @@ from . import common
 )
 def test_translation(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
-    common.test_additivity(shap.explainers.PartitionExplainer, model, tokenizer, data)
+    return common.test_additivity(shap.explainers.PartitionExplainer, model, tokenizer, data)
 
 
 @pytest.mark.skipif(
@@ -25,7 +26,7 @@ def test_translation(basic_translation_scenario):
 )
 def test_translation_auto(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
-    common.test_additivity(shap.Explainer, model, tokenizer, data)
+    return common.test_additivity(shap.Explainer, model, tokenizer, data)
 
 
 @pytest.mark.skipif(
@@ -34,35 +35,41 @@ def test_translation_auto(basic_translation_scenario):
 )
 def test_translation_algorithm_arg(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
-    common.test_additivity(shap.Explainer, model, tokenizer, data, algorithm="partition")
+    return common.test_additivity(shap.Explainer, model, tokenizer, data, algorithm="partition")
 
 
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_single_output():
     model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.PartitionExplainer, model.predict, shap.maskers.Partition(data), data)
+    return common.test_additivity(shap.explainers.PartitionExplainer, model.predict, shap.maskers.Partition(data), data)
 
 
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_multi_output():
     model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.PartitionExplainer, model.predict_proba, shap.maskers.Partition(data), data)
+    return common.test_additivity(
+        shap.explainers.PartitionExplainer, model.predict_proba, shap.maskers.Partition(data), data
+    )
 
 
 @pytest.mark.skipif(
     platform.system() == "Darwin",
     reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
 )
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_serialization(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
-    common.test_serialization(shap.explainers.PartitionExplainer, model, tokenizer, data)
+    return common.test_serialization(shap.explainers.PartitionExplainer, model, tokenizer, data)
 
 
 @pytest.mark.skipif(
     platform.system() == "Darwin",
     reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
 )
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_serialization_no_model_or_masker(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
-    common.test_serialization(
+    return common.test_serialization(
         shap.explainers.Partition,
         model,
         tokenizer,
@@ -78,8 +85,9 @@ def test_serialization_no_model_or_masker(basic_translation_scenario):
     platform.system() == "Darwin",
     reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
 )
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_serialization_custom_model_save(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
-    common.test_serialization(
+    return common.test_serialization(
         shap.explainers.PartitionExplainer, model, tokenizer, data, model_saver=pickle.dump, model_loader=pickle.load
     )
