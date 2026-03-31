@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 import scipy.sparse
 import sklearn
+from conftest import compare_numpy_outputs_against_baseline
 
 import shap
 
@@ -390,6 +391,7 @@ def test_explainer_non_number_dtype(dt):
     np.testing.assert_allclose(shap_values.values.max(), 0.26548, rtol=1e-2)
 
 
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_serialization():
     model, data = common.basic_sklearn_scenario()
-    common.test_serialization(shap.explainers.KernelExplainer, model.predict, data, data)
+    return common.test_serialization(shap.explainers.KernelExplainer, model.predict, data, data)
