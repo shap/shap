@@ -3,16 +3,15 @@
 import pickle
 
 import numpy as np
-from conftest import compare_numpy_outputs_against_baseline
 
 import shap
 
 from . import common
 
 
-def test_exact_second_order(random_seed):
+def test_exact_second_order():
     """This tests that the Perumtation explain gives exact answers for second order functions."""
-    rs = np.random.RandomState(random_seed)
+    rs = np.random.RandomState(42)
     data = rs.randint(0, 2, size=(100, 5))
 
     def model(data):
@@ -30,62 +29,52 @@ def test_exact_second_order(random_seed):
     assert np.allclose(right_answer, shap_values.values)  # type: ignore[union-attr]
 
 
-@compare_numpy_outputs_against_baseline
+# TODO: add baseline comparison once PermutationExplainer supports passing a numpy.random.Generator
+# for reproducible results (currently uses global np.random state)
 def test_tabular_single_output_auto_masker():
     model, data = common.basic_xgboost_scenario(100)
-    return common.test_additivity(shap.explainers.PermutationExplainer, model.predict, data, data)
+    common.test_additivity(shap.explainers.PermutationExplainer, model.predict, data, data)
 
 
-@compare_numpy_outputs_against_baseline
 def test_tabular_multi_output_auto_masker():
     model, data = common.basic_xgboost_scenario(100)
-    return common.test_additivity(shap.explainers.PermutationExplainer, model.predict_proba, data, data)
+    common.test_additivity(shap.explainers.PermutationExplainer, model.predict_proba, data, data)
 
 
-@compare_numpy_outputs_against_baseline
 def test_tabular_single_output_partition_masker():
     model, data = common.basic_xgboost_scenario(100)
-    return common.test_additivity(
-        shap.explainers.PermutationExplainer, model.predict, shap.maskers.Partition(data), data
-    )
+    common.test_additivity(shap.explainers.PermutationExplainer, model.predict, shap.maskers.Partition(data), data)
 
 
-@compare_numpy_outputs_against_baseline
 def test_tabular_multi_output_partition_masker():
     model, data = common.basic_xgboost_scenario(100)
-    return common.test_additivity(
+    common.test_additivity(
         shap.explainers.PermutationExplainer, model.predict_proba, shap.maskers.Partition(data), data
     )
 
 
-@compare_numpy_outputs_against_baseline
 def test_tabular_single_output_independent_masker():
     model, data = common.basic_xgboost_scenario(100)
-    return common.test_additivity(
-        shap.explainers.PermutationExplainer, model.predict, shap.maskers.Independent(data), data
-    )
+    common.test_additivity(shap.explainers.PermutationExplainer, model.predict, shap.maskers.Independent(data), data)
 
 
-@compare_numpy_outputs_against_baseline
 def test_tabular_multi_output_independent_masker():
     model, data = common.basic_xgboost_scenario(100)
-    return common.test_additivity(
+    common.test_additivity(
         shap.explainers.PermutationExplainer, model.predict_proba, shap.maskers.Independent(data), data
     )
 
 
-@compare_numpy_outputs_against_baseline
 def test_serialization():
     model, data = common.basic_xgboost_scenario()
-    return common.test_serialization(
+    common.test_serialization(
         shap.explainers.PermutationExplainer, model.predict, data, data, rtol=0.1, atol=0.05, max_evals=100000
     )
 
 
-@compare_numpy_outputs_against_baseline
 def test_serialization_no_model_or_masker():
     model, data = common.basic_xgboost_scenario()
-    return common.test_serialization(
+    common.test_serialization(
         shap.explainers.PermutationExplainer,
         model.predict,
         data,
@@ -100,10 +89,9 @@ def test_serialization_no_model_or_masker():
     )
 
 
-@compare_numpy_outputs_against_baseline
 def test_serialization_custom_model_save():
     model, data = common.basic_xgboost_scenario()
-    return common.test_serialization(
+    common.test_serialization(
         shap.explainers.PermutationExplainer,
         model.predict,
         data,

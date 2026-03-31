@@ -10,7 +10,7 @@ from shap.explainers._coalition import create_partition_hierarchy
 from . import common
 
 
-@compare_numpy_outputs_against_baseline
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_coalition_single_output():
     coalition_tree = {
         "Demographics": ["Sex", "Age", "Race", "Marital Status", "Education-Num"],
@@ -28,7 +28,7 @@ def test_tabular_coalition_single_output():
     )
 
 
-@compare_numpy_outputs_against_baseline
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_coalition_multiple_output():
     coalition_tree = {
         "Demographics": ["Sex", "Age", "Race", "Marital Status", "Education-Num"],

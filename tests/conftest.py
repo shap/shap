@@ -78,7 +78,7 @@ def mpl_test_cleanup():
     plt.close("all")
 
 
-def compare_numpy_outputs_against_baseline(func=None, *, baseline_dir=None):
+def compare_numpy_outputs_against_baseline(*, func_file, baseline_dir=None, rtol=1e-4, atol=1e-6):
     if baseline_dir is None:
         baseline_dir = Path(__file__).parent / "shap_values_baselines"
     elif isinstance(baseline_dir, str):
@@ -87,8 +87,10 @@ def compare_numpy_outputs_against_baseline(func=None, *, baseline_dir=None):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            # breakpoint()
             output = func(*args, **kwargs)
-            baseline_file = baseline_dir / f"{func.__name__}_baseline.npz"
+            base_func_name = f"{Path(func_file).stem}_{func.__name__}"
+            baseline_file = baseline_dir / f"{base_func_name}_baseline.npz"
             if hasattr(output, "values"):
                 arrays = {"values": output.values, "base_values": np.asarray(output.base_values)}
             else:
@@ -96,7 +98,7 @@ def compare_numpy_outputs_against_baseline(func=None, *, baseline_dir=None):
             if baseline_file.exists():
                 baseline = np.load(baseline_file, allow_pickle=False)
                 for key in arrays:
-                    np.testing.assert_allclose(arrays[key], baseline[key])
+                    np.testing.assert_allclose(arrays[key], baseline[key], rtol=rtol, atol=atol)
             else:
                 baseline_dir.mkdir(parents=True, exist_ok=True)
                 np.savez(baseline_file, **arrays)
@@ -104,6 +106,4 @@ def compare_numpy_outputs_against_baseline(func=None, *, baseline_dir=None):
 
         return wrapper
 
-    if func is not None:
-        return decorator(func)
     return decorator

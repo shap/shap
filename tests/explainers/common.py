@@ -7,7 +7,7 @@ from sklearn.linear_model import LogisticRegression
 import shap
 
 
-def basic_xgboost_scenario(max_samples=None, dataset=shap.datasets.adult):
+def basic_xgboost_scenario(max_samples=None, dataset=shap.datasets.adult, seed=42):
     """Create a basic XGBoost model on a data set."""
     xgboost = pytest.importorskip("xgboost")
 
@@ -20,7 +20,7 @@ def basic_xgboost_scenario(max_samples=None, dataset=shap.datasets.adult):
 
     # train an XGBoost model (but any other model type would also work)
     # Specify some hyperparameters for consitency between xgboost v1.X and v2.X
-    model = xgboost.XGBClassifier(tree_method="exact", base_score=0.5)
+    model = xgboost.XGBClassifier(tree_method="exact", base_score=0.5, seed=seed)
     model.fit(X, y)
 
     return model, X
