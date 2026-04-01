@@ -28,6 +28,7 @@ def test_tf_keras_mnist_cnn_tf216_and_above(random_seed):
         Dense,
         Dropout,
         Flatten,
+        Input,
         MaxPooling2D,
     )
     from tensorflow.keras.models import Sequential
@@ -69,7 +70,8 @@ def test_tf_keras_mnist_cnn_tf216_and_above(random_seed):
     y_test = tf.keras.utils.to_categorical(y_test, num_classes)
 
     model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3), activation="relu", input_shape=input_shape))
+    model.add(Input(shape=input_shape))
+    model.add(Conv2D(32, kernel_size=(3, 3), activation="relu"))
     model.add(Conv2D(64, (3, 3), activation="relu"))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
@@ -464,7 +466,8 @@ def test_tf_input(random_seed, input_type):
 
     model = tf.keras.Sequential(
         [
-            tf.keras.layers.Dense(10, input_shape=(num_features,), activation="relu"),
+            tf.keras.layers.Input(shape=(num_features,)),
+            tf.keras.layers.Dense(10, activation="relu"),
             tf.keras.layers.Dense(1, activation="linear"),
         ]
     )
