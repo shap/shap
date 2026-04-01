@@ -31,6 +31,10 @@ pip install shap
 conda install -c conda-forge shap
 </pre>
 
+## Supported versions
+
+SHAP follows [SPEC 0](https://scientific-python.org/specs/spec-0000/) for minimum supported dependency versions. We test against the versions specified there and may not fix bugs for older versions.
+
 ## Contributing
 
 We welcome contributions highly. Feel free to file an issue. Before opening a PR make sure you've read our [CONTRIBUTING.md](CONTRIBUTING.md) guideline.
