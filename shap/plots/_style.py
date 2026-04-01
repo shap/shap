@@ -7,10 +7,9 @@ from __future__ import annotations
 
 import dataclasses
 from contextlib import contextmanager
-from typing import TypeAlias, TypedDict
+from typing import TypeAlias, TypedDict, Unpack
 
 import numpy as np
-from typing_extensions import Unpack
 
 from ..utils._exceptions import InvalidStyleOptionError
 from . import colors
