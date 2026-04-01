@@ -1988,7 +1988,7 @@ class SingleTree:
                     # We should be technically be assigning the number of samples used to
                     # train the model as the weight here, but unfortunately this info is
                     # currently unavailable in `tree`, so we set to 0 first.
-                    # cf. https://github.com/microsoft/LightGBM/issues/5962
+                    # cf. https://github.com/lightgbm-org/LightGBM/issues/5962
                     self.node_sample_weight[vleaf_idx] = vertex.get("leaf_count", 0)
             self.values = np.asarray(self.values)
             self.values = np.multiply(self.values, scaling)

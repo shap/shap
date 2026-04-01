@@ -681,7 +681,7 @@ def rank() -> tuple[ssp.csr_matrix, np.ndarray, ssp.csr_matrix, np.ndarray, np.n
 
     Notes
     -----
-    Data Source: LightGBM repository https://github.com/microsoft/LightGBM/tree/master/examples/lambdarank
+    Data Source: LightGBM repository https://github.com/lightgbm-org/LightGBM/tree/master/examples/lambdarank
 
     Examples
     --------
@@ -690,7 +690,7 @@ def rank() -> tuple[ssp.csr_matrix, np.ndarray, ssp.csr_matrix, np.ndarray, np.n
         x_train, y_train, x_test, y_test, q_train, q_test = shap.datasets.rank()
 
     """
-    rank_data_url = "https://raw.githubusercontent.com/Microsoft/LightGBM/master/examples/lambdarank/"
+    rank_data_url = "https://raw.githubusercontent.com/lightgbm-org/LightGBM/master/examples/lambdarank/"
     x_train, y_train = sklearn.datasets.load_svmlight_file(cache(rank_data_url + "rank.train"))
     x_test, y_test = sklearn.datasets.load_svmlight_file(cache(rank_data_url + "rank.test"))
     q_train = np.loadtxt(cache(rank_data_url + "rank.train.query"))
