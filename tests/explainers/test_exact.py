@@ -34,6 +34,18 @@ def test_tabular_single_output_partition_masker():
 
 
 @compare_numpy_outputs_against_baseline(func_file=__file__)
+def test_tabular_single_output_auto_masker_single_value():
+    model, data = common.basic_xgboost_scenario(2)
+    return common.test_additivity(shap.explainers.ExactExplainer, model.predict, data, data)
+
+
+@compare_numpy_outputs_against_baseline(func_file=__file__)
+def test_tabular_single_output_auto_masker_minimal():
+    model, data = common.basic_xgboost_scenario(2)
+    return common.test_additivity(shap.explainers.ExactExplainer, model.predict, data, data)
+
+
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_multi_output_partition_masker():
     model, data = common.basic_xgboost_scenario(100)
     return common.test_additivity(
