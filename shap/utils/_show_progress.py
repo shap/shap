@@ -2,14 +2,11 @@ from __future__ import annotations
 
 import time
 from collections.abc import Iterable, Iterator
-from typing import TypeVar
 
 import tqdm
 
-T = TypeVar("T")
 
-
-class ShowProgress(Iterator[T]):
+class ShowProgress[T](Iterator[T]):
     """This is a simple wrapper around tqdm that includes a starting delay before printing."""
 
     def __init__(
@@ -48,7 +45,7 @@ class ShowProgress(Iterator[T]):
         return self
 
 
-def show_progress(
+def show_progress[T](
     iterable: Iterable[T],
     total: int | None = None,
     desc: str | None = None,
