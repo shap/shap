@@ -908,7 +908,7 @@ class TestSingleTree:
             "shrinkage": 1,
             "tree_structure": {
                 "leaf_value": 0,
-                # "leaf_count": 123,  # FIXME(upstream): microsoft/LightGBM#5962
+                # "leaf_count": 123,  # FIXME(upstream): lightgbm-org/LightGBM#5962
             },
         }
         stree = SingleTree(sample_tree)
