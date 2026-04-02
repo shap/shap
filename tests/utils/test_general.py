@@ -89,36 +89,99 @@ def test_opchain_repr():
 
 
 def test_format_value_empty_string():
-    """Tests that format_value() handles empty strings without raising IndexError."""
-    # Test with empty string
-    result = shap.utils._general.format_value("", "%0.03f")
+    result = shap.utils.format_value("", "%0.03f")
     assert result == ""
 
 
 def test_format_value_negative_number():
-    """Tests that format_value() correctly formats negative numbers with unicode minus sign."""
-    result = shap.utils._general.format_value(-1.5, "%0.03f")
+    result = shap.utils.format_value(-1.5, "%0.03f")
     assert result == "\u2212" + "1.5"
 
 
 def test_format_value_positive_number():
-    """Tests that format_value() correctly formats positive numbers."""
-    result = shap.utils._general.format_value(1.5, "%0.03f")
+    result = shap.utils.format_value(1.5, "%0.03f")
     assert result == "1.5"
 
 
 def test_format_value_trailing_zeros():
-    """Tests that format_value() removes trailing zeros."""
-    result = shap.utils._general.format_value(1.5000, "%0.03f")
+    result = shap.utils.format_value(1.5000, "%0.03f")
     assert result == "1.5"
 
 
 def test_format_value_string_input():
-    """Tests that format_value() handles string inputs correctly."""
-    # Test with non-empty string
-    result = shap.utils._general.format_value("test_string", "%0.03f")
+    result = shap.utils.format_value("test_string", "%0.03f")
     assert result == "test_string"
 
-    # Test with string that starts with minus
-    result = shap.utils._general.format_value("-123", "%0.03f")
+    result = shap.utils.format_value("-123", "%0.03f")
     assert result == "\u2212" + "123"
+
+
+def test_approximate_interactions_with_string_feature_name():
+    rng = np.random.RandomState(0)
+    X = rng.randn(100, 3)
+    shap_values = rng.randn(100, 3)
+    feature_names = ["age", "income", "score"]
+
+    result = shap.utils.approximate_interactions("income", shap_values, X, feature_names)
+    assert result.shape == (3,)
+    assert set(result.tolist()) == {0, 1, 2}
+
+
+def test_approximate_interactions_with_integer_index():
+    rng = np.random.RandomState(0)
+    X = rng.randn(100, 3)
+    shap_values = rng.randn(100, 3)
+
+    result = shap.utils.approximate_interactions(0, shap_values, X)
+    assert result.shape == (3,)
+    assert set(result.tolist()) == {0, 1, 2}
+
+
+def test_approximate_interactions_with_rank_index():
+    rng = np.random.RandomState(0)
+    X = rng.randn(100, 3)
+    shap_values = rng.randn(100, 3)
+    feature_names = ["a", "b", "c"]
+
+    result = shap.utils.approximate_interactions("rank(0)", shap_values, X, feature_names)
+    assert result.shape == (3,)
+
+
+def test_approximate_interactions_with_dataframe():
+    rng = np.random.RandomState(0)
+    X = pd.DataFrame(rng.randn(100, 3), columns=["a", "b", "c"])
+    shap_values = rng.randn(100, 3)
+
+    result = shap.utils.approximate_interactions("b", shap_values, X)
+    assert result.shape == (3,)
+
+
+def test_approximate_interactions_with_string_column():
+    rng = np.random.RandomState(0)
+    X = pd.DataFrame(
+        {
+            "color": rng.choice(["red", "blue", "green"], 100),
+            "size": rng.randn(100),
+            "weight": rng.randn(100),
+        }
+    )
+    shap_values = rng.randn(100, 3)
+
+    result = shap.utils.approximate_interactions("size", shap_values, X)
+    assert result.shape == (3,)
+
+
+def test_record_and_assert_import(monkeypatch):
+    err = ImportError("fake error")
+    shap.utils.record_import_error("_test_fake_pkg", "Could not import _test_fake_pkg", err)
+    with pytest.raises(ImportError, match="fake error"):
+        shap.utils.assert_import("_test_fake_pkg")
+
+    from shap.utils._general import import_errors
+
+    monkeypatch.delitem(import_errors, "_test_fake_pkg")
+
+
+def test_assert_import_no_error():
+    shap.utils.assert_import("definitely_not_recorded")
+
