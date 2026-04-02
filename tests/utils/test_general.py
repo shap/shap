@@ -122,3 +122,65 @@ def test_format_value_string_input():
     # Test with string that starts with minus
     result = shap.utils._general.format_value("-123", "%0.03f")
     assert result == "\u2212" + "123"
+
+
+def test_convert_name_none_passthrough():
+    assert shap.utils.convert_name(None, None, ["a", "b"]) is None
+
+
+def test_convert_name_int_passthrough():
+    assert shap.utils.convert_name(2, None, ["a", "b", "c"]) == 2
+
+
+def test_convert_name_string_lookup():
+    names = ["age", "income", "score"]
+    assert shap.utils.convert_name("income", None, names) == 1
+
+
+def test_convert_name_rank_indexing():
+    shap_values = np.array([[0.1, 0.9, 0.5], [0.2, 0.8, 0.4]])
+    names = ["a", "b", "c"]
+    result = shap.utils.convert_name("rank(0)", shap_values, names)
+    expected = np.argsort(-np.abs(shap_values).mean(0))[0]
+    assert result == expected
+
+
+def test_convert_name_rank_without_shap_values():
+    with pytest.raises(ValueError, match="shap_values must be provided"):
+        shap.utils.convert_name("rank(0)", None, ["a", "b"])
+
+
+def test_convert_name_sum():
+    assert shap.utils.convert_name("sum()", None, ["a", "b"]) == "sum()"
+
+
+def test_convert_name_unknown_feature():
+    with pytest.raises(ValueError, match="Could not find feature named"):
+        shap.utils.convert_name("nonexistent", None, ["a", "b"])
+
+
+def test_record_and_assert_import():
+    err = ImportError("fake error")
+    shap.utils.record_import_error("fake_pkg", "Could not import fake_pkg", err)
+    with pytest.raises(ImportError, match="fake error"):
+        shap.utils.assert_import("fake_pkg")
+    del shap.utils._general.import_errors["fake_pkg"]
+
+
+def test_assert_import_no_error():
+    shap.utils.assert_import("definitely_not_recorded")
+
+
+def test_encode_array_if_needed_numeric():
+    arr = np.array([1, 2, 3])
+    result = shap.utils._general.encode_array_if_needed(arr, dtype=float)
+    np.testing.assert_array_equal(result, np.array([1.0, 2.0, 3.0]))
+
+
+def test_encode_array_if_needed_strings():
+    arr = np.array(["cat", "dog", "cat", "bird"])
+    result = shap.utils._general.encode_array_if_needed(arr, dtype=float)
+    assert result.dtype == float
+    assert len(result) == 4
+    assert result[0] == result[2]
+    assert len(set(result)) == 3
