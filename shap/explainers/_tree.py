@@ -13,6 +13,7 @@ import numpy.typing as npt
 import pandas as pd
 import scipy.sparse
 import scipy.special
+from scipy.sparse import issparse
 from packaging import version
 
 from .. import maskers
@@ -463,7 +464,11 @@ class TreeExplainer(Explainer):
             X = X.reshape(1, X.shape[0])
         if X.dtype != self.model.input_dtype:
             X = X.astype(self.model.input_dtype)
-        X_missing = np.isnan(X, dtype=bool)
+        if issparse(X):
+            X = X.toarray()
+            X_missing = np.isnan(X)
+        else:
+            X_missing = np.isnan(X)
         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
@@ -1684,7 +1689,12 @@ class TreeEnsemble:
             X = X.reshape(1, X.shape[0])
         if X.dtype.type != self.input_dtype:
             X = X.astype(self.input_dtype)
-        X_missing = np.isnan(X, dtype=bool)
+        from scipy.sparse import issparse
+
+        if issparse(X):
+            X_missing = np.zeros(X.shape, dtype=bool)
+        else:
+            X_missing = np.isnan(X)
         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
