@@ -1,4 +1,3 @@
-import sys
 from contextlib import nullcontext as does_not_raise
 
 import matplotlib.pyplot as plt
@@ -15,7 +14,7 @@ def data_explainer_shap_values():
 
     # train model
     X, y = shap.datasets.california(n_points=500)
-    model = RandomForestRegressor(n_estimators=100)
+    model = RandomForestRegressor(n_estimators=100, random_state=0)
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
@@ -64,9 +63,6 @@ def test_verify_valid_cmap(cmap, exp_ctx):
         verify_valid_cmap(cmap)
 
 
-@pytest.mark.skipif(
-    sys.platform == "darwin", reason="Since this test is flaky on MacOS, we skip it for now. See GH #4102."
-)
 def test_random_force_plot_mpl_with_data(data_explainer_shap_values):
     """Test if force plot with matplotlib works."""
     X, explainer, shap_values = data_explainer_shap_values
@@ -75,11 +71,9 @@ def test_random_force_plot_mpl_with_data(data_explainer_shap_values):
     shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :], matplotlib=True, show=False)
     with pytest.raises(TypeError, match="force plot now requires the base value as the first parameter"):
         shap.force_plot([1, 1], shap_values, X.iloc[0, :], show=False)
+    plt.close("all")
 
 
-@pytest.mark.skipif(
-    sys.platform == "darwin", reason="Since this test is flaky on MacOS, we skip it for now. See GH #4102."
-)
 def test_random_force_plot_mpl_text_rotation_with_data(data_explainer_shap_values):
     """Test if force plot with matplotlib works when supplied with text_rotation."""
     X, explainer, shap_values = data_explainer_shap_values
@@ -88,6 +82,7 @@ def test_random_force_plot_mpl_text_rotation_with_data(data_explainer_shap_value
     shap.force_plot(
         explainer.expected_value, shap_values[0, :], X.iloc[0, :], matplotlib=True, text_rotation=30, show=False
     )
+    plt.close("all")
 
 
 @pytest.mark.mpl_image_compare(tolerance=3)
