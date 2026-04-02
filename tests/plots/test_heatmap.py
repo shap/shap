@@ -25,3 +25,20 @@ def test_heatmap_feature_order(explainer):
     )
     plt.tight_layout()
     return fig
+
+
+def test_heatmap_show_true(explainer, monkeypatch):
+    """Test heatmap plot with show=True."""
+    shap_values = explainer(explainer.data)
+    show_called = []
+    monkeypatch.setattr(plt, "show", lambda: show_called.append(True))
+    shap.plots.heatmap(shap_values, show=True)
+    assert len(show_called) == 1
+    plt.close()
+
+
+def test_heatmap_invalid_feature_order(explainer):
+    """Test that invalid feature_order raises exception."""
+    shap_values = explainer(explainer.data)
+    with pytest.raises(Exception, match="Unsupported feature_order"):
+        shap.plots.heatmap(shap_values, feature_order=42, show=False)

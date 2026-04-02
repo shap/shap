@@ -394,6 +394,11 @@ def bar(
         return ax
 
 
+# TODO: determine if this is dead code
+# This function is not exposed in the public API (shap/plots/__init__.py).
+# Only the `bar` function above is exposed as the public API.
+# The function itself has a DeprecationWarning indicating it will change/be removed.
+# Coverage: limited (lines 397-462 are only tested via internal _bar.bar_legacy calls)
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
     warnings.warn(
         "The behaviour of this function will change in a future version to the new plotting API."
