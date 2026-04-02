@@ -794,7 +794,8 @@ class TreeExplainer(Explainer):
             import xgboost
 
             if not isinstance(X, xgboost.core.DMatrix):
-                X = xgboost.DMatrix(X)
+                dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
+                X = xgboost.DMatrix(X, **dmatrix_props)
 
             n_iterations = _xgboost_n_iterations(tree_limit, self.model.num_stacked_models)
             phi = self.model.original_model.predict(

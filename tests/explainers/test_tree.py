@@ -1338,6 +1338,34 @@ class TestExplainerXGBoost:
         shap_values = explainer.shap_values(X_nan)
         # check that SHAP values sum to model output
         assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
+        interaction_values = explainer.shap_interaction_values(X_nan)
+        # check that interaction values sum to SHAP values and model output
+        assert np.allclose(shap_values, interaction_values.sum(axis=2))
+        assert np.allclose(margin, explainer.expected_value + interaction_values.sum(axis=(1, 2)))
+
+    @pytest.mark.parametrize("Clf", classifiers)
+    def test_xgboost_mixed_category_and_nan(self, Clf):
+        """Test that xgboost explanations can handle categorical data, for example when explaining a
+        `XGBClassifier(enable_categorical=True)`."""
+        X, y = shap.datasets.adult(n_points=100)
+        # convert to category type
+        X["Education-Num"] = X["Education-Num"].astype("category")
+        X["Workclass"] = X["Workclass"].astype("category")
+        X["Country"] = X["Country"].astype("category")
+        # add a few missing values
+        X.loc[X.sample(frac=0.3, random_state=42).index, "Country"] = np.nan
+
+        clf = Clf(random_state=42, enable_categorical=True)
+        clf.fit(X, y)
+        margin = clf.predict(X, output_margin=True)
+        explainer = shap.TreeExplainer(clf)
+        shap_values = explainer.shap_values(X)
+        # check that SHAP values sum to model output
+        assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
+        interaction_values = explainer.shap_interaction_values(X)
+        # check that interaction values sum to SHAP values and model output
+        assert np.allclose(shap_values, interaction_values.sum(axis=2))
+        assert np.allclose(margin, explainer.expected_value + interaction_values.sum(axis=(1, 2)))
 
     @pytest.mark.parametrize("Reg", regressors)
     def test_xgboost_direct(self, Reg):
