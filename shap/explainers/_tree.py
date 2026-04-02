@@ -13,8 +13,8 @@ import numpy.typing as npt
 import pandas as pd
 import scipy.sparse
 import scipy.special
-from scipy.sparse import issparse
 from packaging import version
+from scipy.sparse import issparse
 
 from .. import maskers
 from .._explanation import Explanation
