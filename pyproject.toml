@@ -1,18 +1,21 @@
 [build-system]
 # Note for maintainers: this numpy constraint is specific to wheels for PyPI. See:
 # https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-abi-handling
-requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "numpy>=2.0", "packaging>20.9",
-            "cython>=3.0.11"]
-build-backend = "setuptools.build_meta"
+requires = [
+  "scikit-build-core >=0.10",
+  "numpy>=2.0",
+  "packaging>20.9",
+  "cython>=3.0.11",
+  "nanobind >=1.3.2",
+]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "shap"
 description = "A unified approach to explain the output of any machine learning model."
 readme = "README.md"
-license = {text = "MIT License"}
-authors = [
-  {name = "Scott Lundberg", email = "slund1@cs.washington.edu"},
-]
+license = { text = "MIT License" }
+authors = [{ name = "Scott Lundberg", email = "slund1@cs.washington.edu" }]
 requires-python = ">=3.12"
 dependencies = [
   'numpy>=2',
@@ -22,9 +25,9 @@ dependencies = [
   'tqdm>=4.27.0',
   'packaging>20.9',
   'slicer==0.0.8',
-  'numba<0.63; sys_platform == "darwin" and platform_machine == "x86_64"',  # numba 0.63+ dropped macOS x86_64 wheels, see numba/numba#10187
+  'numba<0.63; sys_platform == "darwin" and platform_machine == "x86_64"',    # numba 0.63+ dropped macOS x86_64 wheels, see numba/numba#10187
   'numba; sys_platform != "darwin" or platform_machine != "x86_64"',
-  'llvmlite<0.46; sys_platform == "darwin" and platform_machine == "x86_64"',  # llvmlite 0.46+ dropped macOS x86_64 wheels, see numba/numba#10187
+  'llvmlite<0.46; sys_platform == "darwin" and platform_machine == "x86_64"', # llvmlite 0.46+ dropped macOS x86_64 wheels, see numba/numba#10187
   'llvmlite; sys_platform != "darwin" or platform_machine != "x86_64"',
   'cloudpickle',
   'typing-extensions',
@@ -64,38 +67,33 @@ docs = [
   "sphinx_github_changelog",
   "myst-parser",
   "requests",
-  "ipywidgets",  # For tqdm in notebooks
+  "ipywidgets",              # For tqdm in notebooks
 ]
-test-core = [
-  "pytest",
-  "pytest-mpl",
-  "pytest-cov",
-  "mypy",
-]
+test-core = ["pytest", "pytest-mpl", "pytest-cov", "mypy"]
 test = [
   "pytest",
   "pytest-mpl",
   "pytest-cov",
   "xgboost",
   "lightgbm",
-  'catboost; python_version < "3.14"',  # TODO: pending 3.14 support
-  'gpboost==1.6.3.1; python_version < "3.14"',  # TODO: pending 3.14 support, see GH #4210
+  'catboost; python_version < "3.14"',         # TODO: pending 3.14 support
+  'gpboost==1.6.3.1; python_version < "3.14"', # TODO: pending 3.14 support, see GH #4210
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers < 4.54.0",  # TODO: fix once tests pass for 4.54.0
+  "transformers < 4.54.0",                     # TODO: fix once tests pass for 4.54.0
   "tf-keras",
-  "protobuf",  # See GH #3046
-  'torch; python_version < "3.14"',  # TODO: pending 3.14 support
-  'torchvision; python_version < "3.14"',  # TODO: pending 3.14 support
-  'tensorflow; python_version < "3.14"',  # TODO: pending 3.14 support
+  "protobuf",                                  # See GH #3046
+  'torch; python_version < "3.14"',            # TODO: pending 3.14 support
+  'torchvision; python_version < "3.14"',      # TODO: pending 3.14 support
+  'tensorflow; python_version < "3.14"',       # TODO: pending 3.14 support
   "sentencepiece",
   "opencv-python",
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
   # See GH #3707, #3768, 3922
   "numpy>=2.0",
   "causalml>=0.15.5",
-  "selenium",  # needed to test the javascript based plots
+  "selenium",         # needed to test the javascript based plots
 ]
 
 test_notebooks = [
@@ -108,11 +106,7 @@ test_notebooks = [
   "keras",
 ]
 
-nbtest = [
-  "nbtest-plugin",
-  "nbtest-gen",
-  "nbtest-lab-extension"
-]
+nbtest = ["nbtest-plugin", "nbtest-gen", "nbtest-lab-extension"]
 
 [project.urls]
 Repository = 'http://github.com/shap/shap'
@@ -204,7 +198,7 @@ packages = [
   'shap.maskers',
   'shap.utils',
   'shap.actions',
-  'shap.models'
+  'shap.models',
 ]
 
 [tool.setuptools_scm]
@@ -222,7 +216,9 @@ filterwarnings = [
   "ignore:.*is_datetime64tz_dtype is deprecated.*:DeprecationWarning:.*pyspark.*",
   "ignore:.*'force_all_finite' was renamed to 'ensure_all_finite' in 1.6.*:FutureWarning:.*sklearn.*",
 ]
-markers = ["xslow: mark test as extremely slow (not run unless explicitly requested)"]
+markers = [
+  "xslow: mark test as extremely slow (not run unless explicitly requested)",
+]
 
 [tool.ruff]
 # Careful: when running on pre-commit, ruff's "include" and "exclude" config
@@ -234,17 +230,17 @@ line-length = 120
 
 [tool.ruff.lint]
 select = [
-  "F",  # pyflakes
-  "I",  # isort
-  "ISC",  # string literal concatenation.
-  "UP",  # pyupgrade
-  "E",  # pycodestyle
-  "W",  # warning
-  "D",  # pydocstyle
-  "NPY",  # Numpy
-  "SIM101",  # flake8-simplify
-  "FA",  # future annotations
-  "TCH",  # Move type only imports to type-checking condition.
+  "F",      # pyflakes
+  "I",      # isort
+  "ISC",    # string literal concatenation.
+  "UP",     # pyupgrade
+  "E",      # pycodestyle
+  "W",      # warning
+  "D",      # pydocstyle
+  "NPY",    # Numpy
+  "SIM101", # flake8-simplify
+  "FA",     # future annotations
+  "TCH",    # Move type only imports to type-checking condition.
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
@@ -259,17 +255,17 @@ ignore = [
   "W191",
 
   # pydocstyle issues not yet fixed
-  "D100",  # Missing docstring in public module
-  "D101",  # Missing docstring in public class
-  "D102",  # Missing docstring in public method
-  "D103",  # Missing docstring in public function
-  "D104",  # Missing docstring in public package
-  "D105",  # Missing docstring in magic method
-  "D205",  # 1 blank line required between summary line and description
-  "D400",  # First line should end with a period
-  "D401",  # First line of docstring should be in imperative mood: "A basic partial dependence plot function."
-  "D404",  # First word of the docstring should not be "This"
-  "NPY002",  # Allow numpy RandomState objects in tests
+  "D100",   # Missing docstring in public module
+  "D101",   # Missing docstring in public class
+  "D102",   # Missing docstring in public method
+  "D103",   # Missing docstring in public function
+  "D104",   # Missing docstring in public package
+  "D105",   # Missing docstring in magic method
+  "D205",   # 1 blank line required between summary line and description
+  "D400",   # First line should end with a period
+  "D401",   # First line of docstring should be in imperative mood: "A basic partial dependence plot function."
+  "D404",   # First word of the docstring should not be "This"
+  "NPY002", # Allow numpy RandomState objects in tests
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -283,10 +279,14 @@ convention = "numpy"
 "docs/user_studies/*.ipynb" = ["ALL"]
 
 # Ignore SHAP Paper, as it is an unmaintained record of a published paper
-"notebooks/tabular_examples/tree_based_models/tree_shap_paper/*"  = ["ALL"]
+"notebooks/tabular_examples/tree_based_models/tree_shap_paper/*" = ["ALL"]
 
 # Disable some unwanted rules on Jupyter notebooks
-"*.ipynb" = ["D", "E703", "E402"]  # Allow trailing semicolons, allow imports not at top
+"*.ipynb" = [
+  "D",
+  "E703",
+  "E402",
+] # Allow trailing semicolons, allow imports not at top
 
 # Ignore pycodestyle in tests
 "tests/*py" = ["D"]
@@ -304,7 +304,12 @@ combine = ["shap", "*/site-packages/shap"]
 # skip cp38-musllinux_x86_64 since numpy never provided cp38 musllinux wheels
 #  they introduced musllinux in 1.25 when they already dropped cp38
 # skip *t (free-threaded builds) since dependencies like llvmlite don't support it yet
-skip = ["cp314-macosx_x86_64", "cp314t-manylinux_x86_64", "cp314t-macosx_x86_64", "cp314t-win_amd64"]
+skip = [
+  "cp314-macosx_x86_64",
+  "cp314t-manylinux_x86_64",
+  "cp314t-macosx_x86_64",
+  "cp314t-win_amd64",
+]
 build-verbosity = 2
 # Change import-mode to ensure we test against installed package, not local project
 test-command = "pytest -v {project}/tests --import-mode=append"
