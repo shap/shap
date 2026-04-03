@@ -55,8 +55,8 @@ nanobind_add_module(
 
   # Source code goes here
   src/bind.cpp
-  # src/partition.cpp
+  src/partition.cpp
 )
 
 # Install directive for scikit-build-core
-install(TARGETS _ext LIBRARY DESTINATION .)
+install(TARGETS _ext LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})

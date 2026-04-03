@@ -108,6 +108,9 @@ test_notebooks = [
 
 nbtest = ["nbtest-plugin", "nbtest-gen", "nbtest-lab-extension"]
 
+[dependency-groups]
+dev = ["pre-commit>=4.5.1"]
+
 [project.urls]
 Repository = 'http://github.com/shap/shap'
 Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
@@ -298,6 +301,19 @@ omit = ["shap/benchmark/*"]
 [tool.coverage.paths]
 combine = ["shap", "*/site-packages/shap"]
 
+[tool.uv]
+cache-keys = [{ file = "src/*.cpp" }, { file = "include/*.h" }]
+
+[tool.scikit-build]
+# Protect the configuration against future changes in scikit-build-core
+minimum-version = "build-system.requires"
+
+# Setuptools-style build caching in a local directory
+build-dir = "build/{wheel_tag}"
+
+# Build stable ABI wheels for CPython 3.12+
+wheel.py-api = "cp312"
+
 [tool.cibuildwheel]
 # Restrict the set of builds to mirror the wheels available in scipy. See #3028
 # skip *-musllinux_aarch64 since numpy doesn't provid those wheels
@@ -328,3 +344,7 @@ archs = ["AMD64"]
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
+
+# Needed for full C++17 support
+[tool.cibuildwheel.macos.environment]
+MACOSX_DEPLOYMENT_TARGET = "10.14"
