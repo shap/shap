@@ -98,7 +98,7 @@ def compile_cuda_module(host_args):
 
 def run_setup(*, with_binary, with_cuda):
     ext_modules = []
-    
+
     # ✅ FIX: initialize here (IMPORTANT)
     compile_args = []
 
@@ -158,6 +158,7 @@ def run_setup(*, with_binary, with_cuda):
     )
 
     setup(ext_modules=ext_modules)
+
 
 def try_run_setup(*, with_binary, with_cuda):
     """Fails gracefully when various install steps don't work."""
