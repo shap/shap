@@ -72,15 +72,13 @@ class CoalitionExplainer(Explainer):
     partition_tree: dict[str, Any]
     _clustering: Any
     _mask_matrix: npt.NDArray[np.bool_] | None
-    root: Node
-    combinations_list: list[tuple[str, tuple[Any, ...], float]]
-    masks: list[npt.NDArray[np.bool_]]
-    keys: list[tuple[Any, ...] | str]
-    masks_dict: dict[tuple[Any, ...] | str, npt.NDArray[np.bool_]]
-    mask_permutations: list[tuple[str, npt.NDArray[np.bool_], float]]
-    masks_list: list[npt.NDArray[np.bool_]]
-    unique_masks_set: set[tuple[bool, ...]]
-    unique_masks: list[npt.NDArray[np.bool_]]
+    # partition structure cached at construction time
+    _unique_masks: list[npt.NDArray[np.bool_]]
+    _unique_mask_array: npt.NDArray[np.bool_]
+    _last_key_to_off_indexes: dict[str, list[int]]
+    _last_key_to_on_indexes: dict[str, list[int]]
+    _coalition_weights: dict[str, list[float]]
+    _feature_name_to_index: dict[str, int]
 
     def __init__(
         self,
@@ -179,6 +177,72 @@ class CoalitionExplainer(Explainer):
             self._clustering = self.masker.clustering
             self._mask_matrix = make_masks(self._clustering)
 
+        # build once at construction if feature_names are already available
+        if hasattr(self.masker, "feature_names") and self.masker.feature_names is not None:
+            self._build_partition_structure()
+
+    def _build_partition_structure(self) -> None:
+        """Pre-compute masks, weights and index maps from the partition tree.
+
+        Results are cached as instance attributes and reused across ``explain_row`` calls.
+        Uses :func:`_iter_paths_and_combinations` to stream combinations one at a time
+        so neither ``combinations_list`` nor ``mask_permutations`` are fully materialised,
+        reducing peak memory on wide or deep hierarchies.
+        """
+        root = Node("Root")
+        _build_tree(self.partition_tree, root)
+
+        masks, keys = _create_masks(root, self.masker.feature_names)
+        masks_dict = dict(zip(keys, masks))
+        zero_mask = np.zeros(len(self.masker.feature_names), dtype=bool)
+
+        # deduplicate masks: tuple(mask) -> index
+        unique_mask_to_idx: dict[tuple[Any, ...], int] = {}
+        unique_masks: list[npt.NDArray[np.bool_]] = []
+
+        last_key_to_off_indexes: dict[str, list[int]] = {}
+        last_key_to_on_indexes: dict[str, list[int]] = {}
+        coalition_weights: dict[str, list[float]] = {}
+
+        def _intern(mask_arr: npt.NDArray[np.bool_]) -> int:
+            key = tuple(mask_arr)
+            idx = unique_mask_to_idx.get(key)
+            if idx is None:
+                idx = len(unique_masks)
+                unique_mask_to_idx[key] = idx
+                unique_masks.append(mask_arr)
+            return idx
+
+        for last_key, combination, weight in _iter_paths_and_combinations(root):
+            context: list[npt.NDArray[np.bool_]] = []
+            for keys_group in combination:
+                if isinstance(keys_group, tuple) and not keys_group:
+                    continue
+                for key in keys_group:
+                    if key in masks_dict:
+                        context.append(masks_dict[key])
+
+            off_mask = _combine_masks(context) if context else zero_mask.copy()
+            on_mask = _combine_masks([off_mask, masks_dict[last_key]]) if last_key in masks_dict else off_mask
+
+            if last_key not in last_key_to_off_indexes:
+                last_key_to_off_indexes[last_key] = []
+                last_key_to_on_indexes[last_key] = []
+                coalition_weights[last_key] = []
+
+            last_key_to_off_indexes[last_key].append(_intern(off_mask))
+            last_key_to_on_indexes[last_key].append(_intern(on_mask))
+            coalition_weights[last_key].append(weight)
+
+        self._unique_masks = unique_masks
+        self._unique_mask_array = (
+            np.stack(unique_masks) if unique_masks else np.empty((0, len(self.masker.feature_names)), dtype=bool)
+        )
+        self._last_key_to_off_indexes = last_key_to_off_indexes
+        self._last_key_to_on_indexes = last_key_to_on_indexes
+        self._coalition_weights = coalition_weights
+        self._feature_name_to_index = {name: idx for idx, name in enumerate(self.masker.feature_names)}
+
     def __call__(
         self,
         *args: Any,
@@ -222,6 +286,10 @@ class CoalitionExplainer(Explainer):
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
 
+        # build lazily if feature_names weren't available at __init__
+        if not hasattr(self, "_unique_mask_array"):
+            self._build_partition_structure()
+
         # make sure we have the base value and current value outputs
         M = len(fm)
         m00 = np.zeros(M, dtype=bool)
@@ -239,63 +307,36 @@ class CoalitionExplainer(Explainer):
             num_outputs = 1
             shap_values = np.zeros(M)
 
-        # Step 1: build the hierarchy
-        self.root = Node("Root")
-        _build_tree(self.partition_tree, self.root)  # generate partition tree specified
-        self.combinations_list = _generate_paths_and_combinations(
-            self.root
-        )  # generate permutations of neighbours consistent with partition tree, and related weights
-        self.masks, self.keys = _create_masks(
-            self.root, self.masker.feature_names
-        )  # turn the premutations into valid masks for inference
-        self.masks_dict = dict(zip(self.keys, self.masks))
-        self.mask_permutations = _create_combined_masks(
-            self.combinations_list, self.masks_dict
-        )  # add up masks to leave nodes
-        self.masks_list = [mask for _, mask, _ in self.mask_permutations]
-        self.unique_masks_set = set(map(tuple, self.masks_list))
-        self.unique_masks = [np.array(mask) for mask in self.unique_masks_set]  # unique masks for inference
-
-        # Step 2: Compute model results for all unique masks
-        mask_results = {}
-        for mask in self.unique_masks:
-            result = fm(mask.reshape(1, -1))
-            # Ensure result is properly shaped for multi-output
+        # Evaluate all unique masks in a single batched call.
+        all_results = fm(self._unique_mask_array)
+        mask_results: dict[tuple[bool, ...], Any] = {}
+        for i, mask in enumerate(self._unique_masks):
+            result = all_results[i]
             if isinstance(result, (list, tuple)):
                 result = np.array(result)
             elif not isinstance(result, np.ndarray):
                 result = np.array([result])
             mask_results[tuple(mask)] = result
 
-        # Step 3: Compute marginals for permutations
-        last_key_to_off_indexes, last_key_to_on_indexes, weights = _map_combinations_to_unique_masks(
-            self.mask_permutations, self.unique_masks
-        )
-
-        feature_name_to_index = {name: idx for idx, name in enumerate(self.masker.feature_names)}
-
-        # Step 4: Implement Owen values weighting
-        for last_key in last_key_to_off_indexes:
-            off_indexes = last_key_to_off_indexes[last_key]
-            on_indexes = last_key_to_on_indexes[last_key]
-            weight_list = weights[last_key]
+        for last_key in self._last_key_to_off_indexes:
+            off_indexes = self._last_key_to_off_indexes[last_key]
+            on_indexes = self._last_key_to_on_indexes[last_key]
+            weight_list = self._coalition_weights[last_key]
 
             for off_index, on_index, weight in zip(off_indexes, on_indexes, weight_list):
-                off_result = mask_results[tuple(self.unique_masks[off_index])]
-                on_result = mask_results[tuple(self.unique_masks[on_index])]
+                off_result = mask_results[tuple(self._unique_masks[off_index])]
+                on_result = mask_results[tuple(self._unique_masks[on_index])]
 
                 if num_outputs > 1:
-                    # Ensure results are properly shaped for multi-output
                     off_result = np.asarray(off_result).reshape(-1)
                     on_result = np.asarray(on_result).reshape(-1)
                     for i in range(num_outputs):
                         marginal_contribution = ((on_result[i] - off_result[i]) * weight).item()
-                        shap_values[feature_name_to_index[last_key], i] += marginal_contribution
+                        shap_values[self._feature_name_to_index[last_key], i] += marginal_contribution
                 else:
                     marginal_contribution = ((on_result - off_result) * weight).item()
-                    shap_values[feature_name_to_index[last_key]] += marginal_contribution
+                    shap_values[self._feature_name_to_index[last_key]] += marginal_contribution
 
-        # Step 5: Return results
         return {
             "values": shap_values.copy(),
             "expected_values": self._curr_base_value,
@@ -438,6 +479,39 @@ def _create_masks(node: Node, columns: Any) -> tuple[list[npt.NDArray[np.bool_]]
             keys.extend(child_keys)
 
     return masks, keys
+
+
+def _iter_paths_and_combinations(node: Node) -> Iterable[tuple[str, tuple[Any, ...], float]]:
+    """Generator equivalent of ``_generate_paths_and_combinations``.
+
+    Yields ``(last_key, combination, weight)`` one at a time without building the
+    full list in memory. This is used by ``_build_partition_structure`` to avoid
+    OOM on large hierarchies.
+    """
+    paths: list[list[tuple[str, Any, list[float]]]] = []
+
+    def dfs(
+        current_node: Node,
+        current_path: list[tuple[str, Any, list[float]]],
+    ) -> None:
+        current_path.append((current_node.key, current_node.permutations, current_node.weights))
+        if not current_node.child:
+            paths.append(current_path[:])
+        else:
+            for child in current_node.child:
+                dfs(child, current_path)
+        current_path.pop()
+
+    dfs(node, [])
+
+    for path in paths:
+        filtered = [(key, perms, ws) for key, perms, ws in path if perms]
+        if not filtered:
+            continue
+        node_keys, permutations, weights = zip(*filtered)
+        last_key = node_keys[-1]
+        for combination, weight_tuple in zip(product(*permutations), product(*weights)):
+            yield last_key, combination, float(np.prod(weight_tuple))
 
 
 def _generate_paths_and_combinations(node: Node) -> list[tuple[str, tuple[Any, ...], float]]:
