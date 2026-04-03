@@ -540,6 +540,7 @@ def summary_legacy(
     show_values_in_legend: bool = False,
     use_log_scale: bool = False,
     rng: np.random.Generator | None = None,
+    _internal: bool = False,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -729,6 +730,7 @@ def summary_legacy(
             color_bar=False,
             plot_size=None,
             max_display=max_display,
+            _internal=True,
         )
         plt.xlim((slow, shigh))
         plt.xlabel("")
@@ -749,6 +751,7 @@ def summary_legacy(
                 color_bar=False,
                 plot_size=None,
                 max_display=max_display,
+                _internal=True,
             )
             plt.xlim((slow, shigh))
             plt.xlabel("")
@@ -760,6 +763,28 @@ def summary_legacy(
         if show:
             plt.show()
         return
+
+    # GH #3920: repeated summary_plot on the same axes stacked colorbars. Remove our
+    # previous colorbar and clear the axes only when redrawing after a prior summary
+    # (avoid cla() on a fresh axes so image tests stay stable). Nested interaction
+    # subplots pass _internal=True and skip this entirely.
+    if not _internal:
+        ax = plt.gca()
+        removed_prior_colorbar = False
+        if hasattr(ax, "_shap_summary_colorbar"):
+            removed_prior_colorbar = True
+            try:
+                ax._shap_summary_colorbar.remove()
+            except (AttributeError, ValueError, RuntimeError):
+                pass
+            try:
+                delattr(ax, "_shap_summary_colorbar")
+            except AttributeError:
+                pass
+        if removed_prior_colorbar:
+            ax.cla()
+            if use_log_scale:
+                plt.xscale("symlog")
 
     if max_display is None:
         max_display = 20
@@ -1122,7 +1147,9 @@ def summary_legacy(
 
         m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else plt.get_cmap(color))
         m.set_array([0, 1])
-        cb = plt.colorbar(m, ax=plt.gca(), ticks=[0, 1], aspect=80)
+        ax = plt.gca()
+        cb = plt.colorbar(m, ax=ax, ticks=[0, 1], aspect=80)
+        ax._shap_summary_colorbar = cb  # type: ignore[attr-defined]
         cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
