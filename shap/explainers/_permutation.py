@@ -24,6 +24,10 @@ class PermutationExplainer(Explainer):
     model evaluations and the ability to efficiently avoid evaluating the model when the background values
     for a feature are the same as the current input value. We can also account for hierarchical data
     structures with partition trees, something not currently implemented for KernalExplainer or SamplingExplainer.
+
+    Examples
+    --------
+    See `Permutation explainer examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/explainers/Permutation.html>`_
     """
 
     def __init__(
