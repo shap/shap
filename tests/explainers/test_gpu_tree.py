@@ -288,3 +288,43 @@ def test_lightgbm_categorical_split(use_interactions):
         else:
             shap_values = explainer.shap_values(X.iloc[:10, :])
             assert np.allclose(shap_values.sum(axis=1) + explainer.expected_value, preds[:10], atol=1e-4)
+
+
+def test_gpu_cpu_match_with_transform_gh3655():
+    """GPU and CPU SHAP values should match when using output transforms.
+
+    Reproduces GitHub issue #3655: GPU TreeSHAP ignored the output transform
+    (model_output="probability", "log_loss", etc.), producing values that
+    differed greatly from CPU TreeExplainer.
+    """
+    xgboost = pytest.importorskip("xgboost")
+
+    X, y = shap.datasets.adult()
+    X = X.iloc[:500]
+    y = y[:500]
+
+    model = xgboost.XGBClassifier(n_estimators=10, max_depth=3, random_state=42)
+    model.fit(X, y)
+
+    background = X.iloc[:100]
+
+    # Test with model_output="probability" (logistic transform)
+    explainer_cpu = shap.TreeExplainer(
+        model, background, feature_perturbation="interventional", model_output="probability"
+    )
+    explainer_gpu = shap.GPUTreeExplainer(
+        model, background, feature_perturbation="interventional", model_output="probability"
+    )
+
+    X_test = X.iloc[100:110]
+    sv_cpu = explainer_cpu.shap_values(X_test)
+    sv_gpu = explainer_gpu.shap_values(X_test)
+
+    np.testing.assert_allclose(
+        sv_cpu, sv_gpu, atol=1e-4, err_msg="GPU vs CPU SHAP values differ with model_output='probability'"
+    )
+
+    # Verify additivity: sum(shap) + expected_value ≈ predict_proba
+    proba = model.predict_proba(X_test)[:, 1]
+    gpu_sum = sv_gpu.sum(axis=1) + explainer_gpu.expected_value
+    np.testing.assert_allclose(gpu_sum, proba, atol=1e-3, err_msg="GPU SHAP values don't sum to predict_proba")
