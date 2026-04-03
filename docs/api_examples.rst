@@ -20,7 +20,7 @@ are `available on GitHub <https://github.com/shap/shap/tree/master/notebooks/api
 
 explainers
 ==========
-.. Examples for members of :ref:`shap.explainers <explainers_api>`.
+*See also:* :ref:`Explainer API Reference <explainers_api>`.
 
 .. toctree::
     :glob:
@@ -33,7 +33,7 @@ explainers
 
 maskers
 =======
-.. Examples for members of :ref:`shap.maskers <maskers_api>`.
+*See also:* :ref:`Masker API Reference <maskers_api>`.
 
 .. toctree::
     :glob:
@@ -62,7 +62,7 @@ Work in progress.
 
 plots
 =====
-.. Examples for members of :ref:`shap.plots <plots_api>`.
+*See also:* :ref:`Plot API Reference <plots_api>`.
 
 .. toctree::
     :glob:

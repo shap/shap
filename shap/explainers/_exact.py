@@ -29,6 +29,10 @@ class ExactExplainer(Explainer):
     explainer minimizes the number of function evaluations needed by ordering the masking sets to
     minimize sequential differences. This is done using gray codes for standard Shapley values
     and a greedy sorting method for hclustering structured maskers.
+
+    Examples
+    --------
+    See `Exact explainer examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/explainers/Exact.html>`_
     """
 
     model: Model
