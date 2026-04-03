@@ -630,14 +630,18 @@ class TreeExplainer(Explainer):
                         )
                         raise ValueError(emsg) from e
 
-            elif self.model.model_type == "catboost":  # thanks to the CatBoost team for implementing this...
+            elif self.model.model_type == "catboost":
                 assert not approximate, "approximate=True is not supported for CatBoost models!"
                 assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
                 import catboost
 
                 if not isinstance(X, catboost.Pool):
                     X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
-                phi = self.model.original_model.get_feature_importance(data=X, fstr_type="ShapValues")
+                phi = self.model.original_model.get_feature_importance(
+                    data=X, fstr_type="ShapValues", reference_data=None
+                )
+                if check_additivity and self.model.model_output == "raw":
+                    model_output_vals = self.model.original_model.predict(X, prediction_type="RawFormulaVal")
 
             # note we pull off the last column and keep it as our expected_value
             if phi is not None:
