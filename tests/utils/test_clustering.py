@@ -76,12 +76,11 @@ def test_partition_tree_with_nan():
     assert isinstance(result, np.ndarray)
     assert result.shape == (2, 4)
 
+
 def test_hclust_accepts_dataframe():
-    #checks for whether hclust accepts dataframe
+    # checks for whether hclust accepts dataframe
     pytest.importorskip("xgboost")
-    X = pd.DataFrame(
-        np.column_stack((np.arange(1, 10), np.arange(100, 1000, step=100)))
-    )
+    X = pd.DataFrame(np.column_stack((np.arange(1, 10), np.arange(100, 1000, step=100))))
     y = np.where(X.iloc[:, 0] > 5, 1, 0)
     result = hclust(X, y, random_state=0)
     assert isinstance(result, np.ndarray)
@@ -89,24 +88,25 @@ def test_hclust_accepts_dataframe():
 
 
 def test_xgboost_distances_r2_constant_feature_warns():
-    #Constant features should trigger a warning.
+    # Constant features should trigger a warning.
     pytest.importorskip("xgboost")
     from shap.utils._clustering import xgboost_distances_r2
-    
+
     X = np.column_stack((np.ones(20), np.arange(1, 21)))
     y = np.arange(1, 21, dtype=float)
-    
+
     with pytest.warns(UserWarning, match="No/low signal found from feature"):
         xgboost_distances_r2(X, y, random_state=0)
+
 
 def test_hclust_ordering():
     # Covers lines 129-131: internal leaf ordering logic.
     from shap.utils._clustering import hclust_ordering
-    
+
     # Pass 10 samples with 3 features
-    X = np.random.randn(10, 3) 
+    X = np.random.randn(10, 3)
     order = hclust_ordering(X)
-    
+
     # It should return a valid permutation array of the 10 row indices
     assert isinstance(order, np.ndarray)
     assert len(order) == 10
@@ -117,7 +117,7 @@ def test_hclust_warns_when_y_given_with_non_xgboost_metric():
     # Covers line 298: fallback warning when users misuse y.
     X = np.column_stack((np.arange(1, 10), np.arange(100, 1000, step=100)))
     y = np.where(X[:, 0] > 5, 1, 0)
-    
+
     # 'cosine' ignores y, so it should explicitly warn the user
     with pytest.warns(UserWarning, match="Ignoring the y argument"):
         hclust(X, y=y, metric="cosine", random_state=0)
