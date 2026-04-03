@@ -992,9 +992,7 @@ def saliency_plot(shap_values):
             for col_index in range(compressed_shap_matrix.shape[1]):
                 scaled_value = 0.5 + 0.5 * compressed_shap_matrix[row_index, col_index] / cmax
                 color = colors.red_transparent_blue(scaled_value)
-                input_colors_row.append(
-                    _css_rgba(color[0] * 255, color[1] * 255, color[2] * 255, color[3])
-                )
+                input_colors_row.append(_css_rgba(color[0] * 255, color[1] * 255, color[2] * 255, color[3]))
             input_colors.append(input_colors_row)
 
         return input_colors
