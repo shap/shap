@@ -98,8 +98,12 @@ def compile_cuda_module(host_args):
 
 def run_setup(*, with_binary, with_cuda):
     ext_modules = []
+    
+    # ✅ FIX: initialize here (IMPORTANT)
+    compile_args = []
+
+    # -------- Binary extension --------
     if with_binary:
-        compile_args = []
         if sys.platform == "zos":
             compile_args.append("-qlonglong")
         if sys.platform == "win32":
@@ -113,6 +117,8 @@ def run_setup(*, with_binary, with_cuda):
                 extra_compile_args=compile_args,
             )
         )
+
+    # -------- CUDA extension --------
     if with_cuda:
         try:
             cuda_home, _ = get_cuda_path()
@@ -120,7 +126,7 @@ def run_setup(*, with_binary, with_cuda):
                 cudart_path = cuda_home + "/lib/x64"
             else:
                 cudart_path = cuda_home + "/lib64"
-                compile_args.append("-fPIC")
+                compile_args.append("-fPIC")  # ✅ now safe
 
             lib_dir, lib = compile_cuda_module(compile_args)
 
@@ -132,18 +138,26 @@ def run_setup(*, with_binary, with_cuda):
                     include_dirs=[np.get_include()],
                     library_dirs=[lib_dir, cudart_path],
                     libraries=[lib, "cudart"],
-                    depends=["shap/cext/_cext_gpu.cu", "shap/cext/gpu_treeshap.h", "setup.py"],
+                    depends=[
+                        "shap/cext/_cext_gpu.cu",
+                        "shap/cext/gpu_treeshap.h",
+                        "setup.py",
+                    ],
                 )
             )
         except Exception as e:
             raise Exception("Error building cuda module: " + repr(e)) from e
 
+    # -------- Kernel lib --------
     ext_modules.append(
-        Extension("_kernel_lib", sources=["shap/explainers/_kernel_lib.pyx"], include_dirs=[np.get_include()])
+        Extension(
+            "_kernel_lib",
+            sources=["shap/explainers/_kernel_lib.pyx"],
+            include_dirs=[np.get_include()],
+        )
     )
 
     setup(ext_modules=ext_modules)
-
 
 def try_run_setup(*, with_binary, with_cuda):
     """Fails gracefully when various install steps don't work."""
