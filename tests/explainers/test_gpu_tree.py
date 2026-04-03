@@ -242,6 +242,33 @@ def test_gpu_tree_explainer_shap(task, feature_perturbation):
 
 
 @pytest.mark.parametrize("task", tasks, ids=idfn)
+@pytest.mark.parametrize("feature_perturbation", ["interventional", "tree_path_dependent"])
+def test_gpu_tree_explainer_shap_nan(task, feature_perturbation):
+    """Test that GPU TreeSHAP handles NaN inputs correctly by comparing to CPU."""
+    model, X, _ = task
+    gpu_ex = shap.GPUTreeExplainer(model, X, feature_perturbation=feature_perturbation)
+    ex = shap.TreeExplainer(model, X, feature_perturbation=feature_perturbation)
+
+    # Mask a random subset of input values with NaN
+    rng = np.random.RandomState(42)
+    X_nan = X.copy()
+    nan_col = rng.choice(X_nan.shape[1], 1, replace=False)
+    nan_row = rng.choice(X_nan.shape[0], max(1, int(0.1 * X_nan.shape[0])), replace=False)
+    X_nan[nan_row, nan_col] = np.nan
+
+    host_shap_nan = ex.shap_values(X_nan, check_additivity=True)
+    gpu_shap_nan = gpu_ex.shap_values(X_nan, check_additivity=True)
+
+    # Normalize shape for multiclass
+    if np.array(gpu_shap_nan).ndim == 3:
+        gpu_shap_nan = np.moveaxis(np.array(gpu_shap_nan), [0, 1, 2], [2, 0, 1])
+    else:
+        gpu_shap_nan = np.array(gpu_shap_nan, copy=False)
+
+    assert np.allclose(host_shap_nan, gpu_shap_nan, 1e-3, 1e-3), "SHAP values don't match when input has NaNs!"
+
+
+@pytest.mark.parametrize("task", tasks, ids=idfn)
 @pytest.mark.parametrize("feature_perturbation", ["tree_path_dependent"])
 def test_gpu_tree_explainer_shap_interactions(task, feature_perturbation):
     model, X, margin = task
