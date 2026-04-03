@@ -13,9 +13,10 @@ namespace partition
         nb::ndarray<nb::numpy, double, nb::ndim<2>> clustering)
     {
         auto v = values.view<double, nb::ndim<1>>();
+        v(i) += value;
+
         if (i < M)
         {
-            v(i) += value;
             return;
         }
 
@@ -31,8 +32,6 @@ namespace partition
         {
             throw nb::value_error("left and right cluster sizes do not match parent group size");
         }
-
-        v(i) += value;
 
         const double left_value = v(i) * static_cast<double>(lsize) / static_cast<double>(group_size);
         const double right_value = v(i) * static_cast<double>(rsize) / static_cast<double>(group_size);
@@ -95,7 +94,7 @@ namespace partition
         }
         else
         {
-            throw nb::value_error("values array must be 1-dimensional");
+            throw nb::value_error("values array must be 1-dimensional or 2-dimensional");
         }
     }
 
