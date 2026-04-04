@@ -298,6 +298,12 @@ omit = ["shap/benchmark/*"]
 [tool.coverage.paths]
 combine = ["shap", "*/site-packages/shap"]
 
+[tool.coverage.report]
+exclude_also = [
+    "def partition_tree_shuffle",
+    "def delta_minimization_order",
+]
+
 [tool.cibuildwheel]
 # Restrict the set of builds to mirror the wheels available in scipy. See #3028
 # skip *-musllinux_aarch64 since numpy doesn't provid those wheels
