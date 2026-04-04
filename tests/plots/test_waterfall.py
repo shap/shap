@@ -118,3 +118,12 @@ def test_waterfall_plot_for_data_with_number_columns():
     explainer = shap.Explainer(f, med)
     shap_values = explainer(X)
     shap.plots.waterfall(shap_values[0], show=False)
+
+
+def test_waterfall_accepts_ax_argument(explainer):
+    explanation = explainer(explainer.data)
+    fig, ax = plt.subplots()
+    returned_ax = shap.plots.waterfall(explanation[0], show=False, ax=ax)
+
+    assert returned_ax is ax
+    assert ax.figure is fig
