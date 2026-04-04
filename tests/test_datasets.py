@@ -146,3 +146,58 @@ def test_rank():
     assert y2.shape == (768,)
     assert q1.shape == (201,)
     assert q2.shape == (50,)
+
+
+@pytest.mark.parametrize("n_points", [None, 12])
+def test_communitiesandcrime(n_points):
+    X, y = shap.datasets.communitiesandcrime(n_points=n_points)
+
+    if n_points is None:
+        assert X.shape[0] == y.shape[0]
+    else:
+        assert X.shape[0] == n_points
+        assert y.shape[0] == n_points
+
+    # verify no NaN columns remain
+    assert X.isna().sum().sum() == 0
+
+
+def test_iris_display():
+    X, y = shap.datasets.iris(display=True)
+    assert X.shape == (150, 4)
+    assert isinstance(y, list)
+    assert all(isinstance(label, str) for label in y)
+    assert set(y) == {"setosa", "versicolor", "virginica"}
+
+
+def test_adult_display():
+    X, y = shap.datasets.adult(display=True)
+    # display=True drops Education, Target, and fnlwgt columns
+    assert "Education" not in X.columns
+    assert "Target" not in X.columns
+    assert "fnlwgt" not in X.columns
+    assert y.shape[0] == X.shape[0]
+
+
+def test_nhanesi_display():
+    X, y = shap.datasets.nhanesi(display=True, n_points=100)
+    assert X.shape[0] == 100
+    assert y.shape[0] == 100
+
+
+def test_cache_custom_filename(tmp_path, monkeypatch):
+    """Test the cache function with a custom file_name parameter."""
+    from unittest.mock import patch
+
+    import shap.datasets as ds
+
+    # create a fake file so the cache function skips the download
+    fake_dir = tmp_path / "cached_data"
+    fake_dir.mkdir()
+    (fake_dir / "test_file.csv").write_text("dummy")
+
+    with patch.object(ds.os.path, "dirname", return_value=str(tmp_path)):
+        path = ds.cache("https://example.com/test.csv", file_name="test_file.csv")
+
+    assert path.endswith("test_file.csv")
+    assert ds.os.path.isfile(path)
