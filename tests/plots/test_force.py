@@ -117,3 +117,51 @@ def test_force_plot_positive_sign():
         show=False,
     )
     return plt.gcf()
+
+
+def test_force_array_higher_predictions_first():
+    """Test that AdditiveForceArrayVisualizer puts higher predictions first (GH #4342).
+
+    np.flipud(clustOrder) must be assigned back; otherwise the reorder is a no-op.
+    """
+    from shap.plots._force import AdditiveExplanation, AdditiveForceArrayVisualizer, DenseData, Instance, Model
+    from shap.utils._legacy import IdentityLink
+
+    link = IdentityLink()
+    n_features = 3
+    feature_names = [f"f{i}" for i in range(n_features)]
+    model = Model(None, ["f(x)"])
+
+    # Build explanations whose total effects span negative to positive.
+    # Hierarchical clustering will produce a linear leaf ordering for these
+    # well-separated, linearly-spaced effects.
+    effect_sums = [-10.0, -5.0, 0.0, 5.0, 10.0]
+    explanations = []
+    for s in effect_sums:
+        effects = np.full(n_features, s / n_features)
+        instance = Instance(np.zeros((1, n_features)), np.zeros(n_features))
+        data = DenseData(np.zeros((1, n_features)), list(feature_names))
+        explanations.append(
+            AdditiveExplanation(
+                base_value=0.0,
+                out_value=float(s),
+                effects=effects,
+                effects_var=None,
+                instance=instance,
+                link=link,
+                model=model,
+                data=data,
+            )
+        )
+
+    viz = AdditiveForceArrayVisualizer(explanations)
+
+    # Collect (outValue, simIndex) pairs produced by the visualizer.
+    out_values = [exp["outValue"] for exp in viz.data["explanations"]]
+    sim_indices = [exp["simIndex"] for exp in viz.data["explanations"]]
+
+    # The explanation with simIndex == 1 (displayed first in the stacked plot)
+    # must have higher-or-equal total effects than the one displayed last.
+    first_idx = sim_indices.index(1)
+    last_idx = sim_indices.index(len(explanations))
+    assert out_values[first_idx] >= out_values[last_idx]
