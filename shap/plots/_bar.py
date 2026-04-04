@@ -33,7 +33,7 @@ def bar(
 
     Parameters
     ----------
-    shap_values : shap.Explanation or shap.Cohorts or dictionary of shap.Explanation objects
+    shap_values : shap.Explanation or shap.Cohorts or dict of shap.Explanation
         Passing a multi-row :class:`.Explanation` object creates a global
         feature importance plot.
 
@@ -43,36 +43,78 @@ def bar(
         Passing a dictionary of Explanation objects will create a multiple-bar
         plot with one bar type for each of the cohorts represented by the
         explanation objects.
-    max_display : int
+
+    max_display : int or None
         How many top features to include in the bar plot (default is 10).
+        If ``None``, all features are shown (subject to merging when a cluster
+        tree is used).
+
     order : OpChain or numpy.ndarray
         A function that returns a sort ordering given a matrix of SHAP values
         and an axis, or a direct sample ordering given as a ``numpy.ndarray``.
 
         By default, take the absolute value.
-    clustering: np.ndarray or None
-        A partition tree, as returned by :func:`shap.utils.hclust`
-    clustering_cutoff: float
+
+    clustering : numpy.ndarray, False, or None
+        A partition tree as returned by :func:`shap.utils.hclust`, or ``None``
+        to use any tree stored on the :class:`.Explanation`. Pass ``False`` to
+        disable hierarchical clustering entirely.
+
+    clustering_cutoff : float
         Controls how much of the clustering structure is displayed.
-    show_data: bool or str
+
+    show_data : bool or str
         Controls if data values are shown as part of the y tick labels. If
-        "auto", we show the data only when there are no transforms.
-    ax: matplotlib Axes
-        Axes object to draw the plot onto, otherwise uses the current Axes.
+        ``"auto"``, data is shown only when there are no transforms (other than
+        ``__getitem__``) in the explanation history.
+
+    ax : matplotlib.axes.Axes or None
+        Axes object to draw the plot onto; if ``None``, the current axes are used.
+
     show : bool
-        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
-        Setting this to ``False`` allows the plot
-        to be customized further after it has been created.
+        Whether :external+mpl:func:`matplotlib.pyplot.show` is called before returning.
+        Set to ``False`` to customize the figure further or to embed the plot in
+        notebooks that manage display themselves.
 
     Returns
     -------
-    ax: matplotlib Axes
-        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it. Only
-        returned if ``show=False``.
+    matplotlib.axes.Axes or None
+        The axes with the plot drawn on them when ``show=False``. When
+        ``show=True``, returns ``None`` after displaying the figure.
+
+    Raises
+    ------
+    TypeError
+        If ``shap_values`` is not an :class:`.Explanation`, :class:`.Cohorts`,
+        or ``dict`` of explanations, if a dict value is not an
+        :class:`.Explanation`, or if ``clustering`` is a matrix that is not a
+        valid partition tree (wrong shape).
+
+    DimensionError
+        If multiple explanations are passed and they do not share the same
+        number of feature columns.
+
+    ValueError
+        If the passed explanation has no rows or features to plot.
 
     Examples
     --------
-    See `bar plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/bar.html>`_.
+    Global importance over a dataset (typical ``Explainer`` output)::
+
+        import matplotlib.pyplot as plt
+        import shap
+
+        explainer = shap.Explainer(model, X_background)
+        shap_values = explainer(X)
+        shap.plots.bar(shap_values, show=False)
+        plt.tight_layout()
+        plt.show()
+
+    Local explanation for one instance::
+
+        shap.plots.bar(shap_values[0], show=False)
+
+    More examples: `bar plot gallery <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/bar.html>`_.
 
     """
     style = get_style()
