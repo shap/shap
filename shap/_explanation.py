@@ -353,7 +353,6 @@ class Explanation(metaclass=MetaExplanation):
                         new_values = []
                         new_base_values = []
                         new_data = []
-                        new_self = copy.deepcopy(self)
                         for i, v in enumerate(self.values):
                             for j, s in enumerate(self.output_names[i]):
                                 if s == t:
@@ -378,13 +377,6 @@ class Explanation(metaclass=MetaExplanation):
                             clustering=self.clustering,
                         )
                         new_self.op_history = copy.copy(self.op_history)
-                        # new_self = copy.deepcopy(self)
-                        # new_self.values = np.array(new_values)
-                        # new_self.base_values = np.array(new_base_values)
-                        # new_self.data = np.array(new_data)
-                        # new_self.output_names = t
-                        # new_self.feature_names = np.array(new_data)
-                        # new_self.clustering = None
 
                 # work around for 2D feature_names since they are not yet slicer supported
                 feature_names_dims = []
@@ -398,12 +390,13 @@ class Explanation(metaclass=MetaExplanation):
                             if s == t:
                                 new_values.append(v)
                                 new_data.append(d)
-                    new_self = copy.deepcopy(self)
-                    new_self.values = new_values
-                    new_self.data = new_data
+                    new_self = copy.copy(self)
+                    new_self.values = np.array(new_values)
+                    new_self.data = np.array(new_data)
                     new_self.feature_names = t
                     new_self.clustering = None
-                    # return new_self
+                    new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
+                    return new_self
 
             if isinstance(t, (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)
@@ -418,6 +411,11 @@ class Explanation(metaclass=MetaExplanation):
         if len(item) == 0:
             return new_self  # type: ignore
         if new_self is None:
+            fast = _fast_slice(self, item)
+            if fast is not None:
+                fast.op_history = copy.copy(self.op_history)
+                fast.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
+                return fast
             new_self = copy.copy(self)
         new_self._s = new_self._s.__getitem__(item)
         new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
@@ -582,7 +580,7 @@ class Explanation(metaclass=MetaExplanation):
         raise DimensionError("Only axis = 1 is supported for grouping right now...")
 
     def percentile(self, q: float, axis: int | None = None) -> Explanation:
-        new_self = copy.deepcopy(self)
+        new_self = copy.copy(self)
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
             new_values = self._flatten_feature_names()
             new_self.feature_names = np.array(list(new_values.keys()))
@@ -739,7 +737,11 @@ def group_features(shap_values: Explanation, feature_map: dict[str, str]) -> Exp
         reverse_map[feature_map[name]] = reverse_map.get(feature_map[name], []) + [name]
 
     curr_names = shap_values.feature_names
-    sv_new = copy.deepcopy(shap_values)
+    # Only copy the arrays written in place below. All remaining attributes from
+    # shap_values are passed directly to the Explanation constructor.
+    out_values = shap_values.values.copy()
+    out_data = shap_values.data.copy()
+    out_feature_names = list(shap_values.feature_names) if shap_values.feature_names is not None else None
     found = {}
     i = 0
     rank1 = len(shap_values.shape) == 1
@@ -754,23 +756,23 @@ def group_features(shap_values: Explanation, feature_map: dict[str, str]) -> Exp
         old_inds = [curr_names.index(v) for v in cols_to_sum]
 
         if rank1:
-            sv_new.values[i] = shap_values.values[old_inds].sum()
-            sv_new.data[i] = shap_values.data[old_inds].sum()
+            out_values[i] = shap_values.values[old_inds].sum()
+            out_data[i] = shap_values.data[old_inds].sum()
         else:
-            sv_new.values[:, i] = shap_values.values[:, old_inds].sum(1)
-            sv_new.data[:, i] = shap_values.data[:, old_inds].sum(1)
-        sv_new.feature_names[i] = new_name
+            out_values[:, i] = shap_values.values[:, old_inds].sum(1)
+            out_data[:, i] = shap_values.data[:, old_inds].sum(1)
+        out_feature_names[i] = new_name
         i += 1
 
     return Explanation(
-        sv_new.values[:i] if rank1 else sv_new.values[:, :i],
-        base_values=sv_new.base_values,
-        data=sv_new.data[:i] if rank1 else sv_new.data[:, :i],
+        out_values[:i] if rank1 else out_values[:, :i],
+        base_values=shap_values.base_values,
+        data=out_data[:i] if rank1 else out_data[:, :i],
         display_data=None
-        if sv_new.display_data is None
-        else (sv_new.display_data[:, :i] if rank1 else sv_new.display_data[:, :i]),
+        if shap_values.display_data is None
+        else (shap_values.display_data[:, :i] if rank1 else shap_values.display_data[:, :i]),
         instance_names=None,
-        feature_names=None if sv_new.feature_names is None else sv_new.feature_names[:i],
+        feature_names=None if out_feature_names is None else out_feature_names[:i],
         output_names=None,
         output_indexes=None,
         lower_bounds=None,
@@ -1000,3 +1002,119 @@ def list_wrap(x: npt.NDArray[Any] | Any) -> list[npt.NDArray[Any]] | Any:
         return [v for v in x]
     else:
         return x
+
+
+_PLAIN_INDEX_TYPES = (int, slice, list, np.ndarray, np.integer)
+
+
+def _fast_slice(exp: Explanation, item: tuple) -> Explanation | None:
+    """Return a sliced Explanation by indexing numpy arrays directly, bypassing Slicer.
+
+    Slicer iterates each tracked attribute through Python loops for 1D attributes
+    such as base_values of shape (N,) even when the slice is trivial, because the
+    internal tail_slice path runs element by element when flatten is False. For
+    plain 2D ndarray explanations with numeric indices this function slices numpy
+    arrays directly and rebuilds the Explanation in O(1) Python calls regardless of N.
+
+    Returns None when the explanation uses multi-output (output_names set), object
+    array data, per sample feature_names, or other non-numpy attributes. The caller
+    falls through to the Slicer path in that case.
+    """
+    vals = exp.values
+    if not isinstance(vals, np.ndarray) or vals.ndim != 2:
+        return None
+    if not all(isinstance(t, _PLAIN_INDEX_TYPES) for t in item):
+        return None
+    if len(item) > 2:
+        return None
+    if exp.output_names is not None:
+        return None
+    if exp.output_indexes is not None:
+        return None
+    if exp.instance_names is not None:
+        return None
+    if exp.hierarchical_values is not None:
+        return None
+
+    row_sel = item[0]
+    col_sel = item[1] if len(item) == 2 else None
+
+    new_values = vals[item]
+
+    def slice_2d(arr: npt.NDArray[Any] | None) -> tuple[npt.NDArray[Any] | None, bool]:
+        if arr is None:
+            return None, True
+        if isinstance(arr, np.ndarray) and arr.ndim == 2:
+            return arr[item], True
+        return None, False
+
+    new_data, ok = slice_2d(exp.data)
+    if not ok:
+        return None
+    new_dd, ok = slice_2d(exp.display_data)
+    if not ok:
+        return None
+    new_lb, ok = slice_2d(exp.lower_bounds)
+    if not ok:
+        return None
+    new_ub, ok = slice_2d(exp.upper_bounds)
+    if not ok:
+        return None
+    new_es, ok = slice_2d(exp.error_std)
+    if not ok:
+        return None
+
+    fn = exp.feature_names
+    new_fn: Any = fn
+    if col_sel is not None and fn is not None:
+        if isinstance(fn, np.ndarray):
+            new_fn = fn[col_sel]
+        elif isinstance(fn, list):
+            if isinstance(col_sel, (int, np.integer)):
+                new_fn = fn[int(col_sel)]
+            elif isinstance(col_sel, slice):
+                new_fn = fn[col_sel]
+            else:
+                cols = col_sel.tolist() if isinstance(col_sel, np.ndarray) else col_sel
+                new_fn = [fn[i] for i in cols]
+        else:
+            return None
+
+    bv = exp.base_values
+    new_bv: Any = bv
+    if isinstance(bv, np.ndarray):
+        if bv.ndim == 1:
+            new_bv = bv[row_sel]
+        else:
+            return None
+    elif bv is not None and not isinstance(bv, (int, float, np.floating, np.integer)):
+        return None
+
+    me = exp.main_effects
+    new_me = None
+    if me is not None:
+        if isinstance(me, np.ndarray) and me.ndim == 1:
+            new_me = me[row_sel]
+        else:
+            return None
+
+    cl = exp.clustering
+    new_cl = None
+    if cl is not None:
+        if isinstance(cl, np.ndarray):
+            new_cl = cl[row_sel]
+        else:
+            return None
+
+    return Explanation(
+        values=new_values,
+        base_values=new_bv,
+        data=new_data,
+        display_data=new_dd,
+        feature_names=new_fn,
+        lower_bounds=new_lb,
+        upper_bounds=new_ub,
+        error_std=new_es,
+        main_effects=new_me,
+        clustering=new_cl,
+    )
