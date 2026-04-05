@@ -1,6 +1,7 @@
 """This file contains tests for the `shap._explanation` module."""
 
 from textwrap import dedent
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -245,3 +246,93 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_getitem_2d_feature_names(random_seed):
+    """Checks that string __getitem__ works for per sample 2D feature_names.
+
+    Previously this path raised IndexError because the resolved Explanation was passed
+    back into the slicer with the same index tuple that triggered the lookup.
+    """
+    rng = np.random.RandomState(random_seed)
+    N, F = 20, 4
+    vals = rng.randn(N, F)
+    dat = rng.randn(N, F)
+    feature_names = [list("abcd") for _ in range(N)]
+
+    exp = shap.Explanation(values=vals, data=dat, feature_names=feature_names)
+    result = exp[:, "a"]
+
+    assert result.values.shape == (N,)
+    assert np.allclose(result.values, vals[:, 0])
+    assert result.feature_names == "a"
+    assert result.data is not None
+    assert len(result.op_history) == 1
+    assert result.op_history[0].name == "__getitem__"
+
+
+def test_getitem_no_deepcopy(random_seed):
+    """Checks that __getitem__ does not call copy.deepcopy on either code path.
+
+    The 2D feature_names workaround path previously deepcopied the full object even
+    though only four attributes were replaced immediately after.
+    """
+    rng = np.random.RandomState(random_seed)
+    N, F = 10, 4
+    vals = rng.randn(N, F)
+    dat = rng.randn(N, F)
+
+    # 1D feature_names, main slicer path
+    exp_1d = shap.Explanation(values=vals, data=dat, feature_names=list("abcd"))
+    with patch("shap._explanation.copy.deepcopy") as mock_dc:
+        _ = exp_1d[:, 2]
+    mock_dc.assert_not_called()
+
+    # 2D feature_names, workaround path
+    exp_2d = shap.Explanation(values=vals, data=dat, feature_names=[list("abcd") for _ in range(N)])
+    with patch("shap._explanation.copy.deepcopy") as mock_dc:
+        _ = exp_2d[:, "a"]
+    mock_dc.assert_not_called()
+
+
+def test_percentile_does_not_mutate_original(random_seed):
+    """Checks that Explanation.percentile does not mutate the original object.
+
+    Previously percentile deepcopied self before overwriting values and data on the
+    copy. copy.copy is sufficient because none of those writes are in place mutations.
+    """
+    rng = np.random.RandomState(random_seed)
+    vals = rng.randn(20, 5)
+    dat = rng.randn(20, 5)
+    exp = shap.Explanation(values=vals.copy(), data=dat.copy(), feature_names=list("abcde"))
+
+    result = exp.percentile(50, axis=0)
+
+    assert np.allclose(result.values, np.percentile(vals, 50, axis=0))
+    assert np.allclose(exp.values, vals)
+    assert np.allclose(exp.data, dat)
+
+
+def test_group_features_does_not_mutate_original(random_seed):
+    """Checks that group_features does not mutate the original explanation.
+
+    Previously the function deepcopied the full explanation as a scratch workspace.
+    Only values, data and feature_names are written in place so only those need copying.
+    """
+    rng = np.random.RandomState(random_seed)
+    vals = rng.randn(20, 4)
+    dat = rng.randn(20, 4)
+    exp = shap.Explanation(
+        values=vals.copy(),
+        data=dat.copy(),
+        base_values=rng.randn(20),
+        feature_names=list("abcd"),
+    )
+
+    feature_map = {"a": "ab", "b": "ab", "c": "c", "d": "d"}
+    result = exp.sum(axis=1, grouping=feature_map)
+
+    assert result.values.shape == (20, 3)
+    assert np.allclose(result.values[:, 0], vals[:, 0] + vals[:, 1])
+    assert np.allclose(exp.values, vals)
+    assert np.allclose(exp.data, dat)

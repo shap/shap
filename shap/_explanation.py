@@ -353,7 +353,6 @@ class Explanation(metaclass=MetaExplanation):
                         new_values = []
                         new_base_values = []
                         new_data = []
-                        new_self = copy.deepcopy(self)
                         for i, v in enumerate(self.values):
                             for j, s in enumerate(self.output_names[i]):
                                 if s == t:
@@ -378,13 +377,6 @@ class Explanation(metaclass=MetaExplanation):
                             clustering=self.clustering,
                         )
                         new_self.op_history = copy.copy(self.op_history)
-                        # new_self = copy.deepcopy(self)
-                        # new_self.values = np.array(new_values)
-                        # new_self.base_values = np.array(new_base_values)
-                        # new_self.data = np.array(new_data)
-                        # new_self.output_names = t
-                        # new_self.feature_names = np.array(new_data)
-                        # new_self.clustering = None
 
                 # work around for 2D feature_names since they are not yet slicer supported
                 feature_names_dims = []
@@ -398,12 +390,13 @@ class Explanation(metaclass=MetaExplanation):
                             if s == t:
                                 new_values.append(v)
                                 new_data.append(d)
-                    new_self = copy.deepcopy(self)
-                    new_self.values = new_values
-                    new_self.data = new_data
+                    new_self = copy.copy(self)
+                    new_self.values = np.array(new_values)
+                    new_self.data = np.array(new_data)
                     new_self.feature_names = t
                     new_self.clustering = None
-                    # return new_self
+                    new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
+                    return new_self
 
             if isinstance(t, (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)
@@ -582,7 +575,7 @@ class Explanation(metaclass=MetaExplanation):
         raise DimensionError("Only axis = 1 is supported for grouping right now...")
 
     def percentile(self, q: float, axis: int | None = None) -> Explanation:
-        new_self = copy.deepcopy(self)
+        new_self = copy.copy(self)
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
             new_values = self._flatten_feature_names()
             new_self.feature_names = np.array(list(new_values.keys()))
@@ -739,7 +732,11 @@ def group_features(shap_values: Explanation, feature_map: dict[str, str]) -> Exp
         reverse_map[feature_map[name]] = reverse_map.get(feature_map[name], []) + [name]
 
     curr_names = shap_values.feature_names
-    sv_new = copy.deepcopy(shap_values)
+    # Only copy the arrays written in place below. All remaining attributes from
+    # shap_values are passed directly to the Explanation constructor.
+    out_values = shap_values.values.copy()
+    out_data = shap_values.data.copy()
+    out_feature_names = list(shap_values.feature_names) if shap_values.feature_names is not None else None
     found = {}
     i = 0
     rank1 = len(shap_values.shape) == 1
@@ -754,23 +751,23 @@ def group_features(shap_values: Explanation, feature_map: dict[str, str]) -> Exp
         old_inds = [curr_names.index(v) for v in cols_to_sum]
 
         if rank1:
-            sv_new.values[i] = shap_values.values[old_inds].sum()
-            sv_new.data[i] = shap_values.data[old_inds].sum()
+            out_values[i] = shap_values.values[old_inds].sum()
+            out_data[i] = shap_values.data[old_inds].sum()
         else:
-            sv_new.values[:, i] = shap_values.values[:, old_inds].sum(1)
-            sv_new.data[:, i] = shap_values.data[:, old_inds].sum(1)
-        sv_new.feature_names[i] = new_name
+            out_values[:, i] = shap_values.values[:, old_inds].sum(1)
+            out_data[:, i] = shap_values.data[:, old_inds].sum(1)
+        out_feature_names[i] = new_name
         i += 1
 
     return Explanation(
-        sv_new.values[:i] if rank1 else sv_new.values[:, :i],
-        base_values=sv_new.base_values,
-        data=sv_new.data[:i] if rank1 else sv_new.data[:, :i],
+        out_values[:i] if rank1 else out_values[:, :i],
+        base_values=shap_values.base_values,
+        data=out_data[:i] if rank1 else out_data[:, :i],
         display_data=None
-        if sv_new.display_data is None
-        else (sv_new.display_data[:, :i] if rank1 else sv_new.display_data[:, :i]),
+        if shap_values.display_data is None
+        else (shap_values.display_data[:, :i] if rank1 else shap_values.display_data[:, :i]),
         instance_names=None,
-        feature_names=None if sv_new.feature_names is None else sv_new.feature_names[:i],
+        feature_names=None if out_feature_names is None else out_feature_names[:i],
         output_names=None,
         output_indexes=None,
         lower_bounds=None,
