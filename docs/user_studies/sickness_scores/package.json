@@ -5,8 +5,8 @@
   "main": "index.jsx",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node_modules/.bin/webpack --content-base build/",
-    "build": "node_modules/.bin/webpack"
+    "dev": "node init && node_modules/.bin/webpack --content-base build/",
+    "build": "node init && node_modules/.bin/webpack"
   },
   "author": "Scott Lundberg",
   "repository": "https://github.com/interpretable-ml/benchmark/experiments/sickness-score",
