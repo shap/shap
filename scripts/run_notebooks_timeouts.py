@@ -21,7 +21,6 @@ allow_to_fail = [
     Path("overviews/An introduction to explainable AI with Shapley values.ipynb"),
     Path("overviews/Be careful when interpreting predictive models in search of causal insights.ipynb"),
     Path("overviews/Explaining quantitative measures of fairness.ipynb"),
-    Path("tabular_examples/model_agnostic/Multioutput Regression SHAP.ipynb"),
     Path("tabular_examples/neural_networks/Census income classification with Keras.ipynb"),
     Path("tabular_examples/tree_based_models/League of Legends Win Prediction with XGBoost.ipynb"),
     Path("tabular_examples/tree_based_models/Perfomance Comparison.ipynb"),
