@@ -55,3 +55,12 @@ def test_embedding_alpha(shap_values):
 def test_embedding_show(shap_values):
     """Test embedding with show=True executes without error."""
     shap.plots.embedding(ind=0, shap_values=shap_values, show=True)
+
+
+def test_embedding_unsupported_method(shap_values):
+    """Test embedding with unsupported method crashes with UnboundLocalError.
+
+    This documents the current buggy behaviour. See issue #4394 for the fix.
+    """
+    with pytest.raises(UnboundLocalError):
+        shap.plots.embedding(ind=0, shap_values=shap_values, method="unsupported", show=False)
