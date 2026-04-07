@@ -104,6 +104,13 @@ def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
     return n_iterations
 
 
+def _xgboost_prepare_input(X: Any) -> Any:
+    """Normalize pandas Series inputs for XGBoost DMatrix construction."""
+    if isinstance(X, pd.Series):
+        return X.to_frame().T
+    return X
+
+
 def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
     if model.model_type == "xgboost" and model.cat_feature_indices is not None:
         raise NotImplementedError(
@@ -592,6 +599,7 @@ class TreeExplainer(Explainer):
                 import xgboost
 
                 n_iterations = _xgboost_n_iterations(tree_limit, self.model.num_stacked_models)
+                X = _xgboost_prepare_input(X)
                 if not isinstance(X, xgboost.core.DMatrix):
                     # Retrieve any DMatrix properties if they have been set on the TreeEnsemble Class
                     dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
@@ -793,6 +801,7 @@ class TreeExplainer(Explainer):
         if self.model.model_type == "xgboost" and self.feature_perturbation == "tree_path_dependent":
             import xgboost
 
+            X = _xgboost_prepare_input(X)
             if not isinstance(X, xgboost.core.DMatrix):
                 X = xgboost.DMatrix(X)
 

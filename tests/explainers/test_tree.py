@@ -1313,6 +1313,21 @@ class TestExplainerXGBoost:
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
+    @pytest.mark.parametrize("Reg", regressors)
+    def test_xgboost_series_input(self, Reg):
+        # train xgboost model
+        X, y = shap.datasets.california(n_points=500)
+        model = Reg().fit(X, y)
+
+        explainer = shap.TreeExplainer(model)
+
+        single_row = X.iloc[0]
+        shap_values = explainer.shap_values(single_row)
+
+        predicted = model.predict(X.iloc[[0]])[0]
+        shap_sum = shap_values.sum() if shap_values.ndim == 1 else shap_values.sum(1)[0]
+        assert abs(shap_sum + explainer.expected_value - predicted) < 1e-4
+
     @pytest.mark.skipif(
         sys.platform == "darwin", reason="Test currently not working on mac. Investigating is a todo, see GH #3709."
     )
