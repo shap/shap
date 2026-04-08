@@ -217,13 +217,13 @@ class _TFGradient(Explainer):
             except Exception:
                 pass
         if tf.executing_eagerly():  # type: ignore[attr-defined]
+            from tensorflow import keras
             if isinstance(model, (list, tuple)):
                 assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
-                from tensorflow import keras
 
                 self.model = keras.Model(model[0], model[1])  # type: ignore[attr-defined]
             else:
-                self.model = model
+                self.model = keras.Model(model.inputs, model.layers[-1].output)
 
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)

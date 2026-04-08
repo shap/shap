@@ -100,8 +100,8 @@ def test_tf_keras_mnist_cnn_tf216_and_above(random_seed):
     shap_values = e.shap_values(x_test[:1], nsamples=2000)
 
     model = tf.keras.Model(inputs=model.inputs, outputs=model.layers[-1].input)
-    outputs = model(x_test[:1]).numpy()
-    background = model(x_train[inds, :, :]).numpy()
+    outputs = model.predict(x_test[:1])
+    background = model.predict(x_train[inds, :, :])
     # outputs = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]})
     # background = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]})
     expected_value = background.mean(0)
