@@ -139,7 +139,7 @@ def scatter(
         ymax = parse_axis_limit(ymax, shap_values.values, is_shap_axis=True)
         ymin, ymax = _suggest_buffered_limits(ymin, ymax, shap_values.values)
         fig, ax_list = plt.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
-        ax_list=list(np.atleast_1d(ax_list))
+        ax_list = list(np.atleast_1d(ax_list))
         for idx, i in enumerate(inds):
             ax_i = ax_list[idx]
             scatter(shap_values[:, i], color=color, show=False, ax=ax_i, ymin=ymin, ymax=ymax)

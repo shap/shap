@@ -113,6 +113,7 @@ def test_scatter_plot_value_input(input):
     plt.tight_layout()
     return plt.gcf()
 
+
 def test_scatter_always_returns_ax(explainer):
     """scatter() should return an Axes object regardless of show value."""
     explanation = explainer(explainer.data)
