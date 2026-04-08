@@ -112,3 +112,17 @@ def test_scatter_plot_value_input(input):
     shap.plots.scatter(explanations, show=False)
     plt.tight_layout()
     return plt.gcf()
+
+def test_scatter_always_returns_ax(explainer):
+    """scatter() should return an Axes object regardless of show value."""
+    explanation = explainer(explainer.data)
+    result = shap.plots.scatter(explanation[:, "Age"], show=False)
+    assert isinstance(result, plt.Axes)
+
+
+def test_scatter_multi_returns_axes_list(explainer):
+    """scatter() with multiple features should return a list of Axes."""
+    explanation = explainer(explainer.data)
+    result = shap.plots.scatter(explanation[:, ["Age", "Workclass"]], show=False)
+    assert isinstance(result, list)
+    assert all(isinstance(a, plt.Axes) for a in result)
