@@ -154,6 +154,19 @@ def test_independent_masker_with_sampling():
     assert masker.data.shape[1] == 5
 
 
+def test_independent_masker_logs_on_subsampling(caplog):
+    """Tabular masker should emit an info log when the background dataset is sub-sampled — GH #3461."""
+    import logging
+
+    large_data = np.random.randn(150, 5)
+    with caplog.at_level(logging.INFO, logger="shap"):
+        shap.maskers.Independent(large_data, max_samples=50)
+
+    assert any("Subsampling" in record.message for record in caplog.records), (
+        "Expected an info log warning about background dataset sub-sampling"
+    )
+
+
 def test_independent_masker_with_no_clustering():
     """Test Independent masker without clustering."""
     data = np.random.randn(10, 3)
