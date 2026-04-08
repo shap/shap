@@ -2628,7 +2628,7 @@ def test_tree_explainer_expected_value():
     if isinstance(explainer.expected_value, np.ndarray):
         assert abs(explainer.expected_value[0] - mean_pred) < 1.0
     else:
-        assert isinstance(explainer.expected_value, (float, np.floating))
+        assert isinstance(explainer.expected_value, float | np.floating)
         assert abs(explainer.expected_value - mean_pred) < 1.0
 
     # Check additivity

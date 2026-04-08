@@ -153,7 +153,7 @@ class LinearExplainer(Explainer):
         self.coef, self.intercept = LinearExplainer._parse_model(model)
 
         # extract the data
-        if issubclass(type(self.masker), (maskers.Independent, maskers.Partition)):
+        if issubclass(type(self.masker), maskers.Independent | maskers.Partition):
             self.feature_perturbation = "interventional"
         elif issubclass(type(self.masker), maskers.Impute):
             self.feature_perturbation = "correlation_dependent"
@@ -341,7 +341,7 @@ class LinearExplainer(Explainer):
     @staticmethod
     def supports_model_with_masker(model: Any, masker: Any) -> bool:
         """Determines if we can parse the given model."""
-        if not isinstance(masker, (maskers.Independent, maskers.Partition, maskers.Impute)):
+        if not isinstance(masker, maskers.Independent | maskers.Partition | maskers.Impute):
             return False
 
         try:
@@ -368,7 +368,7 @@ class LinearExplainer(Explainer):
             X = X.reshape(1, -1)
 
         # convert dataframes
-        if isinstance(X, (pd.Series, pd.DataFrame)):
+        if isinstance(X, pd.Series | pd.DataFrame):
             X = X.values
 
         if len(X.shape) not in (1, 2):
@@ -440,7 +440,7 @@ class LinearExplainer(Explainer):
 
         """
         # convert dataframes
-        if isinstance(X, (pd.Series, pd.DataFrame)):
+        if isinstance(X, pd.Series | pd.DataFrame):
             X = X.values
 
         # assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))

@@ -332,7 +332,7 @@ class Explainer(Serializable):
         args = list(args)  # type: ignore[assignment]
         if self.feature_names is None:
             feature_names = [None for _ in range(len(args))]
-        elif issubclass(type(self.feature_names[0]), (list, tuple)):
+        elif issubclass(type(self.feature_names[0]), list | tuple):
             feature_names = copy.deepcopy(self.feature_names)  # type: ignore[arg-type, assignment]
         else:
             feature_names = [copy.deepcopy(self.feature_names)]  # type: ignore[list-item, assignment]

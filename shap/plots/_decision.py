@@ -390,7 +390,7 @@ def decision(
 
     # the above code converts features to either None or np.ndarray. if features is something else at this point,
     # there's a problem.
-    if not isinstance(features, (np.ndarray, type(None))):
+    if not isinstance(features, np.ndarray | type(None)):
         raise TypeError("The features arg uses an unsupported type.")
     if (features is not None) and (features.ndim == 1):
         features = features.reshape(1, -1)
@@ -400,7 +400,7 @@ def decision(
         feature_names = [labels["FEATURE"] % str(i) for i in range(feature_count)]
     elif len(feature_names) != feature_count:
         raise ValueError("The feature_names arg must include all features represented in shap_values.")
-    elif not isinstance(feature_names, (list, np.ndarray)):
+    elif not isinstance(feature_names, list | np.ndarray):
         raise TypeError("The feature_names arg requires a list or numpy array.")
 
     # transform interactions cube to a matrix and generate interaction names.
@@ -448,7 +448,7 @@ def decision(
     # validate and convert feature_display_range to a slice. prevents out of range errors later.
     if feature_display_range is None:
         feature_display_range = slice(-1, -21, -1)  # show last 20 features in descending order.
-    elif not isinstance(feature_display_range, (slice, range)):
+    elif not isinstance(feature_display_range, slice | range):
         raise TypeError("The feature_display_range arg requires a slice or a range.")
     elif feature_display_range.step not in (-1, 1, None):
         raise ValueError("The feature_display_range arg supports a step of 1, -1, or None.")

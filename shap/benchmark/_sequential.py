@@ -225,7 +225,7 @@ class SequentialPerturbation:
             label = f"Score {len(self.score_values)}"
 
         # convert dataframes
-        if isinstance(X, (pd.Series, pd.DataFrame)):
+        if isinstance(X, pd.Series | pd.DataFrame):
             X = X.values
 
         # convert all single-sample vectors to matrices

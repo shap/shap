@@ -148,7 +148,7 @@ def scatter(
                 line_styles = ["solid", "dotted", "dashed"]
                 for j, name in enumerate(overlay):
                     vals = overlay[name]
-                    if isinstance(vals[i][0][0], (float, int)):
+                    if isinstance(vals[i][0][0], float | int):
                         plt.plot(vals[i][0], vals[i][1], color="#000000", linestyle=line_styles[j], label=name)
             if i == 0:
                 ax.set_ylabel(ylabel)
@@ -186,7 +186,7 @@ def scatter(
     # TODO: This stacking could be avoided if we use the new shap.utils.potential_interactions function
     if isinstance(color, Explanation):
         shap_values2 = color
-        if issubclass(type(shap_values2.feature_names), (str, int)):
+        if issubclass(type(shap_values2.feature_names), str | int):
             feature_names.append(shap_values2.feature_names)
             shap_values_arr = np.hstack([shap_values_arr, shap_values2.values.reshape(-1, len(feature_names) - 1)])
             features = np.hstack([features, shap_values2.data.reshape(-1, len(feature_names) - 1)])
@@ -359,7 +359,7 @@ def scatter(
             cb = plt.colorbar(p, ax=ax, aspect=80)
 
         # Type narrowing for mypy
-        assert isinstance(interaction_index, (int, np.integer)), f"Unexpected {type(interaction_index)=}"
+        assert isinstance(interaction_index, int | np.integer), f"Unexpected {type(interaction_index)=}"
         cb.set_label(feature_names[interaction_index], size=13)
         cb.ax.tick_params(labelsize=11)
         if categorical_interaction:

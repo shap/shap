@@ -90,7 +90,7 @@ class Serializer:
                 pickle.dump("cloudpickle.dump", self.out_stream)
                 cloudpickle.dump(value, self.out_stream)
         elif encoder == "auto":
-            if isinstance(value, (int, float, str)):
+            if isinstance(value, int | float | str):
                 log.debug("encoder_name = %s", "pickle.dump")
                 pickle.dump("pickle.dump", self.out_stream)
                 pickle.dump(value, self.out_stream)

@@ -60,8 +60,8 @@ def configs_are_equal(config1: _style.StyleConfig, config2: _style.StyleConfig):
 
 
 def _values_are_equivalent(value1, value2):
-    value1_is_arraylike = isinstance(value1, (np.ndarray, list, tuple))
-    value2_is_arraylike = isinstance(value2, (np.ndarray, list, tuple))
+    value1_is_arraylike = isinstance(value1, np.ndarray | list | tuple)
+    value2_is_arraylike = isinstance(value2, np.ndarray | list | tuple)
     if value1_is_arraylike and value2_is_arraylike:
         return np.allclose(value1, value2)
     elif value1_is_arraylike != value2_is_arraylike:

@@ -105,7 +105,7 @@ class TFDeep(Explainer):
             self.multi_output = False
 
         if tf.executing_eagerly():
-            if isinstance(model, (list, tuple)):
+            if isinstance(model, list | tuple):
                 assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
                 from tensorflow import keras
 

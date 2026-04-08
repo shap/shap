@@ -333,7 +333,7 @@ class Explanation(metaclass=MetaExplanation):
             orig_t = t
             if isinstance(t, OpChain):
                 t = t.apply(self)
-                if isinstance(t, (np.int64, np.int32)):  # because slicer does not like numpy indexes
+                if isinstance(t, np.int64 | np.int32):  # because slicer does not like numpy indexes
                     t = int(t)
                 elif isinstance(t, np.ndarray):
                     t = [int(v) for v in t]  # slicer wants lists not numpy arrays for indexing
@@ -405,7 +405,7 @@ class Explanation(metaclass=MetaExplanation):
                     new_self.clustering = None
                     # return new_self
 
-            if isinstance(t, (np.int8, np.int16, np.int32, np.int64)):
+            if isinstance(t, np.int8 | np.int16 | np.int32 | np.int64):
                 t = int(t)
 
             if t is not orig_t:
@@ -708,7 +708,7 @@ class Explanation(metaclass=MetaExplanation):
             )
         if isinstance(cohorts, int):
             return _auto_cohorts(self, max_cohorts=cohorts)
-        if isinstance(cohorts, (list, tuple, np.ndarray)):
+        if isinstance(cohorts, list | tuple | np.ndarray):
             cohorts = np.array(cohorts)
             return Cohorts(**{name: self[cohorts == name] for name in np.unique(cohorts)})
         raise TypeError("The given set of cohort indicators is not recognized! Please give an array or int.")
@@ -817,7 +817,7 @@ def compute_output_dims(values, base_values, data, output_names) -> tuple[int, .
 
 
 def is_1d(val: Sequence[Any] | npt.NDArray[Any]) -> bool:
-    return not (isinstance(val[0], (list, np.ndarray)))
+    return not (isinstance(val[0], list | np.ndarray))
 
 
 def _compute_shape(x) -> tuple[int | None, ...]:

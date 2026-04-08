@@ -368,7 +368,7 @@ def beeswarm(
     row_height = 0.4
     if plot_size == "auto":
         fig.set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
-    elif isinstance(plot_size, (list, tuple)):
+    elif isinstance(plot_size, list | tuple):
         fig.set_size_inches(plot_size[0], plot_size[1])
     elif plot_size is not None:
         fig.set_size_inches(8, min(len(feature_order), max_display) * plot_size + 1.5)
