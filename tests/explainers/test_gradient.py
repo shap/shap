@@ -477,7 +477,7 @@ def test_tf_input(random_seed, input_type):
     example = np.ones((1, num_features))
     explanation = explainer(example)
 
-    diff = (model.predict(example) - model.predict(background)).mean(0)
+    diff = (model(example).numpy() - model(background).numpy()).mean(0)
     sums = np.array([values.sum() for values in explanation.values])
     d = np.abs(sums - diff).sum()
     assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (
