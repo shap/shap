@@ -148,7 +148,7 @@ def test_tf_keras_activations(activation):
     model.fit(x, y, epochs=30, shuffle=False, verbose=0)
 
     # explain
-    e = shap.DeepExplainer((model.inputs[0], model.layers[-1].output), x)
+    e = shap.DeepExplainer((model.inputs, model.layers[-1].output), x)
     shap_values = e.shap_values(x)
     preds = model.predict(x)
 
