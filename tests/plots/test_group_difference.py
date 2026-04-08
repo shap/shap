@@ -18,6 +18,7 @@ def test_group_difference(explainer):
     plt.tight_layout()
     return fig
 
+
 def test_group_difference_returns_ax(explainer):
     """group_difference() should always return an Axes object."""
     np.random.seed(0)
