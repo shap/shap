@@ -15,6 +15,11 @@ def test_colors():
     assert_allclose(colors.red_rgb, np.array([1.0, 0.0, 0.31796406]))
 
 
+def test_red_blue_special_values():
+    assert_allclose(colors.red_blue(np.nan), np.array([0.51615537, 0.51615111, 0.5161729, 1.0]))
+    assert_allclose(colors.red_blue(2.0), np.array([0.51615537, 0.51615111, 0.5161729, 1.0]))
+    assert_allclose(colors.red_blue(-1.0), np.array([0.51615537, 0.51615111, 0.5161729, 1.0]))
+
 @pytest.mark.mpl_image_compare
 @pytest.mark.parametrize(
     "cmap",
