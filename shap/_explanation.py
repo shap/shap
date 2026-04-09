@@ -418,6 +418,11 @@ class Explanation(metaclass=MetaExplanation):
         if len(item) == 0:
             return new_self  # type: ignore
         if new_self is None:
+            fast = _fast_slice(self, item)
+            if fast is not None:
+                fast.op_history = copy.copy(self.op_history)
+                fast.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
+                return fast
             new_self = copy.copy(self)
         new_self._s = new_self._s.__getitem__(item)
         new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
@@ -1000,3 +1005,119 @@ def list_wrap(x: npt.NDArray[Any] | Any) -> list[npt.NDArray[Any]] | Any:
         return [v for v in x]
     else:
         return x
+
+
+_PLAIN_INDEX_TYPES = (int, slice, list, np.ndarray, np.integer)
+
+
+def _fast_slice(exp: Explanation, item: tuple) -> Explanation | None:
+    """Return a sliced Explanation by indexing numpy arrays directly, bypassing Slicer.
+
+    Slicer iterates each tracked attribute through Python loops for 1D attributes
+    such as base_values of shape (N,) even when the slice is trivial, because the
+    internal tail_slice path runs element by element when flatten is False. For
+    plain 2D ndarray explanations with numeric indices this function slices numpy
+    arrays directly and rebuilds the Explanation in O(1) Python calls regardless of N.
+
+    Returns None when the explanation uses multi-output (output_names set), object
+    array data, per sample feature_names, or other non-numpy attributes. The caller
+    falls through to the Slicer path in that case.
+    """
+    vals = exp.values
+    if not isinstance(vals, np.ndarray) or vals.ndim != 2:
+        return None
+    if not all(isinstance(t, _PLAIN_INDEX_TYPES) for t in item):
+        return None
+    if len(item) > 2:
+        return None
+    if exp.output_names is not None:
+        return None
+    if exp.output_indexes is not None:
+        return None
+    if exp.instance_names is not None:
+        return None
+    if exp.hierarchical_values is not None:
+        return None
+
+    row_sel = item[0]
+    col_sel = item[1] if len(item) == 2 else None
+
+    new_values = vals[item]
+
+    def slice_2d(arr: npt.NDArray[Any] | None) -> tuple[npt.NDArray[Any] | None, bool]:
+        if arr is None:
+            return None, True
+        if isinstance(arr, np.ndarray) and arr.ndim == 2:
+            return arr[item], True
+        return None, False
+
+    new_data, ok = slice_2d(exp.data)
+    if not ok:
+        return None
+    new_dd, ok = slice_2d(exp.display_data)
+    if not ok:
+        return None
+    new_lb, ok = slice_2d(exp.lower_bounds)
+    if not ok:
+        return None
+    new_ub, ok = slice_2d(exp.upper_bounds)
+    if not ok:
+        return None
+    new_es, ok = slice_2d(exp.error_std)
+    if not ok:
+        return None
+
+    fn = exp.feature_names
+    new_fn: Any = fn
+    if col_sel is not None and fn is not None:
+        if isinstance(fn, np.ndarray):
+            new_fn = fn[col_sel]
+        elif isinstance(fn, list):
+            if isinstance(col_sel, (int, np.integer)):
+                new_fn = fn[int(col_sel)]
+            elif isinstance(col_sel, slice):
+                new_fn = fn[col_sel]
+            else:
+                cols = col_sel.tolist() if isinstance(col_sel, np.ndarray) else col_sel
+                new_fn = [fn[i] for i in cols]
+        else:
+            return None
+
+    bv = exp.base_values
+    new_bv: Any = bv
+    if isinstance(bv, np.ndarray):
+        if bv.ndim == 1:
+            new_bv = bv[row_sel]
+        else:
+            return None
+    elif bv is not None and not isinstance(bv, (int, float, np.floating, np.integer)):
+        return None
+
+    me = exp.main_effects
+    new_me = None
+    if me is not None:
+        if isinstance(me, np.ndarray) and me.ndim == 1:
+            new_me = me[row_sel]
+        else:
+            return None
+
+    cl = exp.clustering
+    new_cl = None
+    if cl is not None:
+        if isinstance(cl, np.ndarray):
+            new_cl = cl[row_sel]
+        else:
+            return None
+
+    return Explanation(
+        values=new_values,
+        base_values=new_bv,
+        data=new_data,
+        display_data=new_dd,
+        feature_names=new_fn,
+        lower_bounds=new_lb,
+        upper_bounds=new_ub,
+        error_std=new_es,
+        main_effects=new_me,
+        clustering=new_cl,
+    )
