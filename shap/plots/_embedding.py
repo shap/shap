@@ -1,12 +1,13 @@
 from __future__ import annotations
-
+from typing import TYPE_CHECKING
 import matplotlib.pyplot as plt
-import numpy as np
 import sklearn
-
 from ..utils import convert_name
 from . import colors
 from ._labels import labels
+
+if TYPE_CHECKING:
+    import numpy as np
 
 
 def embedding(
