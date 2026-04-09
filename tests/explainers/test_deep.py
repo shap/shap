@@ -195,6 +195,7 @@ def test_tf_keras_linear_tuple_input():
     expected = (x - x.mean(0)) * fit_coef
     np.testing.assert_allclose(shap_values.sum(-1), expected, atol=1e-5)
 
+
 def test_tf_keras_linear_model_input():
     """Test verifying that a linear model with linear data gives the correct result."""
     # FIXME: this test should ideally pass with any random seed. See #2960
@@ -232,6 +233,7 @@ def test_tf_keras_linear_model_input():
     # verify that the explanation follows the equation in LinearExplainer
     expected = (x - x.mean(0)) * fit_coef
     np.testing.assert_allclose(shap_values.sum(-1), expected, atol=1e-5)
+
 
 def test_tf_keras_imdb_lstm(random_seed):
     """Basic LSTM example using the keras API defined in tensorflow"""

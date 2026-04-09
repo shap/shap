@@ -218,6 +218,7 @@ class _TFGradient(Explainer):
                 pass
         if tf.executing_eagerly():  # type: ignore[attr-defined]
             from tensorflow import keras
+
             if isinstance(model, (list, tuple)):
                 assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
 
