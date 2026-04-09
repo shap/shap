@@ -241,3 +241,53 @@ def test_independent_masker_with_small_data():
     # Should keep all data
     assert masker.data.shape[0] == 5
     assert masker.data.shape[1] == 3
+
+
+def test_impute_masker_with_dict_mean_cov():
+    """Test that Impute masker correctly handles dict input with mean and cov.
+
+    Regression test for the bug where ``data is dict`` (identity check against
+    the type object) was used instead of ``isinstance(data, dict)``, making the
+    dict branch unreachable.
+    """
+    mean = np.array([1.0, 2.0, 3.0])
+    cov = np.eye(3)
+    masker = shap.maskers.Impute({"mean": mean, "cov": cov})
+
+    assert np.allclose(masker.mean, mean)
+    assert np.allclose(masker.cov, cov)
+    # data should be reshaped from the mean vector
+    assert masker.data.shape == (1, 3)
+
+
+def test_explainer_creates_independent_from_dict_masker():
+    """Test that Explainer.__init__ routes a dict masker to Independent.
+
+    Regression test for ``masker is dict`` identity check.
+    """
+    from sklearn.linear_model import LinearRegression
+
+    X = np.random.RandomState(0).randn(20, 3)
+    y = X @ [1, 2, 3]
+    model = LinearRegression().fit(X, y)
+
+    mean = X.mean(axis=0)
+    cov = np.cov(X.T)
+    explainer = shap.Explainer(model.predict, masker={"mean": mean, "cov": cov})
+
+    assert isinstance(explainer.masker, shap.maskers.Independent)
+
+
+def test_explainer_creates_composite_from_list_masker():
+    """Test that Explainer.__init__ routes a list of maskers to Composite.
+
+    Regression test for ``masker is list`` identity check.
+    """
+    X = np.random.RandomState(0).randn(20, 3)
+    masker1 = shap.maskers.Independent(X[:, :2])
+    masker2 = shap.maskers.Independent(X[:, 2:])
+
+    # Should not raise; the list branch should create a Composite masker
+    explainer = shap.Explainer(lambda x: x.sum(axis=1), masker=[masker1, masker2])
+
+    assert isinstance(explainer.masker, shap.maskers.Composite)
