@@ -549,6 +549,12 @@ class TreeExplainer(Explainer):
 
             * Single output: ``shap_values[i, :].sum() + expected_value = model_output[i]``
             * Multiple outputs: ``shap_values[i, :, j].sum() + expected_value[j] = model_output[i, j]``
+            .. note::
+                This property holds only when ``shap_values`` and ``model_output``
+                are computed on the **same samples in the same order**. A common
+                mistake is computing SHAP values on a subset of samples while
+                comparing against predictions from a different batch, which will
+                cause assertion failures even though the formula itself is correct.
 
             The shape of the returned array depends on the number of model outputs:
 
