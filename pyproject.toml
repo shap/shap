@@ -6,7 +6,6 @@ requires = [
   "setuptools-scm>=8.0",
   "numpy>=2.0",
   "packaging>20.9",
-  "cython>=3.0.11",
   "nanobind>=2.0.0",
 ]
 build-backend = "scikit_build_core.build"
