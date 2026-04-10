@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
-from numpy.typing import NDArray
 
 from shap import links
 from shap.models import Model
 from shap.utils import MaskedModel
 
 from .._explainer import Explainer
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from numpy.typing import NDArray
 
 
 class Random(Explainer):
