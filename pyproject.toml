@@ -218,12 +218,19 @@ local_scheme = "no-local-version"
 [tool.pytest.ini_options]
 addopts = "--mpl -m 'not xslow'"
 testpaths = ["tests"]
+mpl-default-style = "default"
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
   "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:.*pandas.*",
   "ignore:.*typing.io is deprecated.*:DeprecationWarning:.*pyspark.*",
   "ignore:.*is_datetime64tz_dtype is deprecated.*:DeprecationWarning:.*pyspark.*",
   "ignore:.*'force_all_finite' was renamed to 'ensure_all_finite' in 1.6.*:FutureWarning:.*sklearn.*",
+  # TensorFlow graph-mode deprecations — SHAP's DeepExplainer still needs these APIs (GH #3066)
+  "ignore:.*graph support has been removed in eager mode.*",
+  "ignore:.*The structure of inputs doesn't match the expected structure.*",
+  "ignore:.*Conversion of an array with ndim > 0 to a scalar is deprecated.*",
+  # Transformers deprecation outside SHAP's control (GH #3066)
+  "ignore:.*`return_all_scores` is now deprecated.*",
 ]
 markers = ["xslow: mark test as extremely slow (not run unless explicitly requested)"]
 

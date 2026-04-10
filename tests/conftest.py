@@ -68,8 +68,15 @@ def global_random_seed():
 
 @pytest.fixture(autouse=True)
 def mpl_test_cleanup():
-    """Run tests in a mpl context manager and close figures after each test."""
+    """Run tests in a mpl context manager and close figures after each test.
+
+    Uses matplotlib's 'default' style to ensure consistent rendering across
+    environments and to match what users will actually see with a modern
+    matplotlib installation. See GH #3954.
+    """
+    import matplotlib
     plt.switch_backend("Agg")  # Non-interactive backend
     with plt.rc_context():
+        matplotlib.style.use("default")
         yield
     plt.close("all")
