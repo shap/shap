@@ -8,7 +8,7 @@ except ImportError:
 from ._bar import bar
 from ._beeswarm import beeswarm
 from ._benchmark import benchmark
-from ._decision import decision
+from ._decision import decision, multioutput_decision
 from ._embedding import embedding
 from ._force import force, initjs
 from ._group_difference import group_difference
