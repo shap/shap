@@ -7,16 +7,17 @@ build:
     python: "3.12"
   jobs:
     # cf. https://docs.readthedocs.io/en/stable/build-customization.html#install-dependencies-with-uv
-    setup_uv:
+    pre_create_environment:
       - asdf plugin add uv
       - asdf install uv latest
       - asdf global uv latest
-    create_env:
+    create_environment:
       - uv venv
       - uv sync
     install:
       - uv pip install -r docs/requirements-docs.txt
-    build_docs:
-      - >-
-        uv run python -m sphinx -T -b html -d docs/_build/doctrees -D language=en
-        docs $READTHEDOCS_OUTPUT/html
+    build:
+      html:
+        - >-
+          uv run python -m sphinx -T -b html -d docs/_build/doctrees -D language=en
+          docs $READTHEDOCS_OUTPUT/html
