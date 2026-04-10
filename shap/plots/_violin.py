@@ -126,7 +126,9 @@ def violin(
         emsg = f"plot_type: Expected one of ('violin','layered_violin'), received {plot_type} instead."
         raise ValueError(emsg)
 
-    assert len(shap_values.shape) != 1, "Violin summary plots need a matrix of shap_values, not a vector."
+    if len(shap_values.shape) == 1:
+        emsg = "Violin summary plots need a matrix of shap_values, not a vector."
+        raise ValueError(emsg)
 
     # default color:
     if color is None:
