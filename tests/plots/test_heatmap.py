@@ -25,3 +25,29 @@ def test_heatmap_feature_order(explainer):
     )
     plt.tight_layout()
     return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_heatmap_feature_order_opchain(explainer):
+    """Make sure the heatmap plot is unchanged when we apply an opchain feature ordering."""
+    fig = plt.figure()
+    shap_values = explainer(explainer.data)
+    shap.plots.heatmap(shap_values, max_display=5, feature_order=shap.Explanation.abs.mean(0).argsort, show=False)
+    plt.tight_layout()
+    return fig
+
+
+def test_heatmap_feature_order_invalid(explainer):
+    """Handle unsupported feature order condition"""
+    shap_values = explainer(explainer.data)
+    print(explainer)
+    with pytest.raises(Exception, match="Unsupported feature_order"):
+        shap.plots.heatmap(shap_values, feature_order=123, show=False)
+
+
+def test_heatmap_show(explainer, monkeypatch):
+    """Triggers plt.show() in the heatmap"""
+    monkeypatch.setattr(plt, "show", lambda: None)
+
+    shap_values = explainer(explainer.data)
+    shap.plots.heatmap(shap_values, show=True)
