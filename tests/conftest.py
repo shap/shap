@@ -75,6 +75,7 @@ def mpl_test_cleanup():
     matplotlib installation. See GH #3954.
     """
     import matplotlib
+
     plt.switch_backend("Agg")  # Non-interactive backend
     with plt.rc_context():
         matplotlib.style.use("default")
