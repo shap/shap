@@ -1595,7 +1595,7 @@ class TreeEnsemble:
 
     @property
     def num_outputs(self) -> int:
-        # Currrently, XGBoost models derive the num_outputs attribute from the input
+        # Currently, XGBoost models derive the num_outputs attribute from the input
         # models, which is set during model load.
         if self.model_type == "xgboost":
             assert hasattr(self, "_xgboost_n_outputs")
