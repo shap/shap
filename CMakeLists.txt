@@ -62,11 +62,10 @@ if(NOT "${SKBUILD_SABI_VERSION}" STREQUAL "")
 endif()
 
 python_add_library(
-  _cext
-  MODULE
+  _cext MODULE
 
-  # Use the SABI if requested
-  WITH_SOABI ${USE_SABI}
+  # Target the stable ABI of Python 3.12+, reducing the number of binary wheels
+  ${USE_SABI} WITH_SOABI
 
   # Sources for the cext module
   shap/cext/_cext.cc

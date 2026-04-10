@@ -3,6 +3,7 @@
 # https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-abi-handling
 requires = [
   "scikit-build-core>=0.10.0",
+  "setuptools-scm>=8.0",
   "numpy>=2.0",
   "packaging>20.9",
   "cython>=3.0.11",
@@ -225,8 +226,14 @@ module = [
 ]
 ignore_missing_imports = true
 
-[tool.setuptools]
-packages = [
+[tool.setuptools_scm]
+version_file = "shap/_version.py"
+# Use "no-local-version" so dev releases are compatibile with PyPI
+local_scheme = "no-local-version"
+
+[tool.scikit-build]
+# List of packages to include in the wheel
+wheel.packages = [
   'shap',
   'shap.cext',
   'shap.explainers',
@@ -242,10 +249,18 @@ packages = [
   'shap.models',
 ]
 
-[tool.setuptools_scm]
-version_file = "shap/_version.py"
-# Use "no-local-version" so dev releases are compatibile with PyPI
-local_scheme = "no-local-version"
+metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
+sdist.include = ["shap/_version.py"]
+
+# Protect the configuration against future changes in scikit-build-core
+minimum-version = "build-system.requires"
+
+# Setuptools-style build caching in a local directory
+build-dir = "build/{wheel_tag}"
+
+# Build stable ABI wheels for CPython 3.12+
+wheel.py-api = "cp312"
+
 
 [tool.pytest.ini_options]
 addopts = "--mpl -m 'not xslow'"
@@ -340,10 +355,10 @@ omit = ["shap/benchmark/*"]
 combine = ["shap", "*/site-packages/shap"]
 
 [tool.cibuildwheel]
+# TODO: Should we use uv as build frontend for faster builds?
+# build-frontend = "uv"
+
 # Restrict the set of builds to mirror the wheels available in scipy. See #3028
-# skip *-musllinux_aarch64 since numpy doesn't provid those wheels
-# skip cp38-musllinux_x86_64 since numpy never provided cp38 musllinux wheels
-#  they introduced musllinux in 1.25 when they already dropped cp38
 # skip *t (free-threaded builds) since dependencies like llvmlite don't support it yet
 skip = [
   "cp314-macosx_x86_64",
@@ -359,13 +374,19 @@ test-extras = ["test-core", "plots"]
 # skip tests on emulated architectures, as they are very slow
 # skip tests on *-macosx_arm64 , as cibuildwheel does not support tests on arm64 (yet)
 # skip tests on *-musllinux*" since llvmlite and numba do not provide musllinux wheels
-test-skip = "cp314-macosx_x86_64 *-*linux_{aarch64,ppc64le,s390x} *-macosx_arm64 *-musllinux*"
+test-skip = "cp314-macosx_x86_64 *-*linux_{aarch64} *-macosx_arm64 *-musllinux*"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
 
 [tool.cibuildwheel.windows]
+# TODO: Should we support Windows ARM64 too?
 archs = ["AMD64"]
 
 [tool.cibuildwheel.macos]
+# TODO: Should we build universal2 wheels for macOS to reduce wheel count?
 archs = ["x86_64", "arm64"]
+
+[tool.cibuildwheel.macos.environment]
+# Needed for C++17 support
+MACOSX_DEPLOYMENT_TARGET = "10.13"
