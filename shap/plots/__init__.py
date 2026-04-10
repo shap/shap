@@ -39,4 +39,5 @@ __all__ = [
     "text",
     "violin",
     "waterfall",
+    "multioutput_decision",
 ]
