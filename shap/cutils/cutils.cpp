@@ -5,8 +5,9 @@
 
 namespace nb = nanobind;
 
-NB_MODULE(cutils, m) {
-    m.def("_compute_grey_code_row_values", &compute_grey_code_row_values_1d);
-    m.def("_compute_grey_code_row_values", &compute_grey_code_row_values_2d);
-    m.def("_compute_exp_val", &compute_exp_val);
+NB_MODULE(cutils, m)
+{
+    m.def("compute_grey_code_row_values", &compute_grey_code_row_values_1d);
+    m.def("compute_grey_code_row_values", &compute_grey_code_row_values_2d);
+    m.def("compute_exp_val", &compute_exp_val);
 }
