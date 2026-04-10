@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - master
+      - "move-to-nanobind"
   pull_request:
     branches:
       - master
+      - "move-to-nanobind"
     paths:
       - "shap/**"
       - "notebooks/**"

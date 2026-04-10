@@ -3,11 +3,14 @@ name: tests
 on:
   workflow_dispatch:
   push:
+    # TODO: remove "move-to-nanobind" branch before merge
     branches:
       - master
+      - "move-to-nanobind"
   pull_request:
     branches:
       - master
+      - "move-to-nanobind"
     paths:
       - "shap/**"
       - "tests/**"
@@ -15,6 +18,7 @@ on:
       - "javascript/**"  # Include JS changes that affect bundle.js
       - ".github/workflows/run_tests.yml"
       - "pyproject.toml"
+      - "CMakeLists.txt"
       - "setup.py"
 
 concurrency:
