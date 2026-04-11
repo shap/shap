@@ -539,7 +539,7 @@ def summary_legacy(
     cmap=colors.red_blue,
     show_values_in_legend: bool = False,
     use_log_scale: bool = False,
-    rng: np.random.Generator | None = None,
+    rng: np.random.Generator | np.random.RandomState | int | np.random.SeedSequence | None = None,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -573,11 +573,11 @@ def summary_legacy(
     show_values_in_legend: bool
         Flag to print the mean of the SHAP values in the multi-output bar plot. Set to False
         by default.
-    rng : `numpy.random.Generator`, optional
+    rng : `numpy.random.Generator`, `numpy.random.RandomState`, int, or `numpy.random.SeedSequence`, optional
         Pseudorandom number generator state. When `rng` is None,
         the legacy behavior of using global NumPy random state will be
-        used. Types other than `numpy.random.Generator` are
-        passed to `numpy.random.default_rng` to instantiate a ``Generator``.
+        used. Integer or seed-like inputs are passed to
+        `numpy.random.default_rng` to instantiate a ``Generator``.
 
     """
     # handle randomization machinery in conformance with SPEC 7

@@ -38,6 +38,8 @@ def group_difference(
     if rng is None:
         random = np.random.random
     else:
+        if not isinstance(rng, (np.random.Generator, np.random.RandomState)):
+            rng = np.random.default_rng(rng)
         random = rng.random
 
     # Compute confidence bounds for the group difference value
