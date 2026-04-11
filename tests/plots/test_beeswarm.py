@@ -112,10 +112,10 @@ def test_beeswarm_works_with_colors(color):
 
 
 def test_beeswarm_colors_values_with_data(color):
-    np.random.seed(42)
+    rs = np.random.RandomState(42)
 
     explanation = shap.Explanation(
-        values=np.random.randn(100, 5),
+        values=rs.randn(100, 5),
         data=np.array([["cat"] * 5] * 100),
     )
     shap.plots.beeswarm(explanation, show=False, color_bar=True, color=color)

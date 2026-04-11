@@ -87,9 +87,9 @@ def test_random_force_plot_mpl_text_rotation_with_data(data_explainer_shap_value
 
 @pytest.mark.mpl_image_compare(tolerance=3)
 def test_force_plot_negative_sign():
-    np.random.seed(0)
+    rs = np.random.RandomState(0)
     base = 100
-    contribution = np.r_[-np.random.rand(5)]
+    contribution = np.r_[-rs.rand(5)]
     names = [f"minus_{i}" for i in range(5)]
 
     shap.force_plot(
@@ -104,9 +104,9 @@ def test_force_plot_negative_sign():
 
 @pytest.mark.mpl_image_compare(tolerance=3)
 def test_force_plot_positive_sign():
-    np.random.seed(0)
+    rs = np.random.RandomState(0)
     base = 100
-    contribution = np.r_[np.random.rand(5)]
+    contribution = np.r_[rs.rand(5)]
     names = [f"plus_{i}" for i in range(5)]
 
     shap.force_plot(

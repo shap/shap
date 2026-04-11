@@ -15,6 +15,7 @@ def group_difference(
     sort=True,
     show=True,
     ax=None,
+    rng=None,
 ):
     """This plots the difference in mean SHAP values between two groups.
 
@@ -34,11 +35,16 @@ def group_difference(
         A list of feature names.
 
     """
+    if rng is None:
+        random = np.random.random
+    else:
+        random = rng.random
+
     # Compute confidence bounds for the group difference value
     vs = []
     gmean = group_mask.mean()
     for _ in range(200):
-        r = np.random.rand(shap_values.shape[0]) > gmean
+        r = random(shap_values.shape[0]) > gmean
         vs.append(shap_values[r].mean(0) - shap_values[~r].mean(0))
     vs_ = np.array(vs)
     xerr = np.vstack([np.percentile(vs_, 95, axis=0), np.percentile(vs_, 5, axis=0)])

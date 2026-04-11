@@ -582,7 +582,8 @@ def summary_legacy(
     """
     # handle randomization machinery in conformance with SPEC 7
     if rng is not None:
-        rng = np.random.default_rng(rng)
+        if not isinstance(rng, np.random.RandomState):
+            rng = np.random.default_rng(rng)
     else:
         global_seed_set = np.random.mtrand._rand._bit_generator._seed_seq is None  # type: ignore
         if global_seed_set:
@@ -699,6 +700,7 @@ def summary_legacy(
                 plot_size=plot_size,
                 class_names=class_names,
                 color_bar_label="*" + color_bar_label,
+                rng=rng,
             )
 
         if max_display is None:
@@ -729,6 +731,7 @@ def summary_legacy(
             color_bar=False,
             plot_size=None,
             max_display=max_display,
+            rng=rng,
         )
         plt.xlim((slow, shigh))
         plt.xlabel("")
@@ -749,6 +752,7 @@ def summary_legacy(
                 color_bar=False,
                 plot_size=None,
                 max_display=max_display,
+                rng=rng,
             )
             plt.xlim((slow, shigh))
             plt.xlabel("")
