@@ -325,6 +325,8 @@ class KernelExplainer(Explainer):
                     gc.collect()
 
             # vector-output
+            if len(explanations) == 0:
+                return []
             s = explanations[0].shape
             if len(s) == 2:
                 outs = [np.zeros((X.shape[0], s[0])) for j in range(s[1])]
