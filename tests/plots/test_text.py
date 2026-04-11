@@ -29,3 +29,19 @@ def test_single_text_to_text():
         hierarchical_values=[test_hierarchical_values],
     )
     shap.plots.text(shap_values_test)
+
+
+def test_multi_row_values():
+    """For multi row text plot logic"""
+    test_values = np.random.randn(2, 3)
+
+    test_base_values = np.array([0.1, 0.3])
+
+    test_data = np.array([["Hello", "world", " "], ["Testing", "text", "plot"]])
+
+    test_output_names = "Positive Sentiment"
+
+    shap_values_test = shap.Explanation(
+        values=test_values, base_values=test_base_values, data=test_data, output_names=test_output_names
+    )
+    shap.plots.text(shap_values_test, display=False)
