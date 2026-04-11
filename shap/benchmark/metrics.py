@@ -550,8 +550,6 @@ def __score_method(
     return np.array(method_reps).mean(0)
 
 
-
-
 def __intlogspace(start, end, count):
     return np.unique(np.round(start + (end - start) * (np.logspace(0, 1, count, endpoint=True) - 1) / 9).astype(int))
 
