@@ -246,13 +246,9 @@ def scatter(
         _, ax = plt.subplots(figsize=figsize)
 
     if shap_values_arr.shape[0] != features.shape[0]:
-        raise DimensionError(
-            "'shap_values_arr' and 'features' values must have the same number of rows!"
-        )
+        raise DimensionError("'shap_values_arr' and 'features' values must have the same number of rows!")
     if shap_values_arr.shape[1] != features.shape[1]:
-        raise DimensionError(
-            "'shap_values_arr' must have the same number of columns as 'features'!"
-        )
+        raise DimensionError("'shap_values_arr' must have the same number of columns as 'features'!")
 
     # get both the raw and display feature values
     oinds = np.arange(
@@ -683,13 +679,9 @@ def dependence_legacy(
         return
 
     if shap_values.shape[0] != features.shape[0]:
-        raise DimensionError(
-            "'shap_values' and 'features' values must have the same number of rows!"
-        )
+        raise DimensionError("'shap_values' and 'features' values must have the same number of rows!")
     if shap_values.shape[1] != features.shape[1]:
-        raise DimensionError(
-            "'shap_values' must have the same number of columns as 'features'!"
-        )
+        raise DimensionError("'shap_values' must have the same number of columns as 'features'!")
 
     # get both the raw and display feature values
     oinds = np.arange(
