@@ -83,3 +83,50 @@ def test_tabular_coalition_partition_match():
     binary_winter_values = partition_explainer_b(data)
 
     assert np.allclose(binary_values.values, binary_winter_values.values)  # type: ignore[union-attr]
+
+
+def test_coalition_explainer_raises_on_overlapping_features():
+    """CoalitionExplainer should raise ValueError for overlapping features."""
+    import pytest
+    from sklearn.datasets import load_iris
+    from sklearn.ensemble import RandomForestClassifier
+
+    import shap
+
+    X, y = load_iris(return_X_y=True)
+    feature_names = ["sepal length (cm)", "sepal width (cm)", "petal length (cm)", "petal width (cm)"]
+    model = RandomForestClassifier(n_estimators=10, random_state=42).fit(X, y)
+    masker = shap.maskers.Partition(X)
+    masker.feature_names = feature_names
+
+    overlapping_tree = {
+        "Sepal": ["sepal length (cm)", "sepal width (cm)"],
+        "Petal": ["petal length (cm)", "petal width (cm)"],
+        "Extra": ["sepal length (cm)"],  # duplicate
+    }
+
+    with pytest.raises(ValueError, match="overlapping features"):
+        shap.CoalitionExplainer(model.predict, masker, partition_tree=overlapping_tree)
+
+
+def test_coalition_explainer_valid_tree_no_error():
+    """CoalitionExplainer should not raise for a valid non-overlapping tree."""
+    from sklearn.datasets import load_iris
+    from sklearn.ensemble import RandomForestClassifier
+
+    import shap
+
+    X, y = load_iris(return_X_y=True)
+    feature_names = ["sepal length (cm)", "sepal width (cm)", "petal length (cm)", "petal width (cm)"]
+    model = RandomForestClassifier(n_estimators=10, random_state=42).fit(X, y)
+    masker = shap.maskers.Partition(X)
+    masker.feature_names = feature_names
+
+    valid_tree = {
+        "Sepal": ["sepal length (cm)", "sepal width (cm)"],
+        "Petal": ["petal length (cm)", "petal width (cm)"],
+    }
+
+    explainer = shap.CoalitionExplainer(model.predict, masker, partition_tree=valid_tree)
+    shap_values = explainer(X[:3]).values
+    assert shap_values.shape == (3, 4)
