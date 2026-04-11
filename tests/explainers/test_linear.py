@@ -262,3 +262,34 @@ def test_interventional_multi_regression():
     explainer = shap.explainers.LinearExplainer(model, maskers.Independent(X))
     shap_values = explainer.shap_values(X)
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, outputs, atol=1e-6)
+
+
+def test_linear_explainer_warns_singular_covariance():
+    """LinearExplainer should warn when n_samples <= n_features."""
+    import warnings
+
+    import numpy as np
+    from sklearn.linear_model import LinearRegression
+
+    import shap
+
+    rng = np.random.default_rng(42)
+    n_features = 10
+    X_train = rng.normal(size=(8, n_features))
+    y_train = X_train @ np.arange(1, n_features + 1, dtype=float)
+    model = LinearRegression().fit(X_train, y_train)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        shap.LinearExplainer(
+            model,
+            X_train,
+            feature_perturbation="correlation_dependent",
+        )
+        user_warnings = [
+            x for x in w if issubclass(x.category, UserWarning) and "singular covariance" in str(x.message).lower()
+        ]
+
+    assert len(user_warnings) == 1, (
+        f"Expected a UserWarning about singular covariance matrix but got: {[str(x.message) for x in w]}"
+    )
