@@ -449,6 +449,7 @@ class TreeExplainer(Explainer):
         check_additivity: bool,
     ) -> tuple[npt.NDArray[Any], npt.NDArray[Any] | pd.Series | None, npt.NDArray[np.bool_], bool, int, bool]:
         import numpy as np
+
         if not hasattr(X, "shape"):
             X = np.array(X)
         # see if we have a default tree_limit in place.
