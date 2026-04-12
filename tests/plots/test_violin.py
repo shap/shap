@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import pytest
 
 import shap
@@ -101,3 +102,44 @@ def test_summary_layered_violin_with_data2():
     )
     fig.set_layout_engine("tight")
     return fig
+
+
+@pytest.mark.mpl_image_compare(filename="test_violin_with_title.png", tolerance=5)
+def test_violin_with_title():
+    """Checks for warning when title value is passed"""
+    fig = plt.figure()
+
+    emsg = "The `title` argument is unused and will be removed in a future release."
+    with pytest.warns(DeprecationWarning, match=emsg):
+        shap.plots.violin(np.random.randn(20, 5), show=False, title="Violin")
+
+    plt.tight_layout()
+    return fig
+
+
+def test_violin_multi_output_values():
+    """Checks for error when multi output values are passed"""
+    values = np.random.randn(20, 5)
+    shap_values = [values, values]
+
+    emsg = "Violin plots don't support multi-output explanations! Use 'shap.plots.bar` instead."
+    with pytest.raises(TypeError, match=emsg):
+        shap.plots.violin(shap_values)
+
+
+@pytest.mark.parametrize(
+    "features, expected_feature_names",
+    [
+        # Feature is of type DataFrame
+        (pd.DataFrame({"A": [1, 2], "B": [3, 4]}), ["A", "B"]),
+        # Feature is of type list
+        (["Feature 1", "Feature 2"], ["Feature 1", "Feature 2"]),
+        # Feature is of type Array
+        (np.array(["Prop 1", "Prop 2"]), ["Prop 1", "Prop 2"]),
+    ],
+)
+def test_violin_features(features, expected_feature_names):
+    """Checks for conditions where features are passed"""
+    shap_values = np.random.randn(2, 2)
+
+    shap.plots.violin(shap_values, features=features, show=False)
