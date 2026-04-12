@@ -645,7 +645,7 @@ class TreeExplainer(Explainer):
                     self.expected_value = [phi[0, i, -1] for i in range(phi.shape[1])]
                     out = [phi[:, i, :-1] for i in range(phi.shape[1])]
                 else:
-                    self.expected_value = phi[0, -1]
+                    self.expected_value = np.array([phi[0, -1]])
                     out = phi[:, :-1]
 
                 if check_additivity and model_output_vals is not None:

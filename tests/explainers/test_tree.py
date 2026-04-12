@@ -3004,3 +3004,26 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+def test_tree_explainer_expected_value_shape_consistent_xgboost():
+    """expected_value shape should be consistent before and after calling shap_values().
+    Regression test for: https://github.com/shap/shap/issues/XXXX
+    Before this fix, shape changed from (1,) to () after calling shap_values().
+    """
+    xgboost = pytest.importorskip("xgboost")
+    from sklearn.datasets import make_classification
+
+    X, y = make_classification(n_samples=200, n_features=10, random_state=42)
+    model = xgboost.XGBClassifier(n_estimators=50, random_state=42)
+    model.fit(X[:150], y[:150])
+
+    explainer = shap.TreeExplainer(model)
+    shape_before = np.array(explainer.expected_value).shape
+
+    _ = explainer.shap_values(X[150:])
+    shape_after = np.array(explainer.expected_value).shape
+
+    assert shape_before == shape_after, (
+        f"expected_value shape changed after shap_values() call: {shape_before} -> {shape_after}"
+    )
