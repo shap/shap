@@ -413,13 +413,13 @@ def make_grid(scores, dataset, model, normalize=True, transform=True):
     col_keys = list(color_vals.keys())
     row_keys = list({v for k in col_keys for v in color_vals[k].keys()})
 
-    data = -28567 * np.ones((len(row_keys), len(col_keys)))
+    data = np.full((len(row_keys), len(col_keys)), np.nan)
 
     for i in range(len(row_keys)):
         for j in range(len(col_keys)):
             data[i, j] = color_vals[col_keys[j]][row_keys[i]]
 
-    assert np.sum(data == -28567) == 0, "There are missing data values!"
+    assert not np.any(np.isnan(data)), "There are missing data values!"
 
     if normalize:
         data = (data - data.min(0)) / (data.max(0) - data.min(0) + 1e-8)
