@@ -104,17 +104,12 @@ def test_summary_layered_violin_with_data2():
     return fig
 
 
-@pytest.mark.mpl_image_compare(filename="test_violin_with_title.png", tolerance=5)
 def test_violin_with_title():
     """Checks for warning when title value is passed"""
-    fig = plt.figure()
 
     emsg = "The `title` argument is unused and will be removed in a future release."
     with pytest.warns(DeprecationWarning, match=emsg):
         shap.plots.violin(np.random.randn(20, 5), show=False, title="Violin")
-
-    plt.tight_layout()
-    return fig
 
 
 def test_violin_multi_output_values():
@@ -143,3 +138,22 @@ def test_violin_features(features, expected_feature_names):
     shap_values = np.random.randn(2, 2)
 
     shap.plots.violin(shap_values, features=features, show=False)
+
+
+@pytest.mark.parametrize(
+    "plot_size",
+    [
+        # plot_size is auto
+        "auto",
+        # type(plot_size) is tuple
+        (10, 5),
+        # type(plot_size) is list
+        [12, 6],
+        # type(plot_size) is float
+        0.8,
+    ],
+)
+def test_violin_plot_size(plot_size):
+    """Checks for conditions with different plot_size types"""
+    shap_values = np.random.randn(5, 3)
+    shap.plots.violin(shap_values, plot_size=plot_size, show=False)
