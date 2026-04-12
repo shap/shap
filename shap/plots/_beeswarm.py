@@ -611,10 +611,7 @@ def summary_legacy(
 
     valid_plot_types = {"dot", "bar", "violin", "layered_violin", "compact_dot"}
     if plot_type is not None and plot_type not in valid_plot_types:
-        raise ValueError(
-            f"Invalid plot_type '{plot_type}'. "
-            f"Must be one of {sorted(valid_plot_types)}."
-        )
+        raise ValueError(f"Invalid plot_type '{plot_type}'. Must be one of {sorted(valid_plot_types)}.")
 
     multi_class = False
     if isinstance(shap_values, list):
