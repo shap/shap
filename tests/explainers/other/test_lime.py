@@ -18,7 +18,6 @@ pytest.importorskip("lime")
 
 from shap.explainers.other._lime import LimeTabular  # noqa: E402
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
