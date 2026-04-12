@@ -609,6 +609,13 @@ def summary_legacy(
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
 
+    valid_plot_types = {"dot", "bar", "violin", "layered_violin", "compact_dot"}
+    if plot_type is not None and plot_type not in valid_plot_types:
+        raise ValueError(
+            f"Invalid plot_type '{plot_type}'. "
+            f"Must be one of {sorted(valid_plot_types)}."
+        )
+
     multi_class = False
     if isinstance(shap_values, list):
         multi_class = True
@@ -620,7 +627,7 @@ def summary_legacy(
             plot_type = "dot"  # default for single output explanations
         assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
         # revert the shape of the shap_values matrix for multi-output explanations to list of matrices
-        if len(shap_values.shape) == 3 and shap_values.shape[2] > 2 and plot_type == "bar":
+        if len(shap_values.shape) == 3 and plot_type == "bar":
             shap_values = [shap_values[:, :, i] for i in range(shap_values.shape[2])]
             multi_class = True
 
