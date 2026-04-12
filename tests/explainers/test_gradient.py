@@ -483,3 +483,100 @@ def test_tf_input(random_seed, input_type):
     assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (
         d / np.abs(diff).sum()
     )
+
+
+def test_reproducibility_with_seed():
+    import numpy as np
+    import tensorflow as tf
+
+    import shap
+
+    tf.random.set_seed(0)
+    np.random.seed(0)
+
+    model = tf.keras.Sequential([tf.keras.layers.Input(shape=(3,)), tf.keras.layers.Dense(1)])
+    model.compile(optimizer="adam", loss="mse")
+
+    X = np.random.randn(20, 3)
+    background = X[:10]
+
+    explainer = shap.GradientExplainer(model, background)
+
+    vals1 = explainer.shap_values(X[:1], rseed=42)
+    vals2 = explainer.shap_values(X[:1], rseed=42)
+
+    np.testing.assert_allclose(vals1, vals2, atol=1e-6)
+
+
+def test_invalid_input_shape_raises():
+    import numpy as np
+    import pytest
+    import tensorflow as tf
+
+    import shap
+
+    model = tf.keras.Sequential([tf.keras.layers.Input(shape=(3,)), tf.keras.layers.Dense(1)])
+    model.compile(optimizer="adam", loss="mse")
+
+    background = np.zeros((10, 3))
+    explainer = shap.GradientExplainer(model, background)
+
+    with pytest.raises(AssertionError):
+        explainer.shap_values([np.ones((1, 3))])  # wrong type (list instead of array)
+
+
+def test_ranked_outputs():
+    import numpy as np
+    import tensorflow as tf
+
+    import shap
+
+    model = tf.keras.Sequential([tf.keras.layers.Input(shape=(4,)), tf.keras.layers.Dense(3)])
+    model.compile(optimizer="adam", loss="mse")
+
+    X = np.random.randn(20, 4)
+    explainer = shap.GradientExplainer(model, X[:10])
+
+    shap_vals, ranks = explainer.shap_values(X[:1], ranked_outputs=2)
+
+    assert ranks.shape[1] == 2
+    assert shap_vals.shape[0] == 1
+
+
+def test_local_smoothing_changes_output():
+    import numpy as np
+    import tensorflow as tf
+
+    import shap
+
+    model = tf.keras.Sequential([tf.keras.layers.Input(shape=(3,)), tf.keras.layers.Dense(1)])
+    model.compile(optimizer="adam", loss="mse")
+
+    X = np.random.randn(20, 3)
+
+    e1 = shap.GradientExplainer(model, X[:10], local_smoothing=0)
+    e2 = shap.GradientExplainer(model, X[:10], local_smoothing=0.1)
+
+    vals1 = e1.shap_values(X[:1])
+    vals2 = e2.shap_values(X[:1])
+
+    assert not np.allclose(vals1, vals2)
+
+
+def test_output_shape_consistency():
+    import numpy as np
+    import tensorflow as tf
+
+    import shap
+
+    model = tf.keras.Sequential([tf.keras.layers.Input(shape=(5,)), tf.keras.layers.Dense(2)])
+    model.compile(optimizer="adam", loss="mse")
+
+    X = np.random.randn(10, 5)
+    explainer = shap.GradientExplainer(model, X[:5])
+
+    shap_vals = explainer.shap_values(X[:2])
+
+    assert shap_vals.shape[0] == 2  # samples
+    assert shap_vals.shape[1] == 5  # features
+    assert shap_vals.shape[2] == 2  # outputs
