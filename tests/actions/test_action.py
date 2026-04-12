@@ -26,7 +26,7 @@ def test_create_and_run():
     action = IncreaseFeature1(4)
     action.__repr__()
     assert not (action < action)
-    action(X.iloc[0])
+    action(X)
     assert X["feature1"][0] == 5
 
 
