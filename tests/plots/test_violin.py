@@ -1,18 +1,19 @@
 """Tests for shap/plots/_violin.py"""
 
 import matplotlib
+
 matplotlib.use("Agg")  # non-interactive backend for testing
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
-import matplotlib.pyplot as plt
 
 import shap
 from shap.plots._violin import _trim_crange, shorten_text
 
-
 # ── helpers ──────────────────────────────────────────────────────────────────
+
 
 def make_shap_values(n_samples=50, n_features=5, seed=42):
     rng = np.random.RandomState(seed)
@@ -36,6 +37,7 @@ def make_explanation(n_samples=50, n_features=5):
 
 
 # ── _trim_crange ──────────────────────────────────────────────────────────────
+
 
 class TestTrimCrange:
     def test_basic(self):
@@ -77,6 +79,7 @@ class TestTrimCrange:
 
 # ── shorten_text ──────────────────────────────────────────────────────────────
 
+
 class TestShortenText:
     def test_short_text_unchanged(self):
         assert shorten_text("hi", 10) == "hi"
@@ -96,6 +99,7 @@ class TestShortenText:
 
 
 # ── violin() — basic smoke tests ──────────────────────────────────────────────
+
 
 class TestViolinPlot:
     def setup_method(self):
@@ -167,6 +171,7 @@ class TestViolinPlot:
 
 
 # ── violin() — error/edge cases ───────────────────────────────────────────────
+
 
 class TestViolinErrors:
     def setup_method(self):
