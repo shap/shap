@@ -335,6 +335,34 @@ class TreeExplainer(Explainer):
             if self.model.model_output != "raw":
                 self.expected_value = None  # we don't handle transforms in this case right now...
 
+            if self.model.model_type == "xgboost" and self.model.model_output == "raw":
+                import xgboost
+
+                _check_xgboost_version(xgboost.__version__)
+                try:
+                    n_features = self.model.original_model.num_features()
+                    dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
+                    dummy = xgboost.DMatrix(np.zeros((1, n_features)), **dmatrix_props)
+                    n_iterations = _xgboost_n_iterations(-1, self.model.num_stacked_models)
+                    phi_init = self.model.original_model.predict(
+                        dummy,
+                        iteration_range=(0, n_iterations),
+                        pred_contribs=True,
+                        validate_features=False,
+                    )
+                    if len(phi_init.shape) == 3:
+                        self.expected_value = [phi_init[0, i, -1] for i in range(phi_init.shape[1])]
+                    else:
+                        self.expected_value = np.array([phi_init[0, -1]])  # shape (1,)
+                except Exception as e:
+                    warnings.warn(
+                        f"Could not compute XGBoost expected_value at initialization "
+                        f"({type(e).__name__}: {e}). Falling back to manual tree "
+                        "calculation. Call shap_values() to get the correct value.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+
         # if our output format requires binary classification to be represented as two outputs then we do that here
         if self.model.model_output == "probability_doubled" and self.expected_value is not None:
             self.expected_value = [1 - self.expected_value, self.expected_value]
