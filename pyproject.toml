@@ -395,3 +395,9 @@ archs = ["x86_64", "arm64"]
 [tool.cibuildwheel.macos.environment]
 # Needed for C++17 support
 MACOSX_DEPLOYMENT_TARGET = "10.13"
+
+[tool.cibuildwheel.linux.environment]
+# Build CUDA extensions for distribution
+SHAP_CUDA_BUILD = "1"
+SHAP_CUDA_ARCHITECTURES = "all"
+

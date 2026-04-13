@@ -107,6 +107,8 @@ install(TARGETS _cext LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 # Enabled via: SHAP_ENABLE_CUDA=1 pip install .
 # ==============================================================================
 
+OPTION(SHAP_CUDA_ARCHITECTURES "CUDA architectures to target (e.g., 70;75;80;86)" "native")
+
 if(DEFINED ENV{SHAP_ENABLE_CUDA})
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED)
@@ -125,7 +127,7 @@ if(DEFINED ENV{SHAP_ENABLE_CUDA})
   target_link_libraries(_cext_gpu PRIVATE CUDA::cudart)
 
   set_target_properties(_cext_gpu PROPERTIES
-    CUDA_ARCHITECTURES "60;70;75;80"
+    CUDA_ARCHITECTURES ${SHAP_CUDA_ARCHITECTURES}
     CUDA_STANDARD 14
     CUDA_EXTENSIONS ON
   )
