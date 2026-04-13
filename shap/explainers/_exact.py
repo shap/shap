@@ -7,7 +7,7 @@ import numpy as np
 import numpy.typing as npt
 from numba import njit  # type: ignore[attr-defined]
 
-from shap.cutils.cutils import _compute_grey_code_row_values
+from shap.cutils import compute_grey_code_row_values
 
 from .. import links
 from ..models import Model
@@ -177,7 +177,7 @@ class ExactExplainer(Explainer):
                 row_values = np.zeros((len(fm),) + outputs.shape[1:])
                 mask = np.zeros(len(fm), dtype=bool)
 
-                _compute_grey_code_row_values(
+                compute_grey_code_row_values(
                     row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value
                 )
 

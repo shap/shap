@@ -6,11 +6,14 @@ name: test_js
 
 on:
   push:
+    # TODO: remove "move-to-nanobind" branch before merge
     branches:
       - master
+      - "move-to-nanobind"
   pull_request:
     branches:
       - master
+      - "move-to-nanobind"
     paths:
       - "javascript/**"
 
