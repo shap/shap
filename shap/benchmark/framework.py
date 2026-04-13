@@ -4,13 +4,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from . import perturbation
+from . import _sequential as perturbation
 
 
 def update(model, attributions, X, y, masker, sort_order, perturbation_method, scores):
     metric = perturbation_method + " " + sort_order
     sp = perturbation.SequentialPerturbation(model, masker, sort_order, perturbation_method)
-    xs, ys, auc = sp.model_score(attributions, X, y=y)
+    xs, ys, auc = sp.score(attributions, X, y=y)
     scores["metrics"].append(metric)
     scores["values"][metric] = [xs, ys, auc]
 
@@ -94,7 +94,10 @@ def compare_plot(benchmarks):
         for explainer in explainers:
             scores = benchmarks[explainer]
             _, _, auc = scores["values"][metric]
-            aucs[explainer].append((auc - min_auc) / (max_auc - min_auc))
+            if max_auc == min_auc:
+                aucs[explainer].append(0.5)
+            else:
+                aucs[explainer].append((auc - min_auc) / (max_auc - min_auc))
 
     # plot common curves
     ax = plt.gca()
