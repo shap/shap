@@ -64,8 +64,8 @@ jobs:
         os: ["ubuntu-latest"]
         # The total number of matrix jobs should match codecov.yml `after_n_builds`.
         python-version: ["3.12",
-                         # "3.13",
-                         # "3.14"
+                         "3.13",
+                         "3.14"
                          ]
         extras: ["test"]
         include:
@@ -124,8 +124,8 @@ jobs:
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
       - name: Restore datasets to correct locations
         shell: bash
         run: |
