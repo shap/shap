@@ -49,6 +49,24 @@ nanobind_add_module(
   shap/cutils/cutils.cpp
 )
 
+nanobind_add_stub(
+  _cutils_stub
+  MODULE _cutils
+  OUTPUT _cutils.pyi
+  PYTHON_PATH $<TARGET_FILE_DIR:_cutils>
+  MARKER_FILE py.typed
+  DEPENDS _cutils
+)
+
+# Keep generated typing artifacts visible to language servers during local/editable
+# development. VS Code/Pylance resolves this workspace package from source.
+add_custom_command(
+  TARGET _cutils_stub POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${CMAKE_CURRENT_BINARY_DIR}/_cutils.pyi
+    ${CMAKE_CURRENT_SOURCE_DIR}/shap/_cutils.pyi
+)
+
 # Install the module to shap
 install(TARGETS _cutils LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 
