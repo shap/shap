@@ -171,3 +171,13 @@ def test_call_image_masker_with_no_mask():
     image = np.ones((5, 5, 3))
     result = image_masker(None, image)
     assert np.all(result[0] == 0)  # entire image masked with mask_value (all 0)
+
+
+def test_inpaint_fully_masked_image():
+    """Make sure mean colour is used when entire image is masked during inpainting"""
+    image_masker = shap.maskers.Image("inpaint_telea", (5, 5, 3))
+    image = np.zeros((5, 5, 3))
+    image[0, 0, :] = 100  # one pixel has 100 for all three channels, the rest are all 0
+    # mean = 100/ (5*5) = 4.00
+    result = image_masker(None, image)
+    assert np.all(result[0] == 4.0)
