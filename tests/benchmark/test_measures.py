@@ -1,15 +1,14 @@
 import numpy as np
-import pytest
 import pandas as pd
-
+import pytest
 from sklearn.linear_model import LinearRegression
 
 import shap.benchmark.measures as measures
 
-
 # =========================
 # Fixtures
 # =========================
+
 
 @pytest.fixture
 def data():
@@ -41,6 +40,7 @@ def metric():
 # Helper functions
 # =========================
 
+
 def test_to_array():
     df = pd.DataFrame([[1, 2], [3, 4]])
     out = measures.to_array(df)[0]
@@ -62,6 +62,7 @@ def test_strip_list():
 # =========================
 # Core masking logic
 # =========================
+
 
 def test_remove_mask(data, model, metric):
     X_train, X_test, y_train, y_test, attr_test = data
@@ -109,6 +110,7 @@ def test_keep_mask(data, model, metric):
 # Advanced (imputation)
 # =========================
 
+
 def test_remove_impute(data, model, metric):
     X_train, X_test, y_train, y_test, attr_test = data
 
@@ -154,6 +156,7 @@ def test_keep_impute(data, model, metric):
 # =========================
 # Optional: resampling
 # =========================
+
 
 def test_remove_resample(data, model, metric):
     X_train, X_test, y_train, y_test, attr_test = data
