@@ -63,10 +63,9 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         # The total number of matrix jobs should match codecov.yml `after_n_builds`.
-        python-version: [
-                         #"3.12",
-                         #"3.13",
-                         "3.14"
+        python-version: ["3.12",
+                         # "3.13",
+                         # "3.14"
                          ]
         extras: ["test"]
         include:
@@ -125,6 +124,8 @@ jobs:
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: Restore datasets to correct locations
         shell: bash
         run: |
@@ -149,8 +150,6 @@ jobs:
           ls -la ~/scikit_learn_data/ 2>/dev/null || echo "No sklearn data"
           echo "Shap cache data:"
           ls -la "$SHAP_CACHE_DIR" 2>/dev/null || echo "No shap data"
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
         # - Use "pytest" over "python -m pytest"
