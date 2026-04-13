@@ -163,3 +163,11 @@ def test_call_image_masker_shape_mismatch():
     mask = np.ones(48, dtype=bool)
     with pytest.raises(DimensionError):
         image_masker(mask, image)
+
+
+def test_call_image_masker_with_no_mask():
+    """Make sure the entire image is masked when mask=None is passed."""
+    image_masker = shap.maskers.Image(np.zeros((5, 5, 3)))
+    image = np.ones((5, 5, 3))
+    result = image_masker(None, image)
+    assert np.all(result[0] == 0)  # entire image masked with mask_value (all 0)
