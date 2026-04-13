@@ -1,7 +1,7 @@
 import numpy as np
-import pytest
-import shap
 from sklearn.tree import DecisionTreeClassifier
+
+import shap
 
 
 def test_custom_tree_node_sample_weight_data_count():
@@ -29,12 +29,12 @@ def test_custom_tree_node_sample_weight_data_count():
     norm_values = (raw_values.T / raw_values.sum(1)).T
 
     tree_dict = {
-        "children_left":      tree_.children_left,
-        "children_right":     tree_.children_right,
-        "children_default":   tree_.children_right.copy(),
-        "features":           tree_.feature,
-        "thresholds":         tree_.threshold,
-        "values":             norm_values,
+        "children_left": tree_.children_left,
+        "children_right": tree_.children_right,
+        "children_default": tree_.children_right.copy(),
+        "features": tree_.feature,
+        "thresholds": tree_.threshold,
+        "values": norm_values,
         "node_sample_weight": tree_.weighted_n_node_samples,  # data count
     }
 
