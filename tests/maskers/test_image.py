@@ -143,3 +143,13 @@ def test_init_scalar_mask_with_shape():
     assert image_masker.input_shape == (5, 5, 3)
     assert image_masker.mask_value.shape == (75,)
     assert np.all(image_masker.mask_value == 5)
+
+
+def test_call_with_torch_tensor():
+    """x is converted from torch Tensor to numpy array before masking"""
+    torch = pytest.importorskip("torch")
+    image_masker = shap.maskers.Image(np.zeros((5, 5, 3)))
+    x = torch.zeros(5, 5, 3)
+    mask = np.ones(75, dtype=bool)
+    result = image_masker(mask, x)
+    assert isinstance(result[0], np.ndarray)
