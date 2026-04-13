@@ -170,7 +170,9 @@ def group_difference_legacy(
     if ax is not None:
         show = False
 
-    exp = Explanation(values=np.asarray(shap_values), feature_names=None if feature_names is None else list(feature_names))
+    exp = Explanation(
+        values=np.asarray(shap_values), feature_names=None if feature_names is None else list(feature_names)
+    )
     _ = group_difference(
         exp,
         group_mask,

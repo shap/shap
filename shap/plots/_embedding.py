@@ -96,9 +96,7 @@ def embedding(
     else:
         embedding_values = np.asarray(method)
         if embedding_values.ndim != 2 or embedding_values.shape[1] != 2:
-            raise ValueError(
-                "Unsupported embedding method. Pass method='pca' or an array of shape (# samples, 2)."
-            )
+            raise ValueError("Unsupported embedding method. Pass method='pca' or an array of shape (# samples, 2).")
         if embedding_values.shape[0] != shap_values_arr.shape[0]:
             raise ValueError(
                 "When passing explicit embedding coordinates, method must have the same number of rows as shap_values."
@@ -155,6 +153,8 @@ def embedding_legacy(
         "https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/migrating-to-new-api.html",
         DeprecationWarning,
     )
-    exp = Explanation(values=np.asarray(shap_values), feature_names=None if feature_names is None else list(feature_names))
+    exp = Explanation(
+        values=np.asarray(shap_values), feature_names=None if feature_names is None else list(feature_names)
+    )
     _ = embedding(ind, exp, feature_names=feature_names, method=method, alpha=alpha, show=show)
     return
