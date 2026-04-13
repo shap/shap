@@ -446,6 +446,46 @@ def test_pytorch_mnist_cnn_call(torch_device, interim):
     reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
 )
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
+def test_pytorch_deep_tuple_output_lnn_style(torch_device):
+    """DeepExplainer should support models returning (prediction, state)."""
+    torch = pytest.importorskip("torch")
+    from torch import nn
+
+    class LiquidLikeNet(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.in_proj = nn.Linear(3, 5)
+            self.state_proj = nn.Linear(5, 5)
+            self.out_proj = nn.Linear(5, 2)
+
+        def forward(self, x, state=None):
+            if state is None:
+                state = torch.zeros((x.shape[0], 5), device=x.device)
+            next_state = torch.tanh(self.in_proj(x) + self.state_proj(state))
+            output = self.out_proj(next_state)
+            return output, next_state
+
+    model = LiquidLikeNet().to(torch_device)
+    background = torch.zeros(10, 3, device=torch_device)
+    to_explain = torch.randn(4, 3, device=torch_device)
+
+    explainer = shap.DeepExplainer(model, background)
+    shap_values = explainer.shap_values(to_explain)
+
+    model.eval()
+    with torch.no_grad():
+        outputs, _ = model(to_explain)
+        expected_value = model(background)[0].mean(0).detach().cpu().numpy()
+
+    sums = shap_values.sum(axis=1)
+    np.testing.assert_allclose(sums + expected_value, outputs.detach().cpu().numpy(), atol=2e-2)
+
+
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
+@pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_custom_nested_models(torch_device):
     """Testing single outputs"""
     torch = pytest.importorskip("torch")

@@ -8,6 +8,19 @@ from .deep_utils import _check_additivity
 
 
 class PyTorchDeep(Explainer):
+    @staticmethod
+    def _primary_output(outputs):
+        """Return the primary tensor output when a model returns auxiliary state.
+
+        Some recurrent architectures (including liquid-style models) return
+        tuples/lists like ``(predictions, hidden_state)``.
+        """
+        if isinstance(outputs, (tuple, list)):
+            if len(outputs) == 0:
+                raise ValueError("Model returned an empty output tuple/list.")
+            return outputs[0]
+        return outputs
+
     def __init__(self, model, data):
         import torch
 
@@ -50,7 +63,7 @@ class PyTorchDeep(Explainer):
         self.multi_output = False
         self.num_outputs = 1
         with torch.no_grad():
-            outputs = model(*data)
+            outputs = self._primary_output(model(*data))
 
             # also get the device everything is running on
             self.device = outputs.device
@@ -99,7 +112,7 @@ class PyTorchDeep(Explainer):
 
         self.model.zero_grad()
         X = [x.requires_grad_() for x in inputs]
-        outputs = self.model(*X)
+        outputs = self._primary_output(self.model(*X))
         selected = [val for val in outputs[:, idx]]
         grads = []
         if self.interim:
@@ -145,7 +158,7 @@ class PyTorchDeep(Explainer):
 
         if ranked_outputs is not None and self.multi_output:
             with torch.no_grad():
-                model_output_values = self.model(*X)
+                model_output_values = self._primary_output(self.model(*X))
             # rank and determine the model outputs that we will explain
             if output_rank_order == "max":
                 _, model_output_ranks = torch.sort(model_output_values, descending=True)
@@ -221,7 +234,7 @@ class PyTorchDeep(Explainer):
         if check_additivity:
             if model_output_values is None:
                 with torch.no_grad():
-                    model_output_values = self.model(*X)
+                    model_output_values = self._primary_output(self.model(*X))
 
             _check_additivity(self, model_output_values.cpu(), output_phis)
 
