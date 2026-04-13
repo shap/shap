@@ -1,20 +1,19 @@
 # tests/benchmark/test_methods.py
 
-import pytest
-import numpy as np
-
-import shap
-import shap.benchmark.methods as methods
-
-from sklearn.datasets import make_regression
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
 from unittest.mock import MagicMock, patch
 
+import numpy as np
+import pytest
+from sklearn.datasets import make_regression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
+
+import shap.benchmark.methods as methods
 
 # =========================
 # Fixtures
 # =========================
+
 
 @pytest.fixture
 def regression_data():
@@ -37,6 +36,7 @@ def tree_model(regression_data):
 # =========================
 # REAL TESTS (CORE EXPLAINERS)
 # =========================
+
 
 def test_linear_shap_corr_real(linear_model, regression_data):
     X, _ = regression_data
@@ -111,6 +111,7 @@ def test_sampling_shap_real(linear_model, regression_data):
 # CONDITIONAL TESTS (NO MOCKS)
 # =========================
 
+
 def test_deep_shap_conditional():
     pytest.importorskip("tensorflow")
 
@@ -140,6 +141,7 @@ def test_expected_gradients_conditional():
 # =========================
 # MOCKED TESTS (NON-CORE)
 # =========================
+
 
 @patch.object(methods.other, "CoefficentExplainer", create=True)
 def test_coef_mock(mock_explainer):
