@@ -1775,7 +1775,20 @@ class SingleTree:
 
     node_sample_weight : numpy.array
         A 1d numpy array of length #nodes. The index ``i`` contains the number of
-        records (usually from the training data) that falls into node ``i``.
+        training samples (data count) that fall into node ``i``.
+
+        .. note::
+            This should be the **raw sample count**, not the hessian sum.
+            For regression tasks these are equivalent, but for classification
+            tasks they differ. Using the hessian sum (as stored internally by
+            XGBoost and some LightGBM objectives) instead of the data count
+            can violate the SHAP local accuracy property:
+            ``sum(shap_values) + expected_value == model_output``.
+
+            When constructing a custom tree dict to pass to
+            :class:`TreeExplainer`, always use the actual number of training
+            samples at each node (e.g. ``tree_.weighted_n_node_samples`` from
+            scikit-learn), not gradient-based weights.
 
     max_depth : int
         The max depth of the tree.
@@ -1832,6 +1845,12 @@ class SingleTree:
             self.thresholds = tree["thresholds"]
             self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = tree["values"] * scaling
+            # node_sample_weight should be the raw training data count at each node,
+            # NOT the hessian sum. For classification tasks these differ: hessian
+            # weights depend on predicted probabilities and can break local accuracy
+            # (sum(shap_values) + expected_value == model_output).
+            # Use e.g. tree_.weighted_n_node_samples from sklearn, or internal_count
+            # from a LightGBM dump_model() dict. See GitHub issue #4166.
             self.node_sample_weight = tree["node_sample_weight"]
 
         # deprecated dictionary support (with sklearn singular style "feature" and "value" names)
@@ -2421,6 +2440,14 @@ class XGBTreeModelLoader:
     ) -> list[SingleTree]:
         trees = []
         for i in range(self.num_trees):
+            # NOTE: XGBoost stores sum_hessian (hessian sum) rather than the raw
+            # data count in its model binary. For regression these are equivalent,
+            # but for classification the hessian depends on predicted probabilities
+            # and differs from the true sample count. We use sum_hess here because
+            # it is the only weight available directly from the XGBoost model dump.
+            # This matches XGBoost's own pred_contribs output (used in the fast path
+            # above) and keeps expected_value consistent with XGBoost's native SHAP.
+            # See GitHub issue #4166 for the full discussion.
             info = {
                 "children_left": self.node_cleft[i],
                 "children_right": self.node_cright[i],
