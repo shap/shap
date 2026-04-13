@@ -7,6 +7,7 @@ import pytest
 
 import shap
 from shap.utils import assert_import
+from shap.utils._exceptions import DimensionError
 
 try:
     assert_import("cv2")
@@ -153,3 +154,12 @@ def test_call_with_torch_tensor():
     mask = np.ones(75, dtype=bool)
     result = image_masker(mask, x)
     assert isinstance(result[0], np.ndarray)
+
+
+def test_call_image_masker_shape_mismatch():
+    """Make sure DimensionError when image and masker shapes mismatch"""
+    image_masker = shap.maskers.Image(np.zeros((4, 4, 3)))
+    image = np.zeros((5, 5, 3))
+    mask = np.ones(48, dtype=bool)
+    with pytest.raises(DimensionError):
+        image_masker(mask, image)
