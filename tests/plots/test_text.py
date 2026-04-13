@@ -1,6 +1,51 @@
 import numpy as np
+import pytest
 
 import shap
+
+
+def test_text_plot_input_is_explanation():
+    with pytest.raises(
+        TypeError,
+        match="text plot requires an `Explanation` object",
+    ):
+        shap.plots.text(np.array([[1.0, -1.0]]))
+
+
+def test_text_plot_returns_html_when_display_false():
+    explanation = shap.Explanation(
+        values=np.array([0.25, -0.1]),
+        base_values=0.0,
+        data=np.array(["hello ", "world"]),
+    )
+    html = shap.plots.text(explanation, display=False)
+
+    assert isinstance(html, str)
+    assert "<div" in html
+
+
+def test_text_plot_multirow_returns_html_when_display_false():
+    explanation = shap.Explanation(
+        values=np.array([[0.25, -0.1], [0.3, -0.2]]),
+        base_values=np.array([0.0, 0.0]),
+        data=np.array([["hello ", "world"], ["goodbye ", "world"]], dtype=object),
+    )
+    html = shap.plots.text(explanation, display=False)
+
+    assert isinstance(html, str)
+    assert "<div" in html
+
+
+def test_text_plot_display_requires_ipython(monkeypatch):
+    explanation = shap.Explanation(
+        values=np.array([0.25, -0.1]),
+        base_values=0.0,
+        data=np.array(["hello ", "world"]),
+    )
+    monkeypatch.setattr(shap.plots._text, "have_ipython", False)
+
+    with pytest.raises(ImportError, match="IPython is required for this function"):
+        shap.plots.text(explanation, display=True)
 
 
 def test_single_text_to_text():
