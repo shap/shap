@@ -184,4 +184,3 @@ def test_record_and_assert_import(monkeypatch):
 
 def test_assert_import_no_error():
     shap.utils.assert_import("definitely_not_recorded")
-
