@@ -124,8 +124,6 @@ jobs:
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
-      # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
       - name: Restore datasets to correct locations
         shell: bash
         run: |
