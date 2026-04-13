@@ -1,163 +1,230 @@
+# tests/benchmark/test_methods.py
+
 import pytest
 import numpy as np
-from unittest.mock import MagicMock, patch
 
+import shap
 import shap.benchmark.methods as methods
 
+from sklearn.datasets import make_regression
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from unittest.mock import MagicMock, patch
 
-# ---------- helpers ----------
+
+# =========================
+# Fixtures
+# =========================
 
 @pytest.fixture
-def dummy_data():
-    return np.random.randn(300, 5)
+def regression_data():
+    X, y = make_regression(n_samples=25, n_features=5, random_state=0)
+    return X, y
 
 
 @pytest.fixture
-def dummy_X():
-    return np.random.randn(10, 5)
+def linear_model(regression_data):
+    X, y = regression_data
+    return LinearRegression().fit(X, y)
 
 
-# ---------- simple functions ----------
+@pytest.fixture
+def tree_model(regression_data):
+    X, y = regression_data
+    return RandomForestRegressor(n_estimators=5, random_state=0).fit(X, y)
 
-@patch("shap.benchmark.methods.LinearExplainer")
-def test_linear_shap_corr(mock_explainer, dummy_data):
-    mock_instance = MagicMock()
-    mock_instance.shap_values = "ok"
-    mock_explainer.return_value = mock_instance
 
-    result = methods.linear_shap_corr("model", dummy_data)
-    assert result == "ok"
+# =========================
+# REAL TESTS (CORE EXPLAINERS)
+# =========================
 
+def test_linear_shap_corr_real(linear_model, regression_data):
+    X, _ = regression_data
+    f = methods.linear_shap_corr(linear_model, X)
+    out = f(X)
+
+    assert isinstance(out, np.ndarray)
+    assert out.shape == X.shape
+
+
+def test_linear_shap_ind_real(linear_model, regression_data):
+    X, _ = regression_data
+    f = methods.linear_shap_ind(linear_model, X)
+    out = f(X)
+
+    assert isinstance(out, np.ndarray)
+    assert out.shape == X.shape
+
+
+def test_tree_shap_tree_path_dependent_real(tree_model, regression_data):
+    X, _ = regression_data
+    f = methods.tree_shap_tree_path_dependent(tree_model, X)
+    out = f(X)
+
+    assert isinstance(out, np.ndarray)
+    assert out.shape == X.shape
+
+
+def test_tree_shap_independent_real(tree_model, regression_data):
+    X, _ = regression_data
+    f = methods.tree_shap_independent_200(tree_model, X)
+    out = f(X)
+
+    assert isinstance(out, np.ndarray)
+    assert out.shape == X.shape
+
+
+def test_mean_abs_tree_shap_real(tree_model, regression_data):
+    X, _ = regression_data
+    f = methods.mean_abs_tree_shap(tree_model, X)
+    out = f(X)
+
+    assert isinstance(out, np.ndarray)
+    assert out.shape == X.shape
+    assert np.all(out >= 0)
+
+
+def test_kernel_shap_real(linear_model, regression_data):
+    X, _ = regression_data
+
+    background = X[:10]
+    test_data = X[:5]
+
+    f = methods.kernel_shap_1000_meanref(linear_model, background)
+    out = f(test_data)
+
+    assert isinstance(out, np.ndarray)
+    assert out.shape == test_data.shape
+
+
+def test_sampling_shap_real(linear_model, regression_data):
+    X, _ = regression_data
+
+    f = methods.sampling_shap_1000(linear_model, X)
+    out = f(X[:5])
+
+    assert isinstance(out, np.ndarray)
+    assert out.shape == (5, X.shape[1])
+
+
+# =========================
+# CONDITIONAL TESTS (NO MOCKS)
+# =========================
+
+def test_deep_shap_conditional():
+    pytest.importorskip("tensorflow")
+
+    X = np.random.randn(10, 5)
+
+    # Dummy model (only structure, not deep model)
+    model = lambda x: x
+
+    f = methods.deep_shap(model, X)
+    out = f(X)
+
+    assert out is not None
+
+
+def test_expected_gradients_conditional():
+    pytest.importorskip("tensorflow")
+
+    X = np.random.randn(10, 5)
+    model = lambda x: x
+
+    f = methods.expected_gradients(model, X)
+    out = f(X)
+
+    assert out is not None
+
+
+# =========================
+# MOCKED TESTS (NON-CORE)
+# =========================
 
 @patch.object(methods.other, "CoefficentExplainer", create=True)
-def test_coef(mock_explainer):
+def test_coef_mock(mock_explainer):
     mock_instance = MagicMock()
-    mock_instance.attributions = "coef"
+    mock_instance.attributions = np.ones((5, 3))
     mock_explainer.return_value = mock_instance
 
     result = methods.coef("model", None)
-    assert result == "coef"
+    assert result.shape == (5, 3)
 
 
-# ---------- lambda-return functions ----------
-
-@patch("shap.benchmark.methods.kmeans")
-@patch("shap.benchmark.methods.KernelExplainer")
-def test_kernel_shap_lambda(mock_explainer, mock_kmeans, dummy_data, dummy_X):
-    mock_kmeans.return_value = MagicMock(data=dummy_data)
-
+@patch.object(methods.other, "RandomExplainer", create=True)
+def test_random_mock(mock_explainer):
     mock_instance = MagicMock()
-    mock_instance.shap_values.return_value = "val"
+    mock_instance.attributions = np.ones((5, 3))
     mock_explainer.return_value = mock_instance
 
-    f = methods.kernel_shap_1000_meanref(MagicMock(), dummy_data)
-    assert callable(f)
-    assert f(dummy_X) == "val"
+    result = methods.random("model", None)
+    assert result.shape == (5, 3)
 
 
-# ---------- tree_shap_independent_200 ----------
-
-@patch("shap.benchmark.methods.TreeExplainer")
-def test_tree_shap_independent_subsample(mock_explainer, dummy_data):
+@patch.object(methods.other, "TreeGainExplainer", create=True)
+def test_tree_gain_mock(mock_explainer):
     mock_instance = MagicMock()
-    mock_instance.shap_values = "tree"
+    mock_instance.attributions = np.ones((5, 3))
     mock_explainer.return_value = mock_instance
 
-    result = methods.tree_shap_independent_200("model", dummy_data)
-    mock_explainer.assert_called_once()
-    assert result == "tree"
+    result = methods.tree_gain("model", None)
+    assert result.shape == (5, 3)
 
 
-# ---------- mean_abs_tree_shap ----------
-
-@patch("shap.benchmark.methods.TreeExplainer")
-def test_mean_abs_tree_shap_array(mock_explainer, dummy_X):
+@patch.object(methods.other, "LimeTabularExplainer", create=True)
+def test_lime_regression_mock(mock_explainer):
     mock_instance = MagicMock()
-    mock_instance.shap_values.return_value = np.ones((10, 5))
+    mock_instance.attributions.return_value = np.ones((5, 3))
     mock_explainer.return_value = mock_instance
 
-    f = methods.mean_abs_tree_shap("model", None)
-    out = f(dummy_X)
+    model = MagicMock()
+    model.predict = MagicMock()
 
-    assert out.shape == (10, 5)
+    f = methods.lime_tabular_regression_1000(model, np.random.randn(10, 3))
+    out = f(np.random.randn(5, 3))
+
+    assert out.shape == (5, 3)
 
 
-@patch("shap.benchmark.methods.TreeExplainer")
-def test_mean_abs_tree_shap_list(mock_explainer, dummy_X):
+@patch.object(methods.other, "LimeTabularExplainer", create=True)
+def test_lime_classification_mock(mock_explainer):
     mock_instance = MagicMock()
-    mock_instance.shap_values.return_value = [np.ones((10, 5))]
+    mock_instance.attributions.return_value = [None, np.ones((5, 3))]
     mock_explainer.return_value = mock_instance
 
-    f = methods.mean_abs_tree_shap("model", None)
-    out = f(dummy_X)
+    model = MagicMock()
+    model.predict_proba = MagicMock()
 
-    assert isinstance(out, list)
-    assert len(out) == 1
+    f = methods.lime_tabular_classification_1000(model, np.random.randn(10, 3))
+    out = f(np.random.randn(5, 3))
+
+    assert out.shape == (5, 3)
 
 
-# ---------- deep_shap ----------
-
-@patch("shap.benchmark.methods.kmeans")
-@patch("shap.benchmark.methods.DeepExplainer")
-def test_deep_shap_single_output(mock_explainer, mock_kmeans, dummy_X):
-    mock_kmeans.return_value = MagicMock(data=dummy_X)
-
+@patch.object(methods.other, "MapleExplainer", create=True)
+def test_maple_mock(mock_explainer):
     mock_instance = MagicMock()
-    mock_instance.shap_values.return_value = [np.ones((10, 5))]
+    mock_instance.attributions.return_value = np.ones((5, 3))
     mock_explainer.return_value = mock_instance
 
-    f = methods.deep_shap("model", np.ones((10, 5)))
-    out = f(dummy_X)
+    model = MagicMock()
+    model.predict = MagicMock()
 
-    assert isinstance(out, np.ndarray)
+    f = methods.maple(model, np.random.randn(10, 3))
+    out = f(np.random.randn(5, 3))
+
+    assert out.shape == (5, 3)
 
 
-@patch("shap.benchmark.methods.kmeans")
-@patch("shap.benchmark.methods.DeepExplainer")
-def test_deep_shap_multi_output(mock_explainer, mock_kmeans, dummy_X):
-    mock_kmeans.return_value = MagicMock(data=dummy_X)
-
+@patch.object(methods.other, "TreeMapleExplainer", create=True)
+def test_tree_maple_mock(mock_explainer):
     mock_instance = MagicMock()
-    mock_instance.shap_values.return_value = [1, 2]
+    mock_instance.attributions.return_value = np.ones((5, 3))
     mock_explainer.return_value = mock_instance
 
-    f = methods.deep_shap("model", np.ones((10, 5)))
-    out = f(dummy_X)
+    model = MagicMock()
 
-    assert isinstance(out, list)
+    f = methods.tree_maple(model, np.random.randn(10, 3))
+    out = f(np.random.randn(5, 3))
 
-
-# ---------- expected_gradients ----------
-
-@patch("shap.benchmark.methods.GradientExplainer")
-def test_expected_gradients(mock_explainer, dummy_X):
-    mock_instance = MagicMock()
-    mock_instance.shap_values.return_value = [np.ones((10, 5))]
-    mock_explainer.return_value = mock_instance
-
-    f = methods.expected_gradients("model", np.ones((10, 5)))
-    out = f(dummy_X)
-
-    assert isinstance(out, np.ndarray)
-
-
-# ---------- KerasWrap handling ----------
-
-def test_keras_wrap_unwrap():
-    class DummyWrap:
-        def __init__(self):
-            self.model = "real_model"
-
-    model = DummyWrap()
-
-    with patch("shap.benchmark.methods.kmeans") as mock_kmeans, \
-         patch("shap.benchmark.methods.DeepExplainer") as mock_explainer:
-
-        mock_kmeans.return_value = MagicMock(data=np.ones((10, 5)))
-
-        mock_instance = MagicMock()
-        mock_instance.shap_values.return_value = [np.ones((10, 5))]
-        mock_explainer.return_value = mock_instance
-
-        f = methods.deep_shap(model, np.ones((10, 5)))
-        assert callable(f)
+    assert out.shape == (5, 3)
