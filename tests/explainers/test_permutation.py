@@ -9,9 +9,9 @@ import shap
 from . import common
 
 
-def test_exact_second_order(random_seed):
+def test_exact_second_order():
     """This tests that the Perumtation explain gives exact answers for second order functions."""
-    rs = np.random.RandomState(random_seed)
+    rs = np.random.RandomState(42)
     data = rs.randint(0, 2, size=(100, 5))
 
     def model(data):
@@ -29,6 +29,8 @@ def test_exact_second_order(random_seed):
     assert np.allclose(right_answer, shap_values.values)  # type: ignore[union-attr]
 
 
+# TODO: add baseline comparison once PermutationExplainer supports passing a numpy.random.Generator
+# for reproducible results (currently uses global np.random state)
 def test_tabular_single_output_auto_masker():
     model, data = common.basic_xgboost_scenario(100)
     common.test_additivity(shap.explainers.PermutationExplainer, model.predict, data, data)

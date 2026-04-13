@@ -135,10 +135,10 @@ jobs:
       - name: Fetch all tags
         run: git fetch --tags
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Build sdist (pep517)
         run: |

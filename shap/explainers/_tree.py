@@ -454,9 +454,9 @@ class TreeExplainer(Explainer):
 
         if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
             tree_limit = self.model.values.shape[0]
-        # convert dataframes
+        # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
         if isinstance(X, (pd.Series, pd.DataFrame)):
-            X = X.values
+            X = X.to_numpy(dtype=self.model.input_dtype, na_value=np.nan)
 
         if scipy.sparse.issparse(X):
             X = X.toarray()
@@ -1679,9 +1679,9 @@ class TreeEnsemble:
         if tree_limit is None:
             tree_limit = -1 if self.tree_limit is None else self.tree_limit
 
-        # convert dataframes
+        # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
         if isinstance(X, (pd.Series, pd.DataFrame)):
-            X = X.values
+            X = X.to_numpy(dtype=self.input_dtype, na_value=np.nan)
         flat_output = False
         if len(X.shape) == 1:
             flat_output = True
@@ -1992,7 +1992,7 @@ class SingleTree:
                     # We should be technically be assigning the number of samples used to
                     # train the model as the weight here, but unfortunately this info is
                     # currently unavailable in `tree`, so we set to 0 first.
-                    # cf. https://github.com/microsoft/LightGBM/issues/5962
+                    # cf. https://github.com/lightgbm-org/LightGBM/issues/5962
                     self.node_sample_weight[vleaf_idx] = vertex.get("leaf_count", 0)
             self.values = np.asarray(self.values)
             self.values = np.multiply(self.values, scaling)

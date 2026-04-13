@@ -13,7 +13,7 @@ license = {text = "MIT License"}
 authors = [
   {name = "Scott Lundberg", email = "slund1@cs.washington.edu"},
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
   'numpy>=2',
   'scipy',
@@ -34,7 +34,6 @@ classifiers = [
   "Operating System :: POSIX",
   "Operating System :: Unix",
   "Operating System :: MacOS",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
@@ -95,9 +94,7 @@ test = [
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
   # See GH #3707, #3768, 3922
   "numpy>=2.0",
-  "numba==0.63.0", # needed since causalml fails when importing causalml.datasets when built with numba==0.63.1, see https://github.com/uber/causalml/issues/859
-  # "scikit-learn<=1.6.1",  # needed since causalml doesn't support scikit-learn 1.7.0 and above as of 2025-06-11
-  "causalml",
+  "causalml>=0.15.5",
   "selenium",  # needed to test the javascript based plots
 ]
 

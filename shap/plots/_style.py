@@ -7,17 +7,16 @@ from __future__ import annotations
 
 import dataclasses
 from contextlib import contextmanager
-from typing import TypeAlias, TypedDict
+from typing import TypedDict, Unpack
 
 import numpy as np
-from typing_extensions import Unpack
 
 from ..utils._exceptions import InvalidStyleOptionError
 from . import colors
 
 # Type hints, adapted from matplotlib.typing
 RGBColorType = tuple[float, float, float] | str
-RGBAColorType: TypeAlias = (
+type RGBAColorType = (
     str  # "none" or "#RRGGBBAA"/"#RGBA" hex strings
     | tuple[float, float, float, float]
     |
@@ -28,7 +27,7 @@ RGBAColorType: TypeAlias = (
     # (4-tuple, float) is odd, but accepted as the outer float overriding A of 4-tuple
     tuple[tuple[float, float, float, float], float]
 )
-ColorType: TypeAlias = RGBColorType | RGBAColorType | np.ndarray
+type ColorType = RGBColorType | RGBAColorType | np.ndarray
 
 
 # TODO: Use dataclass(kw_only=True) when we drop Python 3.9
