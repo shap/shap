@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Sequence
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,6 +11,9 @@ from .. import Explanation
 from ..utils import convert_name
 from . import colors
 from ._labels import labels
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def embedding(

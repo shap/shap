@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from .. import Explanation
 from . import colors
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def group_difference(
@@ -86,12 +89,17 @@ def group_difference(
             f"Got {group_mask_arr.shape[0]} vs {shap_values_arr.shape[0]}."
         )
 
+    if not group_mask_arr.any() or group_mask_arr.all():
+        raise ValueError("group_mask must define two non-empty groups (both True and False must be present).")
+
     # Fill in any missing feature names
     if feature_names is None:
         if shap_values.feature_names is not None and len(shap_values.shape) == 2:
             feature_names = list(shap_values.feature_names)  # type: ignore[arg-type]
         else:
             feature_names = [f"Feature {i}" for i in range(shap_values_arr.shape[1])]
+
+    feature_names_list = list(feature_names)
 
     # Compute confidence bounds for the group difference value
     vs: list[np.ndarray] = []
@@ -128,7 +136,7 @@ def group_difference(
     ax.xaxis.set_ticks_position("bottom")
     ax.yaxis.set_ticks_position("none")
     ax.set_yticks(ticks)
-    ax.set_yticklabels([list(feature_names)[i] for i in inds], fontsize=13)
+    ax.set_yticklabels([feature_names_list[i] for i in inds], fontsize=13)
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
     ax.spines["left"].set_visible(False)
