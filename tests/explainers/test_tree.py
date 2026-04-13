@@ -2073,6 +2073,13 @@ def test_feature_perturbation_refactoring():
     with pytest.raises(shap.utils._exceptions.InvalidFeaturePerturbationError, match=err_msg):
         explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)  # type: ignore[arg-type]
 
+    # check that we warn when >1000 background samples are passed with interventional perturbation (closes #4385)
+    X_large, y_large = sklearn.datasets.make_regression(n_samples=1_001, n_features=10, random_state=0)
+    model_large = sklearn.ensemble.RandomForestRegressor().fit(X_large, y_large)
+    warn_msg_large = "background samples may lead to slow runtimes"
+    with pytest.warns(UserWarning, match=warn_msg_large):
+        shap.explainers.Tree(model_large, data=X_large, feature_perturbation="interventional")  # type: ignore[arg-type]
+
 
 # the expected results can be found in the paper "Consistent Individualized Feature Attribution for Tree Ensembles",
 # https://arxiv.org/abs/1802.03888
