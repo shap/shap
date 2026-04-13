@@ -9,6 +9,7 @@ def compute_grey_code_row_values(
     shapley_coeff: npt.NDArray[np.float64],
     extended_delta_indexes: npt.NDArray[np.uint64],
     noop_code: int,
+    /,
 ) -> None: ...
 def compute_exp_val(
     nsamples_run: int,
@@ -18,4 +19,5 @@ def compute_exp_val(
     weights: npt.NDArray[np.float64],
     y: npt.NDArray[np.float64],
     ey: npt.NDArray[np.float64],
+    /,
 ) -> int: ...
