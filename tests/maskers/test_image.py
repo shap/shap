@@ -129,9 +129,17 @@ def test_init_string_mask_without_shape():
         shap.maskers.Image("inpaint_telea")
 
 
-def test_init_nparray_mask_without_shape():
+def test_init_ndarray_mask_without_shape():
     """Make sure that shape is inferred correctly from np.array when no shape is passed"""
     mask_value = np.zeros((5, 5, 3))
     image_masker = shap.maskers.Image(mask_value)  # no shape parameter passed
     assert image_masker.input_shape == (5, 5, 3)
     assert image_masker.shape == (1, 75)  # 5*5*3 = 75, when flattened
+
+
+def test_init_scalar_mask_with_shape():
+    """Make sure mask_value is expanded to a flat array of the scalar when mask_value is an int"""
+    image_masker = shap.maskers.Image(5, shape=(5, 5, 3))
+    assert image_masker.input_shape == (5, 5, 3)
+    assert image_masker.mask_value.shape == (75,)
+    assert np.all(image_masker.mask_value == 5)
