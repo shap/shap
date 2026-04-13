@@ -7,7 +7,7 @@ import numpy as np
 import numpy.typing as npt
 from numba import njit  # type: ignore[attr-defined]
 
-from shap.cutils import compute_grey_code_row_values
+from shap._cutils import compute_grey_code_row_values
 
 from .. import links
 from ..models import Model

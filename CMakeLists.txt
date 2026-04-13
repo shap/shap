@@ -34,7 +34,7 @@ find_package(nanobind CONFIG REQUIRED)
 
 # Create the cutils module using nanobind
 nanobind_add_module(
-  cutils
+  _cutils
 
   # This extension is free-threaded
   FREE_THREADED
@@ -50,7 +50,7 @@ nanobind_add_module(
 )
 
 # Install the module to shap
-install(TARGETS cutils LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
+install(TARGETS _cutils LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 
 # ==============================================================================
 # Build the Tree Logic extension module (cext)

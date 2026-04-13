@@ -119,7 +119,7 @@ def run_setup(*, with_binary, with_cuda):
         nanobind_path = Path(nanobind.source_dir(), "nb_combined.cpp").relative_to(Path.cwd())
         ext_modules.append(
             Extension(
-                "shap.cutils.cutils",
+                "shap._cutils",
                 sources=["shap/cutils/cutils.cpp", nanobind_path],
                 include_dirs=[
                     np.get_include(),
