@@ -80,6 +80,8 @@ def heatmap(
         feature_order = np.argsort(-feature_values)
     elif issubclass(type(feature_order), OpChain):
         feature_order = feature_order.apply(Explanation(values))
+        if issubclass(type(feature_order), Explanation):
+            feature_order = feature_order.values
     elif not hasattr(feature_order, "__len__"):
         raise Exception(f"Unsupported feature_order: {str(feature_order)}!")
     xlabel = "Instances"
@@ -154,16 +156,18 @@ def heatmap(
     # plot the f(x) line chart above the heat map
     ax.axhline(-1.5, color="#aaaaaa", linestyle="--", linewidth=0.5)
     fx = values.T.sum(0)
+    fx_max = np.abs(fx).max()
     ax.plot(
-        -fx / np.abs(fx).max() - 1.5,
+        -fx / fx_max - 1.5 if fx_max > 0 else np.full_like(fx, -1.5),
         color="#000000",
         linewidth=1,
     )
 
     # plot the bar plot on the right spine of the heat map
+    fv_max = np.abs(feature_values).max()
     bar_container = ax.barh(
         heatmap_yticks_pos,
-        (feature_values / np.abs(feature_values).max()) * values.shape[0] / 20,
+        (feature_values / fv_max) * values.shape[0] / 20 if fv_max > 0 else np.zeros_like(feature_values),
         height=0.7,
         align="center",
         color="#000000",
