@@ -516,6 +516,10 @@ def is_color_map(color):
     safe_isinstance(color, "matplotlib.colors.Colormap")
 
 
+# TODO: determine if this is dead code
+# This function is not exposed in the public API (shap/plots/__init__.py).
+# Only the `beeswarm` function above is exposed as the public API.
+# Coverage: 0% (lines 521-1152 never executed in tests through public API)
 # TODO: remove unused title argument / use title argument
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
 def summary_legacy(

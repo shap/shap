@@ -373,6 +373,10 @@ def waterfall(shap_values, max_display=10, show=True):
         return plt.gca()
 
 
+# TODO: determine if this is dead code
+# This function is not exposed in the public API (shap/plots/__init__.py).
+# Only the `waterfall` function above is exposed as the public API.
+# Coverage: limited (lines 376-737 are only tested via internal _waterfall.waterfall_legacy calls)
 def waterfall_legacy(expected_value, shap_values=None, features=None, feature_names=None, max_display=10, show=True):
     """Plots an explanation of a single prediction as a waterfall plot.
 

@@ -28,4 +28,7 @@ def explainer():
     model = xgboost.XGBClassifier(random_state=0, tree_method="exact", base_score=0.5).fit(X, y)
 
     # build an Exact explainer and explain the model predictions on the given dataset
-    return shap.TreeExplainer(model, X)
+    explainer = shap.TreeExplainer(model, X)
+    # Store feature names as an attribute for tests
+    explainer.feature_names = X.columns.tolist()
+    return explainer
