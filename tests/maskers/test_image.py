@@ -121,3 +121,9 @@ def test_serialization_image_masker_mask():
 
     # comparing masked values
     assert np.array_equal(original_image_masker(mask, test_data), new_image_masker(mask, test_data))
+
+
+def test_init_string_mask_without_shape():
+    """Make sure masker raises error when initializing with string mask value without shape"""
+    with pytest.raises(TypeError):
+        shap.maskers.Image("inpaint_telea")
