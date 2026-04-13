@@ -163,14 +163,14 @@ class Deserializer:
             if end_token == "END_BLOCK___":
                 return
             self._load_data_value()
-        raise ValueError(f"The data block end token wsa not found for the block {self.block_name}.")
+        raise ValueError(f"The data block end token was not found for the block {self.block_name}.")
 
     def load(self, name, decoder=None):
         """Load a data item from the current input stream."""
         # confirm the block name
         loaded_name = pickle.load(self.in_stream)
         log.debug("loaded_name = %s", loaded_name)
-        print("loaded_name", loaded_name)
+
         if loaded_name != name:
             raise ValueError(
                 f"The next data item in the file being loaded was supposed to be {name}, "
