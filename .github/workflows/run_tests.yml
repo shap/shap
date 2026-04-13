@@ -42,6 +42,8 @@ jobs:
       - name: Install dependencies for dataset download
         run: |
           uv pip install --system '.[download_datasets]'
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: Pre-download datasets
         run: python tests/datasets_to_cache.py
       - name: Create unified cache directory
