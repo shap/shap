@@ -16,7 +16,6 @@ on:
       - "scripts/**"
       - "pyproject.toml"
       - "CMakeLists.txt"
-      - "setup.py"
   workflow_dispatch:
 
 concurrency:

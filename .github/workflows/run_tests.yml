@@ -19,7 +19,6 @@ on:
       - ".github/workflows/run_tests.yml"
       - "pyproject.toml"
       - "CMakeLists.txt"
-      - "setup.py"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

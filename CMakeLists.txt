@@ -1,6 +1,6 @@
 # Followed https://nanobind.readthedocs.io/en/latest/building.html
 cmake_minimum_required(VERSION 3.15...3.27)
-project(cutils LANGUAGES CXX)
+project(shap_extensions LANGUAGES CXX)
 
 if (NOT SKBUILD)
   message(FATAL_ERROR "\
@@ -101,3 +101,42 @@ target_include_directories(_cext PUBLIC ${NUMPY_INCLUDE_DIR})
 
 # Install directive for scikit-build-core
 install(TARGETS _cext LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
+
+# ==============================================================================
+# Optional: Build the GPU Tree SHAP extension module (cext_gpu)
+# Enabled via: SHAP_ENABLE_CUDA=1 pip install .
+# ==============================================================================
+
+if(DEFINED ENV{SHAP_ENABLE_CUDA})
+  enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED)
+
+  python_add_library(
+    _cext_gpu MODULE
+
+    ${USE_SABI} WITH_SOABI
+
+    # The .cu file is compiled by nvcc, the .cc file by the host compiler
+    shap/cext/_cext_gpu.cu
+    shap/cext/_cext_gpu.cc
+  )
+
+  target_include_directories(_cext_gpu PUBLIC ${NUMPY_INCLUDE_DIR})
+  target_link_libraries(_cext_gpu PRIVATE CUDA::cudart)
+
+  set_target_properties(_cext_gpu PROPERTIES
+    CUDA_ARCHITECTURES "60;70;75;80"
+    CUDA_STANDARD 14
+    CUDA_EXTENSIONS ON
+  )
+
+  # nvcc flags matching the previous setup.py build
+  target_compile_options(_cext_gpu PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:
+      --expt-extended-lambda
+      --expt-relaxed-constexpr
+    >
+  )
+
+  install(TARGETS _cext_gpu LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
+endif()
