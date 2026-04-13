@@ -137,7 +137,7 @@ jobs:
           fi
 
           # Restore shap cached data to the installed package location
-          SHAP_CACHE_DIR=$(python -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
+          SHAP_CACHE_DIR=$(python -P -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
           mkdir -p "$SHAP_CACHE_DIR"
 
           if [ "$RUNNER_OS" == "Windows" ]; then
