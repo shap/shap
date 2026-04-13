@@ -400,4 +400,3 @@ MACOSX_DEPLOYMENT_TARGET = "10.13"
 # Build CUDA extensions for distribution
 SHAP_CUDA_BUILD = "1"
 SHAP_CUDA_ARCHITECTURES = "all"
-
