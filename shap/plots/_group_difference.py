@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -5,33 +7,66 @@ from . import colors
 
 
 def group_difference(
-    shap_values,
-    group_mask,
-    feature_names=None,
-    xlabel=None,
-    xmin=None,
-    xmax=None,
-    max_display=None,
-    sort=True,
-    show=True,
-    ax=None,
-):
-    """This plots the difference in mean SHAP values between two groups.
+    shap_values: np.ndarray,
+    group_mask: np.ndarray,
+    feature_names: list[str] | None = None,
+    xlabel: str | None = None,
+    xmin: float | None = None,
+    xmax: float | None = None,
+    max_display: int | None = None,
+    sort: bool = True,
+    show: bool = True,
+    ax: plt.Axes | None = None,
+) -> plt.Axes:
+    """Plot the difference in mean SHAP values between two groups.
 
-    It is useful to decompose many group level metrics about the model output among the
+    Useful for decomposing group level metrics about the model output among the
     input features. Quantitative fairness metrics for machine learning models are
     a common example of such group level metrics.
 
     Parameters
     ----------
-    shap_values : numpy.array
-        Matrix of SHAP values (# samples x # features) or a vector of model outputs (# samples).
+    shap_values : numpy.ndarray
+        Matrix of SHAP values (# samples x # features) or a vector of model
+        outputs (# samples).
 
-    group_mask : numpy.array
-        A boolean mask where True represents the first group of samples and False the second.
+    group_mask : numpy.ndarray
+        A boolean mask where ``True`` represents the first group of samples and
+        ``False`` the second.
 
-    feature_names : list
+    feature_names : list of str, optional
         A list of feature names.
+
+    xlabel : str, optional
+        Label for the x-axis. Defaults to ``"Group SHAP value difference"``.
+
+    xmin : float, optional
+        Minimum value for the x-axis.
+
+    xmax : float, optional
+        Maximum value for the x-axis.
+
+    max_display : int, optional
+        Maximum number of features to display.
+
+    sort : bool
+        Whether to sort features by the absolute value of their group difference.
+        Defaults to ``True``.
+
+    show : bool
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
+        Setting this to ``False`` allows the plot to be customized further after
+        it has been created. Defaults to ``True``.
+
+    ax : matplotlib Axes, optional
+        Optionally specify an existing :external+mpl:class:`matplotlib.axes.Axes`
+        object to draw into. When ``None``, uses the current axes (``plt.gca()``).
+
+    Returns
+    -------
+    ax : matplotlib Axes
+        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the
+        plot drawn onto it.
 
     """
     # Compute confidence bounds for the group difference value
@@ -62,13 +97,12 @@ def group_difference(
 
     if max_display is not None:
         inds = inds[:max_display]
-    if ax:
-        # Disable plotting out if an ax has been provided
-        show = False
-    else:
-        # Draw the figure if no ax has been provided
+
+    # get (or create) the axes to draw on
+    if ax is None:
         figsize = (6.4, 0.2 + 0.9 * len(inds))
         _, ax = plt.subplots(figsize=figsize)
+
     ticks = range(len(inds) - 1, -1, -1)
     ax.axvline(0, color="#999999", linewidth=0.5)
     ax.barh(ticks, diff[inds], color=colors.blue_rgb, capsize=3, xerr=np.abs(xerr[:, inds]))
@@ -88,5 +122,7 @@ def group_difference(
         xlabel = "Group SHAP value difference"
     ax.set_xlabel(xlabel, fontsize=13)
     ax.set_xlim(xmin, xmax)
+
     if show:
         plt.show()
+    return ax
