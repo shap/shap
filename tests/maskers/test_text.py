@@ -21,7 +21,6 @@ def test_method_token_segments_pretrained_tokenizer():
     test_text = "I ate a Cannoli"
     output_token_segments, _ = masker.token_segments(test_text)
 
-    # FIX
     correct_token_segments = ["", "I ", "ate ", "a ", "Can", "no", "li", ""]
 
     assert output_token_segments == correct_token_segments
@@ -53,7 +52,6 @@ def test_masker_call_pretrained_tokenizer():
 
     output_masked_text = masker(test_input_mask, test_text)
 
-    # FIX
     correct_masked_text = "[MASK]ate a [MASK]noli"
 
     assert output_masked_text[0] == correct_masked_text
@@ -97,8 +95,6 @@ def test_keep_prefix_suffix_tokenizer_parsing():
     """Checks parsed keep prefix and keep suffix for different tokenizers."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    # FIX
-    # Helsinki-NLP/opus-mt-en-es removed compatibility in new transformers
     tokenizer_mt = AutoTokenizer.from_pretrained("t5-small")
 
     tokenizer_gpt = AutoTokenizer.from_pretrained("gpt2")
@@ -120,7 +116,6 @@ def test_keep_prefix_suffix_tokenizer_parsing():
     assert masker_bart.keep_suffix == masker_bart_expected_keep_suffix
 
 
-# FIX: removed xfail
 def test_keep_prefix_suffix_tokenizer_parsing_mistralai():
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
@@ -132,7 +127,6 @@ def test_keep_prefix_suffix_tokenizer_parsing_mistralai():
     assert masker_mistral.keep_suffix == masker_mistral_expected_keep_suffix
 
 
-# FIX: removed xfail
 def test_text_infill_with_collapse_mask_token_mistralai():
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
