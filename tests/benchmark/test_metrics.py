@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-
 from sklearn.linear_model import LinearRegression
 
 import shap.benchmark.metrics as metrics
@@ -17,6 +16,7 @@ def data():
 def model_gen():
     def f():
         return LinearRegression()
+
     return f
 
 
@@ -24,12 +24,11 @@ def model_gen():
 # Core metrics
 # =========================
 
+
 def test_consistency_guarantees(data, model_gen):
     X, y = data
 
-    _, val = metrics.consistency_guarantees(
-        X, y, model_gen, "linear_shap_corr"
-    )
+    _, val = metrics.consistency_guarantees(X, y, model_gen, "linear_shap_corr")
 
     assert val == 1.0
 
@@ -37,9 +36,7 @@ def test_consistency_guarantees(data, model_gen):
 def test_runtime(data, model_gen):
     X, y = data
 
-    _, val = metrics.runtime(
-        X, y, model_gen, "linear_shap_ind"
-    )
+    _, val = metrics.runtime(X, y, model_gen, "linear_shap_ind")
 
     assert isinstance(val, float)
     assert val >= 0
@@ -48,9 +45,7 @@ def test_runtime(data, model_gen):
 def test_local_accuracy(data, model_gen):
     X, y = data
 
-    _, val = metrics.local_accuracy(
-        X, y, model_gen, "linear_shap_ind"
-    )
+    _, val = metrics.local_accuracy(X, y, model_gen, "linear_shap_ind")
 
     assert isinstance(val, float)
 
@@ -59,12 +54,11 @@ def test_local_accuracy(data, model_gen):
 # Wrapper tests
 # =========================
 
+
 def test_keep_positive_mask(data, model_gen):
     X, y = data
 
-    fcounts, scores = metrics.keep_positive_mask(
-        X, y, model_gen, "linear_shap_ind"
-    )
+    fcounts, scores = metrics.keep_positive_mask(X, y, model_gen, "linear_shap_ind")
 
     assert len(fcounts) > 0
     assert scores is not None
@@ -73,9 +67,7 @@ def test_keep_positive_mask(data, model_gen):
 def test_remove_negative_mask(data, model_gen):
     X, y = data
 
-    fcounts, scores = metrics.remove_negative_mask(
-        X, y, model_gen, "linear_shap_ind"
-    )
+    fcounts, scores = metrics.remove_negative_mask(X, y, model_gen, "linear_shap_ind")
 
     assert len(fcounts) > 0
     assert scores is not None
