@@ -28,6 +28,7 @@ def bar(
     show_data="auto",
     ax=None,
     show=True,
+    descending=True,
 ):
     """Create a bar plot of a set of SHAP values.
 
@@ -63,6 +64,8 @@ def bar(
         Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
+    descending : bool
+        Whether to sort the features in descending order (default is ``True``).
 
     Returns
     -------
@@ -181,6 +184,9 @@ def bar(
         feature_order = np.argsort(
             np.mean([np.argsort(convert_ordering(order, Explanation(values[i]))) for i in range(values.shape[0])], 0)
         )
+        if not descending:
+            feature_order = feature_order[::-1]
+
         if partition_tree is not None:
             # compute the leaf order if we were to show (and so have the ordering respect) the whole partition tree
             clust_order = sort_inds(partition_tree, np.abs(values).mean(0))
