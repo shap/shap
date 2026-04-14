@@ -110,8 +110,13 @@ jobs:
           npm run build
           cp build/bundle.js ../shap/plots/resources/bundle.js
       - name: Install libomp (macOS)
-        if: matrix.os == 'macos-latest'
-        run: brew install libomp
+        if: runner.os == 'macOS'
+        run: |
+          brew install libomp
+          # Set DYLD_LIBRARY_PATH to avoid OpenMP conflicts, see https://github.com/unit8co/darts/pull/3050
+          _libomp_path=$(brew --prefix libomp 2>/dev/null)/lib
+          echo "DYLD_LIBRARY_PATH=$_libomp_path:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          unset _libomp_path
       - name: Install uv
         uses: astral-sh/setup-uv@v7
       - name: Install dependencies
