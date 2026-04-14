@@ -40,7 +40,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
       - name: Install dependencies for dataset download
         run: |
-          uv pip install --system '.[download_datasets]'
+          uv pip install --system . --group download-datasets
       - name: Pre-download datasets
         run: python -P tests/datasets_to_cache.py
       - name: Create unified cache directory
@@ -122,7 +122,7 @@ jobs:
       - name: Install dependencies
         # Do regular install NOT editable install: see GH #3020
         run: |
-          uv pip install --system '.[${{ matrix.extras }},plots]'
+          uv pip install --system --group ${{matrix.extras}} --group plots
       - name: Download pre-cached datasets
         uses: actions/download-artifact@v4
         with:
@@ -190,7 +190,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
       - name: Install dependencies
         run: |
-          uv pip install --system numpy==2.0 '.[test-core,plots]'
+          uv pip install --system numpy==2.0 --group test-core --group plots
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
 
@@ -208,7 +208,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
       - name: Install dependencies
         run: |
-          uv pip install --system '.[test-core]'
+          uv pip install --system --group test-core
           # TODO: consider removing requirements.ci.txt and use pyproject.toml extras instead
           uv pip install --system --reinstall -r requirements.ci.txt
       - name: Run mypy
