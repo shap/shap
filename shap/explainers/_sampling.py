@@ -22,7 +22,7 @@ class SamplingExplainer(KernelExplainer):
     using Game Theory", Erik Strumbelj, Igor Kononenko, JMLR 2010. It is a good alternative to
     KernelExplainer when you want to use a large background set (as opposed to a single reference
     value for example).
-
+    
     Parameters
     ----------
     model : function
@@ -39,6 +39,11 @@ class SamplingExplainer(KernelExplainer):
         we would approximate a feature being missing by setting it to zero. Unlike the
         KernelExplainer, this data can be the whole training set, even if that is a large set. This
         is because SamplingExplainer only samples from this background dataset.
+
+    Examples
+    --------
+    See the SHAP documentation for examples using ``SamplingExplainer``:
+    https://shap.readthedocs.io/en/latest/api_examples.html#explainers
 
     """
 
