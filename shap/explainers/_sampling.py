@@ -22,7 +22,7 @@ class SamplingExplainer(KernelExplainer):
     using Game Theory", Erik Strumbelj, Igor Kononenko, JMLR 2010. It is a good alternative to
     KernelExplainer when you want to use a large background set (as opposed to a single reference
     value for example).
-    
+
     Parameters
     ----------
     model : function
