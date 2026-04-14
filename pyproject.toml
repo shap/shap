@@ -181,6 +181,7 @@ module = [
   "tqdm.*",
   "xgboost.*",
   "causalml.*",
+  "selenium.*",
 ]
 ignore_missing_imports = true
 
