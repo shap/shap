@@ -11,5 +11,5 @@ NB_MODULE(_cutils, m)
     m.def("compute_grey_code_row_values", &compute_grey_code_row_values_1d);
     m.def("compute_grey_code_row_values", &compute_grey_code_row_values_2d);
     m.def("compute_exp_val", &compute_exp_val);
-    m.def("reverse_window", &reverse_window);
+    m.def("reverse_window", &reverse_window, "order"_a, "start"_a, "length"_a);
 }
