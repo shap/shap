@@ -3,7 +3,7 @@ from typing import Any
 
 import numpy as np
 import scipy.sparse
-from numba import njit
+from numba import njit  # type: ignore[attr-defined]
 
 from .. import links
 

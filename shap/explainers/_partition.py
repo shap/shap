@@ -126,8 +126,9 @@ class PartitionExplainer(Explainer):
         #     self.partition_tree = partition_tree
 
         # handle higher dimensional tensor inputs
-        if self.input_shape is not None and len(self.input_shape) > 1:
-            self._reshaped_model = lambda x: self.model(x.reshape(x.shape[0], *self.input_shape))
+        input_shape = self.input_shape
+        if input_shape is not None and len(input_shape) > 1:
+            self._reshaped_model = lambda x: self.model(x.reshape(x.shape[0], *input_shape))
         else:
             self._reshaped_model = self.model
 

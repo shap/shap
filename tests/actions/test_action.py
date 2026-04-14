@@ -4,13 +4,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import shap
+from shap.actions import Action
 
 
 def test_create_and_run():
     X = pd.DataFrame({"feature1": np.ones(5), "feature2": np.ones(5)})
 
-    class IncreaseFeature1(shap.actions.Action):
+    class IncreaseFeature1(Action):
         """Sample action."""
 
         def __init__(self, amount):
@@ -32,7 +32,7 @@ def test_create_and_run():
 
 def test_action_base_call_raises_not_implemented():
     """Test that the base Action class raises NotImplementedError when called."""
-    base_action = shap.actions.Action(cost=10)
+    base_action = Action(cost=10)
     with pytest.raises(NotImplementedError):
         base_action()
 
@@ -40,7 +40,7 @@ def test_action_base_call_raises_not_implemented():
 def test_action_comparisons_and_properties():
     """Test the less-than operator, string representation, and base properties."""
 
-    class MockAction(shap.actions.Action):
+    class MockAction(Action):
         def __str__(self):
             return "Test action string"
 

@@ -3,7 +3,7 @@ import heapq
 
 import numba.typed
 import numpy as np
-from numba import njit
+from numba import njit  # type: ignore[attr-defined]
 
 from .._serializable import Deserializer, Serializer
 from ..utils import assert_import, record_import_error, safe_isinstance

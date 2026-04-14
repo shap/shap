@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 import pandas as pd
-from numba import njit
+from numba import njit  # type: ignore[attr-defined]
 
 from .. import utils
 from .._serializable import Deserializer, Serializer

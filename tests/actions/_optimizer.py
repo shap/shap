@@ -5,13 +5,14 @@ import pandas as pd
 import pytest
 
 import shap
+from shap.actions import Action
 from shap.utils._exceptions import ConvergenceError, InvalidAction
 
 
 def create_basic_scenario():
     X = pd.DataFrame({"feature1": np.ones(5), "feature2": np.ones(5), "feature3": np.ones(5)})
 
-    class IncreaseFeature1(shap.actions.Action):
+    class IncreaseFeature1(Action):
         """Sample action."""
 
         def __init__(self, amount):
@@ -24,7 +25,7 @@ def create_basic_scenario():
         def __str__(self):
             return f"Improve feature1 by {self.amount}."
 
-    class IncreaseFeature2(shap.actions.Action):
+    class IncreaseFeature2(Action):
         """Sample action."""
 
         def __init__(self, amount):
@@ -37,7 +38,7 @@ def create_basic_scenario():
         def __str__(self):
             return f"Improve feature2 by {self.amount}."
 
-    class IncreaseFeature3(shap.actions.Action):
+    class IncreaseFeature3(Action):
         """Sample action."""
 
         def __init__(self, amount):

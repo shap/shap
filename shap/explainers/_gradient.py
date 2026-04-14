@@ -673,7 +673,7 @@ class _PyTorchGradient(Explainer):
                                     samples_delta[0][k] = interim_inputs.cpu().numpy()  # type: ignore[attr-defined]
 
                 # compute the gradients at all the sample points
-                find = model_output_ranks[j, i]
+                find = int(model_output_ranks[j, i])
                 grads = []
                 for b in range(0, nsamples, self.batch_size):
                     batch = [
