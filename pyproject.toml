@@ -68,13 +68,13 @@ docs = [
 ]
 test-core = [
   "pytest",
-  "pytest-mpl",
+  "pytest-mpl>=0.19.0",
   "pytest-cov",
   "mypy",
 ]
 test = [
   "pytest",
-  "pytest-mpl",
+  "pytest-mpl>=0.19.0",
   "pytest-cov",
   "xgboost",
   "lightgbm",
@@ -213,7 +213,8 @@ version_file = "shap/_version.py"
 local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
-addopts = "--mpl -m 'not xslow'"
+addopts = "--mpl -m 'not xslow' --mpl-default-tolerance=5"
+mpl-default-style = "default"
 testpaths = ["tests"]
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control

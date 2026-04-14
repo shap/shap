@@ -172,6 +172,35 @@ pytest
 
 For info about matplotlib tests, see `tests/plots/__init__.py`.
 
+#### Plot baseline images
+
+Plot tests use the [pytest-mpl](https://pytest-mpl.readthedocs.io/) plugin to
+compare generated figures against reference ("baseline") images stored in
+`tests/plots/baseline/`.
+
+**When to regenerate baselines:**
+
+- After upgrading `matplotlib` to a new version (rendering may change).
+- After upgrading `pytest-mpl` to a new version.
+- After modifying any plotting code that changes the visual output.
+
+**How to regenerate baselines:**
+
+```bash
+pytest tests/plots --mpl-generate-path=tests/plots/baseline
+```
+
+Then visually inspect the regenerated images in `tests/plots/baseline/`
+to verify they look correct before committing.
+
+**Cross-platform considerations:**
+
+Baselines should be generated on Linux to match the CI environment. Font
+rendering differs across Linux, macOS, and Windows, so a global default
+tolerance is set in `pyproject.toml` (`--mpl-default-tolerance`) to accommodate
+minor cross-platform differences. Individual tests may override this tolerance
+via the `@pytest.mark.mpl_image_compare(tolerance=...)` decorator.
+
 ## Pull Requests (PRs)
 
 ### Etiquette for creating PRs
