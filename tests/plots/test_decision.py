@@ -109,6 +109,29 @@ def test_multioutput_decision_raises(values_features):
         )
 
 
+def test_decision_returns_ax(random_seed):
+    """Verify that decision_plot returns a matplotlib Axes when show=False."""
+    rs = np.random.RandomState(random_seed)
+    result = shap.decision_plot(
+        0, rs.standard_normal(size=(20, 5)), rs.standard_normal(size=(20, 5)), show=False
+    )
+    assert isinstance(result, plt.Axes)
+    plt.close("all")
+
+
+def test_decision_accepts_ax(random_seed):
+    """Verify that decision_plot draws on a user-provided Axes and returns it."""
+    rs = np.random.RandomState(random_seed)
+    fig, ax = plt.subplots()
+    result = shap.decision_plot(
+        0, rs.standard_normal(size=(20, 5)), rs.standard_normal(size=(20, 5)), show=False, ax=ax
+    )
+    assert result is ax
+    # The axes should have content drawn on it (at least one line)
+    assert len(ax.lines) > 0
+    plt.close("all")
+
+
 # (base_values, shap_values, row_index, **kwargs)
 
 
