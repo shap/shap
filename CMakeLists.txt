@@ -110,6 +110,7 @@ install(TARGETS _cext LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 OPTION(SHAP_CUDA_ARCHITECTURES "CUDA architectures to target (e.g., 70;75;80;86)" "native")
 
 if(DEFINED ENV{SHAP_ENABLE_CUDA})
+  message(STATUS "SHAP_ENABLE_CUDA is set. Building the GPU extension module.")
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED)
 
@@ -124,7 +125,7 @@ if(DEFINED ENV{SHAP_ENABLE_CUDA})
   )
 
   target_include_directories(_cext_gpu PUBLIC ${NUMPY_INCLUDE_DIR})
-  target_link_libraries(_cext_gpu PRIVATE CUDA::cudart)
+  # target_link_libraries(_cext_gpu CUDA::cudart)
 
   set_target_properties(_cext_gpu PROPERTIES
     CUDA_ARCHITECTURES ${SHAP_CUDA_ARCHITECTURES}
@@ -141,4 +142,6 @@ if(DEFINED ENV{SHAP_ENABLE_CUDA})
   )
 
   install(TARGETS _cext_gpu LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
+else()
+  message(STATUS "SHAP_ENABLE_CUDA is not set. Skipping the GPU extension module.")
 endif()

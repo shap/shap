@@ -370,6 +370,7 @@ skip = [
   "cp314t-manylinux_x86_64",
   "cp314t-macosx_x86_64",
   "cp314t-win_amd64",
+  "*-musllinux*", # not supported by llvmlite and numba
 ]
 build-verbosity = 2
 # Change import-mode to ensure we test against installed package, not local project
@@ -383,6 +384,11 @@ test-skip = "cp314-macosx_x86_64 *-*linux_{aarch64} *-macosx_arm64 *-musllinux*"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
+before-all = [
+  "yum config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel8/$(uname -m)/cuda-rhel8.repo",
+  "yum -y install cuda-toolkit",
+  "nvcc --version",
+]
 
 [tool.cibuildwheel.windows]
 # TODO: Should we support Windows ARM64 too?
@@ -398,5 +404,5 @@ MACOSX_DEPLOYMENT_TARGET = "10.13"
 
 [tool.cibuildwheel.linux.environment]
 # Build CUDA extensions for distribution
-SHAP_CUDA_BUILD = "1"
+SHAP_ENABLE_CUDA = "1"
 SHAP_CUDA_ARCHITECTURES = "all"
