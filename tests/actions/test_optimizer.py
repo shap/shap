@@ -93,3 +93,26 @@ def test_run_out_of_group():
 def test_bad_action():
     with pytest.raises(InvalidAction):
         shap.ActionOptimizer(None, [None])  # type: ignore
+
+
+def test_unsatisfiable_model():
+    X, IncreaseFeature1, IncreaseFeature2, IncreaseFeature3, _ = create_basic_scenario()
+
+    def impossible_pass(x):
+        return np.sum(x) > 1000
+
+    possible_actions = [IncreaseFeature1(1)]
+
+    optimizer = shap.ActionOptimizer(impossible_pass, possible_actions)
+    actions = optimizer(X.iloc[0])
+
+    assert actions is None
+
+
+def test_empty_actions():
+    X, _, _, _, passed = create_basic_scenario()
+
+    optimizer = shap.ActionOptimizer(passed, [])
+    actions = optimizer(X.iloc[0])
+
+    assert actions is None
