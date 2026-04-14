@@ -163,10 +163,6 @@ class PermutationExplainer(Explainer):
         masks = np.zeros(2 * len(inds) + 1, dtype=int)
         masks[0] = MaskedModel.delta_mask_noop_value
         npermutations = max_evals // (2 * len(inds) + 1)
-        # When there are no varying inputs, there's only one evaluation, so set npermutations to 1
-        # to avoid massive memory over-allocation of row_values_history
-        if len(inds) == 0:
-            npermutations = 1
         row_values = None
         row_values_history = None
         history_pos = 0
