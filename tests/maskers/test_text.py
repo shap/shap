@@ -1,11 +1,14 @@
 """This file contains tests for the Text masker."""
 
+import sys
 import tempfile
 
 import numpy as np
 import pytest
 
 import shap
+
+pytestmark = pytest.mark.skipif(sys.platform == "darwin", reason="Memory error on macOS")
 
 
 def test_method_token_segments_pretrained_tokenizer():
