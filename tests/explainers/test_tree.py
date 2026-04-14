@@ -3025,9 +3025,10 @@ def test_tree_explainer_with_sparse_input():
 
     # Validate SHAP additivity
     raw_predictions = model.predict_proba(x_sparse)
-    class_idx = 1
-    expected_value = explainer.expected_value[class_idx]
-    sum_shap_values = shap_values.values[:, :, class_idx].sum(axis=1)
-    actual_output = raw_predictions[:, class_idx]
-    reconstructed_output = expected_value + sum_shap_values
-    np.testing.assert_allclose(reconstructed_output, actual_output, atol=1e-5)
+    for class_idx in range(model.n_classes_):
+        expected_value = explainer.expected_value[class_idx]
+        sum_shap_values = shap_values.values[:, :, class_idx].sum(axis=1)
+        reconstructed_output = expected_value + sum_shap_values
+
+        actual_output = raw_predictions[:, class_idx]
+        np.testing.assert_allclose(reconstructed_output, actual_output, atol=1e-5)
