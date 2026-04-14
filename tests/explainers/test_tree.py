@@ -8,9 +8,11 @@ import sys
 import numpy as np
 import pandas as pd
 import pytest
+import scipy.sparse
 import sklearn
 import sklearn.pipeline
 from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor, RandomForestClassifier
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.utils import check_array
 
@@ -3004,3 +3006,20 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+def test_tree_explainer_with_sparse_input():
+    """Test if TreeExplainer correctly handles sparse matrix input
+    by converting it to a dense numpy array.
+    """
+    # Create a simple sparse matrix and labels
+    x_sparse = scipy.sparse.csr_matrix([[1, 0, 1], [0, 1, 0], [1, 1, 1]])
+    y = np.array([0, 1, 0])
+
+    # Fit a model that supports sparse input
+    model = RandomForestClassifier(n_estimators=2, random_state=42).fit(x_sparse, y)
+    explainer = shap.TreeExplainer(model)
+
+    # Execute SHAP values calculation
+    shap_values = explainer.shap_values(x_sparse)
+    assert isinstance(shap_values, np.ndarray), "SHAP values should be a numpy array"
