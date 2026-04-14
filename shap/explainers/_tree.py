@@ -218,7 +218,6 @@ class TreeExplainer(Explainer):
                International Conference on artificial intelligence and statistics. PMLR, 2020.
 
         """
-        
         if feature_names is not None:
             self.data_feature_names = feature_names
         elif isinstance(data, pd.DataFrame):
