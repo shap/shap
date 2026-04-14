@@ -93,11 +93,10 @@ green `<> Code` button on your projects home page.
 
 ### Creating a python environment
 
-Create a new isolated environment for the project, e.g. with conda:
+Create a new isolated environment for the project, e.g. with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-conda create -n shap python=3.12
-conda activate shap
+uv sync
 ```
 
 ### Installing from source
@@ -118,10 +117,10 @@ changes you make to the source code are immediately reflected in your
 environment.
 
 ```bash
-pip install --editable '.[test,plots,docs]'
+uv sync --group test-core --group plots
 ```
 
-The various pip extras are defined in [pyproject.toml](pyproject.toml):
+The various dependency groups are defined in [pyproject.toml](pyproject.toml):
 
 - `test-core`: a minimal set of dependencies to run pytest.
 - `test`: a wider set of 3rd party packages for the full test suite such as
@@ -129,6 +128,7 @@ The various pip extras are defined in [pyproject.toml](pyproject.toml):
 - `plots`: includes matplotlib.
 - `docs`: dependencies for building the docs with Sphinx.
 
+<!-- TODO: update NOTE when GH#4366 is merged -->
 Note: When installing from source, shap will attempt to build the C extension
 and the CUDA extension. If CUDA is not available, shap will retry the build
 without CUDA support.
@@ -143,23 +143,20 @@ We use [pre-commit hooks](https://pre-commit.com/#install) to run code checks.
 Enable `pre-commit` in your local environment with:
 
 ```bash
-pip install pre-commit
-pre-commit install
+uv run pre-commit install
 ```
 
 To run the checks on all files, use:
 
 ```bash
-pre-commit install
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 [Ruff](https://beta.ruff.rs/docs/) is used as a linter, and it is enabled as a
 pre-commit hook. You can also run `ruff` locally with:
 
 ```bash
-pip install ruff
-ruff check .
+uv run ruff check .
 ```
 
 ### Unit tests with pytest
@@ -167,7 +164,7 @@ ruff check .
 The unit test suite can be run locally with:
 
 ```bash
-pytest
+uv run pytest
 ```
 
 For info about matplotlib tests, see `tests/plots/__init__.py`.
@@ -296,7 +293,7 @@ whenever you commit any changes.
 To run the code-quality checks manually, you can do, e.g.:
 
 ```bash
-pre-commit run --files notebook1.ipynb notebook2.ipynb
+uv run pre-commit run --files notebook1.ipynb notebook2.ipynb
 ```
 
 replacing `notebook1.ipynb` and `notebook2.ipynb` with any notebook(s) you have modified.
