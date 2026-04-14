@@ -12,7 +12,6 @@ import scipy.sparse
 import sklearn
 import sklearn.pipeline
 from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor, RandomForestClassifier
-from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.utils import check_array
 
@@ -319,6 +318,7 @@ def create_binary_newsgroups_data():
 def create_random_forest_vectorizer():
     from sklearn.base import TransformerMixin
     from sklearn.ensemble import RandomForestClassifier
+    from sklearn.feature_extraction.text import CountVectorizer
     from sklearn.pipeline import Pipeline
 
     vectorizer = CountVectorizer(lowercase=False, min_df=0.0, binary=True)
