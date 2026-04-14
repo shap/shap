@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
-
 from shap._cutils import reverse_window
+
 from shap.utils import hclust
 from shap.utils._exceptions import DimensionError
 
