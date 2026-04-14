@@ -172,7 +172,6 @@ disallow_untyped_calls = false
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 exclude = ["shap/benchmark/*", "tests/benchmark/*", "shap/_cutils.pyi"]
-mypy_path = "stubs"
 
 # NOTE: numpy.typing.mypy_plugin is deprecated in NumPy 2.3+ and will be removed in a future release
 # plugins = ["numpy.typing.mypy_plugin"]

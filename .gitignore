@@ -41,6 +41,3 @@ node_modules
 mpl-results
 # intermediate AI skill files
 .claude/disclosures/
-
-# stub files
-*.pyi
