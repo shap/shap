@@ -1,7 +1,6 @@
-import os
 import pickle
 import subprocess
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -17,9 +16,7 @@ def test_experiments_generator():
 
     # Test filtering by all parameters
     filtered = list(
-        experiments.experiments(
-            dataset="corrgroups60", model="lasso", method="random", metric="local_accuracy"
-        )
+        experiments.experiments(dataset="corrgroups60", model="lasso", method="random", metric="local_accuracy")
     )
     assert len(filtered) == 1
     assert filtered[0] == ["corrgroups60", "lasso", "random", "local_accuracy"]
@@ -50,9 +47,7 @@ def test_run_experiment(mock_models, mock_metrics, mock_datasets, tmp_path):
 
     # Verify the underlying ML loading functions were called
     mock_datasets.dummy_data.assert_called_once()
-    mock_metrics.dummy_metric.assert_called_once_with(
-        "X_mock", "y_mock", "MockedModelObj", "dummy_method"
-    )
+    mock_metrics.dummy_metric.assert_called_once_with("X_mock", "y_mock", "MockedModelObj", "dummy_method")
 
     # 3. Run again, should hit the cache and NOT call the mocked datasets/metrics
     mock_datasets.dummy_data.reset_mock()
@@ -94,8 +89,10 @@ def test_run_experiments(mock_run_exp, tmp_path):
 # We need a custom fake clock to test the Thread Worker rate limit without creating an infinite loop
 _current_time = [0.0]
 
+
 def fake_time():
     return _current_time[0]
+
 
 def fake_sleep(secs):
     _current_time[0] += secs
@@ -105,9 +102,7 @@ def fake_sleep(secs):
 @patch("time.sleep", side_effect=fake_sleep)
 @patch("subprocess.run")
 @patch("subprocess.check_output")
-def test_run_remote_experiments(
-    mock_check_output, mock_run, mock_sleep, mock_time, tmp_path
-):
+def test_run_remote_experiments(mock_check_output, mock_run, mock_sleep, mock_time, tmp_path):
     """
     Test the complex multi-threaded remote SSH queue execution.
     We mock time.sleep and time.time to simulate throttling without actually waiting.
@@ -128,9 +123,7 @@ def test_run_remote_experiments(
     # Run the remote batch. Using rate_limit=1 forces the thread worker
     # to hit the throttling logic ("sleep 5 seconds until 61 seconds have passed")
     # since we pass two experiments to the exact same host.
-    experiments.run_remote_experiments(
-        [exp1, exp2], ["localhost:python"], rate_limit=1
-    )
+    experiments.run_remote_experiments([exp1, exp2], ["localhost:python"], rate_limit=1)
 
     # Verify our system calls fired
     assert mock_run.called  # the SSH pkill command fired
