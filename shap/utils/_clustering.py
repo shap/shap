@@ -75,7 +75,6 @@ def _pt_shuffle_rec(
     return pos
 
 
-@njit
 def delta_minimization_order(
     all_masks: npt.NDArray[Any],
     max_swap_size: int = 100,
@@ -107,7 +106,6 @@ def _reverse_window_score_gain(
     return forward_score - reverse_score
 
 
-@njit
 def _mask_delta_score(m1: npt.NDArray[Any], m2: npt.NDArray[Any]) -> int:  # type: ignore[misc]
     return (m1 ^ m2).sum()
 
