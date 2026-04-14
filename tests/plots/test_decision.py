@@ -112,9 +112,7 @@ def test_multioutput_decision_raises(values_features):
 def test_decision_returns_ax(random_seed):
     """Verify that decision_plot returns a matplotlib Axes when show=False."""
     rs = np.random.RandomState(random_seed)
-    result = shap.decision_plot(
-        0, rs.standard_normal(size=(20, 5)), rs.standard_normal(size=(20, 5)), show=False
-    )
+    result = shap.decision_plot(0, rs.standard_normal(size=(20, 5)), rs.standard_normal(size=(20, 5)), show=False)
     assert isinstance(result, plt.Axes)
     plt.close("all")
 
