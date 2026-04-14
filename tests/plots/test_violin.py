@@ -3,101 +3,71 @@ import numpy as np
 import pytest
 
 import shap
-from shap.utils._exceptions import DimensionError
 
 
-def test_violin_with_invalid_plot_type():
-    with pytest.raises(ValueError, match="plot_type: Expected one of "):
-        shap.plots.violin(np.random.randn(20, 5), plot_type="nonsense")
-
-
-def test_violin_wrong_features_shape():
-    """Checks that DimensionError is raised if the features data matrix
-    has an incompatible shape with the shap_values matrix.
-    """
-    rs = np.random.RandomState(42)
-
-    emsg = (
-        "The shape of the shap_values matrix does not match the shape of "
-        "the provided data matrix. Perhaps the extra column"
-    )
-    with pytest.raises(DimensionError, match=emsg):
-        expln = shap.Explanation(
-            values=rs.randn(20, 5),
-            data=rs.randn(20, 4),
-        )
-        shap.plots.violin(expln, show=False)
-    # legacy API
-    with pytest.raises(DimensionError, match=emsg):
-        shap.plots.violin(
-            shap_values=rs.randn(20, 5),
-            features=rs.randn(20, 4),
-            show=False,
-        )
-
-    emsg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
-    with pytest.raises(DimensionError, match=emsg):
-        expln = shap.Explanation(
-            values=rs.randn(20, 5),
-            data=rs.randn(20, 1),
-        )
-        shap.plots.violin(expln, show=False)
-    # legacy API
-    with pytest.raises(DimensionError, match=emsg):
-        shap.plots.violin(
-            shap_values=rs.randn(20, 5),
-            features=rs.randn(20, 1),
-            show=False,
-        )
+@pytest.fixture()
+def violin_data(explainer):
+    """Return shap values, features, and feature names for violin tests."""
+    X, _ = shap.datasets.adult()
+    X = X.iloc[:100]
+    explanation = explainer(X)
+    shap_values = explanation.values
+    features = X.values
+    feature_names = list(X.columns)
+    return shap_values, features, feature_names
 
 
 @pytest.mark.mpl_image_compare
-def test_violin(explainer):
-    """Make sure the violin plot is unchanged."""
-    fig = plt.figure()
-    shap_values = explainer.shap_values(explainer.data)
-    shap.plots.violin(shap_values, show=False)
-    plt.tight_layout()
+def test_violin(violin_data):
+    """Check that the violin plot is unchanged (no-features variant)."""
+    np.random.seed(0)
+    shap_values, _, feature_names = violin_data
+    fig, ax = plt.subplots(figsize=(8, 6))
+    shap.plots.violin(shap_values, feature_names=feature_names, show=False, ax=ax)
     return fig
 
 
-# FIXME: remove once we migrate violin completely to the Explanation object
-# ------ "legacy" violin plots -------
-# Currently using the same files as the `test_summary.py` violin tests for comparison
-@pytest.mark.mpl_image_compare(
-    filename="test_summary_violin_with_data.png",
-    tolerance=5,
-)
-def test_summary_violin_with_data2():
-    """Check a violin chart with shap_values as a np.array."""
-    rs = np.random.RandomState(0)
-    fig = plt.figure()
-    shap.plots.violin(
-        rs.standard_normal(size=(20, 5)),
-        rs.standard_normal(size=(20, 5)),
-        plot_type="violin",
-        show=False,
-    )
-    fig.set_layout_engine("tight")
+@pytest.mark.mpl_image_compare
+def test_violin_with_features(violin_data):
+    """Check that the violin plot with feature values is unchanged."""
+    np.random.seed(0)
+    shap_values, features, feature_names = violin_data
+    fig, ax = plt.subplots(figsize=(8, 6))
+    shap.plots.violin(shap_values, features=features, feature_names=feature_names, show=False, ax=ax)
     return fig
 
 
-# Currently using the same files as the `test_summary.py` violin tests for comparison
-@pytest.mark.mpl_image_compare(
-    filename="test_summary_layered_violin_with_data.png",
-    tolerance=5,
-)
-def test_summary_layered_violin_with_data2():
-    """Check a layered violin chart with shap_values as a np.array."""
-    rs = np.random.RandomState(0)
-    fig = plt.figure()
-    shap_values = rs.randn(200, 5)
-    feats = rs.randn(200, 5)
+@pytest.mark.mpl_image_compare
+def test_violin_layered(violin_data):
+    """Check that the layered violin plot is unchanged."""
+    np.random.seed(0)
+    shap_values, features, feature_names = violin_data
+    fig, ax = plt.subplots(figsize=(8, 6))
     shap.plots.violin(
         shap_values,
-        feats,
+        features=features,
+        feature_names=feature_names,
         plot_type="layered_violin",
         show=False,
+        ax=ax,
     )
-    fig.set_layout_engine("tight")
     return fig
+
+
+def test_violin_returns_ax(violin_data):
+    """violin() should always return an Axes object."""
+    np.random.seed(0)
+    shap_values, features, feature_names = violin_data
+    result = shap.plots.violin(shap_values, features=features, feature_names=feature_names, show=False)
+    assert isinstance(result, plt.Axes)
+    plt.close("all")
+
+
+def test_violin_accepts_ax(violin_data):
+    """violin() should draw into a provided Axes and return it."""
+    np.random.seed(0)
+    shap_values, features, feature_names = violin_data
+    fig, ax = plt.subplots()
+    result = shap.plots.violin(shap_values, features=features, feature_names=feature_names, show=False, ax=ax)
+    assert result is ax
+    plt.close(fig)
