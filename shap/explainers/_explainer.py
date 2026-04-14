@@ -432,13 +432,20 @@ class Explainer(Serializable):
             else:
                 sliced_labels = None
         else:
-            assert output_indices is not None, (
-                "You have passed a list for output_names but the model seems to not have multiple outputs!"
-            )
             labels = np.array(self.output_names)
-            sliced_labels = [labels[index_list] for index_list in output_indices]  # type: ignore[assignment]
-            if not ragged_outputs:
-                sliced_labels = np.array(sliced_labels)
+            if output_indices is not None:
+                # Check if we have enough names to satisfy the indices we found
+                max_idx = max([max(index_list) for index_list in output_indices if len(index_list) > 0], default=0)
+                assert len(labels) > max_idx, (
+                    f"You passed {len(labels)} output_names, but the model indexed output {max_idx}. "
+                    "The list of output_names must be long enough to cover all output indices."
+                )
+
+                sliced_labels = [labels[index_list] for index_list in output_indices]  # type: ignore[assignment]
+                if not ragged_outputs:
+                    sliced_labels = np.array(sliced_labels)
+            else:
+                sliced_labels = labels
 
         if isinstance(sliced_labels, np.ndarray) and len(sliced_labels.shape) == 2:
             if np.all(sliced_labels[0, :] == sliced_labels):
