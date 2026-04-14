@@ -40,7 +40,6 @@ try:
 except ImportError as e:
     record_import_error("pyspark", "PySpark could not be imported!", e)
 
-DEPRECATED_APPROX = object()
 
 output_transform_codes = {
     "identity": 0,
@@ -141,7 +140,6 @@ class TreeExplainer(Explainer):
         model_output: str = "raw",
         feature_perturbation: Literal["auto", "interventional", "tree_path_dependent"] = "auto",
         feature_names: list[str] | None = None,
-        approximate: Any = DEPRECATED_APPROX,
         # FIXME: The `link` and `linearize_link` arguments are ignored. GH #3513
         link: Any = None,
         linearize_link: Any = None,
@@ -213,10 +211,6 @@ class TreeExplainer(Explainer):
             Currently the "probability" and "log_loss" options are only
             supported when ``feature_perturbation="interventional"``.
 
-        approximate : bool
-            Deprecated, will be deprecated in v0.47.0 and removed in version v0.49.0.
-            Please use the ``approximate`` argument in the :meth:`.shap_values` or ``__call__`` methods instead.
-
         References
         ----------
         .. [1] Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum.
@@ -224,12 +218,7 @@ class TreeExplainer(Explainer):
                International Conference on artificial intelligence and statistics. PMLR, 2020.
 
         """
-        if approximate is not DEPRECATED_APPROX:
-            warnings.warn(
-                "The approximate argument has been deprecated in version v0.47.0 and will be removed in version v0.48.0. "
-                "Please use the approximate argument in the shap_values or the __call__ method instead.",
-                DeprecationWarning,
-            )
+        
         if feature_names is not None:
             self.data_feature_names = feature_names
         elif isinstance(data, pd.DataFrame):
