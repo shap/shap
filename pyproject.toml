@@ -46,17 +46,15 @@ classifiers = [
 ]
 dynamic = ["version"]
 
-[project.optional-dependencies]
+[dependency-groups]
 plots = ["matplotlib", "ipython"]
-others = ["lime"]
-download_datasets = [
+download-datasets = [
   # Dependencies needed to download datasets for testing
   # scikit-learn is already in core dependencies, but listed here for clarity
   "scikit-learn",
 ]
 docs = [
-  "matplotlib",
-  "ipython",
+  {include-group = "plots"},
   "numpydoc",
   "sphinx_rtd_theme",
   "sphinx",
@@ -71,11 +69,11 @@ test-core = [
   "pytest-mpl",
   "pytest-cov",
   "mypy",
+  "pre-commit",
+  "ruff",
 ]
 test = [
-  "pytest",
-  "pytest-mpl",
-  "pytest-cov",
+  {include-group = "test-core"},
   "xgboost",
   "lightgbm",
   'catboost; python_version < "3.14"',  # TODO: pending 3.14 support
@@ -97,8 +95,7 @@ test = [
   "causalml>=0.15.5",
   "selenium",  # needed to test the javascript based plots
 ]
-
-test_notebooks = [
+nbtest = [
   "jupyter",
   "nbconvert",
   "nbformat",
@@ -106,9 +103,6 @@ test_notebooks = [
   "transformers",
   "datasets",
   "keras",
-]
-
-nbtest = [
   "nbtest-plugin",
   "nbtest-gen",
   "nbtest-lab-extension"
