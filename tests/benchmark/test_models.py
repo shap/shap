@@ -62,8 +62,7 @@ def test_tensorflow_factories():
 
 def test_cric_lambdas():
     """
-    Test the cric functions by mocking the underlying predict_proba
-    to ensure the lambda overrides are executed and covered.
+    Test the cric functions by mocking the underlying predict_proba to ensure the lambda overrides are executed and covered.
     """
     dummy_probs = np.array([[0.1, 0.9], [0.8, 0.2]])
     expected_output = [0.9, 0.2]
