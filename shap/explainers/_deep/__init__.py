@@ -83,8 +83,7 @@ class DeepExplainer(Explainer):
             except Exception:
                 framework = "tensorflow"
 
-        masker = data
-        super().__init__(model, masker)
+        super().__init__(model, masker=None)
 
         self.explainer: TFDeep | PyTorchDeep
         if framework == "tensorflow":
