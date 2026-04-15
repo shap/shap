@@ -104,8 +104,6 @@ test = [
   "selenium",  # needed to test the javascript based plots
 ]
 
-build = ["nanobind>=2.12"]
-
 test_notebooks = [
   "jupyter",
   "nbconvert",
