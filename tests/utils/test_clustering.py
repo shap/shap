@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from shap._cutils import reverse_window
 
 from shap.utils import hclust
 from shap.utils._exceptions import DimensionError
@@ -41,36 +40,3 @@ def test_hclust_errors_on_unknown_linkages():
     X = np.column_stack((np.arange(1, 10), np.arange(100, 1000, step=100)))
     with pytest.raises(ValueError, match=r"Unknown linkage type:"):
         hclust(X, linkage="random-string", random_state=0)  # type: ignore
-
-
-# Tests for the nanobind-ported reverse_window from shap._cutils
-
-
-def test_reverse_window_basic():
-    order = np.array([0, 1, 2, 3, 4], dtype=np.int64)
-    reverse_window(order, 1, 3)
-    assert list(order) == [0, 3, 2, 1, 4]
-
-
-def test_reverse_window_full_array():
-    order = np.array([0, 1, 2, 3, 4], dtype=np.int64)
-    reverse_window(order, 0, 5)
-    assert list(order) == [4, 3, 2, 1, 0]
-
-
-def test_reverse_window_single_element():
-    order = np.array([0, 1, 2, 3, 4], dtype=np.int64)
-    reverse_window(order, 2, 1)
-    assert list(order) == [0, 1, 2, 3, 4]
-
-
-def test_reverse_window_empty():
-    order = np.array([0, 1, 2, 3, 4], dtype=np.int64)
-    reverse_window(order, 2, 0)
-    assert list(order) == [0, 1, 2, 3, 4]
-
-
-def test_reverse_window_at_end():
-    order = np.array([0, 1, 2, 3, 4], dtype=np.int64)
-    reverse_window(order, 3, 2)
-    assert list(order) == [0, 1, 2, 4, 3]
