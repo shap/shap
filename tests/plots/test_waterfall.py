@@ -118,3 +118,19 @@ def test_waterfall_plot_for_data_with_number_columns():
     explainer = shap.Explainer(f, med)
     shap_values = explainer(X)
     shap.plots.waterfall(shap_values[0], show=False)
+
+
+def test_waterfall_returns_ax(explainer):
+    """waterfall() should always return an Axes object."""
+    explanation = explainer(explainer.data)
+    result = shap.plots.waterfall(explanation[0], show=False)
+    assert isinstance(result, plt.Axes)
+
+
+def test_waterfall_accepts_ax(explainer):
+    """waterfall() should draw into a provided Axes and return it."""
+    explanation = explainer(explainer.data)
+    fig, ax = plt.subplots()
+    result = shap.plots.waterfall(explanation[0], ax=ax, show=False)
+    assert result is ax
+    plt.close(fig)

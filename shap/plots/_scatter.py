@@ -107,9 +107,7 @@ def scatter(
 
     ax : matplotlib Axes, optional
         Optionally specify an existing :external+mpl:class:`matplotlib.axes.Axes` object, into which
-        the plot will be placed.
-
-        Only supported when plotting a single feature.
+        the plot will be placed. Only supported when plotting a single feature.
 
     show : bool
         Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
@@ -119,9 +117,9 @@ def scatter(
 
     Returns
     -------
-    ax : matplotlib Axes object
-        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it. Only
-        returned if ``show=False``.
+    ax : matplotlib Axes or list of Axes
+        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it.
+        When plotting multiple features, returns a list of Axes objects.
 
     Examples
     --------
@@ -140,27 +138,28 @@ def scatter(
         ymin = parse_axis_limit(ymin, shap_values.values, is_shap_axis=True)
         ymax = parse_axis_limit(ymax, shap_values.values, is_shap_axis=True)
         ymin, ymax = _suggest_buffered_limits(ymin, ymax, shap_values.values)
-        _ = plt.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
-        for i in inds:
-            ax = plt.subplot(1, len(inds), i + 1)
-            scatter(shap_values[:, i], color=color, show=False, ax=ax, ymin=ymin, ymax=ymax)
+        fig, ax_list = plt.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
+        ax_list = list(np.atleast_1d(ax_list))
+        for idx, i in enumerate(inds):
+            ax_i = ax_list[idx]
+            scatter(shap_values[:, i], color=color, show=False, ax=ax_i, ymin=ymin, ymax=ymax)
             if overlay is not None:
                 line_styles = ["solid", "dotted", "dashed"]
                 for j, name in enumerate(overlay):
                     vals = overlay[name]
                     if isinstance(vals[i][0][0], (float, int)):
-                        plt.plot(vals[i][0], vals[i][1], color="#000000", linestyle=line_styles[j], label=name)
+                        ax_i.plot(vals[i][0], vals[i][1], color="#000000", linestyle=line_styles[j], label=name)
             if i == 0:
-                ax.set_ylabel(ylabel)
+                ax_i.set_ylabel(ylabel)
             else:
-                ax.set_ylabel("")
-                ax.set_yticks([])
-                ax.spines["left"].set_visible(False)
+                ax_i.set_ylabel("")
+                ax_i.set_yticks([])
+                ax_i.spines["left"].set_visible(False)
         if overlay is not None:
-            plt.legend()
+            ax_list[-1].legend()
         if show:
             plt.show()
-        return
+        return ax_list
 
     if len(shap_values.shape) != 1:
         raise DimensionError(
@@ -424,8 +423,7 @@ def scatter(
         with warnings.catch_warnings():  # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
             plt.show()
-    else:
-        return ax
+    return ax
 
 
 def _suggest_buffered_limits(ax_min: float | None, ax_max: float | None, values: np.ndarray) -> tuple[float, float]:
