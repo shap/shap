@@ -98,7 +98,7 @@ def compile_cuda_module(host_args):
 
 def run_setup(*, with_binary, with_cuda):
     ext_modules = []
-    compile_args = []   # initialize here so it always exists
+    compile_args = []  # initialize here so it always exists
 
     if with_binary:
         if sys.platform == "zos":
