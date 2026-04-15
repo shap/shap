@@ -119,8 +119,8 @@ def force(
         elif len(base_value) > 1 and np.all(base_value == base_value[0]):
             base_value = base_value[0]
 
-    if isinstance(base_value, (np.ndarray, list)):
-        if not isinstance(shap_values, (list, np.ndarray)) or len(shap_values) != len(base_value):
+    if isinstance(base_value, np.ndarray | list):
+        if not isinstance(shap_values, list | np.ndarray) or len(shap_values) != len(base_value):
             emsg = (
                 "In v0.20, force plot now requires the base value as the first parameter! "
                 "Try shap.plots.force(explainer.expected_value, shap_values) or "
@@ -366,7 +366,7 @@ def ensure_not_numpy(x):
 
 def verify_valid_cmap(cmap):
     """Checks that cmap is either a str or list of hex colors"""
-    if not (isinstance(cmap, (str, list)) or str(type(cmap)).endswith("unicode'>")):
+    if not (isinstance(cmap, str | list) or str(type(cmap)).endswith("unicode'>")):
         emsg = f"Plot color map must be string or list! Not {type(cmap)}."
         raise TypeError(emsg)
 

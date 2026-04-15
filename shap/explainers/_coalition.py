@@ -229,7 +229,7 @@ class CoalitionExplainer(Explainer):
         # if not fixed background or no base value assigned then compute base value for a row
         if self._curr_base_value is None or not getattr(self.masker, "fixed_background", False):
             base_output = fm(m00.reshape(1, -1), zero_index=0)[0]
-            self._curr_base_value = np.array(base_output) if isinstance(base_output, (list, tuple)) else base_output
+            self._curr_base_value = np.array(base_output) if isinstance(base_output, list | tuple) else base_output
 
         # Handle multi-output predictions
         if isinstance(self._curr_base_value, np.ndarray) and self._curr_base_value.ndim > 0:
@@ -261,7 +261,7 @@ class CoalitionExplainer(Explainer):
         for mask in self.unique_masks:
             result = fm(mask.reshape(1, -1))
             # Ensure result is properly shaped for multi-output
-            if isinstance(result, (list, tuple)):
+            if isinstance(result, list | tuple):
                 result = np.array(result)
             elif not isinstance(result, np.ndarray):
                 result = np.array([result])

@@ -455,7 +455,7 @@ class TreeExplainer(Explainer):
         if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
             tree_limit = self.model.values.shape[0]
         # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
-        if isinstance(X, (pd.Series, pd.DataFrame)):
+        if isinstance(X, pd.Series | pd.DataFrame):
             X = X.to_numpy(dtype=self.model.input_dtype, na_value=np.nan)
         flat_output = False
         if len(X.shape) == 1:
@@ -1676,7 +1676,7 @@ class TreeEnsemble:
             tree_limit = -1 if self.tree_limit is None else self.tree_limit
 
         # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
-        if isinstance(X, (pd.Series, pd.DataFrame)):
+        if isinstance(X, pd.Series | pd.DataFrame):
             X = X.to_numpy(dtype=self.input_dtype, na_value=np.nan)
         flat_output = False
         if len(X.shape) == 1:
@@ -1952,7 +1952,7 @@ class SingleTree:
                         self.children_default[vsplit_idx] = self.children_right[vsplit_idx]
 
                     self.features[vsplit_idx] = vertex["split_feature"]
-                    if isinstance(vertex["threshold"], (int, float)):
+                    if isinstance(vertex["threshold"], int | float):
                         self.thresholds[vsplit_idx] = vertex["threshold"]
                         self.threshold_types[vsplit_idx] = 0
                     elif isinstance(vertex["threshold"], str):
@@ -2257,12 +2257,12 @@ class XGBTreeModelLoader:
         if isinstance(base_score, str):
             try:
                 base_score = ast.literal_eval(base_score)
-                if not isinstance(base_score, (list, float, int, tuple, np.ndarray)):
+                if not isinstance(base_score, list | float | int | tuple | np.ndarray):
                     raise ValueError
             except ValueError as e:
                 emsg = f"Expected the base_score to contain a list or float, received {base_score}"
                 raise ValueError(emsg) from e
-        if isinstance(base_score, (list, tuple, np.ndarray)):
+        if isinstance(base_score, list | tuple | np.ndarray):
             base_score = base_score[0]
         base_score = float(base_score)
         self.base_score = base_score

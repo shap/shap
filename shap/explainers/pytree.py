@@ -180,7 +180,7 @@ class TreeExplainer:
             return self.trees.predict(X, num_iteration=tree_limit, pred_contrib=True)
 
         # convert dataframes
-        if isinstance(X, (pd.Series, pd.DataFrame)):
+        if isinstance(X, pd.Series | pd.DataFrame):
             X = X.values
 
         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))

@@ -136,7 +136,7 @@ class KernelExplainer(Explainer):
         model_null = match_model_to_data(self.model, self.data)
 
         # enforce our current input type limitations
-        if not isinstance(self.data, (DenseData, SparseData)):
+        if not isinstance(self.data, DenseData | SparseData):
             emsg = "Shap explainer only supports the DenseData and SparseData input currently."
             raise TypeError(emsg)
         if self.data.transposed:
@@ -161,7 +161,7 @@ class KernelExplainer(Explainer):
         self.nsamplesRun = 0
 
         # find E_x[f(x)]
-        if isinstance(model_null, (pd.DataFrame, pd.Series)):
+        if isinstance(model_null, pd.DataFrame | pd.Series):
             model_null = np.squeeze(model_null.values)
         if safe_isinstance(model_null, "tensorflow.python.framework.ops.EagerTensor"):
             model_null = model_null.numpy()
@@ -372,7 +372,7 @@ class KernelExplainer(Explainer):
             model_out = self.model.f(instance.convert_to_df())
         else:
             model_out = self.model.f(instance.x)
-        if isinstance(model_out, (pd.DataFrame, pd.Series)):
+        if isinstance(model_out, pd.DataFrame | pd.Series):
             model_out = model_out.values
         elif safe_isinstance(model_out, "tensorflow.python.framework.ops.SymbolicTensor"):
             model_out = self._convert_symbolic_tensor(model_out)
@@ -640,7 +640,7 @@ class KernelExplainer(Explainer):
         w: float,
     ) -> None:
         offset = self.nsamplesAdded * self.N
-        if isinstance(self.varyingFeatureGroups, (list,)):
+        if isinstance(self.varyingFeatureGroups, list):
             for j in range(self.M):
                 for k in self.varyingFeatureGroups[j]:
                     if m[j] == 1.0:
@@ -675,7 +675,7 @@ class KernelExplainer(Explainer):
             if self.keep_index_ordered:
                 data = data.sort_index()
         modelOut = self.model.f(data)
-        if isinstance(modelOut, (pd.DataFrame, pd.Series)):
+        if isinstance(modelOut, pd.DataFrame | pd.Series):
             modelOut = modelOut.values
         elif safe_isinstance(modelOut, "tensorflow.python.framework.ops.SymbolicTensor"):
             modelOut = self._convert_symbolic_tensor(modelOut)

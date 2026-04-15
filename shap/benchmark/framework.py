@@ -17,9 +17,9 @@ def update(model, attributions, X, y, masker, sort_order, perturbation_method, s
 
 def get_benchmark(model, attributions, X, y, masker, metrics):
     # convert dataframes
-    if isinstance(X, (pd.Series, pd.DataFrame)):
+    if isinstance(X, pd.Series | pd.DataFrame):
         X = X.values
-    if isinstance(masker, (pd.Series, pd.DataFrame)):
+    if isinstance(masker, pd.Series | pd.DataFrame):
         masker = masker.values
 
     # record scores per metric
