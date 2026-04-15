@@ -206,6 +206,7 @@ def text(
             scaled_value = 0.5 + 0.5 * output_values[i] / (output_max + 1e-8)
             color = colors.red_transparent_blue(scaled_value)
             color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
+            color = tuple(map(float, color))
             # '#dddddd' if i == 0 else '#ffffff' border-bottom: {'3px solid #000000' if i == 0 else 'none'};
             out += f"""
 <div style="display: inline; border-bottom: {"3px solid #000000" if i == 0 else "none"}; background: rgba{color}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
@@ -335,6 +336,7 @@ def text(
         scaled_value = 0.5 + 0.5 * values[i] / (cmax + 1e-8)
         color = colors.red_transparent_blue(scaled_value)
         color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
+        color = tuple(map(float, color))
 
         # display the labels for the most important words
         label_display = "none"
@@ -548,7 +550,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
     ### Positive value marks ###
 
-    red = tuple(colors.red_rgb * 255)
+    red = tuple(map(float, colors.red_rgb * 255))
     light_red = (255, 195, 213)
 
     # draw base red bar
@@ -646,7 +648,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
     ### Negative value marks ###
 
-    blue = tuple(colors.blue_rgb * 255)
+    blue = tuple(map(float, colors.blue_rgb * 255))
     light_blue = (208, 230, 250)
 
     # draw base blue bar
@@ -852,6 +854,7 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
         scaled_value = 0.5 + 0.5 * shap_values[i] / max(abs(maxv), abs(minv))
         color = colors.red_transparent_blue(scaled_value)
         color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
+        color = tuple(map(float, color))
 
         # display the labels for the most important words
         label_display = "none"
@@ -983,6 +986,7 @@ def saliency_plot(shap_values):
                 scaled_value = 0.5 + 0.5 * compressed_shap_matrix[row_index, col_index] / cmax
                 color = colors.red_transparent_blue(scaled_value)
                 color = "rgba" + str((color[0] * 255, color[1] * 255, color[2] * 255, color[3]))
+                color = tuple(map(float, color))
                 input_colors_row.append(color)
             input_colors.append(input_colors_row)
 
