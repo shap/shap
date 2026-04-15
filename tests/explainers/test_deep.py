@@ -770,3 +770,24 @@ def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
         np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3),
         "Sum of SHAP values does not match difference!",
     )
+
+def test_tf_keras_simple_dense_path():
+    """Simple test to ensure keras utilities are exercised via DeepExplainer."""
+    tf = pytest.importorskip("tensorflow")
+    import numpy as np
+    import shap
+
+    model = tf.keras.Sequential([
+        tf.keras.layers.Input(shape=(4,)),
+        tf.keras.layers.Dense(4, activation="relu"),
+        tf.keras.layers.Dense(1)
+    ])
+
+    model.compile(optimizer="adam", loss="mse")
+
+    X = np.random.randn(10, 4).astype(np.float32)
+
+    explainer = shap.DeepExplainer(model, X[:5])
+    shap_values = explainer.shap_values(X[:2])
+
+    assert shap_values is not None
