@@ -540,6 +540,55 @@ def summary_legacy(
     show_values_in_legend: bool = False,
     use_log_scale: bool = False,
     rng: np.random.Generator | None = None,
+):
+    return _summary_legacy(
+        shap_values,
+        features=features,
+        feature_names=feature_names,
+        max_display=max_display,
+        plot_type=plot_type,
+        color=color,
+        axis_color=axis_color,
+        title=title,
+        alpha=alpha,
+        show=show,
+        sort=sort,
+        color_bar=color_bar,
+        plot_size=plot_size,
+        layered_violin_max_num_bins=layered_violin_max_num_bins,
+        class_names=class_names,
+        class_inds=class_inds,
+        color_bar_label=color_bar_label,
+        cmap=cmap,
+        show_values_in_legend=show_values_in_legend,
+        use_log_scale=use_log_scale,
+        rng=rng,
+        _internal=False,
+    )
+
+
+def _summary_legacy(
+    shap_values,
+    features=None,
+    feature_names=None,
+    max_display=None,
+    plot_type=None,
+    color=None,
+    axis_color="#333333",
+    title=None,
+    alpha=1,
+    show=True,
+    sort=True,
+    color_bar=True,
+    plot_size="auto",
+    layered_violin_max_num_bins=20,
+    class_names=None,
+    class_inds=None,
+    color_bar_label=labels["FEATURE_VALUE"],
+    cmap=colors.red_blue,
+    show_values_in_legend: bool = False,
+    use_log_scale: bool = False,
+    rng: np.random.Generator | None = None,
     _internal: bool = False,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
@@ -684,7 +733,7 @@ def summary_legacy(
                     else:
                         new_feature_names.append(c1 + "* - " + c2)
 
-            return summary_legacy(
+            return _summary_legacy(
                 new_shap_values,
                 new_features,
                 new_feature_names,
@@ -721,7 +770,7 @@ def summary_legacy(
         plt.subplot(1, max_display, 1)
         proj_shap_values = shap_values[:, sort_inds[0], sort_inds]
         proj_shap_values[:, 1:] *= 2  # because off diag effects are split in half
-        summary_legacy(
+        _summary_legacy(
             proj_shap_values,
             features[:, sort_inds] if features is not None else None,
             feature_names=np.array(feature_names)[sort_inds].tolist(),
@@ -742,7 +791,7 @@ def summary_legacy(
             proj_shap_values = shap_values[:, ind, sort_inds]
             proj_shap_values *= 2
             proj_shap_values[:, i] /= 2  # because only off diag effects are split in half
-            summary_legacy(
+            _summary_legacy(
                 proj_shap_values,
                 features[:, sort_inds] if features is not None else None,
                 sort=False,
