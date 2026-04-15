@@ -289,7 +289,7 @@ def hclust(
                 dist_list.append(min(dist_full[i, j], dist_full[j, i]))
             elif linkage == "complete":
                 dist_list.append(max(dist_full[i, j], dist_full[j, i]))
-            elif linkage == "average":
+            else:
                 dist_list.append((dist_full[i, j] + dist_full[j, i]) / 2)
         dist: npt.NDArray[Any] = np.array(dist_list)
 
@@ -309,5 +309,5 @@ def hclust(
         return scipy.cluster.hierarchy.single(dist)
     elif linkage == "complete":
         return scipy.cluster.hierarchy.complete(dist)
-    elif linkage == "average":
+    else:
         return scipy.cluster.hierarchy.average(dist)
