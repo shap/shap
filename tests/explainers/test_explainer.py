@@ -102,7 +102,6 @@ def test_explainer_with_tokenizer_auto_wraps_text_masker_and_explains_text():
     """Exercise Explainer text masker auto-wrapping with real tokenizer inputs."""
     transformers = pytest.importorskip("transformers")
     tokenizer = transformers.AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-BertModel")
-
     # Keep the model simple but text-shaped: one numeric score per string.
     def model(texts):
         texts = np.asarray(texts, dtype=object)
