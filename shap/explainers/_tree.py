@@ -458,7 +458,7 @@ class TreeExplainer(Explainer):
         if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.to_numpy(dtype=self.model.input_dtype, na_value=np.nan)
 
-        if scipy.sparse.issparse(X):
+        if scipy.sparse.issparse(X) and hasattr(X, "toarray"):
             X = X.toarray()
 
         flat_output = False
