@@ -969,7 +969,20 @@ class TreeEnsemble:
         self.input_dtype = (
             np.float64
         )  # for sklearn we need to use np.float32 to always get exact matches to their predictions
-        self.data = data
+        if data is not None:
+            try:
+                # CRITICAL: We must overwrite the local `data` variable
+                # so the clean array gets passed down to the XGBoost/LightGBM parsers below.
+                data = np.asarray(data, dtype=np.float64)
+                self.data = data
+            except (ValueError, TypeError) as e:
+                raise ValueError(
+                    "Background data must be purely numeric. Please convert all "
+                    "features (including strings and booleans) to floats before "
+                    "passing them to SHAP."
+                ) from e
+        else:
+            self.data = None
         self.data_missing = data_missing
         self.fully_defined_weighting = (
             True  # does the background dataset land in every leaf (making it valid for the tree_path_dependent method)
