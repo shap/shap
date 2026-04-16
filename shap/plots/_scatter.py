@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import typing
 import warnings
 from typing import Any, Literal
@@ -131,7 +132,12 @@ def scatter(
     if not isinstance(shap_values, Explanation):
         raise TypeError("The shap_values parameter must be a shap.Explanation object!")
 
-    feature_names = _get_feature_names(shap_values)
+    feature_names = shap_values.feature_names
+    if feature_names is None:
+        num_features = shap_values.shape[1] if len(shap_values.shape) > 1 else 1
+        feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
+        if len(shap_values.shape) == 1:
+            feature_names = str(feature_names[0])
 
     # see if we are plotting multiple columns
     if not isinstance(feature_names, str) and len(feature_names) > 0:
@@ -147,6 +153,7 @@ def scatter(
             ax = plt.subplot(1, len(inds), i + 1)
             column_shap_values = shap_values[:, i]
             if column_shap_values.feature_names is None:
+                column_shap_values = copy.copy(column_shap_values)
                 column_shap_values.feature_names = str(feature_names[i])
             scatter(column_shap_values, color=color, show=False, ax=ax, ymin=ymin, ymax=ymax)
             if overlay is not None:
@@ -191,7 +198,12 @@ def scatter(
     # TODO: This stacking could be avoided if we use the new shap.utils.potential_interactions function
     if isinstance(color, Explanation):
         shap_values2 = color
-        feature_names2 = _get_feature_names(shap_values2)
+        feature_names2 = shap_values2.feature_names
+        if feature_names2 is None:
+            num_features = shap_values2.shape[1] if len(shap_values2.shape) > 1 else 1
+            feature_names2 = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
+            if len(shap_values2.shape) == 1:
+                feature_names2 = str(feature_names2[0])
         if isinstance(feature_names2, (str, int, np.integer)):
             feature_names.append(feature_names2)
             shap_values_arr = np.hstack([shap_values_arr, shap_values2.values.reshape(-1, len(feature_names) - 1)])
@@ -432,18 +444,6 @@ def scatter(
             plt.show()
     else:
         return ax
-
-
-def _get_feature_names(shap_values: Explanation):
-    """Infer default feature names when an Explanation does not provide them."""
-    if shap_values.feature_names is not None:
-        return shap_values.feature_names
-
-    num_features = shap_values.shape[1] if len(shap_values.shape) > 1 else 1
-    feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
-    if len(shap_values.shape) == 1:
-        return str(feature_names[0])
-    return feature_names
 
 
 def _suggest_buffered_limits(ax_min: float | None, ax_max: float | None, values: np.ndarray) -> tuple[float, float]:
