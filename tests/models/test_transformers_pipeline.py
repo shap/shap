@@ -10,6 +10,7 @@ import scipy.special
 
 from shap.models import TransformersPipeline
 
+
 def _make_mock_pipeline(
     label2id=None,
     id2label=None,
@@ -40,7 +41,9 @@ def _make_mock_pipeline(
         pipe.return_value = output
     return pipe
 
+
 # __init__ – label mapping resolution
+
 
 def test_init_with_label2id():
     """Standard case: config has both label2id and id2label."""
@@ -107,7 +110,9 @@ def test_init_no_config_attribute_raises():
     with pytest.raises(AttributeError):
         TransformersPipeline(pipe)
 
+
 # __call__ – output shape and score extraction
+
 
 def test_call_nested_list_output():
     """top_k=None / modern transformers: returns [[{...}, {...}]] per batch."""
@@ -185,8 +190,10 @@ def test_call_string_input_raises():
     with pytest.raises(AssertionError):
         m("just a single string")
 
+
 # Integration-style test using a real transformers pipeline
 # (skipped when transformers is not installed or model can't be downloaded)
+
 
 def test_integration_sentiment_pipeline():
     """Smoke test against a real lightweight sentiment-analysis pipeline.
