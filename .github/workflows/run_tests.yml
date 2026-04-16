@@ -3,14 +3,11 @@ name: tests
 on:
   workflow_dispatch:
   push:
-    # TODO: remove "move-to-nanobind" branch before merge
     branches:
       - master
-      - "move-to-nanobind"
   pull_request:
     branches:
       - master
-      - "move-to-nanobind"
     paths:
       - "shap/**"
       - "tests/**"
