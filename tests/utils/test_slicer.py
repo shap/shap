@@ -2,7 +2,6 @@
 An unholy balance of use cases and test coverage.
 """
 
-import numbers
 from typing import Any
 
 import numpy as np
@@ -37,7 +36,7 @@ def coerced(o: Any):
         raise ValueError(f"Object {o} of {type(o)} is not a list, tuple nor array.")
 
 
-def is_close(a: numbers.Number, b: numbers.Number, rel_tol: float = 1e-09, abs_tol: float = 0.0):
+def is_close(a: int | float, b: int | float, rel_tol: float = 1e-09, abs_tol: float = 0.0):
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 
@@ -47,8 +46,8 @@ def ctr_eq(c1: Any, c2: Any):
     if isinstance(c2, torch.Tensor) and c2.shape == torch.Size([]):
         c2 = c2.item()
 
-    if isinstance(c1, numbers.Number) and isinstance(c2, numbers.Number):
-        return is_close(c1, c2)
+    if isinstance(c1, (int, float, np.number)) and isinstance(c2, (int, float, np.number)):
+        return is_close(c1, c2)  # type: ignore[arg-type]
 
     c1 = coerced(c1)
     c2 = coerced(c2)
@@ -242,12 +241,12 @@ def test_numpy_subkeys():
     subkey = np.int64(1)
     assert slicer[subkey].data == 2
 
-    subkey = np.array([0, 1])
-    assert ctr_eq(slicer[subkey].data, [1, 2])
+    subkey_arr_1d = np.array([0, 1])
+    assert ctr_eq(slicer[subkey_arr_1d].data, [1, 2])
 
-    subkey = np.array([[0, 1], [3, 4]])
+    subkey_arr_2d = np.array([[0, 1], [3, 4]])
     with pytest.raises(ValueError):
-        _ = slicer[subkey]
+        _ = slicer[subkey_arr_2d]
 
 
 def test_repr_smoke():

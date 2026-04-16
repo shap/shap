@@ -164,18 +164,18 @@ class Explanation(metaclass=MetaExplanation):
             if output_names_order == 0:
                 pass
             elif output_names_order == 1:
-                output_names = Obj(output_names, self.output_dims)
+                output_names = Obj(output_names, self.output_dims)  # type: ignore[assignment]
             elif output_names_order == 2:
-                output_names = Obj(output_names, [0] + list(self.output_dims))
+                output_names = Obj(output_names, [0] + list(self.output_dims))  # type: ignore[assignment]
             else:
                 raise ValueError("shap.Explanation does not yet support output_names of order greater than 3!")
 
         if base_values is None or not hasattr(base_values, "__len__") or len(base_values) == 0:
             pass
         elif len(_compute_shape(base_values)) == len(self.output_dims):
-            base_values = Obj(base_values, list(self.output_dims))
+            base_values = Obj(base_values, list(self.output_dims))  # type: ignore[assignment]
         else:
-            base_values = Obj(base_values, [0] + list(self.output_dims))
+            base_values = Obj(base_values, [0] + list(self.output_dims))  # type: ignore[assignment]
 
         self._s = Slicer(
             values=values,

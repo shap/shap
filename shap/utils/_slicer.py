@@ -6,6 +6,7 @@ Mom's spaghetti.
 from typing import Any, AnyStr, Union, List, Tuple
 from abc import abstractmethod
 import numbers
+from typing import Sequence
 
 
 class AtomicSlicer:
@@ -28,7 +29,7 @@ class AtomicSlicer:
         - mixed array indexing (has integer array, ellipses, newaxis in same slice)
     """
 
-    def __init__(self, o: Any, max_dim: Union[None, int, AnyStr] = "auto"):
+    def __init__(self, o: Any, max_dim: Union[None, int, str] = "auto"):
         """Provides a consistent slicing API to the object provided.
 
         Args:
@@ -38,11 +39,11 @@ class AtomicSlicer:
                 If set to "auto", max dimensions will be inferred. This comes at compute cost.
         """
         self.o = o
-        self.max_dim = max_dim
+        self.max_dim: Union[None, int, str] = max_dim
         if self.max_dim == "auto":
             self.max_dim = UnifiedDataHandler.max_dim(o)
 
-    def __repr__(self) -> AnyStr:
+    def __repr__(self) -> str:
         """Override default repr for human readability.
 
         Returns:
@@ -62,6 +63,8 @@ class AtomicSlicer:
         Raises:
             ValueError: If slicing is not compatible with wrapped object.
         """
+        assert isinstance(self.max_dim, int)
+
         # Turn item into tuple if not already.
         index_tup = unify_slice(item, self.max_dim)
 
@@ -152,7 +155,7 @@ def _handle_newaxis_ellipses(index_tup: Tuple, max_dim: int) -> Tuple:
     """
     non_indexes = (None, Ellipsis)
     concrete_indices = sum(idx not in non_indexes for idx in index_tup)
-    index_list = []
+    index_list: List[Any] = []
     # newaxis_at = []
     has_ellipsis = False
     int_count = 0
@@ -219,10 +222,11 @@ class Tracked(AtomicSlicer):
         super().__init__(o)
 
         # Protected attribute that can be overriden.
-        self._name = None
+        self._name: Union[str, None] = None
 
         # Place dim into coordinate form.
         if dim == "auto":
+            assert isinstance(self.max_dim, int)
             self.dim = list(range(self.max_dim))
         elif dim is None:
             self.dim = []
@@ -318,7 +322,7 @@ def resolve_dim(slicer_index: Tuple, slicer_dim: List) -> List:
     return new_slicer_dim
 
 
-def reduced_o(tracked: Tracked) -> Union[List, Any]:
+def reduced_o(tracked: Sequence[Tracked]) -> Union[List, Any]:
     os = [t.o for t in tracked]
     os = os[0] if len(os) == 1 else os
     return os
@@ -529,9 +533,9 @@ class ListTupleHandler(BaseHandler):
             if len(head_index) == 0:
                 return False, o, 1
             else:
-                results = [AtomicSlicer(o, max_dim=max_dim)[sub_index] for sub_index in head_index]
-                results = tuple(results) if isinstance(o, tuple) else results
-                return False, results, 1
+                list_results: List[Any] = [AtomicSlicer(o, max_dim=max_dim)[sub_index] for sub_index in head_index]
+                final_results = tuple(list_results) if isinstance(o, tuple) else list_results
+                return False, final_results, 1
         elif isinstance(head_index, slice):
             return False, o[head_index], 1
         elif isinstance(head_index, int):
@@ -544,8 +548,8 @@ class ListTupleHandler(BaseHandler):
         if flatten:
             return AtomicSlicer(o, max_dim=max_dim)[tail_index]
         else:
-            results = [AtomicSlicer(e, max_dim=max_dim)[tail_index] for e in o]
-            return tuple(results) if isinstance(o, tuple) else results
+            list_results = [AtomicSlicer(e, max_dim=max_dim)[tail_index] for e in o]
+            return tuple(list_results) if isinstance(o, tuple) else list_results
 
     @classmethod
     def max_dim(cls, o):
@@ -628,6 +632,12 @@ def _handle_module_aliases(module_name):
 
 class Slicer:
     """Provides unified slicing to tensor-like objects."""
+
+    _max_dim: int
+    _anon: list[Any]
+    _objects: dict[str, Any]
+    _aliases: dict[str, Any]
+    _alias_lookup: Union["AliasLookup", None]
 
     def __init__(self, *args, **kwargs):
         """Wraps objects in args and provides unified numpy-like slicing.
@@ -713,10 +723,10 @@ class Slicer:
             obj = None
             for _, t in slicer_instance._iter_tracked():
                 obj = t
-
-            generated_aliases = UnifiedDataHandler.default_alias(obj.o)
-            for generated_alias in generated_aliases:
-                slicer_instance.__setattr__(generated_alias._name, generated_alias)
+            if obj is not None:
+                generated_aliases = UnifiedDataHandler.default_alias(obj.o)
+                for generated_alias in generated_aliases:
+                    slicer_instance.__setattr__(generated_alias._name, generated_alias)
 
     def __getitem__(self, item):
         index_tup = unify_slice(item, self._max_dim, self._alias_lookup)
@@ -750,7 +760,7 @@ class Slicer:
             Corresponding object.
         """
         if item.startswith("_"):
-            return super(Slicer, self).__getattr__(item)
+            return super(Slicer, self).__getattribute__(item)
 
         if item == "o":
             return reduced_o(self._anon)
@@ -811,7 +821,8 @@ class Slicer:
                 super(Slicer, self).__setattr__(key, os)
             else:
                 if old_alias:  # If object previously existed as an alias, clean up all references.
-                    self._alias_lookup.delete(old_alias)
+                    if self._alias_lookup is not None:
+                        self._alias_lookup.delete(old_alias)
                     del self._aliases[key]
 
                 value = Obj(value) if not isinstance(value, Obj) else value
