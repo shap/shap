@@ -1,20 +1,21 @@
-""" Basic tests for slicer.
+"""Basic tests for slicer.
 An unholy balance of use cases and test coverage.
 """
 
-from typing import Any
 import numbers
-import pytest
+from typing import Any
+
 import numpy as np
 import pandas as pd
+import pytest
 import torch
 from scipy.sparse import csc_matrix, csr_matrix, dok_matrix, lil_matrix
 
-from shap.utils._slicer import AtomicSlicer
-from shap.utils._slicer import Slicer as S
 from shap.utils._slicer import Alias as A
+from shap.utils._slicer import AtomicSlicer, _handle_newaxis_ellipses
 from shap.utils._slicer import Obj as O
-from shap.utils._slicer import _handle_newaxis_ellipses
+from shap.utils._slicer import Slicer as S
+
 
 def coerced(o: Any):
     if isinstance(o, (csc_matrix, csr_matrix, dok_matrix, lil_matrix)):
@@ -35,10 +36,10 @@ def coerced(o: Any):
     else:
         raise ValueError(f"Object {o} of {type(o)} is not a list, tuple nor array.")
 
-def is_close(
-    a: numbers.Number, b: numbers.Number, rel_tol: float = 1e-09, abs_tol: float = 0.0
-):
+
+def is_close(a: numbers.Number, b: numbers.Number, rel_tol: float = 1e-09, abs_tol: float = 0.0):
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
 
 def ctr_eq(c1: Any, c2: Any):
     if isinstance(c1, torch.Tensor) and c1.shape == torch.Size([]):
@@ -56,13 +57,12 @@ def ctr_eq(c1: Any, c2: Any):
 
 
 def test_slicer_ragged_numpy():
-    values = np.array([
-        np.array([0, 1]),
-        np.array([2, 3, 4])
-    ], dtype=object)
-    data = np.array([
-        np.array([5, 6, 7]),
-    ])
+    values = np.array([np.array([0, 1]), np.array([2, 3, 4])], dtype=object)
+    data = np.array(
+        [
+            np.array([5, 6, 7]),
+        ]
+    )
 
     slicer = S(values=values, data=data)
     sliced = slicer[0, 1]
@@ -337,17 +337,16 @@ def test_slicer_pandas():
 
 
 def test_handle_newaxis_ellipses():
-    from shap.utils._slicer import _handle_newaxis_ellipses
 
     index_tup = (1,)
     max_dim = 3
 
     expanded_index_tup = _handle_newaxis_ellipses(index_tup, max_dim)
     assert expanded_index_tup == (1, slice(None), slice(None))
-    
-    
+
+
 def test_tracked_dim_arg_smoke():
-    li = ['A', 'B']
+    li = ["A", "B"]
     _ = A(li, dim=0)
     _ = A(li, dim=[0])
     _ = A(li, dim=(0,))
@@ -357,7 +356,7 @@ def test_tracked_dim_arg_smoke():
         _ = A(li, dim=None)
 
     with pytest.raises(Exception):
-        _ = A(li, dim=[0,1])
+        _ = A(li, dim=[0, 1])
 
     _ = O(li, dim=0)
     _ = O(li, dim=[0])
@@ -499,9 +498,8 @@ def test_operations_3d():
                 cols.append(elements[i][j][1])
             rows.append(cols)
         assert ctr_eq(slicer[..., 1], rows)
-        assert ctr_eq(
-            slicer[0, ..., 1], [elements[0][i][1] for i in range(len(elements[0]))]
-        )
+        assert ctr_eq(slicer[0, ..., 1], [elements[0][i][1] for i in range(len(elements[0]))])
+
 
 def test_attribute_assignment():
     data = [[1, 2], [3, 4]]
@@ -520,15 +518,15 @@ def test_attribute_assignment():
         full_name=full_name,
     )
 
-    exp.feature_names = ['f3', 'f4']
+    exp.feature_names = ["f3", "f4"]
 
-    assert exp.feature_names == ['f3', 'f4']
-    assert exp[:, 0].feature_names == 'f3'
-    
+    assert exp.feature_names == ["f3", "f4"]
+    assert exp[:, 0].feature_names == "f3"
+
     with pytest.raises(Exception):
-        _ = exp[:, 'f1'] # f1 should no longer exist as valid alias
+        _ = exp[:, "f1"]  # f1 should no longer exist as valid alias
 
-    exp.feature_names = A(['f5', 'f6'], dim=0)
+    exp.feature_names = A(["f5", "f6"], dim=0)
 
-    assert exp.feature_names == ['f5', 'f6']
-    assert exp[1, :].feature_names == 'f6' # feature_names now tracks dim 0
+    assert exp.feature_names == ["f5", "f6"]
+    assert exp[1, :].feature_names == "f6"  # feature_names now tracks dim 0

@@ -1,4 +1,4 @@
-""" Lower level layer for slicer.
+"""Lower level layer for slicer.
 Mom's spaghetti.
 """
 # TODO: Consider boolean array indexing.
@@ -9,7 +9,7 @@ import numbers
 
 
 class AtomicSlicer:
-    """ Wrapping object that will unify slicing across data structures.
+    """Wrapping object that will unify slicing across data structures.
 
     What we support:
         Basic indexing (return references):
@@ -29,7 +29,7 @@ class AtomicSlicer:
     """
 
     def __init__(self, o: Any, max_dim: Union[None, int, AnyStr] = "auto"):
-        """ Provides a consistent slicing API to the object provided.
+        """Provides a consistent slicing API to the object provided.
 
         Args:
             o: Object to enable consistent slicing.
@@ -43,7 +43,7 @@ class AtomicSlicer:
             self.max_dim = UnifiedDataHandler.max_dim(o)
 
     def __repr__(self) -> AnyStr:
-        """ Override default repr for human readability.
+        """Override default repr for human readability.
 
         Returns:
             String to display.
@@ -51,7 +51,7 @@ class AtomicSlicer:
         return f"{self.__class__.__name__}({self.o.__repr__()})"
 
     def __getitem__(self, item: Any) -> Any:
-        """ Consistent slicing into wrapped object.
+        """Consistent slicing into wrapped object.
 
         Args:
             item: Slicing key of type integer or slice.
@@ -70,7 +70,7 @@ class AtomicSlicer:
 
 
 def unify_slice(item: Any, max_dim: int, alias_lookup=None) -> Tuple:
-    """ Resolves aliases and ellipses in a slice item.
+    """Resolves aliases and ellipses in a slice item.
 
     Args:
         item: Slicing key that is passed to __getitem__.
@@ -89,7 +89,7 @@ def unify_slice(item: Any, max_dim: int, alias_lookup=None) -> Tuple:
 
 
 def _normalize_subkey_types(index_tup: Tuple) -> Tuple:
-    """ Casts subkeys into basic types such as int.
+    """Casts subkeys into basic types such as int.
 
     Args:
         key: Slicing key that is passed within __getitem__.
@@ -125,7 +125,7 @@ def _normalize_subkey_types(index_tup: Tuple) -> Tuple:
 
 
 def _normalize_slice_key(key: Any) -> Tuple:
-    """ Normalizes slice key into always being a top-level tuple.
+    """Normalizes slice key into always being a top-level tuple.
 
     Args:
         key: Slicing key that is passed within __getitem__.
@@ -140,7 +140,7 @@ def _normalize_slice_key(key: Any) -> Tuple:
 
 
 def _handle_newaxis_ellipses(index_tup: Tuple, max_dim: int) -> Tuple:
-    """ Expands newaxis and ellipses within a slice for simplification.
+    """Expands newaxis and ellipses within a slice for simplification.
     This code is mostly adapted from: https://github.com/clbarnes/h5py_like/blob/master/h5py_like/shape_utils.py#L111
 
     Args:
@@ -207,10 +207,10 @@ def _handle_aliases(index_tup: Tuple, alias_lookup) -> Tuple:
 
 
 class Tracked(AtomicSlicer):
-    """ Tracked defines an object that slicer wraps."""
+    """Tracked defines an object that slicer wraps."""
 
     def __init__(self, o: Any, dim: Union[int, List, tuple, None, str] = "auto"):
-        """ Defines an object that will be wrapped by slicer.
+        """Defines an object that will be wrapped by slicer.
 
         Args:
             o: Object that will be tracked for slicer.
@@ -237,17 +237,17 @@ class Tracked(AtomicSlicer):
 
 
 class Obj(Tracked):
-    """ An object that slicer wraps. """
+    """An object that slicer wraps."""
+
     def __init__(self, o, dim="auto"):
         super().__init__(o, dim)
 
 
 class Alias(Tracked):
-    """ Defines a tracked object as well as additional __getitem__ keys. """
+    """Defines a tracked object as well as additional __getitem__ keys."""
+
     def __init__(self, o, dim):
-        if not (
-            isinstance(dim, int) or (isinstance(dim, (list, tuple)) and len(dim) <= 1)
-        ):  # pragma: no cover
+        if not (isinstance(dim, int) or (isinstance(dim, (list, tuple)) and len(dim) <= 1)):  # pragma: no cover
             raise ValueError("Aliases must track a single dimension")
         super().__init__(o, dim)
 
@@ -277,7 +277,7 @@ class AliasLookup:
             dim_lookup[x].add(i)
 
     def delete(self, alias):
-        '''Delete an alias that exists from lookup'''
+        """Delete an alias that exists from lookup"""
         dim = alias.dim[0]
         dim_lookup = self._lookup[dim]
         # NOTE: Alias must be backed by either a list or dictionary.
@@ -300,7 +300,7 @@ class AliasLookup:
 
 
 def resolve_dim(slicer_index: Tuple, slicer_dim: List) -> List:
-    """ Extracts new dim after applying slicing index and maps it back to the original index list. """
+    """Extracts new dim after applying slicing index and maps it back to the original index list."""
 
     new_slicer_dim = []
     reduced_mask = []
@@ -439,6 +439,7 @@ class ArrayHandler(BaseHandler):
             inner = [AtomicSlicer(e, max_dim=max_dim)[tail_index] for e in o]
             if _safe_isinstance(o, "numpy", "ndarray"):
                 import numpy
+
                 if len(inner) > 0 and hasattr(inner[0], "__len__"):
                     ragged = not all(len(x) == len(inner[0]) for x in inner)
                 else:
@@ -456,19 +457,23 @@ class ArrayHandler(BaseHandler):
                     return torch.tensor(inner)
             elif _safe_isinstance(o, "scipy.sparse.csc", "csc_matrix"):
                 from scipy.sparse import vstack
-                out = vstack(inner, format='csc')
+
+                out = vstack(inner, format="csc")
                 return out
             elif _safe_isinstance(o, "scipy.sparse.csr", "csr_matrix"):
                 from scipy.sparse import vstack
-                out = vstack(inner, format='csr')
+
+                out = vstack(inner, format="csr")
                 return out
             elif _safe_isinstance(o, "scipy.sparse.dok", "dok_matrix"):
                 from scipy.sparse import vstack
-                out = vstack(inner, format='dok')
+
+                out = vstack(inner, format="dok")
                 return out
             elif _safe_isinstance(o, "scipy.sparse.lil", "lil_matrix"):
                 from scipy.sparse import vstack
-                out = vstack(inner, format='lil')
+
+                out = vstack(inner, format="lil")
                 return out
             else:
                 raise ValueError(f"Cannot handle type {type(o)}.")  # pragma: no cover
@@ -491,10 +496,7 @@ class DictHandler(BaseHandler):
         if isinstance(head_index, (list, tuple)):
             return (
                 False,
-                {
-                    sub_index: AtomicSlicer(o, max_dim=max_dim)[sub_index]
-                    for sub_index in head_index
-                },
+                {sub_index: AtomicSlicer(o, max_dim=max_dim)[sub_index] for sub_index in head_index},
                 1,
             )
         elif isinstance(head_index, slice):
@@ -509,9 +511,7 @@ class DictHandler(BaseHandler):
         if flatten:
             return AtomicSlicer(o, max_dim=max_dim)[tail_index]
         else:
-            return {
-                k: AtomicSlicer(e, max_dim=max_dim)[tail_index] for k, e in o.items()
-            }
+            return {k: AtomicSlicer(e, max_dim=max_dim)[tail_index] for k, e in o.items()}
 
     @classmethod
     def max_dim(cls, o):
@@ -529,10 +529,7 @@ class ListTupleHandler(BaseHandler):
             if len(head_index) == 0:
                 return False, o, 1
             else:
-                results = [
-                    AtomicSlicer(o, max_dim=max_dim)[sub_index]
-                    for sub_index in head_index
-                ]
+                results = [AtomicSlicer(o, max_dim=max_dim)[sub_index] for sub_index in head_index]
                 results = tuple(results) if isinstance(o, tuple) else results
                 return False, results, 1
         elif isinstance(head_index, slice):
@@ -556,7 +553,7 @@ class ListTupleHandler(BaseHandler):
 
 
 class UnifiedDataHandler:
-    """ Registry that maps types to their unified slice calls."""
+    """Registry that maps types to their unified slice calls."""
 
     """ Class attribute that maps type to their unified slice calls."""
     type_map = {
@@ -608,9 +605,7 @@ def _type_name(o: object) -> Tuple[str, str]:
     return _handle_module_aliases(o.__class__.__module__), o.__class__.__name__
 
 
-def _safe_isinstance(
-    o: object, module_name: str, type_name: Union[str, set, tuple]
-) -> bool:
+def _safe_isinstance(o: object, module_name: str, type_name: Union[str, set, tuple]) -> bool:
     o_module, o_type = _type_name(o)
     if isinstance(type_name, str):
         return o_module == module_name and o_type == type_name
@@ -632,10 +627,10 @@ def _handle_module_aliases(module_name):
 
 
 class Slicer:
-    """ Provides unified slicing to tensor-like objects. """
+    """Provides unified slicing to tensor-like objects."""
 
     def __init__(self, *args, **kwargs):
-        """ Wraps objects in args and provides unified numpy-like slicing.
+        """Wraps objects in args and provides unified numpy-like slicing.
 
         Currently supports (with arbitrary nesting):
 
@@ -680,7 +675,7 @@ class Slicer:
 
     @classmethod
     def from_slicer(cls, *args, **kwargs):
-        """ Alternative to SUPER SLICE
+        """Alternative to SUPER SLICE
         Args:
             *args:
             **kwargs:
@@ -747,7 +742,7 @@ class Slicer:
         return self.__class__.from_slicer(*new_args, **new_kwargs)
 
     def __getattr__(self, item):
-        """ Override default getattr to return tracked attribute.
+        """Override default getattr to return tracked attribute.
 
         Args:
             item: Name of tracked attribute.
@@ -770,7 +765,7 @@ class Slicer:
             return tracked.o
 
     def __setattr__(self, key, value):
-        """ Override default setattr to sync tracking of slicer.
+        """Override default setattr to sync tracking of slicer.
 
         Args:
             key: Name of tracked attribute.
@@ -794,8 +789,8 @@ class Slicer:
         if isinstance(value, Alias):
             value._name = key
             self._aliases[key] = value
-            
-            if old_obj: # If object previously existed as an object, clean up all references.
+
+            if old_obj:  # If object previously existed as an object, clean up all references.
                 del self._objects[key]
 
             # Build lookup (for perf)
@@ -815,10 +810,10 @@ class Slicer:
                 os = reduced_o(self._anon)
                 super(Slicer, self).__setattr__(key, os)
             else:
-                if old_alias: # If object previously existed as an alias, clean up all references.
-                    self._alias_lookup.delete(old_alias) 
+                if old_alias:  # If object previously existed as an alias, clean up all references.
+                    self._alias_lookup.delete(old_alias)
                     del self._aliases[key]
-                
+
                 value = Obj(value) if not isinstance(value, Obj) else value
                 value._name = key
                 self._objects[key] = value
@@ -826,7 +821,7 @@ class Slicer:
                 super(Slicer, self).__setattr__(key, value.o)
 
     def __delattr__(self, item):
-        """ Override default delattr to remove tracked attribute.
+        """Override default delattr to remove tracked attribute.
 
         Args:
             item: Name of tracked attribute to delete.
@@ -851,7 +846,7 @@ class Slicer:
         super(Slicer, self).__delattr__(item)
 
     def __repr__(self):
-        """ Override default repr for human readability.
+        """Override default repr for human readability.
 
         Returns:
             String to display.
@@ -876,6 +871,4 @@ class Slicer:
                 yield name, tracked
 
     def _recompute_max_dim(self):
-        self._max_dim = max(
-            [max(o.dim, default=-1) + 1 for _, o in self._iter_tracked()], default=0
-        )
+        self._max_dim = max([max(o.dim, default=-1) + 1 for _, o in self._iter_tracked()], default=0)
