@@ -303,7 +303,7 @@ skip = ["cp314-macosx_x86_64", "cp314t-manylinux_x86_64", "cp314t-macosx_x86_64"
 build-verbosity = 2
 # Change import-mode to ensure we test against installed package, not local project
 test-command = "pytest -v {project}/tests --import-mode=append"
-test-extras = ["test-core", "plots"]
+test-groups = ["test-core", "plots"]
 # skip tests on cp314-macosx_x86_64 due to llvmlite 0.46.0b1 architecture issues
 # skip tests on emulated architectures, as they are very slow
 # skip tests on *-macosx_arm64 , as cibuildwheel does not support tests on arm64 (yet)
