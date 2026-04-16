@@ -5,8 +5,11 @@ from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
-from numba import njit  # type: ignore[attr-defined]
+
+# from numba import njit  # type: ignore[attr-defined]
 from tqdm.auto import tqdm
+
+from shap._ext import lower_credit
 
 from .. import Explanation, links
 from ..models import Model
@@ -263,7 +266,7 @@ class PartitionExplainer(Explainer):
         # drop the interaction terms down onto self.values
         self.values[:] = self.dvalues
 
-        lower_credit(len(self.dvalues) - 1, 0, M, self.values, self._clustering)
+        lower_credit(len(self.dvalues) - 1, M, self.values, self._clustering)
 
         return {
             "values": self.values[:M].copy(),
@@ -762,25 +765,3 @@ def output_indexes_len(output_indexes: str | npt.NDArray[Any]) -> int | None:
     else:
         return len(output_indexes)
     return None
-
-
-@njit
-def lower_credit(
-    i: int,
-    value: float,
-    M: int,
-    values: npt.NDArray[Any],
-    clustering: npt.NDArray[Any],
-) -> None:
-    if i < M:
-        values[i] += value
-        return
-    li = int(clustering[i - M, 0])
-    ri = int(clustering[i - M, 1])
-    group_size = int(clustering[i - M, 3])
-    lsize = int(clustering[li - M, 3]) if li >= M else 1
-    rsize = int(clustering[ri - M, 3]) if ri >= M else 1
-    assert lsize + rsize == group_size
-    values[i] += value
-    lower_credit(li, values[i] * lsize / group_size, M, values, clustering)
-    lower_credit(ri, values[i] * rsize / group_size, M, values, clustering)
