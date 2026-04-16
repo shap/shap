@@ -13,7 +13,7 @@ import scipy.cluster
 import scipy.sparse
 import scipy.spatial
 import sklearn
-from slicer import Alias, Obj, Slicer
+from .utils._slicer import Alias, Obj, Slicer
 
 from .utils._clustering import hclust_ordering
 from .utils._exceptions import DimensionError
