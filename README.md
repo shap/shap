@@ -128,7 +128,7 @@ import transformers
 import shap
 
 # load a transformers pipeline model
-model = transformers.pipeline('sentiment-analysis', return_all_scores=True)
+model = transformers.pipeline('sentiment-analysis', top_k=None)
 
 # explain the model on two sample inputs
 explainer = shap.Explainer(model)
