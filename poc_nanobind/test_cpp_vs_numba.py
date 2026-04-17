@@ -1,9 +1,11 @@
 """Test script: Compare C++ nanobind output vs original Numba output."""
-import numpy as np
+
 import time
 
 # Import both implementations
 import _clustering_cpp as cpp
+import numpy as np
+
 from shap.utils._clustering import (
     _mask_delta_score,
     _reverse_window,
@@ -18,6 +20,7 @@ print("=" * 60)
 passed = 0
 failed = 0
 
+
 def check(name, cpp_val, numba_val):
     global passed, failed
     if np.array_equal(cpp_val, numba_val):
@@ -26,6 +29,7 @@ def check(name, cpp_val, numba_val):
     else:
         print(f"  ❌ {name}: FAIL  (cpp={cpp_val}, numba={numba_val})")
         failed += 1
+
 
 # --- 1. _mask_delta_score ---
 print("\n[1] _mask_delta_score")
@@ -55,13 +59,16 @@ check("length=1 noop", list(o_cpp2), list(o_num2))
 
 # --- 3. _reverse_window_score_gain ---
 print("\n[3] _reverse_window_score_gain")
-masks = np.array([
-    [0, 0, 0],
-    [1, 1, 1],
-    [0, 0, 0],
-    [1, 1, 1],
-    [0, 0, 0],
-], dtype=np.int64)
+masks = np.array(
+    [
+        [0, 0, 0],
+        [1, 1, 1],
+        [0, 0, 0],
+        [1, 1, 1],
+        [0, 0, 0],
+    ],
+    dtype=np.int64,
+)
 order = np.arange(5, dtype=np.int64)
 cpp_gain = cpp._reverse_window_score_gain(masks, order, 1, 2)
 numba_gain = _reverse_window_score_gain(masks, order, 1, 2)
@@ -69,13 +76,16 @@ check("alternating gain", cpp_gain, numba_gain)
 
 # --- 4. delta_minimization_order ---
 print("\n[4] delta_minimization_order")
-masks2 = np.array([
-    [0, 0, 0],
-    [1, 1, 1],
-    [0, 0, 0],
-    [1, 1, 1],
-    [0, 0, 0],
-], dtype=np.int64)
+masks2 = np.array(
+    [
+        [0, 0, 0],
+        [1, 1, 1],
+        [0, 0, 0],
+        [1, 1, 1],
+        [0, 0, 0],
+    ],
+    dtype=np.int64,
+)
 cpp_order = cpp.delta_minimization_order(masks2, 4, 2)
 numba_order = delta_minimization_order(masks2, 4, 2)
 check("same ordering", list(cpp_order), list(numba_order))
@@ -105,7 +115,7 @@ cpp_time = time.perf_counter() - t0
 
 print(f"  Numba: {numba_time:.3f}s")
 print(f"  C++:   {cpp_time:.3f}s")
-print(f"  Speedup: {numba_time/cpp_time:.1f}x")
+print(f"  Speedup: {numba_time / cpp_time:.1f}x")
 
 # --- Final Report ---
 print("\n" + "=" * 60)
