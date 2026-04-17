@@ -576,6 +576,8 @@ class UnifiedDataHandler:
 
     @classmethod
     def slice(cls, o, index_tup, max_dim):
+        import numpy as np
+
         # NOTE: Unified handles base cases such as empty tuples, which
         #       specialized handlers do not.
         if isinstance(index_tup, (tuple, list)) and len(index_tup) == 0:
@@ -583,6 +585,18 @@ class UnifiedDataHandler:
 
         # Slice as delegated by data handler.
         o_type = _type_name(o)
+
+        if o_type[0].startswith("scipy.sparse"):
+            return o[index_tup[:2]]
+
+        if not isinstance(o, dict):
+            ndim = getattr(o, "ndim", None)
+            if ndim is None and isinstance(o, (list, tuple)):
+                ndim = np.ndim(o)
+
+            if ndim is not None and isinstance(index_tup, tuple) and len(index_tup) > ndim:
+                index_tup = index_tup[:ndim]
+
         head_slice = cls.type_map[o_type].head_slice
         tail_slice = cls.type_map[o_type].tail_slice
 
@@ -770,6 +784,9 @@ class Slicer:
                 tracked = self._aliases.get(item, None)
 
             if tracked is None:
+                underlying_obj = reduced_o(self._anon)
+                if hasattr(underlying_obj, item):
+                    return getattr(underlying_obj, item)
                 raise AttributeError(f"Attribute '{item}' does not exist.")
 
             return tracked.o

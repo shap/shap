@@ -317,7 +317,7 @@ def test_slicer_sparse():
 
 
 def test_slicer_torch():
-    import torch
+    torch = pytest.importorskip("torch")
 
     data = torch.tensor([[1, 2], [3, 4]])
     values = torch.tensor([[5, 6], [7, 8]])
