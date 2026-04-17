@@ -98,8 +98,9 @@ def compile_cuda_module(host_args):
 
 def run_setup(*, with_binary, with_cuda):
     ext_modules = []
+    compile_args = []  # initialize here so it always exists
+
     if with_binary:
-        compile_args = []
         if sys.platform == "zos":
             compile_args.append("-qlonglong")
         if sys.platform == "win32":
@@ -113,6 +114,7 @@ def run_setup(*, with_binary, with_cuda):
                 extra_compile_args=compile_args,
             )
         )
+
     if with_cuda:
         try:
             cuda_home, _ = get_cuda_path()
@@ -137,7 +139,6 @@ def run_setup(*, with_binary, with_cuda):
             )
         except Exception as e:
             raise Exception("Error building cuda module: " + repr(e)) from e
-
     ext_modules.append(
         Extension("_kernel_lib", sources=["shap/explainers/_kernel_lib.pyx"], include_dirs=[np.get_include()])
     )
