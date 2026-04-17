@@ -14,7 +14,6 @@ from shap.utils._clustering import (
 )
 from shap.utils._exceptions import DimensionError
 
-
 # ============================================================
 # Tests for hclust (existing + new)
 # ============================================================
@@ -156,13 +155,16 @@ def test_reverse_window_entire_array():
 def test_reverse_window_score_gain_positive():
     """Score gain should be positive when reversal reduces delta."""
     # Alternating pattern: reversing adjacent similar rows should help
-    masks = np.array([
-        [0, 0, 0],
-        [1, 1, 1],
-        [0, 0, 0],
-        [1, 1, 1],
-        [0, 0, 0],
-    ], dtype=np.int64)
+    masks = np.array(
+        [
+            [0, 0, 0],
+            [1, 1, 1],
+            [0, 0, 0],
+            [1, 1, 1],
+            [0, 0, 0],
+        ],
+        dtype=np.int64,
+    )
     order = np.arange(5)
     gain = _reverse_window_score_gain(masks, order, start=1, length=2)
     # forward: score(masks[0], masks[1]) + score(masks[2], masks[3]) = 3 + 3 = 6
@@ -173,12 +175,15 @@ def test_reverse_window_score_gain_positive():
 
 def test_reverse_window_score_gain_zero():
     """Score gain should be zero when reversal doesn't change anything."""
-    masks = np.array([
-        [0, 0],
-        [1, 1],
-        [1, 1],
-        [0, 0],
-    ], dtype=np.int64)
+    masks = np.array(
+        [
+            [0, 0],
+            [1, 1],
+            [1, 1],
+            [0, 0],
+        ],
+        dtype=np.int64,
+    )
     order = np.arange(4)
     gain = _reverse_window_score_gain(masks, order, start=1, length=2)
     # forward: score(masks[0], masks[1]) + score(masks[2], masks[3]) = 2 + 2 = 4
@@ -194,12 +199,15 @@ def test_reverse_window_score_gain_zero():
 
 def test_delta_minimization_order_returns_permutation():
     """The result should be a permutation of the input indices."""
-    masks = np.array([
-        [0, 0, 0],
-        [1, 1, 1],
-        [0, 0, 1],
-        [1, 1, 0],
-    ], dtype=np.int64)
+    masks = np.array(
+        [
+            [0, 0, 0],
+            [1, 1, 1],
+            [0, 0, 1],
+            [1, 1, 0],
+        ],
+        dtype=np.int64,
+    )
     order = delta_minimization_order(masks, max_swap_size=3, num_passes=1)
     assert set(order) == {0, 1, 2, 3}
     assert len(order) == 4
@@ -207,13 +215,16 @@ def test_delta_minimization_order_returns_permutation():
 
 def test_delta_minimization_order_reduces_total_delta():
     """The optimized order should have total delta <= the original order."""
-    masks = np.array([
-        [0, 0, 0],
-        [1, 1, 1],
-        [0, 0, 0],
-        [1, 1, 1],
-        [0, 0, 0],
-    ], dtype=np.int64)
+    masks = np.array(
+        [
+            [0, 0, 0],
+            [1, 1, 1],
+            [0, 0, 0],
+            [1, 1, 1],
+            [0, 0, 0],
+        ],
+        dtype=np.int64,
+    )
 
     def total_delta(masks, order):
         return sum(_mask_delta_score(masks[order[i]], masks[order[i + 1]]) for i in range(len(order) - 1))
