@@ -54,6 +54,15 @@ class Tabular(Masker):
             data = np.expand_dims(data["mean"], 0)
 
         if hasattr(data, "shape") and data.shape[0] > max_samples:
+            log.warning(
+                "Background dataset has %d samples but max_samples=%d. "
+                "Subsampling to %d samples for SHAP value computation. "
+                "To use all samples, set max_samples=%d when initializing the masker.",
+                data.shape[0],
+                max_samples,
+                max_samples,
+                data.shape[0],
+            )
             data = utils.sample(data, max_samples)
 
         self.data = data
