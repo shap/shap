@@ -41,7 +41,7 @@ def explanation_multi_example(imagenet50_example) -> shap.Explanation:
     shap_values_multi = np.stack([shap_values_single for _ in range(n_classes)], axis=-1)
     assert shap_values_multi.shape[-1] == n_classes
 
-    explanation = shap.Explanation(values=shap_values_multi, data=images, output_names=[x for x in range(n_classes)])
+    explanation = shap.Explanation(values=shap_values_multi, data=images, output_names=[x for x in range(n_classes)])  # type: ignore[misc]
     return explanation
 
 

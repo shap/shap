@@ -4,7 +4,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
-import torch
+
+try:
+    import torch
+except ImportError:
+    torch = None
+
 from scipy.sparse import csc_matrix, csr_matrix, dok_matrix, lil_matrix
 
 from shap.utils._slicer import Alias as A
@@ -17,10 +22,13 @@ def coerced(o: Any):
     if isinstance(o, (csc_matrix, csr_matrix, dok_matrix, lil_matrix)):
         o = o.toarray()
 
-    to_list_collections = tuple([np.ndarray, torch.Tensor, pd.core.series.Series])
+    to_list_collections = [np.ndarray, pd.core.series.Series]
+    if torch is not None:
+        to_list_collections.append(torch.Tensor)
+
     if isinstance(o, (list, tuple)):
         return o
-    elif isinstance(o, to_list_collections):
+    elif isinstance(o, tuple(to_list_collections)):
         return o.tolist()
     elif isinstance(o, pd.core.frame.DataFrame):
         return o.values.tolist()
@@ -33,15 +41,16 @@ def coerced(o: Any):
         raise ValueError(f"Object {o} of {type(o)} is not a list, tuple nor array.")
 
 
-def is_close(a: numbers.Number, b: numbers.Number, rel_tol: float = 1e-09, abs_tol: float = 0.0):
+def is_close(a: int | float, b: int | float, rel_tol: float = 1e-09, abs_tol: float = 0.0):
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 
 def ctr_eq(c1: Any, c2: Any):
-    if isinstance(c1, torch.Tensor) and c1.shape == torch.Size([]):
-        c1 = c1.item()
-    if isinstance(c2, torch.Tensor) and c2.shape == torch.Size([]):
-        c2 = c2.item()
+    if torch is not None:
+        if isinstance(c1, torch.Tensor) and c1.shape == torch.Size([]):
+            c1 = c1.item()
+        if isinstance(c2, torch.Tensor) and c2.shape == torch.Size([]):
+            c2 = c2.item()
 
     if isinstance(c1, numbers.Number) and isinstance(c2, numbers.Number):
         return is_close(c1, c2)
@@ -234,15 +243,15 @@ def test_numpy_subkeys():
     data = [1, 2, 3, 4]
     slicer = S(data=data)
 
-    subkey = np.int64(1)
-    assert slicer[subkey].data == 2
+    subkey_int = np.int64(1)
+    assert slicer[subkey_int].data == 2
 
-    subkey = np.array([0, 1])
-    assert ctr_eq(slicer[subkey].data, [1, 2])
+    subkey_arr = np.array([0, 1])
+    assert ctr_eq(slicer[subkey_arr].data, [1, 2])
 
-    subkey = np.array([[0, 1], [3, 4]])
+    subkey_2d = np.array([[0, 1], [3, 4]])
     with pytest.raises(ValueError):
-        _ = slicer[subkey]
+        _ = slicer[subkey_2d]
 
 
 def test_repr_smoke():
@@ -297,9 +306,8 @@ def test_slicer_sparse():
         assert ctr_eq(actual.o, expected)
 
 
+@pytest.mark.skipif(torch is None, reason="PyTorch is not installed")
 def test_slicer_torch():
-    import torch
-
     data = torch.tensor([[1, 2], [3, 4]])
     values = torch.tensor([[5, 6], [7, 8]])
     alias = ["f1", "f2"]
@@ -366,8 +374,11 @@ def test_operations_1d():
     di = {i: x for i, x in enumerate(elements)}
     series = pd.Series(elements)
     array = np.array(elements)
-    torch_array = torch.tensor(elements)
-    containers = [li, tup, array, torch_array, di, series]
+
+    containers = [li, tup, array, di, series]
+    if torch is not None:
+        containers.append(torch.tensor(elements))
+
     for ctr in containers:
         slicer = AtomicSlicer(ctr)
 
@@ -424,7 +435,7 @@ def test_operations_3d():
         ((7, 8, 9), (10, 11, 12)),
         ((13, 14, 15), (16, 17, 18)),
     )
-    torch_array = torch.tensor(elements)
+
     multi_array = np.array(elements)
     list_of_lists = elements
     tuples_of_tuples = tuple_elements
@@ -440,13 +451,15 @@ def test_operations_3d():
     }
 
     containers = [
-        torch_array,
         multi_array,
         tuples_of_tuples,
         list_of_lists,
         list_of_multi_arrays,
         di_of_multi_arrays,
     ]
+    if torch is not None:
+        containers.append(torch.tensor(elements))
+
     for ctr in containers:
         slicer = AtomicSlicer(ctr)
 

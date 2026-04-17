@@ -5,19 +5,17 @@ This is a unified, single-file version of the slicer library.
 
 import numbers
 from abc import abstractmethod
-from typing import Any, AnyStr
+from typing import Any
 
 
 class AtomicSlicer:
-    """Wrapping object that will unify slicing across data structures."""
-
-    def __init__(self, o: Any, max_dim: None | int | AnyStr = "auto"):
+    def __init__(self, o: Any, max_dim: None | int | str = "auto"):
         self.o = o
-        self.max_dim = max_dim
+        self.max_dim: None | int | str = max_dim
         if self.max_dim == "auto":
             self.max_dim = UnifiedDataHandler.max_dim(o)
 
-    def __repr__(self) -> AnyStr:
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.o.__repr__()})"
 
     def __getitem__(self, item: Any) -> Any:
@@ -70,7 +68,7 @@ def _normalize_slice_key(key: Any) -> tuple:
 def _handle_newaxis_ellipses(index_tup: tuple, max_dim: int) -> tuple:
     non_indexes = (None, Ellipsis)
     concrete_indices = sum(idx not in non_indexes for idx in index_tup)
-    index_list = []
+    index_list: list[Any] = []
     has_ellipsis = False
     int_count = 0
     for item in index_tup:
@@ -120,7 +118,7 @@ def _handle_aliases(index_tup: tuple, alias_lookup) -> tuple:
 class Tracked(AtomicSlicer):
     def __init__(self, o: Any, dim: int | list | tuple | None | str = "auto"):
         super().__init__(o)
-        self._name = None
+        self._name: str | None = None
         if dim == "auto":
             self.dim = list(range(self.max_dim))
         elif dim is None:
@@ -206,7 +204,7 @@ def resolve_dim(slicer_index: tuple, slicer_dim: list) -> list:
     return new_slicer_dim
 
 
-def reduced_o(tracked: Tracked) -> list | Any:
+def reduced_o(tracked: list[Tracked]) -> list | Any:
     os = [t.o for t in tracked]
     os = os[0] if len(os) == 1 else os
     return os
@@ -502,11 +500,11 @@ class Slicer:
 
     @classmethod
     def _init_slicer(cls, slicer_instance, *args, **kwargs):
-        slicer_instance._max_dim = 0
-        slicer_instance._anon = []
-        slicer_instance._objects = {}
-        slicer_instance._aliases = {}
-        slicer_instance._alias_lookup = None
+        slicer_instance._max_dim = 0  # type: int
+        slicer_instance._anon = []  # type: List[Tracked]
+        slicer_instance._objects = {}  # type: dict
+        slicer_instance._aliases = {}  # type: dict
+        slicer_instance._alias_lookup = None  # type: Union[AliasLookup, None]
 
         slicer_instance.__setattr__("o", args)
 
@@ -550,7 +548,7 @@ class Slicer:
 
     def __getattr__(self, item):
         if item.startswith("_"):
-            return super().__getattr__(item)
+            return object.__getattribute__(self, item)
 
         if item == "o":
             return reduced_o(self._anon)
