@@ -214,6 +214,7 @@ local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
 addopts = "--mpl -m 'not xslow'"
+mpl-default-style = "default"
 testpaths = ["tests"]
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
