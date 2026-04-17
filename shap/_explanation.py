@@ -13,11 +13,11 @@ import scipy.cluster
 import scipy.sparse
 import scipy.spatial
 import sklearn
-from slicer import Alias, Obj, Slicer
 
 from .utils._clustering import hclust_ordering
 from .utils._exceptions import DimensionError
 from .utils._general import OpChain
+from .utils._slicer import Alias, Obj, Slicer
 
 op_chain_root = OpChain("shap.Explanation")
 
