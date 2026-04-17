@@ -20,12 +20,18 @@ def coerced(o: Any):
     if isinstance(o, (csc_matrix, csr_matrix, dok_matrix, lil_matrix)):
         o = o.toarray()
 
-    import torch
+    to_list_types = [np.ndarray, pd.core.series.Series]
 
-    to_list_collections = tuple([np.ndarray, torch.Tensor, pd.core.series.Series])
+    try:
+        import torch
+
+        to_list_types.append(torch.Tensor)
+    except ImportError:
+        pass
+
     if isinstance(o, (list, tuple)):
         return o
-    elif isinstance(o, to_list_collections):
+    elif isinstance(o, tuple(to_list_types)):
         return o.tolist()
     elif isinstance(o, pd.core.frame.DataFrame):
         return o.values.tolist()
@@ -44,12 +50,15 @@ def is_close(a: int | float, b: int | float, rel_tol: float = 1e-09, abs_tol: fl
 
 def ctr_eq(c1: Any, c2: Any):
 
-    import torch
+    try:
+        import torch
 
-    if isinstance(c1, torch.Tensor) and c1.shape == torch.Size([]):
-        c1 = c1.item()
-    if isinstance(c2, torch.Tensor) and c2.shape == torch.Size([]):
-        c2 = c2.item()
+        if isinstance(c1, torch.Tensor) and c1.shape == torch.Size([]):
+            c1 = c1.item()
+        if isinstance(c2, torch.Tensor) and c2.shape == torch.Size([]):
+            c2 = c2.item()
+    except ImportError:
+        pass
 
     if isinstance(c1, (int, float, np.number)) and isinstance(c2, (int, float, np.number)):
         return is_close(c1, c2)  # type: ignore[arg-type]
@@ -370,7 +379,7 @@ def test_tracked_dim_arg_smoke():
 
 
 def test_operations_1d():
-    import torch
+    torch = pytest.importorskip("torch")
 
     elements = [1, 2, 3, 4]
     li = elements
@@ -440,7 +449,7 @@ def test_operations_2d():
 
 def test_operations_3d():
     # 3-dimensional fixed dimension case
-    import torch
+    torch = pytest.importorskip("torch")
 
     elements = [
         [[1, 2, 3], [4, 5, 6]],
