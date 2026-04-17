@@ -282,7 +282,6 @@ def test_partition_tree_shuffle_respects_mask():
     X = pd.DataFrame(rng.randn(20, 4))
     tree = partition_tree(X)
 
-    M = 4
     index_mask = np.array([True, False, True, False])
     num_selected = index_mask.sum()
     indexes = np.zeros(num_selected, dtype=np.intp)
