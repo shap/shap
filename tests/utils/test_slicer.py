@@ -7,7 +7,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
-import torch
 from scipy.sparse import csc_matrix, csr_matrix, dok_matrix, lil_matrix
 
 from shap.utils._slicer import Alias as A
@@ -17,8 +16,11 @@ from shap.utils._slicer import Slicer as S
 
 
 def coerced(o: Any):
+
     if isinstance(o, (csc_matrix, csr_matrix, dok_matrix, lil_matrix)):
         o = o.toarray()
+
+    import torch
 
     to_list_collections = tuple([np.ndarray, torch.Tensor, pd.core.series.Series])
     if isinstance(o, (list, tuple)):
@@ -41,6 +43,9 @@ def is_close(a: int | float, b: int | float, rel_tol: float = 1e-09, abs_tol: fl
 
 
 def ctr_eq(c1: Any, c2: Any):
+
+    import torch
+
     if isinstance(c1, torch.Tensor) and c1.shape == torch.Size([]):
         c1 = c1.item()
     if isinstance(c2, torch.Tensor) and c2.shape == torch.Size([]):
@@ -365,6 +370,8 @@ def test_tracked_dim_arg_smoke():
 
 
 def test_operations_1d():
+    import torch
+
     elements = [1, 2, 3, 4]
     li = elements
     tup = tuple(elements)
@@ -433,6 +440,8 @@ def test_operations_2d():
 
 def test_operations_3d():
     # 3-dimensional fixed dimension case
+    import torch
+
     elements = [
         [[1, 2, 3], [4, 5, 6]],
         [[7, 8, 9], [10, 11, 12]],

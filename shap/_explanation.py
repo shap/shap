@@ -145,9 +145,9 @@ class Explanation(metaclass=MetaExplanation):
         if (
             feature_names is not None and len(_compute_shape(feature_names)) == 1
         ):  # TODO: should always be an alias once slicer supports per-row aliases
-            if len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
+            if len(values_shape) >= 2 and len(feature_names) == values_shape[1]:  # type: ignore[arg-type]
                 feature_names = Alias(list(feature_names), 1)  # type: ignore[arg-type]
-            elif len(values_shape) >= 1 and len(feature_names) == values_shape[0]:
+            elif len(values_shape) >= 1 and len(feature_names) == values_shape[0]:  # type: ignore[arg-type]
                 feature_names = Alias(list(feature_names), 0)  # type: ignore[arg-type]
 
         if (
