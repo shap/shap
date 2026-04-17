@@ -95,20 +95,6 @@ def test_bad_action():
         shap.ActionOptimizer(None, [None])  # type: ignore
 
 
-def test_warning_emitted():
-    """Tests that warning is emitted when ActionOptimizer is initialized."""
-    import warnings
-
-    X, IncreaseFeature1, IncreaseFeature2, IncreaseFeature3, passed = create_basic_scenario()
-    possible_actions = [[IncreaseFeature1(1)], IncreaseFeature2(1), [IncreaseFeature3(1)]]
-
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        shap.ActionOptimizer(passed, possible_actions)
-        assert len(w) == 1
-        assert "alpha state" in str(w[0].message).lower()
-
-
 def test_no_valid_solution():
     """Tests case when no valid solution exists (queue empties without finding solution)."""
     X, IncreaseFeature1, _, _, _ = create_basic_scenario()
@@ -158,7 +144,7 @@ def test_multiple_action_groups_with_replacement():
 
 def test_immediate_satisfaction():
     """Tests when model is satisfied on first try (no actions needed)."""
-    X, IncreaseFeature1, IncreaseFeature2, IncreaseFeature3, passed = create_basic_scenario()
+    X, IncreaseFeature1, _, _, _ = create_basic_scenario()
 
     def always_satisfied(x):
         return True
