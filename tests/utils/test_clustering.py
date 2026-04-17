@@ -154,4 +154,5 @@ def test_partition_tree_via_explainer():
     masker = shap.maskers.Partition(X, clustering=pt)
     explainer = shap.PermutationExplainer(model.predict, masker)
     shap_values = explainer(X.iloc[:3])
+    assert isinstance(shap_values, shap.Explanation)
     assert shap_values.shape == (3, 4)
