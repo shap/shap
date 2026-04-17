@@ -3,15 +3,22 @@ Vendored from: https://github.com/non-maintained-slicer-repo/slicer
 This is a unified, single-file version of the slicer library.
 """
 
+from __future__ import annotations
+
 import numbers
 from abc import abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class AtomicSlicer:
-    def __init__(self, o: Any, max_dim: None | int | str = "auto"):
+    """Wrapping object that will unify slicing across data structures."""
+
+    def __init__(self, o: Any, max_dim: int | str | None = "auto"):
         self.o = o
-        self.max_dim: None | int | str = max_dim
+        self.max_dim: int | str | None = max_dim
         if self.max_dim == "auto":
             self.max_dim = UnifiedDataHandler.max_dim(o)
 
@@ -19,8 +26,8 @@ class AtomicSlicer:
         return f"{self.__class__.__name__}({self.o.__repr__()})"
 
     def __getitem__(self, item: Any) -> Any:
-        index_tup = unify_slice(item, self.max_dim)
-        return UnifiedDataHandler.slice(self.o, index_tup, self.max_dim)
+        index_tup = unify_slice(item, cast("int", self.max_dim))
+        return UnifiedDataHandler.slice(self.o, index_tup, cast("int", self.max_dim))
 
 
 def unify_slice(item: Any, max_dim: int, alias_lookup=None) -> tuple:
@@ -120,7 +127,7 @@ class Tracked(AtomicSlicer):
         super().__init__(o)
         self._name: str | None = None
         if dim == "auto":
-            self.dim = list(range(self.max_dim))
+            self.dim = list(range(cast("int", self.max_dim)))
         elif dim is None:
             self.dim = []
         elif isinstance(dim, int):
@@ -204,7 +211,7 @@ def resolve_dim(slicer_index: tuple, slicer_dim: list) -> list:
     return new_slicer_dim
 
 
-def reduced_o(tracked: list[Tracked]) -> list | Any:
+def reduced_o(tracked: Sequence[Tracked]) -> list | Any:
     os = [t.o for t in tracked]
     os = os[0] if len(os) == 1 else os
     return os
@@ -399,8 +406,8 @@ class ListTupleHandler(BaseHandler):
                 return False, o, 1
             else:
                 results = [AtomicSlicer(o, max_dim=max_dim)[sub_index] for sub_index in head_index]
-                results = tuple(results) if isinstance(o, tuple) else results
-                return False, results, 1
+                out_results = tuple(results) if isinstance(o, tuple) else results
+                return False, out_results, 1
         elif isinstance(head_index, slice):
             return False, o[head_index], 1
         elif isinstance(head_index, int):
@@ -489,6 +496,12 @@ def _handle_module_aliases(module_name):
 class Slicer:
     """Provides unified slicing to tensor-like objects."""
 
+    _max_dim: int
+    _anon: list[Any]
+    _objects: dict
+    _aliases: dict
+    _alias_lookup: AliasLookup | None
+
     def __init__(self, *args, **kwargs):
         self.__class__._init_slicer(self, *args, **kwargs)
 
@@ -500,11 +513,11 @@ class Slicer:
 
     @classmethod
     def _init_slicer(cls, slicer_instance, *args, **kwargs):
-        slicer_instance._max_dim = 0  # type: int
-        slicer_instance._anon = []  # type: List[Tracked]
-        slicer_instance._objects = {}  # type: dict
-        slicer_instance._aliases = {}  # type: dict
-        slicer_instance._alias_lookup = None  # type: Union[AliasLookup, None]
+        slicer_instance._max_dim = 0
+        slicer_instance._anon = []
+        slicer_instance._objects = {}
+        slicer_instance._aliases = {}
+        slicer_instance._alias_lookup = None
 
         slicer_instance.__setattr__("o", args)
 
@@ -519,9 +532,10 @@ class Slicer:
             for _, t in slicer_instance._iter_tracked():
                 obj = t
 
-            generated_aliases = UnifiedDataHandler.default_alias(obj.o)
-            for generated_alias in generated_aliases:
-                slicer_instance.__setattr__(generated_alias._name, generated_alias)
+            if obj is not None:
+                generated_aliases = UnifiedDataHandler.default_alias(obj.o)
+                for generated_alias in generated_aliases:
+                    slicer_instance.__setattr__(generated_alias._name, generated_alias)
 
     def __getitem__(self, item):
         index_tup = unify_slice(item, self._max_dim, self._alias_lookup)
@@ -600,7 +614,8 @@ class Slicer:
                 super().__setattr__(key, os)
             else:
                 if old_alias:
-                    self._alias_lookup.delete(old_alias)
+                    if self._alias_lookup is not None:
+                        self._alias_lookup.delete(old_alias)
                     del self._aliases[key]
 
                 value = Obj(value) if not isinstance(value, Obj) else value
