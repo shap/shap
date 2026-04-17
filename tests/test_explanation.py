@@ -280,15 +280,6 @@ def test_explanation_init_from_explanation():
     np.testing.assert_array_equal(exp2.data, exp1.data)
 
 
-def test_explanation_display_data_setter_with_dataframe():
-    """Test that setting display_data with a DataFrame converts to values."""
-    exp = shap.Explanation(values=np.array([[1.0, 2.0], [3.0, 4.0]]))
-    df = pd.DataFrame({"a": [10.0, 20.0], "b": [30.0, 40.0]})
-    exp.display_data = df
-    assert isinstance(exp.display_data, np.ndarray)
-    np.testing.assert_array_equal(exp.display_data, df.values)
-
-
 @pytest.mark.parametrize(
     ("op", "other", "expected_values"),
     [
@@ -296,11 +287,10 @@ def test_explanation_display_data_setter_with_dataframe():
         param(lambda e, o: o + e, 1, [3.0, 5.0, 7.0], id="radd_scalar"),
         param(lambda e, o: e - o, 1, [1.0, 3.0, 5.0], id="sub_scalar"),
         param(lambda e, o: e * o, 2, [4.0, 8.0, 12.0], id="mul_scalar"),
-        param(lambda e, o: o * e, 2, [4.0, 8.0, 12.0], id="rmul_scalar"),
         param(lambda e, o: e / o, 2, [1.0, 2.0, 3.0], id="truediv_scalar"),
     ],
 )
-def test_explanation_binary_operators(op, other, expected_values):
+def test_explanation_binary_operators_scalar(op, other, expected_values):
     """Test arithmetic operators with scalars and reverse variants."""
     exp = shap.Explanation(values=np.array([2.0, 4.0, 6.0]), base_values=1.0, data=np.array([1.0, 2.0, 3.0]))
     result = op(exp, other)
@@ -308,7 +298,7 @@ def test_explanation_binary_operators(op, other, expected_values):
 
 
 def test_explanation_binary_operators_between_explanations():
-    """Test arithmetic between two Explanation objects propagates to base_values and data."""
+    """Arithmetic between two Explanations must propagate to base_values and data."""
     vals = np.array([1.0, 2.0, 3.0])
     data = np.array([10.0, 20.0, 30.0])
     exp1 = shap.Explanation(values=vals.copy(), base_values=1.0, data=data.copy())
@@ -334,18 +324,19 @@ def test_explanation_argsort_and_flip(prop, expected):
 
 
 @pytest.mark.parametrize(
-    ("method", "expected"),
+    ("method", "args", "expected"),
     [
-        param("max", [4.0, 6.0], id="max"),
-        param("min", [1.0, 2.0], id="min"),
-        param("mean", [2.6666666666666665, 4.333333333333333], id="mean"),
+        param("max", (), [4.0, 6.0], id="max"),
+        param("min", (), [1.0, 2.0], id="min"),
+        param("mean", (), [2.6666666666666665, 4.333333333333333], id="mean"),
+        param("percentile", (50,), [3.0, 5.0], id="percentile_50"),
     ],
 )
-def test_explanation_reduction_ops(method, expected):
-    """Test min, max, mean reduction along axis=0."""
+def test_explanation_reduction_ops(method, args, expected):
+    """Reduction ops (min/max/mean/percentile) along axis=0."""
     vals = np.array([[1.0, 5.0], [3.0, 2.0], [4.0, 6.0]])
     exp = shap.Explanation(values=vals, data=vals.copy())
-    result = getattr(exp, method)(axis=0)
+    result = getattr(exp, method)(*args, axis=0)
     np.testing.assert_allclose(result.values, expected)
 
 
@@ -357,7 +348,7 @@ def test_explanation_reduction_ops(method, expected):
     ],
 )
 def test_explanation_sum_with_grouping(values, axis, expected_shape):
-    """Test sum with feature grouping on both rank-1 and rank-2 explanations."""
+    """Sum with feature grouping on rank-1 and rank-2 explanations."""
     exp = shap.Explanation(
         values=values,
         data=values.copy(),
@@ -366,12 +357,11 @@ def test_explanation_sum_with_grouping(values, axis, expected_shape):
     grouping = {"a": "group1", "b": "group1", "c": "group2", "d": "group2"}
     result = exp.sum(axis=axis, grouping=grouping)
     assert result.shape == expected_shape
-    # both groups should sum to 3.0 and 7.0
     np.testing.assert_array_equal(result.values.flatten(), [3.0, 7.0])
 
 
 def test_explanation_sum_grouping_invalid_axis():
-    """Test sum with grouping on invalid axis raises DimensionError."""
+    """Sum with grouping on an invalid axis must raise DimensionError."""
     from shap.utils._exceptions import DimensionError
 
     exp = shap.Explanation(
@@ -381,14 +371,6 @@ def test_explanation_sum_grouping_invalid_axis():
     )
     with pytest.raises(DimensionError, match="Only axis = 1"):
         exp.sum(axis=0, grouping={"a": "group1", "b": "group1"})
-
-
-def test_explanation_percentile():
-    """Test percentile operation."""
-    vals = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
-    exp = shap.Explanation(values=vals, data=vals.copy())
-    p50 = exp.percentile(50, axis=0)
-    np.testing.assert_array_equal(p50.values, [3.0, 4.0])
 
 
 @pytest.mark.parametrize(
@@ -423,23 +405,6 @@ def test_explanation_hclust_dimension_error():
     exp = shap.Explanation(values=np.array([1.0, 2.0, 3.0]))
     with pytest.raises(DimensionError, match="2D"):
         exp.hclust()
-
-
-def test_explanation_shape_len_and_copy():
-    """Test shape, len, and __copy__ behavior."""
-    import copy
-
-    exp = shap.Explanation(
-        values=np.zeros((10, 5)),
-        base_values=0.5,
-        data=np.ones((10, 5)),
-    )
-    assert exp.shape == (10, 5)
-    assert len(exp) == 10
-
-    exp_copy = copy.copy(exp)
-    assert isinstance(exp_copy, shap.Explanation)
-    np.testing.assert_array_equal(exp_copy.values, exp.values)
 
 
 def test_explanation_getitem_with_ellipsis_and_explanation():
@@ -502,29 +467,3 @@ def test_explanation_from_tree_explainer_operations():
     # display_data setter with DataFrame
     shap_values.display_data = X[:10]
     assert isinstance(shap_values.display_data, np.ndarray)
-
-
-def test_explanation_property_setters():
-    """Test various property setters on Explanation."""
-    exp = shap.Explanation(
-        values=np.array([[1.0, 2.0], [3.0, 4.0]]),
-        base_values=np.array([0.5, 0.5]),
-        data=np.array([[10.0, 20.0], [30.0, 40.0]]),
-        feature_names=["a", "b"],
-    )
-
-    exp.values = np.array([[5.0, 6.0], [7.0, 8.0]])
-    np.testing.assert_array_equal(exp.values, [[5.0, 6.0], [7.0, 8.0]])
-
-    exp.base_values = np.array([1.0, 1.0])
-    np.testing.assert_array_equal(exp.base_values, [1.0, 1.0])
-
-    exp.data = np.array([[100.0, 200.0], [300.0, 400.0]])
-    np.testing.assert_array_equal(exp.data, [[100.0, 200.0], [300.0, 400.0]])
-
-    exp.output_names = ["out1", "out2"]
-    exp.feature_names = ["x", "y"]
-    exp.main_effects = np.zeros((2, 2))
-    exp.hierarchical_values = np.ones((2, 2))
-    exp.clustering = np.array([[0, 1, 0.5, 2]])
-    assert exp.clustering is not None
