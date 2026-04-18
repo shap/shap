@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <algorithm>
+#include <random>
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
 
@@ -22,6 +23,35 @@ inline int row_delta(
         score += m(row_a, k) ^ m(row_b, k);
     }
     return score;
+}
+
+int pt_shuffle_rec(
+    int i,
+    nb::ndarray<int64_t, nb::shape<-1>, nb::device::cpu>& indexes,
+    const nb::ndarray<bool, nb::shape<-1>, nb::device::cpu>& index_mask,
+    const nb::ndarray<double, nb::shape<-1, -1>, nb::device::cpu>& partition_tree,
+    int M,
+    int pos,
+    std::mt19937& rng
+) {
+    if (i < 0) {
+        if (index_mask(i + M)) {
+            indexes(pos) = i + M;
+            return pos + 1;
+        }
+        return pos;
+    }
+    int left  = static_cast<int>(partition_tree(i, 0)) - M;
+    int right = static_cast<int>(partition_tree(i, 1)) - M;
+    std::bernoulli_distribution coin(0.5);
+    if (coin(rng)) {
+        pos = pt_shuffle_rec(left,  indexes, index_mask, partition_tree, M, pos, rng);
+        pos = pt_shuffle_rec(right, indexes, index_mask, partition_tree, M, pos, rng);
+    } else {
+        pos = pt_shuffle_rec(right, indexes, index_mask, partition_tree, M, pos, rng);
+        pos = pt_shuffle_rec(left,  indexes, index_mask, partition_tree, M, pos, rng);
+    }
+    return pos;
 }
 
 } // namespace detail
@@ -103,6 +133,18 @@ nb::ndarray<nb::numpy, int64_t, nb::shape<-1>> delta_minimization_order(
 
     size_t shape[1] = {n};
     return nb::ndarray<nb::numpy, int64_t, nb::shape<-1>>(data, 1, shape, owner);
+}
+
+int pt_shuffle_rec(
+	int i,
+	nb::ndarray<int64_t, nb::shape<-1>, nb::device::cpu>& indexes,
+	const nb::ndarray<bool, nb::shape<-1>, nb::device::cpu>& index_mask,
+	const nb::ndarray<double, nb::shape<-1,-1>, nb::device::cpu>& partition_tree,
+	int M,
+	int pos
+) {
+	thread_local std::mt19937 rng{std::random_device{}()};
+	return detail::pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos, rng);
 }
 
 #endif // CLUSTERING_UTILS_H
