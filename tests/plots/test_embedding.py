@@ -155,11 +155,7 @@ def test_embedding_colorbar_label_uses_feature_name(shap_vals, feature_names):
     ax = shap.plots.embedding(0, shap_vals, feature_names=feature_names, show=False)
     fig = ax.get_figure()
     # The colorbar axes is a sibling of the main axes on the figure
-    cb_labels = [
-        child.get_label()
-        for child in fig.get_axes()
-        if child is not ax
-    ]
+    cb_labels = [child.get_label() for child in fig.get_axes() if child is not ax]
     # At least one axis or artist should reference the feature name
     assert any("alpha" in lbl or "SHAP" in lbl for lbl in cb_labels) or len(fig.get_axes()) > 1
 
