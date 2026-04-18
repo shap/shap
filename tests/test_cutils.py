@@ -1,7 +1,15 @@
 """Tests for the C++ utility functions in shap._cutils."""
 
 import numpy as np
-from shap._cutils import delta_minimization_order, mask_delta_score, reverse_window, reverse_window_score_gain
+import scipy.cluster.hierarchy
+
+from shap._cutils import (
+    delta_minimization_order,
+    mask_delta_score,
+    pt_shuffle_rec,
+    reverse_window,
+    reverse_window_score_gain,
+)
 
 # Tests for reverse_window
 
@@ -134,3 +142,73 @@ def test_delta_minimization_order_reorders():
     order = delta_minimization_order(masks)
     np.testing.assert_array_equal(sorted(order), [0, 1, 2, 3])
     assert _total_delta(masks, order) < _total_delta(masks, np.array([0, 1, 2, 3]))
+
+
+# Tests for pt_shuffle_rec
+
+
+def _subtree_leaves(node, pt, M):
+    """Recursively collect all leaf feature indices under a given internal node."""
+    if node < 0:
+        return {node + M}
+    left = int(pt[node, 0]) - M
+    right = int(pt[node, 1]) - M
+    return _subtree_leaves(left, pt, M) | _subtree_leaves(right, pt, M)
+
+
+def _build_tree(M):
+    """Build a small scipy complete-linkage tree for M features."""
+    np.random.seed(0)
+    X = np.random.randn(M, 3)
+    return scipy.cluster.hierarchy.complete(X).astype(np.float64)
+
+
+# full mask — pos equals M and all feature indices 0..M-1 are written exactly once
+def test_pt_shuffle_rec_full_mask():
+    M = 8
+    pt = _build_tree(M)
+    index_mask = np.ones(M, dtype=bool)
+    indexes = np.zeros(M, dtype=np.int64)
+    pos = pt_shuffle_rec(int(pt.shape[0] - 1), indexes, index_mask, pt, M, 0)
+    assert pos == M
+    np.testing.assert_array_equal(sorted(indexes[:pos]), list(range(M)))
+
+
+# partial mask — only masked features appear, count matches number of True entries
+def test_pt_shuffle_rec_partial_mask():
+    M = 8
+    pt = _build_tree(M)
+    index_mask = np.array([i % 2 == 0 for i in range(M)], dtype=bool)
+    indexes = np.zeros(M, dtype=np.int64)
+    pos = pt_shuffle_rec(int(pt.shape[0] - 1), indexes, index_mask, pt, M, 0)
+    assert pos == int(index_mask.sum())
+    np.testing.assert_array_equal(sorted(indexes[:pos]), sorted(np.where(index_mask)[0]))
+
+
+# contiguity — every internal node's leaves appear as a contiguous block in the output
+def test_pt_shuffle_rec_contiguity():
+    M = 8
+    pt = _build_tree(M)
+    index_mask = np.ones(M, dtype=bool)
+    indexes = np.zeros(M, dtype=np.int64)
+    pos = pt_shuffle_rec(int(pt.shape[0] - 1), indexes, index_mask, pt, M, 0)
+    result = indexes[:pos].tolist()
+    for node in range(pt.shape[0]):
+        leaves = _subtree_leaves(node, pt, M)
+        positions = [result.index(leaf) for leaf in leaves]
+        assert max(positions) - min(positions) + 1 == len(positions)
+
+
+# stability — contiguity holds across 20 random runs, ruling out flaky RNG behaviour
+def test_pt_shuffle_rec_contiguity_stable():
+    M = 8
+    pt = _build_tree(M)
+    index_mask = np.ones(M, dtype=bool)
+    for _ in range(20):
+        indexes = np.zeros(M, dtype=np.int64)
+        pos = pt_shuffle_rec(int(pt.shape[0] - 1), indexes, index_mask, pt, M, 0)
+        result = indexes[:pos].tolist()
+        for node in range(pt.shape[0]):
+            leaves = _subtree_leaves(node, pt, M)
+            positions = [result.index(leaf) for leaf in leaves]
+            assert max(positions) - min(positions) + 1 == len(positions)
