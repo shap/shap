@@ -189,5 +189,4 @@ class ExplanationError:
         # FIX: average per-row first, then average across rows
         # correctly computes E_row [ E_mask [ error² ] ] instead of using only the last row
         row_means = [np.mean(s) for s in svals]
-        return BenchmarkResult("explanation error", name,
-                               value=np.sqrt(np.mean(row_means)))
+        return BenchmarkResult("explanation error", name, value=np.sqrt(np.mean(row_means)))
