@@ -8,6 +8,24 @@
 namespace nb = nanobind;
 using namespace nb::literals;
 
+namespace detail {
+
+inline int row_delta(
+    const nb::ndarray<bool, nb::shape<-1, -1>, nb::device::cpu>& masks,
+    int64_t row_a,
+    int64_t row_b
+) {
+    auto m = masks.view();
+    int score = 0;
+    for (size_t k = 0; k < masks.shape(1); k++) {
+        score += m(row_a, k) ^ m(row_b, k);
+    }
+    return score;
+}
+
+} // namespace detail
+
+
 void reverse_window(
     nb::ndarray<int64_t, nb::shape<-1>, nb::device::cpu>& order,
     const int start,
@@ -33,6 +51,21 @@ int mask_delta_score(
         score += m1(i) ^ m2(i);
     }
     return score;
+}
+
+int reverse_window_score_gain(
+    const nb::ndarray<bool, nb::shape<-1, -1>, nb::device::cpu>& masks,
+    const nb::ndarray<int64_t, nb::shape<-1>, nb::device::cpu>& order,
+    const int start,
+    const int length
+) {
+    assert(start >= 1);
+    assert(start + length < (int)order.shape(0));
+    int forward_score = detail::row_delta(masks, order(start - 1), order(start))
+                      + detail::row_delta(masks, order(start + length - 1), order(start + length));
+    int reverse_score = detail::row_delta(masks, order(start - 1), order(start + length - 1))
+                      + detail::row_delta(masks, order(start), order(start + length));
+    return forward_score - reverse_score;
 }
 
 #endif // CLUSTERING_UTILS_H

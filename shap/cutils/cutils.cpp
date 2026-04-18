@@ -13,4 +13,5 @@ NB_MODULE(_cutils, m)
     m.def("compute_exp_val", &compute_exp_val, "nsamples_run"_a, "nsamples_added"_a, "D"_a, "N"_a, "weights"_a, "y"_a, "ey"_a, "Compute the expected value for the kernel explainer algorithm");
     m.def("reverse_window", &reverse_window, "order"_a, "start"_a, "length"_a, "Reverse a window of length elements in order starting at index start");
     m.def("mask_delta_score", &mask_delta_score, "m1"_a, "m2"_a, "Compute the Hamming distance between two boolean masks");
+    m.def("reverse_window_score_gain", &reverse_window_score_gain, "masks"_a, "order"_a, "start"_a, "length"_a, "Compute the score gain from reversing a window in the ordering");
 }
