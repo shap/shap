@@ -8,8 +8,5 @@
     "install_command": ["python -mpip install --no-build-isolation {build_dir}"],
     "show_commit_url": "https://github.com/shap/shap/commit/",
     "pythons": ["3.12"],
-    "benchmark_dir": "benchmarks",
-    "results_dir": ".asv/results",
-    "html_dir": ".asv/html",
-    "build_cache_size": 2
+    "benchmark_dir": "benchmarks"
 }
