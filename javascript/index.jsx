@@ -6,17 +6,33 @@ import {
   AdditiveForceArrayVisualizer
 } from "./visualizers";
 
-// Save some globals for the inline scripts to access
+// Store roots to avoid recreating them for the same container
+const roots = new Map();
+
+// Save globals for inline scripts
 window.SHAP = {
   SimpleListVisualizer,
   AdditiveForceVisualizer,
   AdditiveForceArrayVisualizer,
   React: React,
   ReactDOM: ReactDOM,
-  // Provide backward compatibility for render method
+
+  // Backward compatibility render method
   ReactDom: {
     render: (element, container) => {
-      const root = ReactDOM.createRoot(container);
+      if (!container) {
+        console.error("Container is null or undefined");
+        return null;
+      }
+
+      let root = roots.get(container);
+
+      // Create root only once per container
+      if (!root) {
+        root = ReactDOM.createRoot(container);
+        roots.set(container, root);
+      }
+
       root.render(element);
       return root;
     }
