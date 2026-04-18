@@ -3002,33 +3002,25 @@ def test_nullable_pandas_dtype():
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
 
+
 def test_catboost_gold_standard():
     """Gold standard: Compare CatBoost native SHAP vs our C extension on identical tree."""
     catboost = pytest.importorskip("catboost")
-    
+
     # Simple dataset for easy verification
     np.random.seed(42)
-    X = pd.DataFrame({
-        'x1': np.random.randn(100),
-        'x2': np.random.randn(100),
-        'x3': np.random.randn(100)
-    })
-    y = X['x1'] * 2 + X['x2'] - 0.5 * X['x3']
-    
+    X = pd.DataFrame({"x1": np.random.randn(100), "x2": np.random.randn(100), "x3": np.random.randn(100)})
+    y = X["x1"] * 2 + X["x2"] - 0.5 * X["x3"]
+
     # Train single shallow tree (easy to replicate exactly)
-    model = catboost.CatBoostRegressor(
-        iterations=1, depth=2, learning_rate=1.0,
-        random_seed=42, verbose=False
-    )
+    model = catboost.CatBoostRegressor(iterations=1, depth=2, learning_rate=1.0, random_seed=42, verbose=False)
     model.fit(X, y)
-    
+
     # Get SHAP values from both implementations
-    cat_shap = model.get_feature_importance(
-        data=catboost.Pool(X), fstr_type='ShapValues'
-    )
+    cat_shap = model.get_feature_importance(data=catboost.Pool(X), fstr_type="ShapValues")
     our_explainer = shap.TreeExplainer(model, feature_perturbation="tree_path_dependent")
     our_shap = our_explainer.shap_values(X)
-    
+
     # They should be identical
     np.testing.assert_allclose(our_shap, cat_shap[:, :-1], rtol=1e-5, atol=1e-5)
     np.testing.assert_allclose(our_explainer.expected_value, cat_shap[0, -1], rtol=1e-5, atol=1e-5)
