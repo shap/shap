@@ -33,10 +33,10 @@ numba==0.65.0
 numpy==2.1.3
 packaging==24.2
 pandas==3.0.2
-pillow==12.1.1
+pillow==12.2.0
 pluggy==1.5.0
 pyparsing==3.2.1
-pytest==8.3.5
+pytest==9.0.3
 pytest-cov==6.0.0
 pytest-mpl==0.17.0
 python-dateutil==2.9.0.post0
@@ -48,5 +48,4 @@ six==1.17.0
 slicer==0.0.8
 threadpoolctl==3.6.0
 tqdm==4.67.1
-typing-extensions==4.12.2
 tzdata==2025.2

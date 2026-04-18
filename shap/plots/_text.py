@@ -7,6 +7,16 @@ import numpy as np
 
 from . import colors
 
+
+def _css_rgba(r, g, b, a) -> str:
+    """Format an rgba() color for HTML/CSS.
+
+    NumPy 2 scalar types stringify as ``np.float64(...)``, which browsers reject;
+    CSS requires plain numeric literals.
+    """
+    return f"rgba({float(r)}, {float(g)}, {float(b)}, {float(a)})"
+
+
 try:
     from IPython.display import HTML
     from IPython.display import display as ipython_display
@@ -205,10 +215,10 @@ def text(
         for i, name in enumerate(shap_values.output_names):
             scaled_value = 0.5 + 0.5 * output_values[i] / (output_max + 1e-8)
             color = colors.red_transparent_blue(scaled_value)
-            color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
+            rgba_css = _css_rgba(color[0] * 255, color[1] * 255, color[2] * 255, color[3])
             # '#dddddd' if i == 0 else '#ffffff' border-bottom: {'3px solid #000000' if i == 0 else 'none'};
             out += f"""
-<div style="display: inline; border-bottom: {"3px solid #000000" if i == 0 else "none"}; background: rgba{color}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
+<div style="display: inline; border-bottom: {"3px solid #000000" if i == 0 else "none"}; background: {rgba_css}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
     onclick="_output_onclick_{uuid}({i})"
     onmouseover="_output_onmouseover_{uuid}({i}, this);">{name}</div>"""
         out += "<br><br>"
@@ -334,7 +344,7 @@ def text(
     for i, token in enumerate(tokens):
         scaled_value = 0.5 + 0.5 * values[i] / (cmax + 1e-8)
         color = colors.red_transparent_blue(scaled_value)
-        color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
+        rgba_css = _css_rgba(color[0] * 255, color[1] * 255, color[2] * 255, color[3])
 
         # display the labels for the most important words
         label_display = "none"
@@ -354,7 +364,7 @@ def text(
         out += f"""<div style='display: {wrapper_display}; text-align: center;'
     ><div style='display: {label_display}; color: #999; padding-top: 0px; font-size: 12px;'>{value_label}</div
         ><div id='_tp_{uuid}_ind_{i}'
-            style='display: inline; background: rgba{color}; border-radius: 3px; padding: 0px'
+            style='display: inline; background: {rgba_css}; border-radius: 3px; padding: 0px'
             onclick="
             if (this.previousSibling.style.display == 'none') {{
                 this.previousSibling.style.display = 'block';
@@ -548,7 +558,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
     ### Positive value marks ###
 
-    red = tuple(colors.red_rgb * 255)
+    red = tuple(float(x) for x in (colors.red_rgb * 255))
     light_red = (255, 195, 213)
 
     # draw base red bar
@@ -646,7 +656,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
     ### Negative value marks ###
 
-    blue = tuple(colors.blue_rgb * 255)
+    blue = tuple(float(x) for x in (colors.blue_rgb * 255))
     light_blue = (208, 230, 250)
 
     # draw base blue bar
@@ -851,7 +861,7 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
     for i in range(M):
         scaled_value = 0.5 + 0.5 * shap_values[i] / max(abs(maxv), abs(minv))
         color = colors.red_transparent_blue(scaled_value)
-        color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
+        rgba_css = _css_rgba(color[0] * 255, color[1] * 255, color[2] * 255, color[3])
 
         # display the labels for the most important words
         label_display = "none"
@@ -878,8 +888,8 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
             + value_label
             + "</div>"
             + "<div "
-            + "style='display: inline; background: rgba"
-            + str(color)
+            + "style='display: inline; background: "
+            + rgba_css
             + "; border-radius: 3px; padding: 0px'"
             + "onclick=\"if (this.previousSibling.style.display == 'none') {"
             + "this.previousSibling.style.display = 'block';"
@@ -982,8 +992,7 @@ def saliency_plot(shap_values):
             for col_index in range(compressed_shap_matrix.shape[1]):
                 scaled_value = 0.5 + 0.5 * compressed_shap_matrix[row_index, col_index] / cmax
                 color = colors.red_transparent_blue(scaled_value)
-                color = "rgba" + str((color[0] * 255, color[1] * 255, color[2] * 255, color[3]))
-                input_colors_row.append(color)
+                input_colors_row.append(_css_rgba(color[0] * 255, color[1] * 255, color[2] * 255, color[3]))
             input_colors.append(input_colors_row)
 
         return input_colors
@@ -1056,8 +1065,7 @@ def heatmap(shap_values):
     def get_color(shap_value, cmax):
         scaled_value = 0.5 + 0.5 * shap_value / cmax
         color = colors.red_transparent_blue(scaled_value)
-        color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
-        return color
+        return _css_rgba(color[0] * 255, color[1] * 255, color[2] * 255, color[3])
 
     def process_text_to_text_shap_values(shap_values):
         processed_values = []
@@ -1101,8 +1109,8 @@ def heatmap(shap_values):
         shap_values_list = {}
 
         for col_index in range(len(model_output)):
-            color_values[uuid + "_output_flat_token_" + str(col_index)] = "rgba" + str(
-                get_color(shap_values.values[row_index][col_index], cmax)
+            color_values[uuid + "_output_flat_token_" + str(col_index)] = get_color(
+                shap_values.values[row_index][col_index], cmax
             )
             shap_values_list[uuid + "_output_flat_value_label_" + str(col_index)] = round(
                 shap_values.values[row_index][col_index], 3
@@ -1120,7 +1128,7 @@ def heatmap(shap_values):
         for row_index in range(processed_values[col_index]["collapsed_node_ids"].shape[0]):
             color_values[
                 uuid + "_input_node_" + str(processed_values[col_index]["collapsed_node_ids"][row_index]) + "_content"
-            ] = "rgba" + str(get_color(processed_values[col_index]["values"][row_index], cmax))
+            ] = get_color(processed_values[col_index]["values"][row_index], cmax)
             shap_label_value_str = str(round(processed_values[col_index]["values"][row_index], 3))
             if processed_values[col_index]["group_sizes"][row_index] > 1:
                 shap_label_value_str += "/" + str(processed_values[col_index]["group_sizes"][row_index])

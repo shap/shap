@@ -251,7 +251,6 @@ traitlets==5.14.3
     #   nbsphinx
 typing-extensions==4.15.0
     # via
-    #   shap (pyproject.toml)
     #   beautifulsoup4
     #   referencing
 urllib3==2.6.3

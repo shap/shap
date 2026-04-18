@@ -1,3 +1,12 @@
+import functools
+import sys
+from pathlib import Path
+
+# Remove the current working directory from sys.path to ensure tests import the
+# installed shap package (with compiled C extensions) rather than the source tree.
+# If this line is commented out, run pytest via `python -P -m pytest tests` instead.
+sys.path[:] = [p for p in sys.path if p not in ("", ".")]
+
 try:
     # On MacOS, the newer libomp versions that comes with Homebrew (version >= 12)
     # cause segfaults to occur when pytorch + lightgbm are imported (in that order).
@@ -8,12 +17,9 @@ try:
 except ImportError:
     pass
 
-import functools
-from pathlib import Path
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pytest
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+import pytest  # noqa: E402
 
 
 def pytest_addoption(parser):
@@ -87,7 +93,6 @@ def compare_numpy_outputs_against_baseline(*, func_file, baseline_dir=None, rtol
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            # breakpoint()
             output = func(*args, **kwargs)
             base_func_name = f"{Path(func_file).stem}_{func.__name__}"
             baseline_file = baseline_dir / f"{base_func_name}_baseline.npz"
