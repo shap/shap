@@ -684,7 +684,13 @@ class KernelExplainer(Explainer):
 
         # find the expected value of each output
         self.nsamplesRun = compute_exp_val(
-            self.nsamplesRun, self.nsamplesAdded, self.D, self.N, self.data.weights, self.y, self.ey
+            self.nsamplesRun,
+            self.nsamplesAdded,
+            self.D,
+            self.N,
+            self.data.weights,
+            self.y,  # type: ignore[arg-type]
+            self.ey,  # type: ignore[arg-type]
         )
 
     def solve(
