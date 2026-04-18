@@ -88,6 +88,7 @@ def test_tabular_coalition_partition_match():
     assert np.allclose(binary_values.values, binary_winter_values.values)  # type: ignore[union-attr]
     return binary_values
 
+
 def test_coalition_explainer_raises_on_overlapping_features():
     """CoalitionExplainer should raise ValueError for overlapping features."""
     import pytest
