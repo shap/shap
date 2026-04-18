@@ -1,7 +1,8 @@
 """Tests for the C++ utility functions in shap._cutils."""
 
 import numpy as np
-from shap._cutils import mask_delta_score, reverse_window, reverse_window_score_gain
+
+from shap._cutils import delta_minimization_order, mask_delta_score, reverse_window, reverse_window_score_gain
 
 # Tests for reverse_window
 
@@ -103,3 +104,34 @@ def test_reverse_window_score_gain_length_one():
     masks = np.array([[1, 0], [0, 1], [1, 1]], dtype=bool)
     order = np.array([0, 1, 2], dtype=np.int64)
     assert reverse_window_score_gain(masks, order, 1, 1) == 0
+
+
+# Tests for delta_minimization_order
+
+
+def _total_delta(masks, order):
+    """Sum of adjacent Hamming distances for a given ordering."""
+    return sum(int((masks[order[i]] ^ masks[order[i + 1]]).sum()) for i in range(len(order) - 1))
+
+
+# single row — output must be [0]
+def test_delta_minimization_order_single_row():
+    masks = np.array([[1, 0]], dtype=bool)
+    order = delta_minimization_order(masks)
+    np.testing.assert_array_equal(order, [0])
+
+
+# all identical masks — any ordering is equally good, output must be a valid permutation
+def test_delta_minimization_order_identical_masks():
+    masks = np.array([[1, 0], [1, 0], [1, 0]], dtype=bool)
+    order = delta_minimization_order(masks)
+    np.testing.assert_array_equal(sorted(order), [0, 1, 2])
+
+
+# alternating pattern — identity ordering has total delta 6, optimal is 2
+# rows [1,0],[0,1],[1,0],[0,1]: grouping similar rows cuts crossings from 3 to 1
+def test_delta_minimization_order_reorders():
+    masks = np.array([[1, 0], [0, 1], [1, 0], [0, 1]], dtype=bool)
+    order = delta_minimization_order(masks)
+    np.testing.assert_array_equal(sorted(order), [0, 1, 2, 3])
+    assert _total_delta(masks, order) < _total_delta(masks, np.array([0, 1, 2, 3]))
