@@ -2,6 +2,7 @@
 #define CLUSTERING_UTILS_H
 
 #include <cassert>
+#include <algorithm>
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
 
@@ -66,6 +67,42 @@ int reverse_window_score_gain(
     int reverse_score = detail::row_delta(masks, order(start - 1), order(start + length - 1))
                       + detail::row_delta(masks, order(start), order(start + length));
     return forward_score - reverse_score;
+}
+
+nb::ndarray<nb::numpy, int64_t, nb::shape<-1>> delta_minimization_order(
+    const nb::ndarray<bool, nb::shape<-1, -1>, nb::device::cpu>& all_masks,
+    const int max_swap_size = 100,
+    const int num_passes = 2
+) {
+    size_t n = all_masks.shape(0);
+
+    int64_t* data = new int64_t[n];
+    for (size_t i = 0; i < n; i++) data[i] = static_cast<int64_t>(i);
+
+    nb::capsule owner(data, [](void* p) noexcept {
+        delete[] static_cast<int64_t*>(p);
+    });
+
+    int effective_max = std::min(max_swap_size, static_cast<int>(n));
+
+    for (int pass = 0; pass < num_passes; pass++) {
+        for (int length = 2; length < effective_max; length++) {
+            for (int i = 1; i < static_cast<int>(n) - length; i++) {
+                int forward = detail::row_delta(all_masks, data[i - 1], data[i])
+                            + detail::row_delta(all_masks, data[i + length - 1], data[i + length]);
+                int reverse = detail::row_delta(all_masks, data[i - 1], data[i + length - 1])
+                            + detail::row_delta(all_masks, data[i], data[i + length]);
+                if (forward > reverse) {
+                    for (int j = 0; j < length / 2; j++) {
+                        std::swap(data[i + j], data[i + length - j - 1]);
+                    }
+                }
+            }
+        }
+    }
+
+    size_t shape[1] = {n};
+    return nb::ndarray<nb::numpy, int64_t, nb::shape<-1>>(data, 1, shape, owner);
 }
 
 #endif // CLUSTERING_UTILS_H
