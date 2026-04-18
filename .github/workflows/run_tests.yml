@@ -15,7 +15,7 @@ on:
       - "javascript/**"  # Include JS changes that affect bundle.js
       - ".github/workflows/run_tests.yml"
       - "pyproject.toml"
-      - "setup.py"
+      - "CMakeLists.txt"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -33,12 +33,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
       - name: Install dependencies for dataset download
         run: |
-          python -m pip install --upgrade uv
           uv pip install --system '.[download_datasets]'
       - name: Pre-download datasets
-        run: python tests/datasets_to_cache.py
+        run: python -P tests/datasets_to_cache.py
       - name: Create unified cache directory
         run: |
           mkdir -p /tmp/test_data_cache
@@ -58,7 +59,10 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         # The total number of matrix jobs should match codecov.yml `after_n_builds`.
-        python-version: ["3.12", "3.13", "3.14"]
+        python-version: ["3.12",
+                         "3.13",
+                         "3.14"
+                         ]
         extras: ["test"]
         include:
           # Test on windows/mac, just one job each
@@ -103,12 +107,18 @@ jobs:
           npm run build
           cp build/bundle.js ../shap/plots/resources/bundle.js
       - name: Install libomp (macOS)
-        if: matrix.os == 'macos-latest'
-        run: brew install libomp
+        if: runner.os == 'macOS'
+        run: |
+          brew install libomp
+          # Set DYLD_LIBRARY_PATH to avoid OpenMP conflicts, see https://github.com/unit8co/darts/pull/3050
+          _libomp_path=$(brew --prefix libomp 2>/dev/null)/lib
+          echo "DYLD_LIBRARY_PATH=$_libomp_path:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          unset _libomp_path
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
       - name: Install dependencies
         # Do regular install NOT editable install: see GH #3020
         run: |
-          python -m pip install --upgrade uv
           uv pip install --system '.[${{ matrix.extras }},plots]'
       - name: Download pre-cached datasets
         uses: actions/download-artifact@v4
@@ -126,7 +136,7 @@ jobs:
           fi
 
           # Restore shap cached data to the installed package location
-          SHAP_CACHE_DIR=$(python -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
+          SHAP_CACHE_DIR=$(python -P -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
           mkdir -p "$SHAP_CACHE_DIR"
 
           if [ "$RUNNER_OS" == "Windows" ]; then
@@ -173,9 +183,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade uv
           uv pip install --system numpy==2.0 '.[test-core,plots]'
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
@@ -190,10 +201,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.13
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade uv
           uv pip install --system '.[test-core]'
+          # TODO: consider removing requirements.ci.txt and use pyproject.toml extras instead
           uv pip install --system --reinstall -r requirements.ci.txt
       - name: Run mypy
         run: mypy shap tests

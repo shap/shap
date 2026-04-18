@@ -8,6 +8,7 @@ import numpy.typing as npt
 from numba import njit  # type: ignore[attr-defined]
 
 from .. import links
+from .._cutils import compute_grey_code_row_values
 from ..models import Model
 from ..utils import (
     MaskedModel,
@@ -29,6 +30,10 @@ class ExactExplainer(Explainer):
     explainer minimizes the number of function evaluations needed by ordering the masking sets to
     minimize sequential differences. This is done using gray codes for standard Shapley values
     and a greedy sorting method for hclustering structured maskers.
+
+    Examples
+    --------
+    See `Exact explainer examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/explainers/Exact.html>`_
     """
 
     model: Model
@@ -133,6 +138,17 @@ class ExactExplainer(Explainer):
         if getattr(self.masker, "clustering", None) is None:
             # see which elements we actually need to perturb
             inds = fm.varying_inputs()
+            if len(inds) == 0:
+                # if nothing varies then we can just return the expected value as the output and be done with it
+                outputs = fm(np.array([MaskedModel.delta_mask_noop_value]), zero_index=0, batch_size=batch_size)
+                # todo: not quite sure about values, that should be constantly 0!
+                return {
+                    "values": np.zeros(row_args[0].shape),
+                    "expected_values": outputs[0],
+                    "mask_shapes": fm.mask_shapes,
+                    "main_effects": None,
+                    "clustering": getattr(self.masker, "clustering", None),
+                }
 
             # make sure we have enough evals
             if max_evals is not None and max_evals != "auto" and max_evals < 2 ** len(inds):
@@ -163,7 +179,8 @@ class ExactExplainer(Explainer):
                 coeff = shapley_coefficients(len(inds))
                 row_values = np.zeros((len(fm),) + outputs.shape[1:])
                 mask = np.zeros(len(fm), dtype=bool)
-                _compute_grey_code_row_values(
+
+                compute_grey_code_row_values(
                     row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value
                 )
 
@@ -222,40 +239,6 @@ class ExactExplainer(Explainer):
             "main_effects": main_effect_values if main_effects else None,
             "clustering": getattr(self.masker, "clustering", None),
         }
-
-
-@njit
-def _compute_grey_code_row_values(
-    row_values: npt.NDArray[Any],
-    mask: npt.NDArray[np.bool_],
-    inds: npt.NDArray[np.intp],
-    outputs: npt.NDArray[Any],
-    shapley_coeff: npt.NDArray[Any],
-    extended_delta_indexes: npt.NDArray[np.intp],
-    noop_code: int,
-) -> None:
-    set_size = 0
-    M = len(inds)
-    for i in range(2**M):
-        # update the mask
-        delta_ind = extended_delta_indexes[i]
-        if delta_ind != noop_code:
-            mask[delta_ind] = ~mask[delta_ind]
-            if mask[delta_ind]:
-                set_size += 1
-            else:
-                set_size -= 1
-
-        # update the output row values
-        on_coeff = shapley_coeff[set_size - 1]
-        if set_size < M:
-            off_coeff = shapley_coeff[set_size]
-        out = outputs[i]
-        for j in inds:
-            if mask[j]:
-                row_values[j] += out * on_coeff
-            else:
-                row_values[j] -= out * off_coeff
 
 
 @njit

@@ -13,7 +13,7 @@ on:
       - ".github/workflows/run_notebooks.yml"
       - "scripts/**"
       - "pyproject.toml"
-      - "setup.py"
+      - "CMakeLists.txt"
   workflow_dispatch:
 
 concurrency:
@@ -30,6 +30,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
       - name: Install dependencies
         run: |
           python -m pip install --upgrade uv

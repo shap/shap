@@ -22,6 +22,8 @@ Explanation
 
 explainers
 ----------
+*See also:* :ref:`Explainer API Examples <explainers_examples>`.
+
 .. autosummary::
     :toctree: generated/
 
@@ -49,6 +51,8 @@ explainers
 
 plots
 -----
+*See also:* :ref:`Plot API Examples <plots_examples>`.
+
 .. autosummary::
     :toctree: generated/
 
@@ -74,6 +78,8 @@ plots
 
 maskers
 -------
+*See also:* :ref:`Masker API Examples <maskers_examples>`.
+
 .. autosummary::
     :toctree: generated/
 

@@ -9,8 +9,8 @@
   ],
   "scripts": {
     "test": "jest --verbose ./tests",
-    "dev": "webpack-dev-server --mode development --open",
-    "build": "webpack --mode production",
+    "dev": "node init && webpack-dev-server --mode development --open",
+    "build": "node init && webpack --mode production",
     "pub": "npm run build && npm publish"
   },
   "author": "Scott Lundberg",

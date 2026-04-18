@@ -1,6 +1,28 @@
+import re
+
 import numpy as np
 
 import shap
+
+
+def test_text_plot_rgba_css_uses_plain_floats():
+    """Regression: NumPy 2 scalars must not appear in CSS (see GH #4146)."""
+    test_values = np.array([[1.0, -0.5], [0.2, 0.1]])
+    test_base_values = np.array([0.0, 0.0])
+    test_data = np.array(["a", "b"], dtype="<U1")
+    exp = shap.Explanation(
+        values=test_values,
+        base_values=test_base_values,
+        data=test_data,
+        output_names=["x", "y"],
+    )
+    html = shap.plots.text(exp[:, 0], display=False)
+    assert "np.float64" not in html
+    assert "np.int" not in html
+    assert re.search(
+        r"rgba\(\s*[0-9.]+\s*,\s*[0-9.]+\s*,\s*[0-9.]+\s*,\s*[0-9.]+\s*\)",
+        html,
+    )
 
 
 def test_single_text_to_text():

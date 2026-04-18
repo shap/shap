@@ -116,7 +116,7 @@ class Explainer(Serializable):
                 self.masker = maskers.Text(masker)
         elif (masker is list or masker is tuple) and masker[0] is not str:
             self.masker = maskers.Composite(*masker)
-        elif (masker is dict) and ("mean" in masker):
+        elif isinstance(masker, dict) and ("mean" in masker):
             self.masker = maskers.Independent(masker)
         elif masker is None and isinstance(self.model, models.TransformersPipeline):
             return self.__init__(  # type: ignore[misc]

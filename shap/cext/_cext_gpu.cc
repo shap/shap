@@ -107,22 +107,22 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
         children_default_array == NULL || features_array == NULL || thresholds_array == NULL || threshold_types_array == NULL ||
         values_array == NULL || node_sample_weights_array == NULL || X_array == NULL ||
         X_missing_array == NULL || out_contribs_array == NULL) {
-        Py_XDECREF(children_left_array);
-        Py_XDECREF(children_right_array);
-        Py_XDECREF(children_default_array);
-        Py_XDECREF(features_array);
-        Py_XDECREF(thresholds_array);
-        Py_XDECREF(threshold_types_array);
-        Py_XDECREF(values_array);
-        Py_XDECREF(node_sample_weights_array);
-        Py_XDECREF(X_array);
-        Py_XDECREF(X_missing_array);
-        if (y_array != NULL) Py_XDECREF(y_array);
-        if (R_array != NULL) Py_XDECREF(R_array);
-        if (R_missing_array != NULL) Py_XDECREF(R_missing_array);
+        Py_XDECREF((PyObject*)children_left_array);
+        Py_XDECREF((PyObject*)children_right_array);
+        Py_XDECREF((PyObject*)children_default_array);
+        Py_XDECREF((PyObject*)features_array);
+        Py_XDECREF((PyObject*)thresholds_array);
+        Py_XDECREF((PyObject*)threshold_types_array);
+        Py_XDECREF((PyObject*)values_array);
+        Py_XDECREF((PyObject*)node_sample_weights_array);
+        Py_XDECREF((PyObject*)X_array);
+        Py_XDECREF((PyObject*)X_missing_array);
+        if (y_array != NULL) Py_XDECREF((PyObject*)y_array);
+        if (R_array != NULL) Py_XDECREF((PyObject*)R_array);
+        if (R_missing_array != NULL) Py_XDECREF((PyObject*)R_missing_array);
         //PyArray_ResolveWritebackIfCopy(out_contribs_array);
-        Py_XDECREF(out_contribs_array);
-        Py_XDECREF(base_offset_array);
+        Py_XDECREF((PyObject*)out_contribs_array);
+        Py_XDECREF((PyObject*)base_offset_array);
         return NULL;
     }
 
@@ -169,22 +169,22 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     tfloat ret_value = (double)values[0];
 
     // clean up the created python objects
-    Py_XDECREF(children_left_array);
-    Py_XDECREF(children_right_array);
-    Py_XDECREF(children_default_array);
-    Py_XDECREF(features_array);
-    Py_XDECREF(thresholds_array);
-    Py_XDECREF(threshold_types_array);
-    Py_XDECREF(values_array);
-    Py_XDECREF(node_sample_weights_array);
-    Py_XDECREF(X_array);
-    Py_XDECREF(X_missing_array);
-    if (y_array != NULL) Py_XDECREF(y_array);
-    if (R_array != NULL) Py_XDECREF(R_array);
-    if (R_missing_array != NULL) Py_XDECREF(R_missing_array);
+    Py_XDECREF((PyObject*)children_left_array);
+    Py_XDECREF((PyObject*)children_right_array);
+    Py_XDECREF((PyObject*)children_default_array);
+    Py_XDECREF((PyObject*)features_array);
+    Py_XDECREF((PyObject*)thresholds_array);
+    Py_XDECREF((PyObject*)threshold_types_array);
+    Py_XDECREF((PyObject*)values_array);
+    Py_XDECREF((PyObject*)node_sample_weights_array);
+    Py_XDECREF((PyObject*)X_array);
+    Py_XDECREF((PyObject*)X_missing_array);
+    if (y_array != NULL) Py_XDECREF((PyObject*)y_array);
+    if (R_array != NULL) Py_XDECREF((PyObject*)R_array);
+    if (R_missing_array != NULL) Py_XDECREF((PyObject*)R_missing_array);
     //PyArray_ResolveWritebackIfCopy(out_contribs_array);
-    Py_XDECREF(out_contribs_array);
-    Py_XDECREF(base_offset_array);
+    Py_XDECREF((PyObject*)out_contribs_array);
+    Py_XDECREF((PyObject*)base_offset_array);
 
     /* Build the output tuple */
     PyObject *ret = Py_BuildValue("d", ret_value);

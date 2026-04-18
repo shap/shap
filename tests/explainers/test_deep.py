@@ -259,7 +259,7 @@ def test_tf_deep_imbdb_transformers():
 
     # data from datasets imdb dataset
     short_data = ["I lov", "Worth", "its a", "STAR ", "First", "I had", "Isaac", "It ac", "Techn", "Hones"]
-    classifier = transformers.pipeline("sentiment-analysis", return_all_scores=True)
+    classifier = transformers.pipeline("sentiment-analysis", top_k=None)
     pmodel = models.TransformersPipeline(classifier, rescale_to_logits=True)
     explainer3 = shap.Explainer(pmodel, classifier.tokenizer)
     shap_values3 = explainer3(short_data[:10])
@@ -320,10 +320,6 @@ TORCH_DEVICES = [
 ]
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("interim", [True, False])
 def test_pytorch_mnist_cnn_call(torch_device, interim):
@@ -441,10 +437,6 @@ def test_pytorch_mnist_cnn_call(torch_device, interim):
     )
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_custom_nested_models(torch_device):
     """Testing single outputs"""
@@ -566,10 +558,6 @@ def test_pytorch_custom_nested_models(torch_device):
     )
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_single_output(torch_device):
     """Testing single outputs"""
@@ -664,10 +652,6 @@ def test_pytorch_single_output(torch_device):
     )
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 @pytest.mark.parametrize("activation", ["relu", "selu", "gelu"])
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("disconnected", [True, False])
