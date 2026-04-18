@@ -188,4 +188,5 @@ class ExplanationError:
         # reset the random seed so we don't mess up the caller
         np.random.seed(old_seed)
 
-        return BenchmarkResult("explanation error", name, value=np.sqrt(np.sum(total_values) / len(total_values)))
+        # FIX: use svals (all rows) instead of total_values (last row only)
+        return BenchmarkResult("explanation error", name, value=np.sqrt(np.mean(svals)))
