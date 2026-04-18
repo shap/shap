@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,15 +20,15 @@ if TYPE_CHECKING:
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
 # TODO: Have the Explanation object track enough data so that we can tell (and so show) how many instances are in each cohort
 def bar(
-    shap_values,
-    max_display=10,
-    order=Explanation.abs,
-    clustering=None,
-    clustering_cutoff=0.5,
-    show_data="auto",
-    ax=None,
-    show=True,
-):
+    shap_values: Explanation | Cohorts | dict[str, Explanation],
+    max_display: int | None = 10,
+    order: Any = Explanation.abs,
+    clustering: np.ndarray | Literal[False] | None = None,
+    clustering_cutoff: float = 0.5,
+    show_data: bool | Literal["auto"] = "auto",
+    ax: plt.Axes | None = None,
+    show: bool = True,
+) -> plt.Axes | None:
     """Create a bar plot of a set of SHAP values.
 
     Parameters
@@ -393,7 +393,10 @@ def bar(
     # (these fall behind the black ones with just the feature name)
     tick_labels = ax.yaxis.get_majorticklabels()
     for i in range(num_features):
-        tick_labels[i].set_color(style.tick_labels_color)
+        tick_label_color = style.tick_labels_color
+        if isinstance(tick_label_color, np.ndarray):
+            tick_label_color = tuple(tick_label_color.tolist())
+        tick_labels[i].set_color(tick_label_color)
 
     # draw a dendrogram if we are given a partition tree
     if partition_tree is not None:
@@ -432,6 +435,7 @@ def bar(
 
     if show:
         plt.show()
+        return None
     else:
         return ax
 
