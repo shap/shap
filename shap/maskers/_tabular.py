@@ -1,9 +1,9 @@
 import logging
-
 from typing import Any
+
 import numpy as np
 import pandas as pd
-from numba import njit # type: ignore
+from numba import njit  # type: ignore
 
 from .. import utils
 from .._serializable import Deserializer, Serializer
@@ -17,7 +17,9 @@ log = logging.getLogger("shap")
 class Tabular(Masker):
     """A common base class for Independent and Partition."""
 
-    def __init__(self, data: Any, max_samples: int = 100, clustering: str | np.ndarray | None = None, partition: Any = None) -> None:
+    def __init__(
+        self, data: Any, max_samples: int = 100, clustering: str | np.ndarray | None = None, partition: Any = None
+    ) -> None:
         """This masks out tabular features by integrating over the given background dataset.
 
         Parameters
@@ -67,7 +69,7 @@ class Tabular(Masker):
             data = utils.sample(data, max_samples)
 
         self.data = data
-        self.clustering = clustering # type: ignore
+        self.clustering = clustering  # type: ignore
         self.partition = partition
         self.max_samples = max_samples
 
@@ -107,7 +109,7 @@ class Tabular(Masker):
         # this is property that allows callers to check what rows actually changed since last time.
         # self.changed_rows = np.ones(self.data.shape[0], dtype=bool)
 
-    def __call__(self, mask: np.ndarray, x: np.ndarray) -> Any: # type: ignore
+    def __call__(self, mask: np.ndarray, x: np.ndarray) -> Any:  # type: ignore
         mask = self._standardize_mask(mask, x)
 
         # make sure we are given a single sample
@@ -119,8 +121,8 @@ class Tabular(Masker):
             variants = ~self.invariants(x)
             curr_delta_inds = np.zeros(len(mask), dtype=int)
             num_masks = (mask >= 0).sum()
-            varying_rows_out = np.zeros((num_masks, self.shape[0]), dtype=bool) # type: ignore
-            masked_inputs_out = np.zeros((num_masks * self.shape[0], self.shape[1])) # type: ignore
+            varying_rows_out = np.zeros((num_masks, self.shape[0]), dtype=bool)  # type: ignore
+            masked_inputs_out = np.zeros((num_masks * self.shape[0], self.shape[1]))  # type: ignore
             self._last_mask[:] = False
             self._masked_data[:] = self.data
             _delta_masking(
@@ -194,7 +196,7 @@ class Tabular(Masker):
             s.save("partition", self.partition)
 
     @classmethod
-    def load(cls, in_file: Any, instantiate: bool =True) -> Any:
+    def load(cls, in_file: Any, instantiate: bool = True) -> Any:
         """Load a Tabular masker from a file stream."""
         if instantiate:
             return cls._instantiated_load(in_file)
