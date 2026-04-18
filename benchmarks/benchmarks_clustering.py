@@ -22,6 +22,13 @@ try:
 except ImportError:
     _HAS_MASK_DELTA_SCORE = False
 
+try:
+    from shap._cutils import reverse_window as _cpp_reverse_window
+
+    _HAS_REVERSE_WINDOW = True
+except ImportError:
+    _HAS_REVERSE_WINDOW = False
+
 
 # --- Numba reference implementations ---
 
@@ -29,6 +36,14 @@ except ImportError:
 @njit
 def _mask_delta_score(m1, m2):
     return (m1 ^ m2).sum()
+
+
+@njit
+def _reverse_window(order, start, length):
+    for i in range(length // 2):
+        tmp = order[start + i]
+        order[start + i] = order[start + length - i - 1]
+        order[start + length - i - 1] = tmp
 
 
 # --- Benchmarks ---
@@ -50,3 +65,22 @@ class BenchmarkMaskDeltaScore:
     @skip_benchmark_if(not _HAS_MASK_DELTA_SCORE)
     def time_cpp(self, n_features):
         _cpp_mask_delta_score(self.m1, self.m2)
+
+
+class BenchmarkReverseWindow:
+    params = [4, 8, 13]
+    param_names = ["n_features"]
+
+    def setup(self, n_features):
+        n_masks = 2**n_features
+        rng = np.random.default_rng(0)
+        self.order = rng.permutation(n_masks).astype(np.int64)
+        self.length = n_masks // 2
+        _reverse_window(self.order.copy(), 1, self.length)  # force JIT compilation
+
+    def time_numba(self, n_features):
+        _reverse_window(self.order.copy(), 1, self.length)
+
+    @skip_benchmark_if(not _HAS_REVERSE_WINDOW)
+    def time_cpp(self, n_features):
+        _cpp_reverse_window(self.order.copy(), 1, self.length)
