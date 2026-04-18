@@ -96,7 +96,7 @@ green `<> Code` button on your projects home page.
 Create a new isolated environment for the project, e.g. with conda:
 
 ```bash
-conda create -n shap python=3.11
+conda create -n shap python=3.12
 conda activate shap
 ```
 
