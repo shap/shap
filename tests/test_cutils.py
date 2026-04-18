@@ -1,7 +1,7 @@
 """Tests for the C++ utility functions in shap._cutils."""
 
 import numpy as np
-from shap._cutils import mask_delta_score, reverse_window
+from shap._cutils import mask_delta_score, reverse_window, reverse_window_score_gain
 
 # Tests for reverse_window
 
@@ -68,3 +68,38 @@ def test_mask_delta_score_partial():
 def test_mask_delta_score_single_element():
     assert mask_delta_score(np.array([True], dtype=bool), np.array([True], dtype=bool)) == 0
     assert mask_delta_score(np.array([True], dtype=bool), np.array([False], dtype=bool)) == 1
+
+
+# Tests for reverse_window_score_gain
+
+
+# reversing reduces total delta — gain is positive
+def test_reverse_window_score_gain_positive():
+    masks = np.array([[1, 0], [0, 1], [1, 0], [0, 1]], dtype=bool)
+    order = np.array([0, 1, 2, 3], dtype=np.int64)
+    # forward: delta(row0,row1) + delta(row2,row3) = 2 + 2 = 4
+    # reverse: delta(row0,row2) + delta(row1,row3) = 0 + 0 = 0
+    assert reverse_window_score_gain(masks, order, 1, 2) == 4
+
+
+# reversing increases total delta — gain is negative
+def test_reverse_window_score_gain_negative():
+    masks = np.array([[1, 0], [1, 0], [0, 1], [0, 1]], dtype=bool)
+    order = np.array([0, 1, 2, 3], dtype=np.int64)
+    # forward: delta(row0,row1) + delta(row2,row3) = 0 + 0 = 0
+    # reverse: delta(row0,row2) + delta(row1,row3) = 2 + 2 = 4
+    assert reverse_window_score_gain(masks, order, 1, 2) == -4
+
+
+# all identical masks — all deltas are zero, gain is always zero
+def test_reverse_window_score_gain_zero():
+    masks = np.array([[1, 0], [1, 0], [1, 0], [1, 0]], dtype=bool)
+    order = np.array([0, 1, 2, 3], dtype=np.int64)
+    assert reverse_window_score_gain(masks, order, 1, 2) == 0
+
+
+# length=1 window — forward and reverse expressions are identical, gain is always zero
+def test_reverse_window_score_gain_length_one():
+    masks = np.array([[1, 0], [0, 1], [1, 1]], dtype=bool)
+    order = np.array([0, 1, 2], dtype=np.int64)
+    assert reverse_window_score_gain(masks, order, 1, 1) == 0
