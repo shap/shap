@@ -213,8 +213,7 @@ class BenchmarkPtShuffleRec:
         self.M = n_features
         self.index_mask = np.ones(n_features, dtype=bool)
         self.indexes = np.zeros(n_features, dtype=np.int64)
-        # force JIT compilation
-        _pt_shuffle_rec(
+        _pt_shuffle_rec(  # force JIT compilation
             self.partition_tree.shape[0] - 1,
             self.indexes.copy(),
             self.index_mask,
