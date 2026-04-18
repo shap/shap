@@ -36,6 +36,13 @@ try:
 except ImportError:
     _HAS_REVERSE_WINDOW_SCORE_GAIN = False
 
+try:
+    from shap._cutils import delta_minimization_order as _cpp_delta_minimization_order
+
+    _HAS_DELTA_MINIMIZATION_ORDER = True
+except ImportError:
+    _HAS_DELTA_MINIMIZATION_ORDER = False
+
 
 # --- Numba reference implementations ---
 
@@ -51,6 +58,17 @@ def _reverse_window(order, start, length):
         tmp = order[start + i]
         order[start + i] = order[start + length - i - 1]
         order[start + length - i - 1] = tmp
+
+
+@njit
+def _delta_minimization_order(all_masks, max_swap_size=100, num_passes=2):
+    order = np.arange(len(all_masks))
+    for _ in range(num_passes):
+        for length in range(2, max_swap_size):
+            for i in range(1, len(order) - length):
+                if _reverse_window_score_gain(all_masks, order, i, length) > 0:
+                    _reverse_window(order, i, length)
+    return order
 
 
 @njit
@@ -122,3 +140,21 @@ class BenchmarkReverseWindowScoreGain:
     @skip_benchmark_if(not _HAS_REVERSE_WINDOW_SCORE_GAIN)
     def time_cpp(self, n_features):
         _cpp_reverse_window_score_gain(self.masks, self.order, 1, self.length)
+
+
+class BenchmarkDeltaMinimizationOrder:
+    params = [4, 8, 13]
+    param_names = ["n_features"]
+
+    def setup(self, n_features):
+        n_masks = 2**n_features
+        rng = np.random.default_rng(0)
+        self.masks = rng.integers(0, 2, (n_masks, n_features)).astype(bool)
+        _delta_minimization_order(self.masks)  # force JIT compilation
+
+    def time_numba(self, n_features):
+        _delta_minimization_order(self.masks)
+
+    @skip_benchmark_if(not _HAS_DELTA_MINIMIZATION_ORDER)
+    def time_cpp(self, n_features):
+        _cpp_delta_minimization_order(self.masks)
