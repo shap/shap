@@ -199,7 +199,6 @@ module = [
   # "shap.maskers._fixed",      # NOW TYPE CHECKED - type hints added
   "shap.maskers._image",
   # "shap.maskers._masker",     # NOW TYPE CHECKED - type hints added
-  "shap.maskers._tabular",
   "shap.maskers._text",
   "shap.plots._benchmark",
   "shap.plots._force_matplotlib",
