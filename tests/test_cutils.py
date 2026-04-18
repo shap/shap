@@ -1,7 +1,6 @@
 """Tests for the C++ utility functions in shap._cutils."""
 
 import numpy as np
-
 from shap._cutils import mask_delta_score, reverse_window
 
 # Tests for reverse_window
