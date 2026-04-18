@@ -122,6 +122,7 @@ nbtest = [
 
 [dependency-groups]
 core = ["pytest", "pytest-mpl", "pytest-cov", "mypy", "pre-commit"]
+benchmark = ["asv"]
 test = [
   "pytest",
   "pytest-mpl",
