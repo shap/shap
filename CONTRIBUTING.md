@@ -128,14 +128,11 @@ The various dependency groups are defined in [pyproject.toml](pyproject.toml):
 - `plots`: includes matplotlib.
 - `docs`: dependencies for building the docs with Sphinx.
 
-<!-- TODO: update NOTE when GH#4366 is merged -->
-Note: When installing from source, shap will attempt to build the C extension
-and the CUDA extension. If CUDA is not available, shap will retry the build
-without CUDA support.
+To use the CUDA extension for ``GPUTreeExplainer``, set the ``SHAP_ENABLE_CUDA`` environment variable to `1` when installing:
 
-Consequently, is is quite normal to see warnings such as `WARNING: Could not
-compile cuda extensions` when building from source if you do not have CUDA
-available.
+```bash
+SHAP_ENABLE_CUDA=1 uv sync --group test-core --group plots
+```
 
 ### Code checks with precommit
 
