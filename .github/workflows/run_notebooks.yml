@@ -34,7 +34,6 @@ jobs:
         uses: astral-sh/setup-uv@v7
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade uv
           uv pip install --system . --group test --group plots --group nbtest
       - name: Run notebooks
         run: |
