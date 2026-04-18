@@ -13,7 +13,19 @@ n_masks is derived as 2**n_features to reflect the exact explainer mask matrix s
 
 import numpy as np
 from asv_runner.benchmarks.mark import skip_benchmark_if
-from numba import njit
+from scipy.cluster.hierarchy import ward
+from scipy.spatial.distance import pdist
+
+try:
+    from numba import njit
+
+    _HAS_NUMBA = True
+except ImportError:
+    _HAS_NUMBA = False
+
+    def njit(fn):
+        return fn
+
 
 try:
     from shap._cutils import mask_delta_score as _cpp_mask_delta_score
@@ -68,6 +80,17 @@ def _reverse_window(order, start, length):
 
 
 @njit
+def _reverse_window_score_gain(masks, order, start, length):
+    forward_score = _mask_delta_score(masks[order[start - 1]], masks[order[start]]) + _mask_delta_score(
+        masks[order[start + length - 1]], masks[order[start + length]]
+    )
+    reverse_score = _mask_delta_score(masks[order[start - 1]], masks[order[start + length - 1]]) + _mask_delta_score(
+        masks[order[start]], masks[order[start + length]]
+    )
+    return forward_score - reverse_score
+
+
+@njit
 def _delta_minimization_order(all_masks, max_swap_size=100, num_passes=2):
     order = np.arange(len(all_masks))
     for _ in range(num_passes):
@@ -97,17 +120,6 @@ def _pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos):
     return pos
 
 
-@njit
-def _reverse_window_score_gain(masks, order, start, length):
-    forward_score = _mask_delta_score(masks[order[start - 1]], masks[order[start]]) + _mask_delta_score(
-        masks[order[start + length - 1]], masks[order[start + length]]
-    )
-    reverse_score = _mask_delta_score(masks[order[start - 1]], masks[order[start + length - 1]]) + _mask_delta_score(
-        masks[order[start]], masks[order[start + length]]
-    )
-    return forward_score - reverse_score
-
-
 # --- Benchmarks ---
 
 
@@ -121,6 +133,7 @@ class BenchmarkMaskDeltaScore:
         self.m2 = rng.integers(0, 2, n_features).astype(bool)
         _mask_delta_score(self.m1, self.m2)  # force JIT compilation
 
+    @skip_benchmark_if(not _HAS_NUMBA)
     def time_numba(self, n_features):
         _mask_delta_score(self.m1, self.m2)
 
@@ -140,6 +153,7 @@ class BenchmarkReverseWindow:
         self.length = n_masks // 2
         _reverse_window(self.order.copy(), 1, self.length)  # force JIT compilation
 
+    @skip_benchmark_if(not _HAS_NUMBA)
     def time_numba(self, n_features):
         _reverse_window(self.order.copy(), 1, self.length)
 
@@ -160,6 +174,7 @@ class BenchmarkReverseWindowScoreGain:
         self.length = n_masks // 2
         _reverse_window_score_gain(self.masks, self.order, 1, self.length)  # force JIT
 
+    @skip_benchmark_if(not _HAS_NUMBA)
     def time_numba(self, n_features):
         _reverse_window_score_gain(self.masks, self.order, 1, self.length)
 
@@ -178,6 +193,7 @@ class BenchmarkDeltaMinimizationOrder:
         self.masks = rng.integers(0, 2, (n_masks, n_features)).astype(bool)
         _delta_minimization_order(self.masks)  # force JIT compilation
 
+    @skip_benchmark_if(not _HAS_NUMBA)
     def time_numba(self, n_features):
         _delta_minimization_order(self.masks)
 
@@ -191,9 +207,6 @@ class BenchmarkPtShuffleRec:
     param_names = ["n_features"]
 
     def setup(self, n_features):
-        from scipy.cluster.hierarchy import ward
-        from scipy.spatial.distance import pdist
-
         rng = np.random.default_rng(0)
         data = rng.random((n_features, n_features))
         self.partition_tree = ward(pdist(data)).astype(np.float64)
@@ -210,6 +223,7 @@ class BenchmarkPtShuffleRec:
             0,
         )
 
+    @skip_benchmark_if(not _HAS_NUMBA)
     def time_numba(self, n_features):
         _pt_shuffle_rec(
             self.partition_tree.shape[0] - 1,
