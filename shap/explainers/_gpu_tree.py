@@ -22,7 +22,7 @@ class GPUTreeExplainer(TreeExplainer):
 
     Examples
     --------
-    See `GPUTree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/GPUTreeExplainer.html>`_
+    See `GPUTree explainer examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/explainers/GPUTree.html>`_
 
     """
 

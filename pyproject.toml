@@ -1,9 +1,14 @@
 [build-system]
 # Note for maintainers: this numpy constraint is specific to wheels for PyPI. See:
 # https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-abi-handling
-requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "numpy>=2.0", "packaging>20.9",
-            "cython>=3.0.11"]
-build-backend = "setuptools.build_meta"
+requires = [
+  "scikit-build-core>=0.10.0",
+  "setuptools-scm>=8.0",
+  "numpy>=2.0",
+  "packaging>20.9",
+  "nanobind>=2.0.0",
+]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "shap"
@@ -27,7 +32,6 @@ dependencies = [
   'llvmlite<0.46; sys_platform == "darwin" and platform_machine == "x86_64"',  # llvmlite 0.46+ dropped macOS x86_64 wheels, see numba/numba#10187
   'llvmlite; sys_platform != "darwin" or platform_machine != "x86_64"',
   'cloudpickle',
-  'typing-extensions',
 ]
 classifiers = [
   "Operating System :: Microsoft :: Windows",
@@ -45,6 +49,7 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
 ]
 dynamic = ["version"]
+
 
 [project.optional-dependencies]
 plots = ["matplotlib", "ipython"]
@@ -114,18 +119,56 @@ nbtest = [
   "nbtest-lab-extension"
 ]
 
+[dependency-groups]
+core = ["pytest", "pytest-mpl", "pytest-cov", "mypy", "pre-commit"]
+test = [
+  "pytest",
+  "pytest-mpl",
+  "pytest-cov",
+  "xgboost",
+  "lightgbm",
+  'catboost; python_version < "3.14"',         # TODO: pending 3.14 support
+  'gpboost==1.6.3.1; python_version < "3.14"', # TODO: pending 3.14 support, see GH #4210
+  "ngboost",
+  "pyspark",
+  "pyod",
+  "transformers < 4.54.0",                     # TODO: fix once tests pass for 4.54.0
+  "tf-keras",
+  "protobuf",                                  # See GH #3046
+  'torch; python_version < "3.14"',            # TODO: pending 3.14 support
+  'torchvision; python_version < "3.14"',      # TODO: pending 3.14 support
+  'tensorflow; python_version < "3.14"',       # TODO: pending 3.14 support
+  "sentencepiece",
+  "opencv-python",
+  # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
+  # See GH #3707, #3768, 3922
+  "numpy>=2.0",
+  "causalml>=0.15.5",
+  "selenium",         # needed to test the javascript based plots
+]
+notebooks = ["jupyter", "nbconvert", "nbformat"]
+
 [project.urls]
 Repository = 'http://github.com/shap/shap'
 Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
 "Release Notes" = 'https://shap.readthedocs.io/en/latest/release_notes.html'
+
+[tool.uv]
+cache-keys = [
+  { file = "shap/cext/*.cc" },
+  { file = "shap/cext/*.cu" },
+  { file = "shap/cext/*.h" },
+  { file = "shap/cutils/*.cpp" },
+  { file = "shap/cutils/*.h" },
+  { file = "CMakeLists.txt" },
+]
 
 [tool.mypy]
 check_untyped_defs = true
 disallow_untyped_calls = false
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
-exclude = ["shap/benchmark/*", "tests/benchmark/*"]
-mypy_path = "stubs"
+exclude = ["shap/benchmark/*", "tests/benchmark/*", "shap/_cutils.pyi"]
 
 # NOTE: numpy.typing.mypy_plugin is deprecated in NumPy 2.3+ and will be removed in a future release
 # plugins = ["numpy.typing.mypy_plugin"]
@@ -190,8 +233,14 @@ module = [
 ]
 ignore_missing_imports = true
 
-[tool.setuptools]
-packages = [
+[tool.setuptools_scm]
+version_file = "shap/_version.py"
+# Use "no-local-version" so dev releases are compatibile with PyPI
+local_scheme = "no-local-version"
+
+[tool.scikit-build]
+# List of packages to include in the wheel
+wheel.packages = [
   'shap',
   'shap.cext',
   'shap.explainers',
@@ -204,16 +253,29 @@ packages = [
   'shap.maskers',
   'shap.utils',
   'shap.actions',
-  'shap.models'
+  'shap.models',
 ]
 
-[tool.setuptools_scm]
-version_file = "shap/_version.py"
-# Use "no-local-version" so dev releases are compatibile with PyPI
-local_scheme = "no-local-version"
+metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
+sdist.include = ["shap/_version.py"]
+sdist.exclude = ["docs/", "notebooks/"]
+
+# Protect the configuration against future changes in scikit-build-core
+minimum-version = "build-system.requires"
+
+# Setuptools-style build caching in a local directory
+build-dir = "build/{wheel_tag}"
+
+# Exclude C/C++/CUDA source files from the wheel (compiled .so is sufficient)
+wheel.exclude = ["**/*.cc", "**/*.cpp", "**/*.h", "**/*.cu"]
+
+# Build stable ABI wheels for CPython 3.12+
+wheel.py-api = "cp312"
+
 
 [tool.pytest.ini_options]
 addopts = "--mpl -m 'not xslow'"
+mpl-default-style = "default"
 testpaths = ["tests"]
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
@@ -299,27 +361,36 @@ omit = ["shap/benchmark/*"]
 combine = ["shap", "*/site-packages/shap"]
 
 [tool.cibuildwheel]
+# TODO: Should we use uv as build frontend for faster builds?
+# build-frontend = "uv"
+
 # Restrict the set of builds to mirror the wheels available in scipy. See #3028
-# skip *-musllinux_aarch64 since numpy doesn't provid those wheels
-# skip cp38-musllinux_x86_64 since numpy never provided cp38 musllinux wheels
-#  they introduced musllinux in 1.25 when they already dropped cp38
+# skip cp314-macosx_x86_64 due to lack of numba and llvmlite support
 # skip *t (free-threaded builds) since dependencies like llvmlite don't support it yet
-skip = ["cp314-macosx_x86_64", "cp314t-manylinux_x86_64", "cp314t-macosx_x86_64", "cp314t-win_amd64"]
+skip = [
+  "cp314-macosx_x86_64",
+  "cp314t-manylinux_x86_64",
+  "cp314t-macosx_x86_64",
+  "cp314t-win_amd64",
+]
 build-verbosity = 2
 # Change import-mode to ensure we test against installed package, not local project
 test-command = "pytest -v {project}/tests --import-mode=append"
 test-extras = ["test-core", "plots"]
-# skip tests on cp314-macosx_x86_64 due to llvmlite 0.46.0b1 architecture issues
-# skip tests on emulated architectures, as they are very slow
-# skip tests on *-macosx_arm64 , as cibuildwheel does not support tests on arm64 (yet)
 # skip tests on *-musllinux*" since llvmlite and numba do not provide musllinux wheels
-test-skip = "cp314-macosx_x86_64 *-*linux_{aarch64,ppc64le,s390x} *-macosx_arm64 *-musllinux*"
+test-skip = "*-musllinux*"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
 
 [tool.cibuildwheel.windows]
+# TODO: Should we support Windows ARM64 too?
 archs = ["AMD64"]
 
 [tool.cibuildwheel.macos]
+# TODO: Should we build universal2 wheels for macOS to reduce wheel count?
 archs = ["x86_64", "arm64"]
+
+[tool.cibuildwheel.macos.environment]
+# Needed for C++17 support
+MACOSX_DEPLOYMENT_TARGET = "10.13"

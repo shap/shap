@@ -1,5 +1,4 @@
 # Environments
-.env
 .venv
 env/
 venv/
@@ -14,7 +13,6 @@ __pycache__
 .idea
 .ipynb_checkpoints
 .ruff_cache
-.vscode
 .python-version
 *.pyc
 *.so
@@ -41,3 +39,4 @@ node_modules
 mpl-results
 # intermediate AI skill files
 .claude/disclosures/
+config.bat

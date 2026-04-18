@@ -10,6 +10,27 @@ import shap
 from . import common
 
 
+def test_tabular_simple_case():
+    import pytest
+
+    xgboost = pytest.importorskip("xgboost")
+    sk = pytest.importorskip("sklearn")
+
+    model = xgboost.XGBClassifier(tree_method="exact", base_score=0.5)
+    X, y = sk.datasets.make_classification(n_samples=100, n_features=2, n_informative=2, n_redundant=0, return_X_y=True)
+
+    X_train = X[:80]
+    X_test = X[80:]
+    y_train = y[:80]
+    model.fit(X_train, y_train)
+    ex = shap.explainers.ExactExplainer(model.predict_proba, X_train)
+    shap_values = ex(X_test)
+
+    pred = model.predict_proba(X_test)
+    # check additivity
+    np.testing.assert_allclose(shap_values.base_values + shap_values.values.sum(axis=1), pred, atol=1e-6)
+
+
 @compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_interactions():
     model, data = common.basic_xgboost_scenario(100)
@@ -23,6 +44,19 @@ def test_tabular_single_output_auto_masker():
 
 
 @compare_numpy_outputs_against_baseline(func_file=__file__)
+def test_tabular_single_output_auto_masker_single_value():
+    # This currently fails with an MemoryError, I assume due to having a different dimension than required!
+    model, data = common.basic_xgboost_scenario(1)
+    return common.test_additivity(shap.explainers.ExactExplainer, model.predict, data, data)
+
+
+@compare_numpy_outputs_against_baseline(func_file=__file__)
+def test_tabular_single_output_auto_masker_minimal():
+    model, data = common.basic_xgboost_scenario(2)
+    return common.test_additivity(shap.explainers.ExactExplainer, model.predict, data, data)
+
+
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_multi_output_auto_masker():
     model, data = common.basic_xgboost_scenario(100)
     return common.test_additivity(shap.explainers.ExactExplainer, model.predict_proba, data, data)
@@ -32,18 +66,6 @@ def test_tabular_multi_output_auto_masker():
 def test_tabular_single_output_partition_masker():
     model, data = common.basic_xgboost_scenario(100)
     return common.test_additivity(shap.explainers.ExactExplainer, model.predict, shap.maskers.Partition(data), data)
-
-
-@compare_numpy_outputs_against_baseline(func_file=__file__)
-def test_tabular_single_output_auto_masker_single_value():
-    model, data = common.basic_xgboost_scenario(2)
-    return common.test_additivity(shap.explainers.ExactExplainer, model.predict, data, data)
-
-
-@compare_numpy_outputs_against_baseline(func_file=__file__)
-def test_tabular_single_output_auto_masker_minimal():
-    model, data = common.basic_xgboost_scenario(2)
-    return common.test_additivity(shap.explainers.ExactExplainer, model.predict, data, data)
 
 
 @compare_numpy_outputs_against_baseline(func_file=__file__)
@@ -77,6 +99,30 @@ def test_serialization():
 @compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_serialization_no_model_or_masker():
     model, data = common.basic_xgboost_scenario()
+    return common.test_serialization(
+        shap.explainers.ExactExplainer,
+        model.predict,
+        data,
+        data,
+        model_saver=False,
+        masker_saver=False,
+        model_loader=lambda _: model.predict,
+        masker_loader=lambda _: data,
+    )
+
+
+@compare_numpy_outputs_against_baseline(func_file=__file__)
+def test_serialization_no_model_or_masker_reduced():
+    import pytest
+
+    X, y = shap.datasets.adult()
+    X = X.iloc[:, :3]
+    xgboost = pytest.importorskip("xgboost")
+    data = X
+
+    model = xgboost.XGBClassifier(tree_method="exact", base_score=0.5, seed=42)
+    model.fit(X, y)
+
     return common.test_serialization(
         shap.explainers.ExactExplainer,
         model.predict,

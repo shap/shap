@@ -1,5 +1,6 @@
 """This file contains tests for the Tabular maskers."""
 
+import logging
 import tempfile
 
 import numpy as np
@@ -241,3 +242,15 @@ def test_independent_masker_with_small_data():
     # Should keep all data
     assert masker.data.shape[0] == 5
     assert masker.data.shape[1] == 3
+
+
+def test_subsampling_warning_when_data_exceeds_max_samples(caplog):
+    """Test that a warning is logged when background data is subsampled."""
+    data = np.random.randn(200, 5)
+
+    with caplog.at_level(logging.WARNING, logger="shap"):
+        shap.maskers.Independent(data, max_samples=50)
+
+    assert len(caplog.records) == 1
+    assert "200" in caplog.records[0].message
+    assert "max_samples=50" in caplog.records[0].message
