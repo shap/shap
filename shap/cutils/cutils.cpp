@@ -14,6 +14,6 @@ NB_MODULE(_cutils, m)
     m.def("reverse_window", &reverse_window, "order"_a, "start"_a, "length"_a, "Reverse a window of length elements in order starting at index start");
     m.def("mask_delta_score", &mask_delta_score, "m1"_a, "m2"_a, "Compute the Hamming distance between two boolean masks");
     m.def("reverse_window_score_gain", &reverse_window_score_gain, "masks"_a, "order"_a, "start"_a, "length"_a, "Compute the score gain from reversing a window in the ordering");
-	m.def("delta_minimization_order", &delta_minimization_order, "all_masks"_a, "max_swap_size"_a = 100, "num_passes"_a = 2, "Compute the delta minimization order for a set of masks");
-	m.def("pt_shuffle_rec", &pt_shuffle_rec, "i"_a, "indexes"_a, "index_mask"_a, "partition_tree"_a, "M"_a, "pos"_a, "Recursively shuffle feature indices in tree order using a random coin flip at each internal node");
+    m.def("delta_minimization_order", &delta_minimization_order, "all_masks"_a, "max_swap_size"_a = 100, "num_passes"_a = 2, "Compute the delta minimization order for a set of masks");
+    m.def("pt_shuffle_rec", &pt_shuffle_rec, "i"_a, "indexes"_a, "index_mask"_a, "partition_tree"_a, "M"_a, "pos"_a, "Recursively shuffle feature indices in tree order using a random coin flip at each internal node");
 }

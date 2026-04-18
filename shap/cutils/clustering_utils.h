@@ -43,8 +43,7 @@ int pt_shuffle_rec(
     }
     int left  = static_cast<int>(partition_tree(i, 0)) - M;
     int right = static_cast<int>(partition_tree(i, 1)) - M;
-    std::bernoulli_distribution coin(0.5);
-    if (coin(rng)) {
+    if (std::bernoulli_distribution(0.5)(rng)) {
         pos = pt_shuffle_rec(left,  indexes, index_mask, partition_tree, M, pos, rng);
         pos = pt_shuffle_rec(right, indexes, index_mask, partition_tree, M, pos, rng);
     } else {
@@ -136,15 +135,15 @@ nb::ndarray<nb::numpy, int64_t, nb::shape<-1>> delta_minimization_order(
 }
 
 int pt_shuffle_rec(
-	int i,
-	nb::ndarray<int64_t, nb::shape<-1>, nb::device::cpu>& indexes,
-	const nb::ndarray<bool, nb::shape<-1>, nb::device::cpu>& index_mask,
-	const nb::ndarray<double, nb::shape<-1,-1>, nb::device::cpu>& partition_tree,
-	int M,
-	int pos
+    int i,
+    nb::ndarray<int64_t, nb::shape<-1>, nb::device::cpu>& indexes,
+    const nb::ndarray<bool, nb::shape<-1>, nb::device::cpu>& index_mask,
+    const nb::ndarray<double, nb::shape<-1, -1>, nb::device::cpu>& partition_tree,
+    int M,
+    int pos
 ) {
-	thread_local std::mt19937 rng{std::random_device{}()};
-	return detail::pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos, rng);
+    thread_local std::mt19937 rng{std::random_device{}()};
+    return detail::pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos, rng);
 }
 
 #endif // CLUSTERING_UTILS_H
