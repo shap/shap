@@ -52,16 +52,19 @@ def test_hclust_errors_on_unknown_linkages():
         hclust(X, linkage="random-string", random_state=0)  # type: ignore
 
 
+# should always return a numpy array
 def test_partition_tree_returns_ndarray():
     X = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]})
     assert isinstance(partition_tree(X), np.ndarray)
 
 
+# complete linkage on n features gives a (n-1, 4) matrix
 def test_partition_tree_shape():
     X = pd.DataFrame(np.random.randn(10, 4))
     assert partition_tree(X).shape == (3, 4)
 
 
+# NaNs get filled with column mean
 def test_partition_tree_with_nan():
     X = pd.DataFrame({"a": [1.0, np.nan, 3.0], "b": [4.0, 5.0, np.nan]})
     assert partition_tree(X).shape == (1, 4)
@@ -72,6 +75,7 @@ def test_partition_tree_euclidean_metric():
     assert partition_tree(X, metric="euclidean").shape == (2, 4)
 
 
+# all masked indexes should show up in the output exactly once
 def test_partition_tree_shuffle_contains_all_masked_indexes():
     X = pd.DataFrame(np.random.randn(10, 4))
     ptree = partition_tree(X)
@@ -81,6 +85,7 @@ def test_partition_tree_shuffle_contains_all_masked_indexes():
     assert sorted(indexes) == [0, 1, 2, 3]
 
 
+# only the true entries in the mask should appear in the result
 def test_partition_tree_shuffle_respects_mask():
     X = pd.DataFrame(np.random.randn(10, 4))
     ptree = partition_tree(X)
@@ -90,6 +95,7 @@ def test_partition_tree_shuffle_respects_mask():
     assert set(indexes).issubset({0, 2})
 
 
+# output length should match number of True values in the mask
 def test_partition_tree_shuffle_output_length():
     X = pd.DataFrame(np.random.randn(10, 5))
     ptree = partition_tree(X)
@@ -99,41 +105,48 @@ def test_partition_tree_shuffle_output_length():
     assert len(indexes) == 3
 
 
+# XOR of identical masks is all zeros so score should be 0
 def test_mask_delta_score_identical_masks():
     m = np.array([True, False, True, True])
     assert _mask_delta_score(m, m) == 0
 
 
+# every bit is flipped so score equals the length of the mask
 def test_mask_delta_score_fully_different():
     m1 = np.array([True, True, False, False])
     m2 = np.array([False, False, True, True])
     assert _mask_delta_score(m1, m2) == 4
 
 
+# only 2 bits differ here, rest are same
 def test_mask_delta_score_partial_overlap():
     m1 = np.array([True, False, True, False])
     m2 = np.array([True, True, False, False])
     assert _mask_delta_score(m1, m2) == 2
 
 
+# elements at positions 1,2,3 should be reversed in place
 def test_reverse_window_reverses_slice():
     order = np.array([0, 1, 2, 3, 4])
     _reverse_window(order, 1, 3)
     np.testing.assert_array_equal(order, [0, 3, 2, 1, 4])
 
 
+# swaps two adjacent elements
 def test_reverse_window_length_two():
     order = np.array([0, 1, 2, 3])
     _reverse_window(order, 0, 2)
     np.testing.assert_array_equal(order, [1, 0, 2, 3])
 
 
+# elements outside the window range shouldnt be touched
 def test_reverse_window_doesnt_touch_outside_range():
     order = np.array([0, 1, 2, 3, 4])
     _reverse_window(order, 2, 2)
     assert order[0] == 0 and order[1] == 1 and order[4] == 4
 
 
+# check if the the return type is numeric
 def test_reverse_window_score_gain_is_integer():
     masks = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0]], dtype=np.bool_)
     result = _reverse_window_score_gain(masks, np.arange(4), 1, 2)
@@ -145,12 +158,14 @@ def test_reverse_window_score_gain_uniform_masks():
     assert _reverse_window_score_gain(masks, np.arange(5), 1, 3) == 0
 
 
+# reordering of the original indexes
 def test_delta_minimization_order_is_permutation():
     masks = np.random.randint(0, 2, size=(8, 4)).astype(np.bool_)
     order = delta_minimization_order(masks)
     assert sorted(order) == list(range(8))
 
 
+# output shape should match number of masks passed in
 def test_delta_minimization_order_shape():
     masks = np.random.randint(0, 2, size=(6, 3)).astype(np.bool_)
     assert delta_minimization_order(masks).shape == (6,)
@@ -162,11 +177,13 @@ def test_delta_minimization_order_single_pass():
     assert sorted(order) == list(range(5))
 
 
+# returned order should contain each sample index exactly once
 def test_hclust_ordering_is_valid_permutation():
     X = np.random.randn(10, 4)
     assert sorted(hclust_ordering(X)) == list(range(10))
 
 
+# output length should match number of samples in X
 def test_hclust_ordering_shape():
     X = np.random.randn(8, 3)
     assert hclust_ordering(X).shape == (8,)
