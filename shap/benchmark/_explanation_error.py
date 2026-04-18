@@ -183,10 +183,11 @@ class ExplanationError:
         if pbar is not None:
             pbar.close()
 
-        svals = np.array(svals)
-
         # reset the random seed so we don't mess up the caller
         np.random.seed(old_seed)
 
-        # FIX: use svals (all rows) instead of total_values (last row only)
-        return BenchmarkResult("explanation error", name, value=np.sqrt(np.mean(svals)))
+        # FIX: average per-row first, then average across rows
+        # correctly computes E_row [ E_mask [ error² ] ] instead of using only the last row
+        row_means = [np.mean(s) for s in svals]
+        return BenchmarkResult("explanation error", name,
+                               value=np.sqrt(np.mean(row_means)))
