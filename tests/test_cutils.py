@@ -2,7 +2,6 @@
 
 import numpy as np
 import scipy.cluster.hierarchy
-
 from shap._cutils import (
     delta_minimization_order,
     mask_delta_score,
