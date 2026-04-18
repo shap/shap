@@ -1,4 +1,4 @@
-"""Unit tests for the Exact explainer."""
+"""Unit tests for SHAP actions."""
 
 import numpy as np
 import pandas as pd
@@ -26,8 +26,9 @@ def test_create_and_run():
     action = IncreaseFeature1(4)
     action.__repr__()
     assert not (action < action)
-    action(X)
-    assert X["feature1"][0] == 5
+    row = X.iloc[0].copy()
+    action(row)
+    assert row["feature1"] == 5
 
 
 def test_action_base_call_raises_not_implemented():
