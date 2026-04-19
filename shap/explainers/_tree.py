@@ -267,18 +267,17 @@ class TreeExplainer(Explainer):
                     FutureWarning,
                 )
                 feature_perturbation = "tree_path_dependent"
+            elif self.data.shape[0] > 1_000:
+                wmsg = (
+                    f"Passing {self.data.shape[0]} background samples may lead to slow runtimes. Consider "
+                    "using shap.sample(data, 100) to create a smaller background data set."
+                )
+                warnings.warn(wmsg)
         elif feature_perturbation != "tree_path_dependent":
             raise InvalidFeaturePerturbationError(
                 "feature_perturbation must be 'auto', 'interventional', or 'tree_path_dependent'. "
                 f"Got {feature_perturbation} instead."
             )
-
-        elif feature_perturbation == "interventional" and self.data.shape[0] > 1_000:
-            wmsg = (
-                f"Passing {self.data.shape[0]} background samples may lead to slow runtimes. Consider "
-                "using shap.sample(data, 100) to create a smaller background data set."
-            )
-            warnings.warn(wmsg)
 
         _safe_check_tree_instance_experimental(model)
 

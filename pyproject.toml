@@ -32,7 +32,6 @@ dependencies = [
   'llvmlite<0.46; sys_platform == "darwin" and platform_machine == "x86_64"',  # llvmlite 0.46+ dropped macOS x86_64 wheels, see numba/numba#10187
   'llvmlite; sys_platform != "darwin" or platform_machine != "x86_64"',
   'cloudpickle',
-  'typing-extensions',
 ]
 classifiers = [
   "Operating System :: Microsoft :: Windows",
