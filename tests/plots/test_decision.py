@@ -3,7 +3,6 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import pytest
 import sklearn.ensemble
 
@@ -79,9 +78,7 @@ def test_new_base_value_with_interactions(rfc_data):
     iv = ex2(X, interactions=True)
     base = iv.base_values[0, 1]
     shap_interaction = iv.values[:, :, :, 1]
-    r = shap.decision_plot(
-        base, shap_interaction, show=False, return_objects=True, new_base_value=0
-    )
+    r = shap.decision_plot(base, shap_interaction, show=False, return_objects=True, new_base_value=0)
     assert r.base_value == 0
 
 
@@ -110,8 +107,10 @@ def test_raises_wrong_shap_values_type(base_sv_features):
 
 def test_raises_wrong_features_type(base_sv_features):
     base, sv, _ = base_sv_features
+
     class WeirdFeatures:
         ndim = 2
+
     with pytest.raises(TypeError, match="unsupported type"):
         shap.decision_plot(base, sv[:5], features=WeirdFeatures(), show=False)
 
@@ -288,9 +287,7 @@ def test_feature_display_range_range_negative_stop(base_sv_features):
 
 def test_feature_display_range_reuse_xlim(base_sv_features):
     base, sv, _ = base_sv_features
-    r = shap.decision_plot(
-        base, sv[:5], feature_display_range=slice(0, 5, 1), show=False, return_objects=True
-    )
+    r = shap.decision_plot(base, sv[:5], feature_display_range=slice(0, 5, 1), show=False, return_objects=True)
     shap.decision_plot(base, sv[5:10], feature_display_range=slice(0, 5, 1), xlim=r.xlim, show=False)
 
 
@@ -474,9 +471,7 @@ def test_multioutput_return_objects(rfc_data):
     sv, X = rfc_data
     sv_list = [sv.values[:, :, i] for i in range(sv.shape[2])]
     bv_list = list(sv.base_values[0, :])
-    r = shap.multioutput_decision_plot(
-        bv_list, sv_list, row_index=0, features=X, show=False, return_objects=True
-    )
+    r = shap.multioutput_decision_plot(bv_list, sv_list, row_index=0, features=X, show=False, return_objects=True)
     assert r is not None
     assert hasattr(r, "base_value")
 
@@ -485,9 +480,7 @@ def test_multioutput_new_base_value(rfc_data):
     sv, X = rfc_data
     sv_list = [sv.values[:, :, i] for i in range(sv.shape[2])]
     bv_list = list(sv.base_values[0, :])
-    r = shap.multioutput_decision_plot(
-        bv_list, sv_list, row_index=0, show=False, return_objects=True, new_base_value=0
-    )
+    r = shap.multioutput_decision_plot(bv_list, sv_list, row_index=0, show=False, return_objects=True, new_base_value=0)
     assert r.base_value == 0
 
 
@@ -495,18 +488,14 @@ def test_multioutput_features_numpy_2d(rfc_data):
     sv, X = rfc_data
     sv_list = [sv.values[:, :, i] for i in range(sv.shape[2])]
     bv_list = list(sv.base_values[0, :])
-    shap.multioutput_decision_plot(
-        bv_list, sv_list, row_index=0, features=X.values, show=False
-    )
+    shap.multioutput_decision_plot(bv_list, sv_list, row_index=0, features=X.values, show=False)
 
 
 def test_multioutput_features_dataframe(rfc_data):
     sv, X = rfc_data
     sv_list = [sv.values[:, :, i] for i in range(sv.shape[2])]
     bv_list = list(sv.base_values[0, :])
-    shap.multioutput_decision_plot(
-        bv_list, sv_list, row_index=2, features=X, show=False
-    )
+    shap.multioutput_decision_plot(bv_list, sv_list, row_index=2, features=X, show=False)
 
 
 def test_multioutput_raises_not_lists(rfc_data):
