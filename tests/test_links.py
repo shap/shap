@@ -5,8 +5,8 @@ import pytest
 
 import shap.links as links
 
-
 # -- identity
+
 
 def test_identity_scalar():
     """identity(x) should return x unchanged for a scalar."""
@@ -28,12 +28,10 @@ def test_identity_zero():
 def test_identity_inverse_roundtrip():
     """identity.inverse(identity(x)) == x."""
     arr = np.array([0.1, 0.5, 0.9])
-    np.testing.assert_array_almost_equal(
-        links.identity.inverse(links.identity(arr)), arr
-    )
+    np.testing.assert_array_almost_equal(links.identity.inverse(links.identity(arr)), arr)
 
 
-# --- logit 
+# --- logit
 def test_logit_scaler():
     """logit(0.5) should be 0 (log-odds of 50%)."""
     assert links.logit(0.5) == pytest.approx(0.0, abs=1e-6)
@@ -56,15 +54,10 @@ def test_logit_inverse_is_sigmoid():
 def test_logit_inverse_roundtrip():
     """logit.inverse(logit(p)) ≈ p for valid probabilities."""
     p = np.array([0.1, 0.3, 0.7, 0.9])
-    np.testing.assert_array_almost_equal(
-        links.logit.inverse(links.logit(p)), p, decimal=6
-    )
-
+    np.testing.assert_array_almost_equal(links.logit.inverse(links.logit(p)), p, decimal=6)
 
 
 def test_logit_out_of_bounds():
     """logit for invalid probabilities should produce nan."""
     result = links.logit(np.array([-0.1, 1.1]))
     assert np.isnan(result).all()
-    
-
