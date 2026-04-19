@@ -30,6 +30,20 @@ def test_unsupported_model_raises_error():
         _ = shap.TreeExplainer(CustomEstimator())
 
 
+def test_large_background_dataset_warning():
+    """A warning should be emitted when >1000 background samples are passed
+    with feature_perturbation='interventional'. Regression test for GH#4385."""
+    X, y = shap.datasets.california(n_points=1200)
+    model = DecisionTreeRegressor(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    # Use maskers.Independent with a high max_samples to bypass the default
+    # subsampling (max_samples=100), so the >1000 check is actually triggered.
+    background = shap.maskers.Independent(X, max_samples=1200)
+    with pytest.warns(UserWarning, match="may lead to slow runtimes"):
+        shap.TreeExplainer(model, background, feature_perturbation="interventional")
+
+
 def test_front_page_xgboost():
     xgboost = pytest.importorskip("xgboost")
 
