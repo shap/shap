@@ -51,19 +51,23 @@ def __decision_plot_matplotlib(
     show,
     legend_labels,
     legend_location,
+    ax,
 ):
     """Matplotlib rendering for decision_plot()"""
+    if ax is None:
+        ax = plt.gca()
+
     # image size
     row_height = 0.4
     if auto_size_plot:
-        plt.gcf().set_size_inches(8, feature_display_count * row_height + 1.5)
+        ax.figure.set_size_inches(8, feature_display_count * row_height + 1.5)
 
     # draw vertical line indicating center
-    plt.axvline(x=base_value, color="#999999", zorder=-1)
+    ax.axvline(x=base_value, color="#999999", zorder=-1)
 
     # draw horizontal dashed lines for each feature contribution
     for i in range(1, feature_display_count):
-        plt.axhline(y=i, color=y_demarc_color, lw=0.5, dashes=(1, 5), zorder=-1)
+        ax.axhline(y=i, color=y_demarc_color, lw=0.5, dashes=(1, 5), zorder=-1)
 
     # initialize highlighting
     linestyle = np.array("-", dtype=object)
@@ -74,14 +78,13 @@ def __decision_plot_matplotlib(
         linewidth[highlight] = 2
 
     # plot each observation's cumulative SHAP values.
-    ax = plt.gca()
     ax.set_xlim(xlim)
     m = cm.ScalarMappable(cmap=plot_color)
     m.set_clim(xlim)
     y_pos = np.arange(0, feature_display_count + 1)
     lines = []
     for i in range(cumsum.shape[0]):
-        o = plt.plot(
+        o = ax.plot(
             cumsum[i, :], y_pos, color=m.to_rgba(cumsum[i, -1], alpha), linewidth=linewidth[i], linestyle=linestyle[i]
         )
         lines.append(o[0])
@@ -94,8 +97,8 @@ def __decision_plot_matplotlib(
 
     # if there is a single observation and feature values are supplied, print them.
     if (cumsum.shape[0] == 1) and (features is not None):
-        renderer = plt.gcf().canvas.get_renderer()  # type: ignore
-        inverter = plt.gca().transData.inverted()
+        renderer = ax.figure.canvas.get_renderer()  # type: ignore
+        inverter = ax.transData.inverted()
         y_pos = y_pos + 0.5
         for i in range(feature_display_count):
             v = features[0, i]
@@ -129,10 +132,10 @@ def __decision_plot_matplotlib(
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_visible(False)
     ax.tick_params(color=axis_color, labelcolor=axis_color, labeltop=True)
-    plt.yticks(np.arange(feature_display_count) + 0.5, feature_names, fontsize=fontsize)
+    ax.set_yticks(np.arange(feature_display_count) + 0.5, feature_names, fontsize=fontsize)
     ax.tick_params("x", labelsize=11)
-    plt.ylim(0, feature_display_count)
-    plt.xlabel(labels["MODEL_OUTPUT"], fontsize=13)
+    ax.set_ylim(0, feature_display_count)
+    ax.set_xlabel(labels["MODEL_OUTPUT"], fontsize=13)
 
     # draw the color bar - must come after axes styling
     if color_bar:
@@ -140,7 +143,7 @@ def __decision_plot_matplotlib(
         m.set_array(np.array([0, 1]))
 
         # place the colorbar
-        plt.ylim(0, feature_display_count + 0.25)
+        ax.set_ylim(0, feature_display_count + 0.25)
         ax_cb = ax.inset_axes((xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25), transform=ax.transData)
         cb = plt.colorbar(m, ticks=[0, 1], orientation="horizontal", cax=ax_cb)
         cb.set_ticklabels([])
@@ -153,16 +156,18 @@ def __decision_plot_matplotlib(
 
     if title:
         # TODO decide on style/size
-        plt.title(title)
+        ax.set_title(title)
 
     if ascending:
-        plt.gca().invert_yaxis()
+        ax.invert_yaxis()
 
     if legend_labels is not None:
         ax.legend(handles=lines, labels=legend_labels, loc=legend_location)
 
     if show:
         plt.show()
+
+    return ax
 
 
 class DecisionPlotResult:
@@ -232,7 +237,8 @@ def decision(
     new_base_value=None,
     legend_labels=None,
     legend_location="best",
-) -> DecisionPlotResult | None:
+    ax: plt.Axes | None = None,
+) -> DecisionPlotResult | plt.Axes | None:
     """Visualize model decisions using cumulative SHAP values.
 
     Each plotted line explains a single model prediction. If a single prediction is plotted, feature values will be
@@ -338,8 +344,8 @@ def decision(
 
     Returns
     -------
-    DecisionPlotResult or None
-        Returns a :obj:`DecisionPlotResult` object if ``return_objects=True``. Returns ``None`` otherwise (the default).
+    DecisionPlotResult or matplotlib.axes.Axes or None
+        Returns a :obj:`DecisionPlotResult` object if ``return_objects=True``. Returns ``matplotlib.axes.Axes`` if ``return_objects=False`` (the default).
 
     Examples
     --------
@@ -542,7 +548,7 @@ def decision(
     if plot_color is None:
         plot_color = colors.red_blue
 
-    __decision_plot_matplotlib(
+    ax = __decision_plot_matplotlib(
         base_value,
         cumsum,
         ascending,
@@ -561,15 +567,16 @@ def decision(
         show,
         legend_labels,
         legend_location,
+        ax,
     )
 
     if not return_objects:
-        return None
+        return ax
 
     return DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
 
 
-def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> DecisionPlotResult | None:
+def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> DecisionPlotResult | plt.Axes | None:
     """Decision plot for multioutput models.
 
     Plots all outputs for a single observation. By default, the plotted base value will be the mean of base_values
@@ -592,8 +599,8 @@ def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Decis
 
     Returns
     -------
-    DecisionPlotResult or None
-        Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
+    DecisionPlotResult or matplotlib.axes.Axes or None
+        Returns a DecisionPlotResult object if `return_objects=True`. Returns `matplotlib.axes.Axes` otherwise (the default).
 
     """
     # todo: adjust to breaking changes made in #3318
