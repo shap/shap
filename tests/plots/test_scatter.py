@@ -3,10 +3,7 @@ import numpy as np
 import pytest
 
 import shap
-from shap.plots._scatter import dependence_legacy
-from shap.plots._scatter import _plot_histogram
-from shap.plots._scatter import _suggest_buffered_limits
-from shap.plots._scatter import _suggest_x_jitter
+from shap.plots._scatter import _plot_histogram, _suggest_buffered_limits, _suggest_x_jitter, dependence_legacy
 
 
 @pytest.mark.mpl_image_compare
@@ -141,7 +138,9 @@ def test_plot_histogram_uses_discrete_bins_and_updates_xlim():
 
 def test_dependence_legacy_rejects_list_shap_values():
     with pytest.raises(TypeError, match="list not an array"):
-        dependence_legacy(ind=0, shap_values=[np.array([0.1]), np.array([0.2])], features=np.array([[1.0], [2.0]]), show=False)
+        dependence_legacy(
+            ind=0, shap_values=[np.array([0.1]), np.array([0.2])], features=np.array([[1.0], [2.0]]), show=False
+        )
 
 
 def test_dependence_legacy_sets_symmetric_ylim_when_only_ymax_given():
