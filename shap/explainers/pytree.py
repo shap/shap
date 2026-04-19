@@ -5,6 +5,7 @@ module which uses a compiled C++ implementation.
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 # import numba
 from ..utils._exceptions import ExplainerError
@@ -141,6 +142,12 @@ from ..utils._general import safe_isinstance
 class TreeExplainer:
     """A pure Python (slow) implementation of Tree SHAP."""
 
+    @staticmethod
+    def _xgboost_supports_iteration_range():
+        import xgboost
+
+        return Version(xgboost.__version__) >= Version("1.4.0")
+
     def __init__(self, model, **kwargs):
         self.model_type = "internal"
 
@@ -190,10 +197,9 @@ class TreeExplainer:
                 X = xgboost.DMatrix(X)
             if tree_limit == -1:
                 tree_limit = 0
-            try:
+            if self._xgboost_supports_iteration_range():
                 return self.trees.predict(X, iteration_range=(0, tree_limit), pred_contribs=True)
-            except TypeError:
-                return self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
+            return self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
         elif self.model_type == "lightgbm":
             return self.trees.predict(X, num_iteration=tree_limit, pred_contrib=True)
 
@@ -241,10 +247,9 @@ class TreeExplainer:
                 X = xgboost.DMatrix(X)
             if tree_limit == -1:
                 tree_limit = 0
-            try:
+            if self._xgboost_supports_iteration_range():
                 return self.trees.predict(X, iteration_range=(0, tree_limit), pred_interactions=True)
-            except TypeError:
-                return self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)
+            return self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)
         else:
             raise NotImplementedError("Interaction values not yet supported for model type: " + str(type(X)))
 
