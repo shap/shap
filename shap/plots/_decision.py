@@ -11,6 +11,7 @@ from ..utils import hclust_ordering
 from ..utils._legacy import LogitLink, convert_to_link
 from . import colors
 from ._labels import labels
+from ._style import get_style
 
 
 def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndarray:
@@ -53,17 +54,18 @@ def __decision_plot_matplotlib(
     legend_location,
 ):
     """Matplotlib rendering for decision_plot()"""
+    style = get_style()
     # image size
     row_height = 0.4
     if auto_size_plot:
         plt.gcf().set_size_inches(8, feature_display_count * row_height + 1.5)
 
     # draw vertical line indicating center
-    plt.axvline(x=base_value, color="#999999", zorder=-1)
+    plt.axvline(x=base_value, color=style.vlines_color, linewidth=style.line_width, zorder=-1)
 
     # draw horizontal dashed lines for each feature contribution
     for i in range(1, feature_display_count):
-        plt.axhline(y=i, color=y_demarc_color, lw=0.5, dashes=(1, 5), zorder=-1)
+        plt.axhline(y=i, color=y_demarc_color, lw=style.line_width, dashes=(1, 5), zorder=-1)
 
     # initialize highlighting
     linestyle = np.array("-", dtype=object)
@@ -130,9 +132,9 @@ def __decision_plot_matplotlib(
     ax.spines["left"].set_visible(False)
     ax.tick_params(color=axis_color, labelcolor=axis_color, labeltop=True)
     plt.yticks(np.arange(feature_display_count) + 0.5, feature_names, fontsize=fontsize)
-    ax.tick_params("x", labelsize=11)
+    ax.tick_params("x", labelsize=style.tick_label_size)
     plt.ylim(0, feature_display_count)
-    plt.xlabel(labels["MODEL_OUTPUT"], fontsize=13)
+    plt.xlabel(labels["MODEL_OUTPUT"], fontsize=style.label_size)
 
     # draw the color bar - must come after axes styling
     if color_bar:
@@ -144,7 +146,7 @@ def __decision_plot_matplotlib(
         ax_cb = ax.inset_axes((xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25), transform=ax.transData)
         cb = plt.colorbar(m, ticks=[0, 1], orientation="horizontal", cax=ax_cb)
         cb.set_ticklabels([])
-        cb.ax.tick_params(labelsize=11, length=0)
+        cb.ax.tick_params(labelsize=style.tick_label_size, length=0)
         cb.set_alpha(alpha)
         cb.outline.set_visible(False)  # type: ignore
 

@@ -132,7 +132,7 @@ def waterfall(shap_values, max_display=10, show=True):
                 [rng[i] - 1 - 0.4, rng[i] + 0.4],
                 color=style.vlines_color,
                 linestyle="--",
-                linewidth=0.5,
+                linewidth=style.line_width,
                 zorder=-1,
             )
         if features is None:
@@ -225,7 +225,7 @@ def waterfall(shap_values, max_display=10, show=True):
             horizontalalignment="center",
             verticalalignment="center",
             color=style.text_color,
-            fontsize=12,
+            fontsize=style.font_size,
         )
         text_bbox = txt_obj.get_window_extent(renderer=renderer)
         arrow_bbox = arrow_obj.get_window_extent(renderer=renderer)
@@ -241,7 +241,7 @@ def waterfall(shap_values, max_display=10, show=True):
                 horizontalalignment="left",
                 verticalalignment="center",
                 color=style.primary_color_positive,
-                fontsize=12,
+                fontsize=style.font_size,
             )
 
     # draw the negative arrows
@@ -274,7 +274,7 @@ def waterfall(shap_values, max_display=10, show=True):
             horizontalalignment="center",
             verticalalignment="center",
             color=style.text_color,
-            fontsize=12,
+            fontsize=style.font_size,
         )
         text_bbox = txt_obj.get_window_extent(renderer=renderer)
         arrow_bbox = arrow_obj.get_window_extent(renderer=renderer)
@@ -290,22 +290,32 @@ def waterfall(shap_values, max_display=10, show=True):
                 horizontalalignment="right",
                 verticalalignment="center",
                 color=style.primary_color_negative,
-                fontsize=12,
+                fontsize=style.font_size,
             )
 
     # draw the y-ticks twice, once in gray and then again with just the feature names in black
     # The 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks
     ytick_pos = list(range(num_features)) + list(np.arange(num_features) + 1e-8)
-    plt.yticks(ytick_pos, yticklabels[:-1] + [label.split("=")[-1] for label in yticklabels[:-1]], fontsize=13)
+    plt.yticks(
+        ytick_pos, yticklabels[:-1] + [label.split("=")[-1] for label in yticklabels[:-1]], fontsize=style.label_size
+    )
 
     # put horizontal lines for each feature row
     for i in range(num_features):
-        plt.axhline(i, color=style.hlines_color, lw=0.5, dashes=(1, 5), zorder=-1)
+        plt.axhline(i, color=style.hlines_color, lw=style.line_width, dashes=(1, 5), zorder=-1)
 
     # mark the prior expected value and the model prediction
-    plt.axvline(base_values, 0, 1 / num_features, color=style.vlines_color, linestyle="--", linewidth=0.5, zorder=-1)
+    plt.axvline(
+        base_values,
+        0,
+        1 / num_features,
+        color=style.vlines_color,
+        linestyle="--",
+        linewidth=style.line_width,
+        zorder=-1,
+    )
     fx = base_values + values.sum()
-    plt.axvline(fx, 0, 1, color=style.vlines_color, linestyle="--", linewidth=0.5, zorder=-1)
+    plt.axvline(fx, 0, 1, color=style.vlines_color, linestyle="--", linewidth=style.line_width, zorder=-1)
 
     # clean up the main axis
     plt.gca().xaxis.set_ticks_position("bottom")
@@ -313,8 +323,8 @@ def waterfall(shap_values, max_display=10, show=True):
     plt.gca().spines["right"].set_visible(False)
     plt.gca().spines["top"].set_visible(False)
     plt.gca().spines["left"].set_visible(False)
-    ax.tick_params(labelsize=13)
-    # plt.xlabel("\nModel output", fontsize=12)
+    ax.tick_params(labelsize=style.label_size)
+    # plt.xlabel("\nModel output", fontsize=style.font_size)
 
     # draw the E[f(X)] tick mark
     xmin, xmax = ax.get_xlim()
@@ -324,7 +334,9 @@ def waterfall(shap_values, max_display=10, show=True):
         [base_values, base_values + min(1e-8, xmax * 1e-10)]
     )  # The 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks
     # However, for very small values, 1e-8 is disruptively large, so xmax * 1e-10 is used instead
-    ax2.set_xticklabels(["\n$E[f(X)]$", "\n$ = " + format_value(base_values, "%0.03f") + "$"], fontsize=12, ha="left")
+    ax2.set_xticklabels(
+        ["\n$E[f(X)]$", "\n$ = " + format_value(base_values, "%0.03f") + "$"], fontsize=style.font_size, ha="left"
+    )
     ax2.spines["right"].set_visible(False)
     ax2.spines["top"].set_visible(False)
     ax2.spines["left"].set_visible(False)
@@ -336,7 +348,7 @@ def waterfall(shap_values, max_display=10, show=True):
         [base_values + values.sum(), base_values + values.sum() + min(1e-8, xmax * 1e-10)]
     )  # The 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks
     # However, for very small values, 1e-8 is disruptively large, so xmax * 1e-10 is used instead
-    ax3.set_xticklabels(["$f(x)$", "$ = " + format_value(fx, "%0.03f") + "$"], fontsize=12, ha="left")
+    ax3.set_xticklabels(["$f(x)$", "$ = " + format_value(fx, "%0.03f") + "$"], fontsize=style.font_size, ha="left")
     tick_labels = ax3.xaxis.get_majorticklabels()
     tick_labels[0].set_transform(
         tick_labels[0].get_transform() + matplotlib.transforms.ScaledTranslation(-10 / 72.0, 0, fig.dpi_scale_trans)
@@ -497,7 +509,12 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
             neg_lefts.append(loc)
         if num_individual != num_features or i + 4 < num_individual:
             plt.plot(
-                [loc, loc], [rng[i] - 1 - 0.4, rng[i] + 0.4], color="#bbbbbb", linestyle="--", linewidth=0.5, zorder=-1
+                [loc, loc],
+                [rng[i] - 1 - 0.4, rng[i] + 0.4],
+                color=style.vlines_color,
+                linestyle="--",
+                linewidth=style.line_width,
+                zorder=-1,
             )
         if features is None:
             yticklabels[rng[i]] = feature_names[order[i]]
@@ -584,7 +601,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
             horizontalalignment="center",
             verticalalignment="center",
             color=style.text_color,
-            fontsize=12,
+            fontsize=style.font_size,
         )
         text_bbox = txt_obj.get_window_extent(renderer=renderer)
         arrow_bbox = arrow_obj.get_window_extent(renderer=renderer)
@@ -600,7 +617,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
                 horizontalalignment="left",
                 verticalalignment="center",
                 color=style.primary_color_positive,
-                fontsize=12,
+                fontsize=style.font_size,
             )
 
     # draw the negative arrows
@@ -633,7 +650,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
             horizontalalignment="center",
             verticalalignment="center",
             color=style.text_color,
-            fontsize=12,
+            fontsize=style.font_size,
         )
         text_bbox = txt_obj.get_window_extent(renderer=renderer)
         arrow_bbox = arrow_obj.get_window_extent(renderer=renderer)
@@ -649,24 +666,32 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
                 horizontalalignment="right",
                 verticalalignment="center",
                 color=style.primary_color_negative,
-                fontsize=12,
+                fontsize=style.font_size,
             )
 
     # draw the y-ticks twice, once in gray and then again with just the feature names in black
     plt.yticks(
         list(range(num_features)) * 2,
         yticklabels[:-1] + [label.split("=")[-1] for label in yticklabels[:-1]],
-        fontsize=13,
+        fontsize=style.label_size,
     )
 
     # put horizontal lines for each feature row
     for i in range(num_features):
-        plt.axhline(i, color=style.hlines_color, lw=0.5, dashes=(1, 5), zorder=-1)
+        plt.axhline(i, color=style.hlines_color, lw=style.line_width, dashes=(1, 5), zorder=-1)
 
     # mark the prior expected value and the model prediction
-    plt.axvline(expected_value, 0, 1 / num_features, color=style.vlines_color, linestyle="--", linewidth=0.5, zorder=-1)
+    plt.axvline(
+        expected_value,
+        0,
+        1 / num_features,
+        color=style.vlines_color,
+        linestyle="--",
+        linewidth=style.line_width,
+        zorder=-1,
+    )
     fx = expected_value + shap_values.sum()
-    plt.axvline(fx, 0, 1, color=style.vlines_color, linestyle="--", linewidth=0.5, zorder=-1)
+    plt.axvline(fx, 0, 1, color=style.vlines_color, linestyle="--", linewidth=style.line_width, zorder=-1)
 
     # clean up the main axis
     plt.gca().xaxis.set_ticks_position("bottom")
@@ -674,8 +699,8 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     plt.gca().spines["right"].set_visible(False)
     plt.gca().spines["top"].set_visible(False)
     plt.gca().spines["left"].set_visible(False)
-    ax.tick_params(labelsize=13)
-    # plt.xlabel("\nModel output", fontsize=12)
+    ax.tick_params(labelsize=style.label_size)
+    # plt.xlabel("\nModel output", fontsize=style.font_size)
 
     # draw the E[f(X)] tick mark
     xmin, xmax = ax.get_xlim()
@@ -685,7 +710,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         [expected_value, expected_value + 1e-8]
     )  # The 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks
     ax2.set_xticklabels(
-        ["\n$E[f(X)]$", "\n$ = " + format_value(expected_value, "%0.03f") + "$"], fontsize=12, ha="left"
+        ["\n$E[f(X)]$", "\n$ = " + format_value(expected_value, "%0.03f") + "$"], fontsize=style.font_size, ha="left"
     )
     ax2.spines["right"].set_visible(False)
     ax2.spines["top"].set_visible(False)
@@ -701,7 +726,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
             expected_value + shap_values.sum() + 1e-8,
         ]
     )
-    ax3.set_xticklabels(["$f(x)$", "$ = " + format_value(fx, "%0.03f") + "$"], fontsize=12, ha="left")
+    ax3.set_xticklabels(["$f(x)$", "$ = " + format_value(fx, "%0.03f") + "$"], fontsize=style.font_size, ha="left")
     tick_labels = ax3.xaxis.get_majorticklabels()
     tick_labels[0].set_transform(
         tick_labels[0].get_transform() + matplotlib.transforms.ScaledTranslation(-10 / 72.0, 0, fig.dpi_scale_trans)

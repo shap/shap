@@ -21,6 +21,7 @@ from ..utils import safe_isinstance
 from ..utils._exceptions import DimensionError
 from . import colors
 from ._labels import labels
+from ._style import get_style
 from ._utils import (
     convert_color,
     convert_ordering,
@@ -106,6 +107,7 @@ def beeswarm(
     See `beeswarm plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/beeswarm.html>`_.
 
     """
+    style = get_style()
     if not isinstance(shap_values, Explanation):
         emsg = "The beeswarm plot requires an `Explanation` object as the `shap_values` argument."
         raise TypeError(emsg)
@@ -372,11 +374,11 @@ def beeswarm(
         fig.set_size_inches(plot_size[0], plot_size[1])
     elif plot_size is not None:
         fig.set_size_inches(8, min(len(feature_order), max_display) * plot_size + 1.5)
-    ax.axvline(x=0, color="#999999", zorder=-1)
+    ax.axvline(x=0, color=style.vlines_color, linewidth=style.line_width, zorder=-1)
 
     # make the beeswarm dots
     for pos, i in enumerate(reversed(feature_inds)):
-        ax.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+        ax.axhline(y=pos, color=style.hlines_color, lw=style.line_width, dashes=(1, 5), zorder=-1)
         shaps = values[:, i]
         fvalues = None if features is None else features[:, i]
         f_inds = np.arange(len(shaps))
@@ -480,8 +482,8 @@ def beeswarm(
         m.set_array([0, 1])
         cb = fig.colorbar(m, ax=ax, ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
-        cb.set_label(color_bar_label, size=12, labelpad=0)
-        cb.ax.tick_params(labelsize=11, length=0)
+        cb.set_label(color_bar_label, size=style.font_size, labelpad=0)
+        cb.ax.tick_params(labelsize=style.tick_label_size, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)  # type: ignore
     #         bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
@@ -494,11 +496,11 @@ def beeswarm(
     ax.spines["top"].set_visible(False)
     ax.spines["left"].set_visible(False)
     ax.tick_params(color=axis_color, labelcolor=axis_color)
-    ax.set_yticks(range(len(feature_inds)), list(reversed(yticklabels)), fontsize=13)
-    ax.tick_params("y", length=20, width=0.5, which="major")
-    ax.tick_params("x", labelsize=11)
+    ax.set_yticks(range(len(feature_inds)), list(reversed(yticklabels)), fontsize=style.label_size)
+    ax.tick_params("y", length=20, width=style.line_width, which="major")
+    ax.tick_params("x", labelsize=style.tick_label_size)
     ax.set_ylim(-1, len(feature_inds))
-    ax.set_xlabel(labels["VALUE"], fontsize=13)
+    ax.set_xlabel(labels["VALUE"], fontsize=style.label_size)
     if show:
         plt.show()
     else:
@@ -580,6 +582,7 @@ def summary_legacy(
         passed to `numpy.random.default_rng` to instantiate a ``Generator``.
 
     """
+    style = get_style()
     # handle randomization machinery in conformance with SPEC 7
     if rng is not None:
         rng = np.random.default_rng(rng)
@@ -781,11 +784,11 @@ def summary_legacy(
         plt.gcf().set_size_inches(plot_size[0], plot_size[1])
     elif plot_size is not None:
         plt.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
-    plt.axvline(x=0, color="#999999", zorder=-1)
+    plt.axvline(x=0, color=style.vlines_color, linewidth=style.line_width, zorder=-1)
 
     if plot_type == "dot":
         for pos, i in enumerate(feature_order):
-            plt.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+            plt.axhline(y=pos, color=style.hlines_color, lw=style.line_width, dashes=(1, 5), zorder=-1)
             shaps = shap_values[:, i]
             values = None if features is None else features[:, i]
             inds = np.arange(len(shaps))
@@ -886,7 +889,7 @@ def summary_legacy(
 
     elif plot_type == "violin":
         for pos in range(len(feature_order)):
-            plt.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+            plt.axhline(y=pos, color=style.hlines_color, lw=style.line_width, dashes=(1, 5), zorder=-1)
 
         if features is not None:
             global_low = np.nanpercentile(shap_values[:, : len(feature_names)].flatten(), 1)
@@ -1071,7 +1074,7 @@ def summary_legacy(
         y_pos = np.arange(len(feature_inds))
         global_shap_values = np.abs(shap_values).mean(0)
         plt.barh(y_pos, global_shap_values[feature_inds], 0.7, align="center", color=color)
-        plt.yticks(y_pos, fontsize=13)
+        plt.yticks(y_pos, fontsize=style.label_size)
         plt.gca().set_yticklabels([feature_names[i] for i in feature_inds])
 
     elif multi_class and plot_type == "bar":
@@ -1107,9 +1110,9 @@ def summary_legacy(
                 y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align="center", color=color(i), label=label
             )
             left_pos += global_shap_values[feature_inds]
-        plt.yticks(y_pos, fontsize=13)
+        plt.yticks(y_pos, fontsize=style.label_size)
         plt.gca().set_yticklabels([feature_names[i] for i in feature_inds])
-        plt.legend(frameon=False, fontsize=12)
+        plt.legend(frameon=False, fontsize=style.font_size)
 
     # draw the color bar
     if (
@@ -1124,8 +1127,8 @@ def summary_legacy(
         m.set_array([0, 1])
         cb = plt.colorbar(m, ax=plt.gca(), ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
-        cb.set_label(color_bar_label, size=12, labelpad=0)
-        cb.ax.tick_params(labelsize=11, length=0)
+        cb.set_label(color_bar_label, size=style.font_size, labelpad=0)
+        cb.ax.tick_params(labelsize=style.tick_label_size, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)  # type: ignore
     #         bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
@@ -1138,15 +1141,15 @@ def summary_legacy(
     plt.gca().spines["top"].set_visible(False)
     plt.gca().spines["left"].set_visible(False)
     plt.gca().tick_params(color=axis_color, labelcolor=axis_color)
-    plt.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=13)
+    plt.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=style.label_size)
     if plot_type != "bar":
-        plt.gca().tick_params("y", length=20, width=0.5, which="major")
-    plt.gca().tick_params("x", labelsize=11)
+        plt.gca().tick_params("y", length=20, width=style.line_width, which="major")
+    plt.gca().tick_params("x", labelsize=style.tick_label_size)
     plt.ylim(-1, len(feature_order))
     if plot_type == "bar":
-        plt.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
+        plt.xlabel(labels["GLOBAL_VALUE"], fontsize=style.label_size)
     else:
-        plt.xlabel(labels["VALUE"], fontsize=13)
+        plt.xlabel(labels["VALUE"], fontsize=style.label_size)
     plt.tight_layout()
     if show:
         plt.show()

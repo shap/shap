@@ -29,6 +29,9 @@ type RGBAColorType = (
 )
 type ColorType = RGBColorType | RGBAColorType | np.ndarray
 
+# Matches matplotlib's accepted fontsize values (number or named size string)
+FontSizeType = int | float | str
+
 
 # TODO: Use dataclass(kw_only=True) when we drop Python 3.9
 @dataclasses.dataclass(frozen=True)
@@ -43,6 +46,11 @@ class StyleConfig:
     vlines_color: ColorType
     text_color: ColorType
     tick_labels_color: ColorType
+    # Typography and line properties
+    font_size: FontSizeType  # inline annotation text and colorbar labels
+    label_size: FontSizeType  # axis labels and feature names
+    tick_label_size: FontSizeType  # axis tick labels
+    line_width: float  # thin separator and grid lines
 
     def asdict(self):
         return dataclasses.asdict(self)
@@ -62,6 +70,10 @@ class StyleOptions(TypedDict, total=False):
     vlines_color: ColorType
     text_color: ColorType
     tick_labels_color: ColorType
+    font_size: FontSizeType
+    label_size: FontSizeType
+    tick_label_size: FontSizeType
+    line_width: float
 
 
 _shap_defaults = StyleConfig(
@@ -73,6 +85,10 @@ _shap_defaults = StyleConfig(
     vlines_color="#bbbbbb",
     text_color="white",
     tick_labels_color="#999999",
+    font_size=12,
+    label_size=13,
+    tick_label_size=11,
+    line_width=0.5,
 )
 
 
@@ -80,6 +96,40 @@ def load_default_style() -> StyleConfig:
     """Load the default style configuration."""
     # In future, this could allow reading from a persistent config file, like matplotlib rcParams.
     return _shap_defaults
+
+
+def load_matplotlib_style(style: str | None = None) -> StyleConfig:
+    """Load style configuration from the active matplotlib rcParams or a matplotlib style sheet."""
+    import matplotlib.pyplot as plt
+
+    if style is not None:
+        with plt.style.context(style):
+            return _style_from_rc_params()
+    return _style_from_rc_params()
+
+
+def _style_from_rc_params() -> StyleConfig:
+    import matplotlib.pyplot as plt
+
+    rc_params = plt.rcParams
+    prop_cycle = rc_params["axes.prop_cycle"].by_key().get("color", [])
+    primary_color_positive = prop_cycle[0] if len(prop_cycle) > 0 else _shap_defaults.primary_color_positive
+    primary_color_negative = prop_cycle[1] if len(prop_cycle) > 1 else _shap_defaults.primary_color_negative
+
+    return StyleConfig(
+        primary_color_positive=primary_color_positive,
+        primary_color_negative=primary_color_negative,
+        secondary_color_positive=primary_color_positive,
+        secondary_color_negative=primary_color_negative,
+        hlines_color=rc_params["grid.color"],
+        vlines_color=rc_params["axes.edgecolor"],
+        text_color=rc_params["text.color"],
+        tick_labels_color=rc_params["xtick.color"],
+        font_size=rc_params["font.size"],
+        label_size=rc_params["axes.labelsize"],
+        tick_label_size=rc_params["xtick.labelsize"],
+        line_width=rc_params["grid.linewidth"],
+    )
 
 
 # Singleton instance that determines the current style.
@@ -93,12 +143,23 @@ def get_style() -> StyleConfig:
     return _STYLE
 
 
-def set_style(_style: StyleConfig | None = None, /, **options: Unpack[StyleOptions]) -> None:
+def set_style(_style: StyleConfig | str | None = None, /, **options: Unpack[StyleOptions]) -> None:
     """Set options in the currently active global style configuration.
 
-    Pass keyword arguments to set individual options, or pass a StyleConfig dataclass to replace all options.
+    Pass keyword arguments to set individual options, pass a StyleConfig dataclass
+    to replace all options, or pass ``"shap"``/``"matplotlib"`` to load a base style.
     """
     if _style is not None:
+        if isinstance(_style, str):
+            if _style == "shap":
+                _style = load_default_style()
+            elif _style == "matplotlib":
+                _style = load_matplotlib_style()
+            else:
+                try:
+                    _style = load_matplotlib_style(_style)
+                except OSError as exc:
+                    raise InvalidStyleOptionError(f"Invalid style config option: {_style}") from exc
         # Unpack the dataclass; any keyword arguments take precendence.
         options = _style.asdict() | options
     global _STYLE
@@ -106,7 +167,7 @@ def set_style(_style: StyleConfig | None = None, /, **options: Unpack[StyleOptio
 
 
 @contextmanager
-def style_context(**options: Unpack[StyleOptions]):
+def style_context(_style: StyleConfig | str | None = None, /, **options: Unpack[StyleOptions]):
     """Context manager to temporarily change style options.
 
     NOTE: This is experimental and subject to change!
@@ -119,9 +180,11 @@ def style_context(**options: Unpack[StyleOptions]):
             shap.plots.waterfall(...)
     """
     old_style = get_style()
-    set_style(**options)
-    yield
-    set_style(**old_style.asdict())
+    set_style(_style, **options)
+    try:
+        yield
+    finally:
+        set_style(old_style)
 
 
 def _apply_options(style: StyleConfig, changes: StyleOptions) -> StyleConfig:

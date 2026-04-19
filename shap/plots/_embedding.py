@@ -4,6 +4,7 @@ import sklearn
 from ..utils import convert_name
 from . import colors
 from ._labels import labels
+from ._style import get_style
 
 
 def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, show=True):
@@ -34,6 +35,7 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
         show density of the data points when using a large dataset.
 
     """
+    style = get_style()
     if feature_names is None:
         feature_names = [labels["FEATURE"] % str(i) for i in range(shap_values.shape[1])]
 
@@ -58,7 +60,7 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
     plt.axis("off")
     # plt.title(feature_names[ind])
     cb = plt.colorbar()
-    cb.set_label("SHAP value for\n" + fname, size=13)
+    cb.set_label("SHAP value for\n" + fname, size=style.label_size)
     cb.outline.set_visible(False)  # type: ignore
 
     plt.gcf().set_size_inches(7.5, 5)
