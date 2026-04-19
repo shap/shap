@@ -8,6 +8,7 @@ import pandas as pd
 
 # import numba
 from ..utils._exceptions import ExplainerError
+from ..utils._general import safe_isinstance
 
 # class TreeExplainer(Explainer):
 #     def __init__(self, model, **kwargs):
@@ -143,14 +144,28 @@ class TreeExplainer:
     def __init__(self, model, **kwargs):
         self.model_type = "internal"
 
-        if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
+        if safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.RandomForestRegressor",
+                "sklearn.ensemble._forest.RandomForestRegressor",
+                "sklearn.ensemble.forest.RandomForestRegressor",
+            ],
+        ):
             self.trees = [Tree(e.tree_) for e in model.estimators_]
-        elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.RandomForestClassifier",
+                "sklearn.ensemble._forest.RandomForestClassifier",
+                "sklearn.ensemble.forest.RandomForestClassifier",
+            ],
+        ):
             self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
-        elif str(type(model)).endswith("xgboost.core.Booster'>"):
+        elif safe_isinstance(model, "xgboost.core.Booster"):
             self.model_type = "xgboost"
             self.trees = model
-        elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
+        elif safe_isinstance(model, "lightgbm.basic.Booster"):
             self.model_type = "lightgbm"
             self.trees = model
         else:
@@ -171,11 +186,14 @@ class TreeExplainer:
         if self.model_type == "xgboost":
             import xgboost
 
-            if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
+            if not safe_isinstance(X, "xgboost.core.DMatrix"):
                 X = xgboost.DMatrix(X)
             if tree_limit == -1:
                 tree_limit = 0
-            return self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
+            try:
+                return self.trees.predict(X, iteration_range=(0, tree_limit), pred_contribs=True)
+            except TypeError:
+                return self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
         elif self.model_type == "lightgbm":
             return self.trees.predict(X, num_iteration=tree_limit, pred_contrib=True)
 
@@ -190,7 +208,7 @@ class TreeExplainer:
 
         # single instance
         if len(X.shape) == 1:
-            phi = np.zeros(X.shape[0] + 1, n_outputs)
+            phi = np.zeros((X.shape[0] + 1, n_outputs))
             x_missing = np.zeros(X.shape[0], dtype=bool)
             for t in self.trees:
                 self.tree_shap(t, X, x_missing, phi)
@@ -219,11 +237,14 @@ class TreeExplainer:
         if self.model_type == "xgboost":
             import xgboost
 
-            if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
+            if not safe_isinstance(X, "xgboost.core.DMatrix"):
                 X = xgboost.DMatrix(X)
             if tree_limit == -1:
                 tree_limit = 0
-            return self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)
+            try:
+                return self.trees.predict(X, iteration_range=(0, tree_limit), pred_interactions=True)
+            except TypeError:
+                return self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)
         else:
             raise NotImplementedError("Interaction values not yet supported for model type: " + str(type(X)))
 
