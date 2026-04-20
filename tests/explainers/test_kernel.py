@@ -564,7 +564,8 @@ def test_single_feature_varies_carries_full_effect():
 def test_single_row_background_additivity():
     X_bg = np.array([[1.0, 2.0, 3.0]])
     X_test = np.array([[4.0, 5.0, 6.0]])
-    f = lambda x: x[:, 0] + x[:, 1]
+   def f(x):
+    return x[:, 0] + x[:, 1]
     e = shap.KernelExplainer(f, X_bg)
     sv = e.shap_values(X_test, silent=True)
     residual = np.abs(sv.sum() + e.expected_value - f(X_test)[0])
