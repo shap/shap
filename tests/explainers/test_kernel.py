@@ -653,7 +653,8 @@ def test_additivity_multioutput():
     sv = e.shap_values(X[:3], nsamples=300, silent=True)
     pred = multi_out(X[:3])
     for d in range(2):
-        residuals = np.abs(sv[:, :, d].sum(1) + e.expected_value[d] - pred[:, d])
+        ev = np.asarray(e.expected_value)
+        residuals = np.abs(sv[:, :, d].sum(1) + ev[d] - pred[:, d])
         assert residuals.max() < 1e-4
 
 
@@ -789,7 +790,8 @@ def test_multiclass_additivity_all_outputs():
     sv = e.shap_values(X_test, nsamples=200, silent=True)
     pred = lr.predict_proba(X_test)
     for cls in range(3):
-        residuals = np.abs(sv[:, :, cls].sum(1) + e.expected_value[cls] - pred[:, cls])
+        ev = np.asarray(e.expected_value)
+        residuals = np.abs(sv[:, :, cls].sum(1) + ev[cls] - pred[:, cls])
         assert residuals.max() < 1e-3
 
 
