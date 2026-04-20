@@ -3,7 +3,6 @@ import sys
 import warnings
 
 import numpy as np
-import numpy as np
 import pandas as pd
 import pytest
 import scipy.sparse
@@ -17,7 +16,6 @@ import shap
 from shap.utils._exceptions import DimensionError
 
 from . import common
-from conftest import compare_numpy_outputs_against_baseline
 
 
 def sigm(x):
