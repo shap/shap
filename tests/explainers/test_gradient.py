@@ -1,4 +1,3 @@
-import platform
 from urllib.error import HTTPError
 
 import numpy as np
@@ -28,6 +27,7 @@ def test_tf_keras_mnist_cnn_tf216_and_above(random_seed):
         Dense,
         Dropout,
         Flatten,
+        Input,
         MaxPooling2D,
     )
     from tensorflow.keras.models import Sequential
@@ -69,7 +69,8 @@ def test_tf_keras_mnist_cnn_tf216_and_above(random_seed):
     y_test = tf.keras.utils.to_categorical(y_test, num_classes)
 
     model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3), activation="relu", input_shape=input_shape))
+    model.add(Input(shape=input_shape))
+    model.add(Conv2D(32, kernel_size=(3, 3), activation="relu"))
     model.add(Conv2D(64, (3, 3), activation="relu"))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
@@ -237,10 +238,6 @@ def test_tf_multi_inputs_multi_outputs():
     np.testing.assert_allclose(shap_values[0].sum(1) + shap_values[1].sum(1) + predicted.mean(0), predicted, atol=1e-1)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch"""
     # FIXME: this test should ideally pass with any random seed. See #2960
@@ -363,10 +360,6 @@ def test_pytorch_mnist_cnn():
     run_test(train_loader, test_loader, False)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 def test_pytorch_multiple_inputs(random_seed):
     """Test multi-input scenarios."""
     torch = pytest.importorskip("torch")
@@ -405,10 +398,6 @@ def test_pytorch_multiple_inputs(random_seed):
     np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-2)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
     """Test multi-input scenarios."""
     torch = pytest.importorskip("torch")
@@ -464,7 +453,8 @@ def test_tf_input(random_seed, input_type):
 
     model = tf.keras.Sequential(
         [
-            tf.keras.layers.Dense(10, input_shape=(num_features,), activation="relu"),
+            tf.keras.layers.Input(shape=(num_features,)),
+            tf.keras.layers.Dense(10, activation="relu"),
             tf.keras.layers.Dense(1, activation="linear"),
         ]
     )

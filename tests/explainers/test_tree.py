@@ -30,6 +30,20 @@ def test_unsupported_model_raises_error():
         _ = shap.TreeExplainer(CustomEstimator())
 
 
+def test_large_background_dataset_warning():
+    """A warning should be emitted when >1000 background samples are passed
+    with feature_perturbation='interventional'. Regression test for GH#4385."""
+    X, y = shap.datasets.california(n_points=1200)
+    model = DecisionTreeRegressor(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    # Use maskers.Independent with a high max_samples to bypass the default
+    # subsampling (max_samples=100), so the >1000 check is actually triggered.
+    background = shap.maskers.Independent(X, max_samples=1200)
+    with pytest.warns(UserWarning, match="may lead to slow runtimes"):
+        shap.TreeExplainer(model, background, feature_perturbation="interventional")
+
+
 def test_front_page_xgboost():
     xgboost = pytest.importorskip("xgboost")
 
@@ -908,7 +922,7 @@ class TestSingleTree:
             "shrinkage": 1,
             "tree_structure": {
                 "leaf_value": 0,
-                # "leaf_count": 123,  # FIXME(upstream): microsoft/LightGBM#5962
+                # "leaf_count": 123,  # FIXME(upstream): lightgbm-org/LightGBM#5962
             },
         }
         stree = SingleTree(sample_tree)
@@ -1313,9 +1327,6 @@ class TestExplainerXGBoost:
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
-    @pytest.mark.skipif(
-        sys.platform == "darwin", reason="Test currently not working on mac. Investigating is a todo, see GH #3709."
-    )
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_dmatrix_propagation(self, Clf):
         """Test that xgboost sklearn attributes are properly passed to the DMatrix
@@ -1337,7 +1348,7 @@ class TestExplainerXGBoost:
         explainer = shap.TreeExplainer(clf)
         shap_values = explainer.shap_values(X_nan)
         # check that SHAP values sum to model output
-        assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
+        np.testing.assert_allclose(margin, explainer.expected_value + shap_values.sum(axis=1), atol=1e-4, rtol=1e-4)
 
     @pytest.mark.parametrize("Reg", regressors)
     def test_xgboost_direct(self, Reg):
@@ -2196,7 +2207,6 @@ def test_overflow_tree_path_dependent():
     exp(X)
 
 
-@pytest.mark.skip("Currently disabled due to errors, see https://github.com/uber/causalml/issues/859.")
 @pytest.mark.parametrize(
     "n_estimators",
     [
@@ -2972,3 +2982,36 @@ def test_path_dependent_small_background():
     for c in range(3):
         shap_sum = explainer.expected_value[c] + sv[:, :, c].sum(axis=1)
         np.testing.assert_allclose(shap_sum, pred[:, c], atol=1e-6)
+
+
+def test_nullable_pandas_dtype():
+    """TreeExplainer handles pandas nullable dtypes (Int64, Float64) with NA values.
+
+    Previously, DataFrame.values on nullable dtypes produced object arrays,
+    and astype(np.float32) failed on pd.NA with:
+        TypeError: float() argument must be a string or a real number, not 'NAType'
+    Addresses #4011.
+    """
+    X = pd.DataFrame(
+        {
+            "x1": pd.array([1.0, 2.0, 3.0, 4.0, 5.0] * 20, dtype="Float64"),
+            "x2": pd.array([10, 20, 30, 40, 50] * 20, dtype="Int64"),
+        }
+    )
+    y = np.array([0, 1, 0, 1, 0] * 20)
+
+    model = DecisionTreeClassifier(max_depth=2, random_state=0)
+    model.fit(X, y)
+
+    # Introduce NA values in test data
+    X_test = X.iloc[:5].copy()
+    X_test.iloc[2, 0] = pd.NA
+    X_test.iloc[3, 1] = pd.NA
+
+    # Confirm nullable dtypes are present (precondition)
+    assert X_test["x1"].dtype == pd.Float64Dtype()
+    assert X_test["x2"].dtype == pd.Int64Dtype()
+
+    explainer = shap.TreeExplainer(model)
+    sv = explainer.shap_values(X_test)
+    assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))

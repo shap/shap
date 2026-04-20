@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+from conftest import compare_numpy_outputs_against_baseline
 
 import shap
 from shap.explainers._coalition import create_partition_hierarchy
@@ -9,6 +10,7 @@ from shap.explainers._coalition import create_partition_hierarchy
 from . import common
 
 
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_coalition_single_output():
     coalition_tree = {
         "Demographics": ["Sex", "Age", "Race", "Marital Status", "Education-Num"],
@@ -21,11 +23,12 @@ def test_tabular_coalition_single_output():
     features = X.columns.tolist()
     masker = shap.maskers.Partition(data)
     masker.feature_names = features
-    common.test_additivity(
+    return common.test_additivity(
         shap.explainers.CoalitionExplainer, model.predict, masker, data, partition_tree=coalition_tree
     )
 
 
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_coalition_multiple_output():
     coalition_tree = {
         "Demographics": ["Sex", "Age", "Race", "Marital Status", "Education-Num"],
@@ -38,11 +41,12 @@ def test_tabular_coalition_multiple_output():
     features = X.columns.tolist()
     masker = shap.maskers.Partition(data)
     masker.feature_names = features
-    common.test_additivity(
+    return common.test_additivity(
         shap.explainers.CoalitionExplainer, model.predict_proba, masker, data, partition_tree=coalition_tree
     )
 
 
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_coalition_exact_match():
     model, data = common.basic_xgboost_scenario(50)
     X, _ = shap.datasets.adult()
@@ -60,8 +64,10 @@ def test_tabular_coalition_exact_match():
     partition_explainer_f = shap.CoalitionExplainer(model.predict, partition_masker, partition_tree=flat_hierarchy)
     flat_winter_values = partition_explainer_f(data)
     assert np.allclose(shap_values.values, flat_winter_values.values)
+    return shap_values
 
 
+@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_coalition_partition_match():
     model, data = common.basic_xgboost_scenario(50)
     X, _ = shap.datasets.adult()
@@ -80,3 +86,4 @@ def test_tabular_coalition_partition_match():
     binary_winter_values = partition_explainer_b(data)
 
     assert np.allclose(binary_values.values, binary_winter_values.values)  # type: ignore[union-attr]
+    return binary_values

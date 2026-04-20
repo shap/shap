@@ -32,8 +32,9 @@ def test_tf_eager_call(random_seed):
     y = y.map(lambda zz: chr(int(zz * 2 + 65))).str.get_dummies()
 
     model = tf.keras.models.Sequential()
-    model.add(tf.keras.layers.Dense(10, input_shape=(x.shape[1],), activation="relu"))
-    model.add(tf.keras.layers.Dense(y.shape[1], input_shape=(10,), activation="softmax"))
+    model.add(tf.keras.layers.Input(shape=(x.shape[1],)))
+    model.add(tf.keras.layers.Dense(10, activation="relu"))
+    model.add(tf.keras.layers.Dense(y.shape[1], activation="softmax"))
     model.summary()
     model.compile(loss="categorical_crossentropy", optimizer="Adam")
     model.fit(x.values, y.values, epochs=2)
@@ -86,7 +87,8 @@ def test_tf_keras_mnist_cnn_call(random_seed):
     y_test = tf.keras.utils.to_categorical(y_test, num_classes)
 
     model = tf.keras.models.Sequential()
-    model.add(tf.keras.layers.Conv2D(2, kernel_size=(3, 3), activation="relu", input_shape=input_shape))
+    model.add(tf.keras.layers.Input(shape=input_shape))
+    model.add(tf.keras.layers.Conv2D(2, kernel_size=(3, 3), activation="relu"))
     model.add(tf.keras.layers.Conv2D(4, (3, 3), activation="relu"))
     model.add(tf.keras.layers.MaxPooling2D(pool_size=(2, 2)))
     model.add(tf.keras.layers.Dropout(0.25))
@@ -318,10 +320,6 @@ TORCH_DEVICES = [
 ]
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("interim", [True, False])
 def test_pytorch_mnist_cnn_call(torch_device, interim):
@@ -439,10 +437,6 @@ def test_pytorch_mnist_cnn_call(torch_device, interim):
     )
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_custom_nested_models(torch_device):
     """Testing single outputs"""
@@ -564,10 +558,6 @@ def test_pytorch_custom_nested_models(torch_device):
     )
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_single_output(torch_device):
     """Testing single outputs"""
@@ -662,10 +652,6 @@ def test_pytorch_single_output(torch_device):
     )
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 @pytest.mark.parametrize("activation", ["relu", "selu", "gelu"])
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("disconnected", [True, False])
