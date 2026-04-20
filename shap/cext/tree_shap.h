@@ -370,7 +370,7 @@ inline void unwind_path(PathElement *unique_path, unsigned unique_depth, unsigne
             const tfloat tmp = unique_path[i].pweight;
             unique_path[i].pweight = next_one_portion * (unique_depth + 1)
                                      / static_cast<tfloat>((i + 1) * one_fraction);
-            
+
             // Firebreak: Prevent floating-point noise from turning weights negative
             if (unique_path[i].pweight < 0) {
                 unique_path[i].pweight = 0;
@@ -378,7 +378,7 @@ inline void unwind_path(PathElement *unique_path, unsigned unique_depth, unsigne
 
             next_one_portion = tmp - unique_path[i].pweight * zero_fraction * (unique_depth - i)
                                / static_cast<tfloat>(unique_depth + 1);
-            
+
             // Firebreak: Prevent catastrophic cancellation explosion
             if (next_one_portion < 0) {
                 next_one_portion = 0;
@@ -386,7 +386,7 @@ inline void unwind_path(PathElement *unique_path, unsigned unique_depth, unsigne
         } else {
             unique_path[i].pweight = (unique_path[i].pweight * (unique_depth + 1))
                                      / static_cast<tfloat>(zero_fraction * (unique_depth - i));
-            
+
             if (unique_path[i].pweight < 0) {
                 unique_path[i].pweight = 0;
             }
