@@ -699,7 +699,9 @@ class KernelExplainer(Explainer):
         nonzero_inds = np.arange(self.M)
         log.debug(f"{fraction_evaluated = }")
         if self.l1_reg == "auto":
-            warnings.warn("l1_reg='auto' is deprecated and will be removed in a future version.", DeprecationWarning)
+            warnings.warn(
+                "l1_reg='auto' is deprecated and will be removed in a future version.", DeprecationWarning, stacklevel=2
+            )
         if (self.l1_reg not in ["auto", False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
             w_aug = np.hstack((self.kernelWeights * (self.M - s), self.kernelWeights * s))
             log.info(f"{np.sum(w_aug) = }")
@@ -767,7 +769,8 @@ class KernelExplainer(Explainer):
                 "To avoid this situation and get a regular matrix do one of the following:\n"
                 "1) turn up the number of samples,\n"
                 "2) turn up the L1 regularization with num_features(N) where N is less than the number of samples,\n"
-                "3) group features together to reduce the number of inputs that need to be explained."
+                "3) group features together to reduce the number of inputs that need to be explained.",
+                stacklevel=2,
             )
             # XWX = np.linalg.pinv(X.T @ WX)
             # w = np.dot(XWX, np.dot(np.transpose(WX), y))

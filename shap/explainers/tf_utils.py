@@ -98,7 +98,7 @@ def _get_model_output(model):
     ):
         if len(model.layers[-1]._inbound_nodes) == 0:
             if len(model.outputs) > 1:
-                warnings.warn("Only one model output supported.")
+                warnings.warn("Only one model output supported.", stacklevel=2)
             return model.outputs[0]
         else:
             return model.layers[-1].output

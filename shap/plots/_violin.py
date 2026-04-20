@@ -104,7 +104,9 @@ def violin(
 
     """
     if title is not None:
-        warnings.warn("The `title` argument is unused and will be removed in a future release.", DeprecationWarning)
+        warnings.warn(
+            "The `title` argument is unused and will be removed in a future release.", DeprecationWarning, stacklevel=2
+        )
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
@@ -321,7 +323,8 @@ def violin(
                 if shaps.shape[0] == 1:
                     warnings.warn(
                         f"Not enough data in bin #{i} for feature {feature_names[ind]}, so it'll be ignored."
-                        " Try increasing the number of records to plot."
+                        " Try increasing the number of records to plot.",
+                        stacklevel=2,
                     )
                     # to ignore it, just set it to the previous y-values (so the area between them will be zero). Not ys is already 0, so there's
                     # nothing to do if i == 0

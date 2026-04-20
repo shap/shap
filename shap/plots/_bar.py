@@ -401,6 +401,7 @@ def bar_legacy(shap_values, features=None, feature_names=None, max_display=None,
         "\nFor more information on using the new API, see:\n"
         "https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/migrating-to-new-api.html",
         DeprecationWarning,
+        stacklevel=2,
     )
     style = get_style()
     # unwrap pandas series

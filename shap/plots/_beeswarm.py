@@ -1032,7 +1032,8 @@ def summary_legacy(
                 if shaps.shape[0] == 1:
                     warnings.warn(
                         f"Not enough data in bin #{i} for feature {feature_names[ind]}, so it'll be ignored."
-                        " Try increasing the number of records to plot."
+                        " Try increasing the number of records to plot.",
+                        stacklevel=2,
                     )
                     # to ignore it, just set it to the previous y-values (so the area between them will be zero). Not ys is already 0, so there's
                     # nothing to do if i == 0

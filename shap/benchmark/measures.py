@@ -22,7 +22,7 @@ def remove_retrain(
     to get the change in model performance when a specified fraction of the most important features
     are withheld.
     """
-    warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
+    warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!", stacklevel=2)
 
     # see if we match the last cached call
     global _remove_cache
@@ -175,7 +175,7 @@ def batch_remove_retrain(
     and then retrains the model once, instead of retraining the model for every test sample like
     the holdout metric.
     """
-    warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
+    warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!", stacklevel=2)
 
     X_train, X_test = to_array(X_train, X_test)
 
@@ -221,7 +221,7 @@ def keep_retrain(
     to get the change in model performance when a specified fraction of the most important features
     are retained.
     """
-    warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
+    warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!", stacklevel=2)
 
     # see if we match the last cached call
     global _keep_cache
@@ -373,7 +373,7 @@ def batch_keep_retrain(
     and then retrains the model once, instead of retraining the model for every test sample like
     the keep metric.
     """
-    warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
+    warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!", stacklevel=2)
 
     X_train, X_test = to_array(X_train, X_test)
 

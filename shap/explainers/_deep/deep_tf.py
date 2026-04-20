@@ -88,11 +88,12 @@ class TFDeep(Explainer):
 
         """
         if version.parse(tf.__version__) < version.parse("1.4.0"):
-            warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
+            warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.", stacklevel=2)
 
         if version.parse(tf.__version__) >= version.parse("2.4.0"):
             warnings.warn(
-                "Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion."
+                "Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion.",
+                stacklevel=2,
             )
 
         # determine the model inputs and outputs
@@ -151,7 +152,8 @@ class TFDeep(Explainer):
         else:
             if self.data[0].shape[0] > 5000:
                 warnings.warn(
-                    "You have provided over 5k background samples! For better performance consider using smaller random sample."
+                    "You have provided over 5k background samples! For better performance consider using smaller random sample.",
+                    stacklevel=2,
                 )
             if not tf.executing_eagerly():
                 self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
@@ -184,7 +186,7 @@ class TFDeep(Explainer):
     def _get_model_output(self, model):
         if len(model.layers[-1]._inbound_nodes) == 0:
             if len(model.outputs) > 1:
-                warnings.warn("Only one model output supported.")
+                warnings.warn("Only one model output supported.", stacklevel=2)
             return model.outputs[0]
         else:
             return model.layers[-1].output

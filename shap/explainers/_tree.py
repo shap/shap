@@ -84,10 +84,13 @@ def _safe_check_tree_instance_experimental(tree_instance: Any) -> None:
                 f"The {library} support is verified for the following versions: {experimental.get(library)}. "
                 f"As experimental functionality, this integration may be removed or significantly changed in future releases without following semantic versioning. Use in production systems at your own risk.",
                 ExperimentalWarning,
+                stacklevel=2,
             )
     else:
         warnings.warn(
-            f"Unable to check experimental integration status for {tree_instance} object", ExperimentalWarning
+            f"Unable to check experimental integration status for {tree_instance} object",
+            ExperimentalWarning,
+            stacklevel=2,
         )
 
 
@@ -229,6 +232,7 @@ class TreeExplainer(Explainer):
                 "The approximate argument has been deprecated in version v0.47.0 and will be removed in version v0.48.0. "
                 "Please use the approximate argument in the shap_values or the __call__ method instead.",
                 DeprecationWarning,
+                stacklevel=2,
             )
         if feature_names is not None:
             self.data_feature_names = feature_names
@@ -265,6 +269,7 @@ class TreeExplainer(Explainer):
                     "will raise an error. Please provide a background dataset to continue using the interventional "
                     "approach or set feature_perturbation='auto' to automatically switch approaches.",
                     FutureWarning,
+                    stacklevel=2,
                 )
                 feature_perturbation = "tree_path_dependent"
         elif feature_perturbation != "tree_path_dependent":
@@ -278,7 +283,7 @@ class TreeExplainer(Explainer):
                 f"Passing {self.data.shape[0]} background samples may lead to slow runtimes. Consider "
                 "using shap.sample(data, 100) to create a smaller background data set."
             )
-            warnings.warn(wmsg)
+            warnings.warn(wmsg, stacklevel=2)
 
         _safe_check_tree_instance_experimental(model)
 
@@ -426,7 +431,7 @@ class TreeExplainer(Explainer):
                     "update your xgboost to >=1.7.0 or explicitly set `Explanation.data = X`, where "
                     "`X` is a numpy or scipy array."
                 )
-                warnings.warn(wmsg)
+                warnings.warn(wmsg, stacklevel=2)
                 X_data = None
             else:
                 X_data = X.get_data()
@@ -498,7 +503,8 @@ class TreeExplainer(Explainer):
                 "check_additivity requires us to run predictions which is not supported with "
                 "spark, "
                 "ignoring."
-                " Set check_additivity=False to remove this warning"
+                " Set check_additivity=False to remove this warning",
+                stacklevel=2,
             )
             check_additivity = False
 
@@ -618,7 +624,8 @@ class TreeExplainer(Explainer):
                 ):
                     if not from_call:
                         warnings.warn(
-                            "LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray"
+                            "LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray",
+                            stacklevel=2,
                         )
                 if phi.shape[1] != X.shape[1] + 1:
                     try:
@@ -1474,7 +1481,8 @@ class TreeEnsemble:
             if self.model_output == "raw":
                 param_idx = 0  # default to the first parameter of the output distribution
                 warnings.warn(
-                    'Translating model_output="raw" to model_output=0 for the 0-th parameter in the distribution. Use model_output=0 directly to avoid this warning.'
+                    'Translating model_output="raw" to model_output=0 for the 0-th parameter in the distribution. Use model_output=0 directly to avoid this warning.',
+                    stacklevel=2,
                 )
             elif isinstance(self.model_output, int):
                 param_idx = self.model_output

@@ -120,7 +120,7 @@ class LinearExplainer(Explainer):
                 "The feature_perturbation option is now deprecated in favor of using the appropriate "
                 "masker (maskers.Independent, maskers.Partition or maskers.Impute)."
             )
-            warnings.warn(wmsg, FutureWarning)
+            warnings.warn(wmsg, FutureWarning, stacklevel=2)
         else:
             feature_perturbation = "interventional"
 
@@ -241,7 +241,9 @@ class LinearExplainer(Explainer):
             self.x_transform = x_transform
         elif self.feature_perturbation == "interventional":
             if nsamples != 1000:
-                warnings.warn("Setting nsamples has no effect when feature_perturbation = 'interventional'!")
+                warnings.warn(
+                    "Setting nsamples has no effect when feature_perturbation = 'interventional'!", stacklevel=2
+                )
         else:
             raise InvalidFeaturePerturbationError(
                 "Unknown type of feature_perturbation provided: " + self.feature_perturbation

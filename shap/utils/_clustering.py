@@ -195,7 +195,8 @@ def xgboost_distances_r2(
             warnings.warn(
                 f"No/low signal found from feature {i} (this is typically caused by constant or "
                 "near-constant features)! Cluster distances can't be computed for it (so setting "
-                "all redundancy distances to 1)."
+                "all redundancy distances to 1).",
+                stacklevel=2,
             )
             r2: float = 0
 
@@ -297,7 +298,8 @@ def hclust(
         if y is not None:
             warnings.warn(
                 "Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is "
-                "not based on label fitting!"
+                "not based on label fitting!",
+                stacklevel=2,
             )
         bg_no_nan: npt.NDArray[Any] = X_arr.copy()
         for i in range(bg_no_nan.shape[1]):

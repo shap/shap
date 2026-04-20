@@ -12,7 +12,7 @@ class PyTorchDeep(Explainer):
         import torch
 
         if version.parse(torch.__version__) < version.parse("0.4"):
-            warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
+            warnings.warn("Your PyTorch version is older than 0.4 and not supported.", stacklevel=2)
 
         # check if we have multiple inputs
         self.multi_input = False
@@ -252,7 +252,7 @@ def deeplift_grad(module, grad_input, grad_output):
         if op_handler[module_type].__name__ not in ["passthrough", "linear_1d"]:
             return op_handler[module_type](module, grad_input, grad_output)
     else:
-        warnings.warn(f"unrecognized nn.Module: {module_type}")
+        warnings.warn(f"unrecognized nn.Module: {module_type}", stacklevel=2)
         return grad_input
 
 

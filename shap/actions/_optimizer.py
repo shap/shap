@@ -11,7 +11,9 @@ from ._action import Action
 class ActionOptimizer:
     def __init__(self, model, actions: list[Action | list[Action]]):
         self.model = model
-        warnings.warn("Note that ActionOptimizer is still in an alpha state and is subject to API changes.")
+        warnings.warn(
+            "Note that ActionOptimizer is still in an alpha state and is subject to API changes.", stacklevel=2
+        )
         # actions go into mutually exclusive groups
         self.action_groups: list[list[Action]] = []
         for group in actions:
