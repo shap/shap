@@ -883,14 +883,22 @@ class TreeExplainer(Explainer):
                 ind = np.argmax(diff)
                 err_msg = (
                     "Additivity check failed in TreeExplainer! Please ensure the data matrix you passed to the "
-                    "explainer is the same shape that the model was trained on. If your data shape is correct "
-                    "then please report this on GitHub."
+                    "explainer is the same shape that the model was trained on.\n\n"
+                    "If your data shape is correct, this failure is likely caused by numerical instability due "
+                    "to exceptionally deep trees (depth > 70). This frequently occurs when fitting models on "
+                    "sparse data. The path-dependent TreeSHAP algorithm suffers from floating-point overflow "
+                    "at extreme depths.\n\n"
                 )
                 if self.feature_perturbation != "interventional":
-                    err_msg += " Consider retrying with the feature_perturbation='interventional' option."
+                    err_msg += (
+                        "To resolve this, consider retrying with the feature_perturbation='interventional' option, "
+                        "or limit the `max_depth` of your model during training.\n\n"
+                    )
+                else:
+                    err_msg += "To resolve this, consider limiting the `max_depth` of your model during training.\n\n"
                 err_msg += (
                     " This check failed because for one of the samples the sum of the SHAP values"
-                    f" was {sum_val[ind]:f}, while the model output was {model_output[ind]:f}. If this"
+                    f" was {sum_val[ind]:.5f}, while the model output was {model_output[ind]:.5f}. If this"
                     " difference is acceptable you can set check_additivity=False to disable this check."
                 )
                 raise ExplainerError(err_msg)
