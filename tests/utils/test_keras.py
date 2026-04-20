@@ -3,7 +3,6 @@ import pytest
 
 try:
     import tensorflow as tf
-
     from shap.utils._keras import clone_keras_layers, split_keras_model
 
     TF_AVAILABLE = True
