@@ -16,7 +16,6 @@ import pytest
 
 from shap._serializable import Deserializer, Serializable, Serializer
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -341,9 +340,9 @@ class TestDeserializer:
         buf = io.BytesIO()
         self._write_block_header(buf)
         # Write a valid item under "actual_name"
-        pickle.dump("actual_name", buf)   # name stored in stream
-        pickle.dump("pickle.dump", buf)   # encoder
-        pickle.dump(99, buf)              # value
+        pickle.dump("actual_name", buf)  # name stored in stream
+        pickle.dump("pickle.dump", buf)  # encoder
+        pickle.dump(99, buf)  # value
         pickle.dump("END_BLOCK___", buf)  # end token
         buf.seek(0)
         # Asking to load "expected_name" but stream has "actual_name" — must raise ValueError
