@@ -539,7 +539,11 @@ def summary_legacy(
     cmap=colors.red_blue,
     show_values_in_legend: bool = False,
     use_log_scale: bool = False,
-    rng: np.random.Generator | None = None,
+    rng: np.random.Generator 
+    | np.random.SeedSequence
+    | np.random.BitGenerator
+    | int
+    | None = None,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
