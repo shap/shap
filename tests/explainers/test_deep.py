@@ -203,8 +203,6 @@ def test_tf_keras_linear_model_input():
 
     tf = pytest.importorskip("tensorflow")
 
-    # tf.compat.v1.disable_eager_execution()
-
     tf.compat.v1.random.set_random_seed(random_seed)
     rs = np.random.RandomState(random_seed)
 
