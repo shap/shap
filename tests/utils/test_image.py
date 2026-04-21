@@ -1,14 +1,16 @@
 """Tests for shap/utils/image.py"""
+
 import os
 import tempfile
+
 import numpy as np
-import pytest
 from PIL import Image
+
 from shap.utils.image import (
-    is_empty,
-    make_dir,
-    load_image,
     check_valid_image,
+    is_empty,
+    load_image,
+    make_dir,
     resize_image,
 )
 
