@@ -1,6 +1,7 @@
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
-from unittest.mock import MagicMock, patch
 
 from shap import Explanation
 from shap.benchmark import ExplanationError
@@ -98,22 +99,22 @@ def test_explanation_error_tqdm_and_success(mock_masked_model, mock_tqdm, mock_t
     # Provide multiple rows to trigger the loop
     model_args = (np.array([[1.0], [2.0]]),)
     exp_obj = Explanation(values=np.array([[0.5], [0.5]]))
-    
+
     masker = MagicMock()
     masker.clustering = None
     ee = ExplanationError(masker, MagicMock(), *model_args, num_permutations=1)
-    
+
     # Mock time.time() to jump forward 10 seconds to force the progress bar to render
     mock_time.side_effect = [0, 10, 10, 10]
     mock_pbar = MagicMock()
     mock_tqdm.return_value = mock_pbar
-    
+
     result = ee(exp_obj, "test_tqdm")
-    
+
     # Verify standard results
     assert result.metric == "explanation error"
     assert result.method == "test_tqdm"
-    
+
     # Verify tqdm was initialized, updated, and closed
     mock_tqdm.assert_called_once()
     assert mock_pbar.update.call_count >= 1
