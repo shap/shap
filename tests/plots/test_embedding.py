@@ -1,8 +1,10 @@
+import matplotlib
 import numpy as np
 import pytest
-import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
 from shap.plots._embedding import embedding
 
 
