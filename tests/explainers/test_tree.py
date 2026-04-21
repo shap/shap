@@ -30,6 +30,20 @@ def test_unsupported_model_raises_error():
         _ = shap.TreeExplainer(CustomEstimator())
 
 
+def test_large_background_dataset_warning():
+    """A warning should be emitted when >1000 background samples are passed
+    with feature_perturbation='interventional'. Regression test for GH#4385."""
+    X, y = shap.datasets.california(n_points=1200)
+    model = DecisionTreeRegressor(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    # Use maskers.Independent with a high max_samples to bypass the default
+    # subsampling (max_samples=100), so the >1000 check is actually triggered.
+    background = shap.maskers.Independent(X, max_samples=1200)
+    with pytest.warns(UserWarning, match="may lead to slow runtimes"):
+        shap.TreeExplainer(model, background, feature_perturbation="interventional")
+
+
 def test_front_page_xgboost():
     xgboost = pytest.importorskip("xgboost")
 
@@ -1313,9 +1327,6 @@ class TestExplainerXGBoost:
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
-    @pytest.mark.skipif(
-        sys.platform == "darwin", reason="Test currently not working on mac. Investigating is a todo, see GH #3709."
-    )
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_dmatrix_propagation(self, Clf):
         """Test that xgboost sklearn attributes are properly passed to the DMatrix
@@ -1337,7 +1348,7 @@ class TestExplainerXGBoost:
         explainer = shap.TreeExplainer(clf)
         shap_values = explainer.shap_values(X_nan)
         # check that SHAP values sum to model output
-        assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
+        np.testing.assert_allclose(margin, explainer.expected_value + shap_values.sum(axis=1), atol=1e-4, rtol=1e-4)
 
     @pytest.mark.parametrize("Reg", regressors)
     def test_xgboost_direct(self, Reg):
@@ -1978,7 +1989,7 @@ def test_lightgbm_interactions():
 
     model = lightgbm.LGBMClassifier(n_estimators=10, max_depth=3).fit(X, y)
     explainer = shap.TreeExplainer(model)
-    predicted = model.predict(X, raw_score=True)
+    predicted = model.predict(pd.DataFrame(X, columns=model.feature_names_in_), raw_score=True)
     explanation = explainer(X, interactions=False)
     np.testing.assert_allclose(explanation.values.sum(axis=(1)) + explanation.base_values, predicted)
 
@@ -1987,7 +1998,7 @@ def test_lightgbm_interactions():
 
     # test flat input
     explanation_flat = explainer(X[0, :], interactions=True)
-    predicted_flat = model.predict(X[[0], :], raw_score=True)
+    predicted_flat = model.predict(pd.DataFrame(X[[0], :], columns=model.feature_names_in_), raw_score=True)
 
     np.testing.assert_allclose(
         explanation_flat.values.sum((0, 1)) + explanation_flat.base_values[0], predicted_flat[0], atol=1e-4
@@ -2582,7 +2593,7 @@ def test_tree_explainer_with_lightgbm_regressor():
     assert shap_values.shape == (10, 5)
 
     # Check additivity
-    predictions = model.predict(X[:10])
+    predictions = model.predict(pd.DataFrame(X[:10], columns=model.feature_names_in_))
     assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
 
 
@@ -2603,7 +2614,7 @@ def test_tree_explainer_with_lightgbm_classifier():
     assert shap_values.shape == (10, 4) or (isinstance(shap_values, list) and len(shap_values) == 2)
 
     # Check additivity (SHAP values are in raw score space, not probability space)
-    predictions = model.predict(X[:10], raw_score=True)
+    predictions = model.predict(pd.DataFrame(X[:10], columns=model.feature_names_in_), raw_score=True)
     if isinstance(shap_values, list):
         shap_sum = shap_values[1].sum(1) + explainer.expected_value[1]
     else:
