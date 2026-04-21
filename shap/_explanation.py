@@ -455,7 +455,9 @@ class Explanation(metaclass=MetaExplanation):
         new_exp.op_history = copy.copy(self.op_history)
         return new_exp
 
-  # =================== Operations ===================
+
+# =================== Operations ===================
+
 
 def _apply_binary_operator(
     self,
@@ -512,6 +514,8 @@ def __rsub__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Expla
             new_exp.base_values = operator.sub(other, new_exp.base_values)
 
     return new_exp
+
+
 # ===== END FIX =====
 
 
