@@ -274,7 +274,11 @@ def bar(
         )
 
     # draw the yticks (the 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks)
-    ax.set_yticks(list(y_pos) + list(y_pos + 1e-8), yticklabels + [t.split("=")[-1] for t in yticklabels], fontsize=13)
+    ax.set_yticks(
+        list(y_pos) + list(y_pos + 1e-8),
+        yticklabels + [t.split("=")[-1] for t in yticklabels],
+        fontsize=style.label_size,
+    )
 
     xlen = ax.get_xlim()[1] - ax.get_xlim()[0]
     # xticks = ax.get_xticks()
@@ -294,7 +298,7 @@ def bar(
                     horizontalalignment="right",
                     verticalalignment="center",
                     color=style.primary_color_negative,
-                    fontsize=12,
+                    fontsize=style.font_size,
                 )
             else:
                 ax.text(
@@ -304,12 +308,12 @@ def bar(
                     horizontalalignment="left",
                     verticalalignment="center",
                     color=style.primary_color_positive,
-                    fontsize=12,
+                    fontsize=style.font_size,
                 )
 
     # put horizontal lines for each feature row
     for i in range(num_features):
-        ax.axhline(i + 1, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
+        ax.axhline(i + 1, color=style.hlines_color, lw=style.line_width, dashes=(1, 5), zorder=-1)
 
     if features is not None:
         features = list(features)
@@ -328,7 +332,7 @@ def bar(
     ax.spines["top"].set_visible(False)
     if negative_values_present:
         ax.spines["left"].set_visible(False)
-    ax.tick_params("x", labelsize=11)
+    ax.tick_params("x", labelsize=style.tick_label_size)
 
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
@@ -340,12 +344,12 @@ def bar(
         ax.set_xlim(xmin, xmax + x_buffer)
 
     # if features is None:
-    #     plt.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
+    #     plt.xlabel(labels["GLOBAL_VALUE"], fontsize=style.label_size)
     # else:
-    ax.set_xlabel(xlabel, fontsize=13)
+    ax.set_xlabel(xlabel, fontsize=style.label_size)
 
     if len(values) > 1:
-        ax.legend(fontsize=12)
+        ax.legend(fontsize=style.font_size)
 
     # color the y tick labels that have the feature values as gray
     # (these fall behind the black ones with just the feature name)
@@ -369,8 +373,8 @@ def bar(
             "Clustering cutoff = " + format_value(clustering_cutoff, "%0.02f"),
             horizontalalignment="left",
             verticalalignment="center",
-            color="#999999",
-            fontsize=12,
+            color=style.tick_labels_color,
+            fontsize=style.font_size,
             rotation=-90,
         )
         line = ax.axvline(ct_line_pos, color="#dddddd", dashes=(1, 1))
@@ -384,7 +388,11 @@ def bar(
             if np.array(xline).max() <= clustering_cutoff:
                 # only draw if we are not going past the bottom of the plot
                 if yline.max() < max_display:
-                    lines = ax.plot(xv * 0.1 * (xmax - xmin) + xmax, max_display - np.array(yline), color="#999999")
+                    lines = ax.plot(
+                        xv * 0.1 * (xmax - xmin) + xmax,
+                        max_display - np.array(yline),
+                        color=style.tick_labels_color,
+                    )
                     for line in lines:
                         line.set_clip_on(False)
 
@@ -432,7 +440,7 @@ def bar_legacy(shap_values, features=None, feature_names=None, max_display=None,
             for i in range(len(y_pos))
         ],
     )
-    plt.yticks(y_pos, fontsize=13)
+    plt.yticks(y_pos, fontsize=style.label_size)
     if features is not None:
         features = list(features)
 

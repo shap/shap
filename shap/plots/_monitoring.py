@@ -5,6 +5,7 @@ import scipy.stats
 
 from . import colors
 from ._labels import labels
+from ._style import get_style
 
 
 def truncate_text(text, max_len):
@@ -38,6 +39,7 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
         Names of the features (length # features)
 
     """
+    style = get_style()
     if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
@@ -67,7 +69,7 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
     plt.scatter(xs, ys, s=10, c=features[:, ind], cmap=colors.red_blue)
 
     plt.xlabel("Sample index")
-    plt.ylabel(truncate_text(feature_names[ind], 30) + "\nSHAP value", size=13)
+    plt.ylabel(truncate_text(feature_names[ind], 30) + "\nSHAP value", size=style.label_size)
     plt.gca().xaxis.set_ticks_position("bottom")
     plt.gca().yaxis.set_ticks_position("left")
     plt.gca().spines["right"].set_visible(False)
@@ -76,6 +78,6 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
     cb.outline.set_visible(False)  # type: ignore
     bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
     cb.ax.set_aspect((bbox.height - 0.7) * 20)
-    cb.set_label(truncate_text(feature_names[ind], 30), size=13)
+    cb.set_label(truncate_text(feature_names[ind], 30), size=style.label_size)
     if show:
         plt.show()

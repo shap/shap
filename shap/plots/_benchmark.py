@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from . import colors
+from ._style import get_style
 
 xlabel_names = {
     "remove absolute": "Fraction removed",
@@ -18,6 +19,7 @@ xlabel_names = {
 
 def benchmark(benchmark, show=True):
     """Plot a BenchmarkResult or list of such results."""
+    style = get_style()
     if hasattr(benchmark, "__iter__"):
         benchmark = list(benchmark)
 
@@ -63,14 +65,14 @@ def benchmark(benchmark, show=True):
                 )
                 # plt.fill_between(b.curve_x, b.curve_y - b.curve_y_std, b.curve_y + b.curve_y_std, color=method_color[b.method], alpha=0.2)
                 ax = plt.gca()
-            ax.set_xlabel(xlabel_names[metric_name], fontsize=13)
-            ax.set_ylabel("Model output", fontsize=13)
+            ax.set_xlabel(xlabel_names[metric_name], fontsize=style.label_size)
+            ax.set_ylabel("Model output", fontsize=style.label_size)
             ax.xaxis.set_ticks_position("bottom")
             ax.yaxis.set_ticks_position("left")
             ax.spines["right"].set_visible(False)
             ax.spines["top"].set_visible(False)
             plt.title(metric_name.capitalize())
-            plt.legend(fontsize=11)
+            plt.legend(fontsize=style.tick_label_size)
             if show:
                 plt.show()
 
@@ -98,15 +100,15 @@ def benchmark(benchmark, show=True):
             # )
             ax = plt.gca()
             ax.set_yticks(np.arange(len(methods)))
-            ax.set_yticklabels([b.method for b in benchmark], rotation=0, fontsize=11)
-            ax.set_xlabel(xlabel_names[metric_name], fontsize=13)
-            # ax.set_ylabel("Model output", fontsize=13)
+            ax.set_yticklabels([b.method for b in benchmark], rotation=0, fontsize=style.tick_label_size)
+            ax.set_xlabel(xlabel_names[metric_name], fontsize=style.label_size)
+            # ax.set_ylabel("Model output", fontsize=style.label_size)
             ax.xaxis.set_ticks_position("bottom")
             ax.yaxis.set_ticks_position("left")
             ax.spines["right"].set_visible(False)
             ax.spines["top"].set_visible(False)
             plt.title(metric_name.capitalize())
-            # plt.legend(fontsize=11)
+            # plt.legend(fontsize=style.tick_label_size)
             plt.gca().invert_yaxis()
             if show:
                 plt.show()
@@ -180,12 +182,14 @@ def benchmark(benchmark, show=True):
 
             ax = plt.gca()
             ax.set_yticks([1 - i / (len(methods) - 1) for i in range(len(methods))])
-            ax.set_yticklabels(methods, rotation=0, fontsize=11)
+            ax.set_yticklabels(methods, rotation=0, fontsize=style.tick_label_size)
 
             ax.set_xticks(np.arange(len(metrics) + 1))
             # from matplotlib import rcParams
             # rcParams['text.latex.preamble'] = [r'\boldmath']
-            ax.set_xticklabels([""] + [m.capitalize() for m in metrics], rotation=45, ha="left", fontsize=11)
+            ax.set_xticklabels(
+                [""] + [m.capitalize() for m in metrics], rotation=45, ha="left", fontsize=style.tick_label_size
+            )
 
             ax.xaxis.tick_top()
             plt.grid(which="major", axis="x", linestyle="--")
@@ -223,12 +227,12 @@ def benchmark(benchmark, show=True):
             label=benchmark.method + f" ({benchmark.value:0.3})",
         )
         ax = plt.gca()
-        ax.set_xlabel(xlabel_names[benchmark.metric], fontsize=13)
-        ax.set_ylabel("Model output", fontsize=13)
+        ax.set_xlabel(xlabel_names[benchmark.metric], fontsize=style.label_size)
+        ax.set_ylabel("Model output", fontsize=style.label_size)
         ax.xaxis.set_ticks_position("bottom")
         ax.yaxis.set_ticks_position("left")
         ax.spines["right"].set_visible(False)
         ax.spines["top"].set_visible(False)
-        plt.legend(fontsize=11)
+        plt.legend(fontsize=style.tick_label_size)
         if show:
             plt.show()

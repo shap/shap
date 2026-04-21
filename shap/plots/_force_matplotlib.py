@@ -6,6 +6,8 @@ from matplotlib.font_manager import FontProperties
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 
+from ._style import get_style
+
 
 def draw_bars(out_value, features, feature_type, width_separators, width_bar):
     """Draw the bars and separators."""
@@ -79,6 +81,7 @@ def draw_bars(out_value, features, feature_type, width_separators, width_bar):
 def draw_labels(
     fig, ax, out_value, features, feature_type, offset_text, total_effect=0, min_perc=0.05, text_rotation=0
 ):
+    style = get_style()
     start_text = out_value
     pre_val = out_value
 
@@ -126,7 +129,7 @@ def draw_labels(
             start_text - sign * offset_text,
             -0.15,
             text,
-            fontsize=12,
+            fontsize=style.font_size,
             color=colors[0],
             horizontalalignment=alignment,
             va=va_alignment,
@@ -272,6 +275,7 @@ def format_data(data):
 
 
 def draw_output_element(out_name, out_value, ax):
+    style = get_style()
     # Add output value
     x, y = np.array([[out_value, out_value], [0, 0.24]])
     line = lines.Line2D(x, y, lw=2.0, color="#F2F2F2")
@@ -282,32 +286,54 @@ def draw_output_element(out_name, out_value, ax):
     font = font0.copy()
     font.set_weight("bold")
     text_out_val = plt.text(
-        out_value, 0.25, f"{out_value:.2f}", fontproperties=font, fontsize=14, horizontalalignment="center"
+        out_value,
+        0.25,
+        f"{out_value:.2f}",
+        fontproperties=font,
+        fontsize=style.label_size,
+        horizontalalignment="center",
     )
     text_out_val.set_bbox(dict(facecolor="white", edgecolor="white"))
 
-    text_out_val = plt.text(out_value, 0.33, out_name, fontsize=12, alpha=0.5, horizontalalignment="center")
+    text_out_val = plt.text(
+        out_value, 0.33, out_name, fontsize=style.font_size, alpha=0.5, horizontalalignment="center"
+    )
     text_out_val.set_bbox(dict(facecolor="white", edgecolor="white"))
 
 
 def draw_base_element(base_value, ax):
+    style = get_style()
     x, y = np.array([[base_value, base_value], [0.13, 0.25]])
     line = lines.Line2D(x, y, lw=2.0, color="#F2F2F2")
     line.set_clip_on(False)
     ax.add_line(line)
 
-    text_out_val = plt.text(base_value, 0.33, "base value", fontsize=12, alpha=0.5, horizontalalignment="center")
+    text_out_val = plt.text(
+        base_value, 0.33, "base value", fontsize=style.font_size, alpha=0.5, horizontalalignment="center"
+    )
     text_out_val.set_bbox(dict(facecolor="white", edgecolor="white"))
 
 
 def draw_higher_lower_element(out_value, offset_text):
-    plt.text(out_value - offset_text, 0.405, "higher", fontsize=13, color="#FF0D57", horizontalalignment="right")
+    style = get_style()
+    plt.text(
+        out_value - offset_text,
+        0.405,
+        "higher",
+        fontsize=style.label_size,
+        color="#FF0D57",
+        horizontalalignment="right",
+    )
 
-    plt.text(out_value + offset_text, 0.405, "lower", fontsize=13, color="#1E88E5", horizontalalignment="left")
+    plt.text(
+        out_value + offset_text, 0.405, "lower", fontsize=style.label_size, color="#1E88E5", horizontalalignment="left"
+    )
 
-    plt.text(out_value, 0.4, r"$\leftarrow$", fontsize=13, color="#1E88E5", horizontalalignment="center")
+    plt.text(out_value, 0.4, r"$\leftarrow$", fontsize=style.label_size, color="#1E88E5", horizontalalignment="center")
 
-    plt.text(out_value, 0.425, r"$\rightarrow$", fontsize=13, color="#FF0D57", horizontalalignment="center")
+    plt.text(
+        out_value, 0.425, r"$\rightarrow$", fontsize=style.label_size, color="#FF0D57", horizontalalignment="center"
+    )
 
 
 def update_axis_limits(ax, total_pos, pos_features, total_neg, neg_features, base_value, out_value):

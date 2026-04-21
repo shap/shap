@@ -7,6 +7,7 @@ import pandas as pd
 from .. import Explanation
 from ..plots.colors import blue_rgb, light_blue_rgb, red_blue_transparent, red_rgb
 from ..utils import convert_name
+from ._style import get_style
 
 
 def compute_bounds(xmin, xmax, xv):
@@ -50,6 +51,7 @@ def partial_dependence(
     show=True,
 ):
     """A basic partial dependence plot function."""
+    style = get_style()
     if isinstance(data, Explanation):
         features = data.data
         shap_values = data
@@ -124,18 +126,18 @@ def partial_dependence(
         ax1.plot(xs, vals, color=blue_rgb, linewidth=pd_linewidth, alpha=pd_opacity)
 
         ax2.set_ylim(0, features.shape[0])  # ax2.get_ylim()[0], ax2.get_ylim()[1] * 4)
-        ax1.set_xlabel(feature_names[ind], fontsize=13)
+        ax1.set_xlabel(feature_names[ind], fontsize=style.label_size)
         if ylabel is None:
             if not ice:
                 ylabel = "E[f(x) | " + str(feature_names[ind]) + "]"
             else:
                 ylabel = "f(x) | " + str(feature_names[ind])
-        ax1.set_ylabel(ylabel, fontsize=13)
+        ax1.set_ylabel(ylabel, fontsize=style.label_size)
         ax1.xaxis.set_ticks_position("bottom")
         ax1.yaxis.set_ticks_position("left")
         ax1.spines["right"].set_visible(False)
         ax1.spines["top"].set_visible(False)
-        ax1.tick_params(labelsize=11)
+        ax1.tick_params(labelsize=style.tick_label_size)
 
         ax2.xaxis.set_ticks_position("bottom")
         ax2.yaxis.set_ticks_position("left")
@@ -153,8 +155,8 @@ def partial_dependence(
             ax3.set_xticklabels(["E[" + str(feature_names[ind]) + "]"])
             ax3.spines["right"].set_visible(False)
             ax3.spines["top"].set_visible(False)
-            ax3.tick_params(length=0, labelsize=11)
-            ax1.axvline(mval, color="#999999", zorder=-1, linestyle="--", linewidth=1)
+            ax3.tick_params(length=0, labelsize=style.tick_label_size)
+            ax1.axvline(mval, color=style.vlines_color, zorder=-1, linestyle="--", linewidth=style.line_width)
 
         if model_expected_value is not False or shap_values is not None:
             if model_expected_value is True:
@@ -171,8 +173,10 @@ def partial_dependence(
             ax4.set_yticklabels(["E[f(x)]"])
             ax4.spines["right"].set_visible(False)
             ax4.spines["top"].set_visible(False)
-            ax4.tick_params(length=0, labelsize=11)
-            ax1.axhline(model_expected_value, color="#999999", zorder=-1, linestyle="--", linewidth=1)
+            ax4.tick_params(length=0, labelsize=style.tick_label_size)
+            ax1.axhline(
+                model_expected_value, color=style.hlines_color, zorder=-1, linestyle="--", linewidth=style.line_width
+            )
 
         if shap_values is not None:
             # vals = shap_values.values[:, ind]
@@ -246,9 +250,11 @@ def partial_dependence(
 
         ax.plot_surface(x0, x1, vals, cmap=red_blue_transparent)
 
-        ax.set_xlabel(feature_names[ind0], fontsize=13)
-        ax.set_ylabel(feature_names[ind1], fontsize=13)
-        ax.set_zlabel("E[f(x) | " + str(feature_names[ind0]) + ", " + str(feature_names[ind1]) + "]", fontsize=13)
+        ax.set_xlabel(feature_names[ind0], fontsize=style.label_size)
+        ax.set_ylabel(feature_names[ind1], fontsize=style.label_size)
+        ax.set_zlabel(
+            "E[f(x) | " + str(feature_names[ind0]) + ", " + str(feature_names[ind1]) + "]", fontsize=style.label_size
+        )
 
         if show:
             plt.show()

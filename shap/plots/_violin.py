@@ -12,6 +12,7 @@ from scipy.stats import gaussian_kde
 from ..utils._exceptions import DimensionError
 from . import colors
 from ._labels import labels
+from ._style import get_style
 
 # TODO: simplify this when we drop support for matplotlib 3.9
 if version.parse(matplotlib.__version__) >= version.parse("3.10"):
@@ -41,9 +42,9 @@ def violin(
     class_inds=None,
     color_bar_label=labels["FEATURE_VALUE"],
     cmap=colors.red_blue,
-    color_bar_label_size=12,
-    color_bar_tick_size=11,
-    axhline_lw=0.5,
+    color_bar_label_size=None,
+    color_bar_tick_size=None,
+    axhline_lw=None,
     use_log_scale=False,
 ):
     """Create a SHAP violin plot, colored by feature values when they are provided.
@@ -103,6 +104,13 @@ def violin(
     See `violin plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/violin.html>`_.
 
     """
+    style = get_style()
+    if color_bar_label_size is None:
+        color_bar_label_size = style.font_size
+    if color_bar_tick_size is None:
+        color_bar_tick_size = style.tick_label_size
+    if axhline_lw is None:
+        axhline_lw = style.line_width
     if title is not None:
         warnings.warn("The `title` argument is unused and will be removed in a future release.", DeprecationWarning)
     # support passing an explanation object
@@ -184,11 +192,11 @@ def violin(
         plt.gcf().set_size_inches(plot_size[0], plot_size[1])
     elif plot_size is not None:
         plt.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
-    plt.axvline(x=0, color="#999999", zorder=-1)
+    plt.axvline(x=0, color=style.vlines_color, linewidth=style.line_width, zorder=-1)
 
     if plot_type == "violin":
         for pos in range(len(feature_order)):
-            plt.axhline(y=pos, color="#cccccc", lw=axhline_lw, dashes=(1, 5), zorder=-1)
+            plt.axhline(y=pos, color=style.hlines_color, lw=axhline_lw, dashes=(1, 5), zorder=-1)
 
         if features is not None:
             global_low = np.nanpercentile(shap_values[:, : len(feature_names)].flatten(), 1)
@@ -378,11 +386,11 @@ def violin(
     plt.gca().spines["top"].set_visible(False)
     plt.gca().spines["left"].set_visible(False)
     plt.gca().tick_params(color=axis_color, labelcolor=axis_color)
-    plt.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=13)
-    plt.gca().tick_params("y", length=20, width=0.5, which="major")
-    plt.gca().tick_params("x", labelsize=11)
+    plt.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=style.label_size)
+    plt.gca().tick_params("y", length=20, width=style.line_width, which="major")
+    plt.gca().tick_params("x", labelsize=style.tick_label_size)
     plt.ylim(-1, len(feature_order))
-    plt.xlabel(labels["VALUE"], fontsize=13)
+    plt.xlabel(labels["VALUE"], fontsize=style.label_size)
 
     if show:
         plt.show()

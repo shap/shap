@@ -17,6 +17,7 @@ from ._image import image, image_to_text
 from ._monitoring import monitoring
 from ._partial_dependence import partial_dependence
 from ._scatter import scatter
+from ._style import get_style, load_default_style, load_matplotlib_style, set_style, style_context
 from ._text import text
 from ._violin import violin
 from ._waterfall import waterfall
@@ -36,6 +37,11 @@ __all__ = [
     "monitoring",
     "partial_dependence",
     "scatter",
+    "get_style",
+    "load_default_style",
+    "load_matplotlib_style",
+    "set_style",
+    "style_context",
     "text",
     "violin",
     "waterfall",

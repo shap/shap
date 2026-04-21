@@ -16,6 +16,7 @@ from ..utils._exceptions import DimensionError
 from ..utils._general import encode_array_if_needed
 from . import colors
 from ._labels import labels
+from ._style import get_style
 from ._utils import AxisLimitSpec, parse_axis_limit
 
 
@@ -128,6 +129,7 @@ def scatter(
     See `scatter plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/scatter.html>`_.
 
     """
+    style = get_style()
     if not isinstance(shap_values, Explanation):
         raise TypeError("The shap_values parameter must be a shap.Explanation object!")
 
@@ -329,7 +331,7 @@ def scatter(
             vmax = chigh
         else:
             vmin = vmax = None
-        ax.axhline(0, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
+        ax.axhline(0, color=style.hlines_color, lw=style.line_width, dashes=(1, 5), zorder=-1)
         p = ax.scatter(
             xv[xv_notnan],
             s[xv_notnan],
@@ -360,8 +362,8 @@ def scatter(
 
         # Type narrowing for mypy
         assert isinstance(interaction_index, (int, np.integer)), f"Unexpected {type(interaction_index)=}"
-        cb.set_label(feature_names[interaction_index], size=13)
-        cb.ax.tick_params(labelsize=11)
+        cb.set_label(feature_names[interaction_index], size=style.label_size)
+        cb.ax.tick_params(labelsize=style.tick_label_size)
         if categorical_interaction:
             cb.ax.tick_params(length=0)
         cb.set_alpha(1)
@@ -406,20 +408,20 @@ def scatter(
     plt.sca(ax)
 
     # make the plot more readable
-    ax.set_xlabel(name, color=axis_color, fontsize=13)
-    ax.set_ylabel(labels["VALUE_FOR"] % name, color=axis_color, fontsize=13)
+    ax.set_xlabel(name, color=axis_color, fontsize=style.label_size)
+    ax.set_ylabel(labels["VALUE_FOR"] % name, color=axis_color, fontsize=style.label_size)
     if title is not None:
-        ax.set_title(title, color=axis_color, fontsize=13)
+        ax.set_title(title, color=axis_color, fontsize=style.label_size)
     ax.xaxis.set_ticks_position("bottom")
     ax.yaxis.set_ticks_position("left")
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
-    ax.tick_params(color=axis_color, labelcolor=axis_color, labelsize=11)
+    ax.tick_params(color=axis_color, labelcolor=axis_color, labelsize=style.tick_label_size)
     for spine in ax.spines.values():
         spine.set_edgecolor(axis_color)
     if isinstance(xd[0], str):
         ax.set_xticks([name_map[n] for n in xnames])
-        ax.set_xticklabels(xnames, fontdict=dict(rotation="vertical", fontsize=11))
+        ax.set_xticklabels(xnames, fontdict=dict(rotation="vertical", fontsize=style.tick_label_size))
     if show:
         with warnings.catch_warnings():  # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
@@ -596,6 +598,7 @@ def dependence_legacy(
         Represents the upper bound of the plot's y-axis.
 
     """
+    style = get_style()
     if cmap is None:
         cmap = colors.red_blue
 
@@ -786,8 +789,8 @@ def dependence_legacy(
         else:
             cb = plt.colorbar(p, ax=ax, aspect=80)
 
-        cb.set_label(feature_names[interaction_index], size=13)
-        cb.ax.tick_params(labelsize=11)
+        cb.set_label(feature_names[interaction_index], size=style.label_size)
+        cb.ax.tick_params(labelsize=style.tick_label_size)
         if categorical_interaction:
             cb.ax.tick_params(length=0)
         cb.set_alpha(1)
@@ -830,8 +833,8 @@ def dependence_legacy(
     ax.set_xlim(xlim)
 
     # make the plot more readable
-    ax.set_xlabel(name, color=axis_color, fontsize=13)
-    ax.set_ylabel(labels["VALUE_FOR"] % name, color=axis_color, fontsize=13)
+    ax.set_xlabel(name, color=axis_color, fontsize=style.label_size)
+    ax.set_ylabel(labels["VALUE_FOR"] % name, color=axis_color, fontsize=style.label_size)
 
     if (ymin is not None) or (ymax is not None):
         if ymin is None:
@@ -842,17 +845,17 @@ def dependence_legacy(
         ax.set_ylim(ymin, ymax)
 
     if title is not None:
-        ax.set_title(title, color=axis_color, fontsize=13)
+        ax.set_title(title, color=axis_color, fontsize=style.label_size)
     ax.xaxis.set_ticks_position("bottom")
     ax.yaxis.set_ticks_position("left")
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
-    ax.tick_params(color=axis_color, labelcolor=axis_color, labelsize=11)
+    ax.tick_params(color=axis_color, labelcolor=axis_color, labelsize=style.tick_label_size)
     for spine in ax.spines.values():
         spine.set_edgecolor(axis_color)
     if isinstance(xd[0], str):
         ax.set_xticks([name_map[n] for n in xnames])
-        ax.set_xticklabels(xnames, fontdict=dict(rotation="vertical", fontsize=11))
+        ax.set_xticklabels(xnames, fontdict=dict(rotation="vertical", fontsize=style.tick_label_size))
     if show:
         with warnings.catch_warnings():  # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)

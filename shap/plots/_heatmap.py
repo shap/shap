@@ -5,6 +5,7 @@ from .. import Explanation
 from ..utils import OpChain
 from . import colors
 from ._labels import labels
+from ._style import get_style
 from ._utils import convert_ordering
 
 
@@ -70,6 +71,7 @@ def heatmap(
     See `heatmap plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/heatmap.html>`_.
 
     """
+    style = get_style()
     # sort the SHAP values matrix by rows and columns
     values = shap_values.values
     if issubclass(type(feature_values), OpChain):
@@ -143,7 +145,7 @@ def heatmap(
     ax.yaxis.set_ticks(
         [-1.5, *heatmap_yticks_pos],
         [r"$f(x)$", *heatmap_yticks_labels],
-        fontsize=13,
+        fontsize=style.label_size,
     )
     # remove the y-tick line for the f(x) label
     ax.yaxis.get_ticklines()[0].set_visible(False)
@@ -152,7 +154,7 @@ def heatmap(
     ax.set_xlabel(xlabel)
 
     # plot the f(x) line chart above the heat map
-    ax.axhline(-1.5, color="#aaaaaa", linestyle="--", linewidth=0.5)
+    ax.axhline(-1.5, color=style.hlines_color, linestyle="--", linewidth=style.line_width)
     fx = values.T.sum(0)
     ax.plot(
         -fx / np.abs(fx).max() - 1.5,
@@ -185,8 +187,8 @@ def heatmap(
         fraction=0.01,
         pad=0.10,  # padding between the cb and the main axes
     )
-    cb.set_label(labels["VALUE"], size=12, labelpad=-10)
-    cb.ax.tick_params(labelsize=11, length=0)
+    cb.set_label(labels["VALUE"], size=style.font_size, labelpad=-10)
+    cb.ax.tick_params(labelsize=style.tick_label_size, length=0)
     cb.set_alpha(1)
     cb.outline.set_visible(False)  # type: ignore
     # bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
