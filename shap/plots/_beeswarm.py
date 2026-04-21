@@ -699,6 +699,7 @@ def summary_legacy(
                 plot_size=plot_size,
                 class_names=class_names,
                 color_bar_label="*" + color_bar_label,
+                rng=rng,
             )
 
         if max_display is None:
@@ -729,6 +730,7 @@ def summary_legacy(
             color_bar=False,
             plot_size=None,
             max_display=max_display,
+            rng=rng,
         )
         plt.xlim((slow, shigh))
         plt.xlabel("")
@@ -749,6 +751,7 @@ def summary_legacy(
                 color_bar=False,
                 plot_size=None,
                 max_display=max_display,
+                rng=rng,
             )
             plt.xlim((slow, shigh))
             plt.xlabel("")

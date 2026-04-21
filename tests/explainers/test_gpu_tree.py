@@ -39,7 +39,7 @@ def test_front_page_xgboost():
     shap.dependence_plot("Longitude", shap_values, X, show=False)
 
     # summarize the effects of all the features
-    shap.summary_plot(shap_values, X, show=False)
+    shap.summary_plot(shap_values, X, show=False, rng=0)
 
 
 rs = np.random.RandomState(15921)
