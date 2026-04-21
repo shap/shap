@@ -455,61 +455,87 @@ class Explanation(metaclass=MetaExplanation):
         new_exp.op_history = copy.copy(self.op_history)
         return new_exp
 
-    # =================== Operations ===================
+  # =================== Operations ===================
 
-    def _apply_binary_operator(
-        self,
-        other: Explanation | npt.NDArray[Any] | float | int,
-        binary_op: Callable[[Any, Any], Any],
-        op_name: str,
-    ) -> Explanation:
-        new_exp = self.__copy__()
-        new_exp.op_history.append(OpHistoryItem(name=op_name, args=(other,), prev_shape=self.shape))
+def _apply_binary_operator(
+    self,
+    other: Explanation | npt.NDArray[Any] | float | int,
+    binary_op: Callable[[Any, Any], Any],
+    op_name: str,
+) -> Explanation:
+    new_exp = self.__copy__()
+    new_exp.op_history.append(OpHistoryItem(name=op_name, args=(other,), prev_shape=self.shape))
 
-        if isinstance(other, Explanation):
-            new_exp.values = binary_op(new_exp.values, other.values)
-            if new_exp.data is not None:
-                new_exp.data = binary_op(new_exp.data, other.data)
-            if new_exp.base_values is not None:
-                new_exp.base_values = binary_op(new_exp.base_values, other.base_values)
-        else:
-            new_exp.values = binary_op(new_exp.values, other)
-            if new_exp.data is not None:
-                new_exp.data = binary_op(new_exp.data, other)
-            if new_exp.base_values is not None:
-                new_exp.base_values = binary_op(new_exp.base_values, other)
-        return new_exp
+    if isinstance(other, Explanation):
+        new_exp.values = binary_op(new_exp.values, other.values)
+        if new_exp.data is not None:
+            new_exp.data = binary_op(new_exp.data, other.data)
+        if new_exp.base_values is not None:
+            new_exp.base_values = binary_op(new_exp.base_values, other.base_values)
+    else:
+        new_exp.values = binary_op(new_exp.values, other)
+        if new_exp.data is not None:
+            new_exp.data = binary_op(new_exp.data, other)
+        if new_exp.base_values is not None:
+            new_exp.base_values = binary_op(new_exp.base_values, other)
+    return new_exp
 
-    def __add__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
-        return self._apply_binary_operator(other, operator.add, "__add__")
 
-    def __radd__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
-        return self._apply_binary_operator(other, operator.add, "__add__")
+def __add__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
+    return self._apply_binary_operator(other, operator.add, "__add__")
 
-    def __sub__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
-        return self._apply_binary_operator(other, operator.sub, "__sub__")
 
-    def __rsub__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
-        return self._apply_binary_operator(other, operator.sub, "__sub__")
+def __radd__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
+    return self._apply_binary_operator(other, operator.add, "__add__")
 
-    def __mul__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
-        return self._apply_binary_operator(other, operator.mul, "__mul__")
 
-    def __rmul__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
-        return self._apply_binary_operator(other, operator.mul, "__mul__")
+def __sub__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
+    return self._apply_binary_operator(other, operator.sub, "__sub__")
 
-    def __truediv__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
-        return self._apply_binary_operator(other, operator.truediv, "__truediv__")
 
-    def _numpy_func(self, fname: str, **kwargs: Any) -> Explanation:
-        """Apply a numpy-style function to this Explanation."""
-        new_self = copy.copy(self)
-        axis = kwargs.get("axis", None)
+# ===== FIXED METHOD =====
+def __rsub__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
+    new_exp = self.__copy__()
+    new_exp.op_history.append(OpHistoryItem(name="__rsub__", args=(other,), prev_shape=self.shape))
 
-        # collapse the slicer to right shape
-        if axis in [0, 1, 2]:
-            new_self = new_self[axis]
-            new_self.op_history = new_self.op_history[:-1]  # pop off the slicing operation we just used
+    if isinstance(other, Explanation):
+        new_exp.values = operator.sub(other.values, new_exp.values)
+        if new_exp.data is not None:
+            new_exp.data = operator.sub(other.data, new_exp.data)
+        if new_exp.base_values is not None:
+            new_exp.base_values = operator.sub(other.base_values, new_exp.base_values)
+    else:
+        new_exp.values = operator.sub(other, new_exp.values)
+        if new_exp.data is not None:
+            new_exp.data = operator.sub(other, new_exp.data)
+        if new_exp.base_values is not None:
+            new_exp.base_values = operator.sub(other, new_exp.base_values)
+
+    return new_exp
+# ===== END FIX =====
+
+
+def __mul__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
+    return self._apply_binary_operator(other, operator.mul, "__mul__")
+
+
+def __rmul__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
+    return self._apply_binary_operator(other, operator.mul, "__mul__")
+
+
+def __truediv__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
+    return self._apply_binary_operator(other, operator.truediv, "__truediv__")
+
+
+def _numpy_func(self, fname: str, **kwargs: Any) -> Explanation:
+    """Apply a numpy-style function to this Explanation."""
+    new_self = copy.copy(self)
+    axis = kwargs.get("axis", None)
+
+    # collapse the slicer to right shape
+    if axis in [0, 1, 2]:
+        new_self = new_self[axis]
+        new_self.op_history = new_self.op_history[:-1]  # pop off the slice used
 
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
             new_values = self._flatten_feature_names()
