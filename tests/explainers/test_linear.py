@@ -355,9 +355,7 @@ def test_explain_row_via_call_with_dataframe():
     explainer = shap.explainers.LinearExplainer(model, X)
     result = explainer(X.iloc[:5])  # DataFrame routed through explain_row
     assert result.values.shape == (5, X.shape[1])
-    np.testing.assert_allclose(
-        result.values.sum(axis=1) + result.base_values, model.predict(X.iloc[:5]), atol=1e-6
-    )
+    np.testing.assert_allclose(result.values.sum(axis=1) + result.base_values, model.predict(X.iloc[:5]), atol=1e-6)
 
 
 def test_shap_values_series_input():
