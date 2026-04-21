@@ -7,6 +7,52 @@ import shap
 from shap.utils._exceptions import InvalidMaskerError
 
 
+class MockClusteringMasker(shap.maskers.Masker):
+    def __init__(self):
+        self.clustering = np.array([[0, 1, 0.5, 2]])
+
+    def __call__(self, mask, x):
+        return np.array([x])
+
+    def shape(self, x):
+        return (1, 1)
+
+
+class NoClusteringMasker(shap.maskers.Masker):
+    def __call__(self, mask, x):
+        return np.array([x])
+
+    def shape(self, x):
+        return (1, 1)
+
+
+class TextMasker(shap.maskers.Masker):
+    def __init__(self):
+        self.text_data = True
+
+    def __call__(self, mask, x):
+        pass
+
+
+class ImageMasker(shap.maskers.Masker):
+    def __init__(self):
+        self.image_data = True
+
+    def __call__(self, mask, x):
+        pass
+
+
+class TransformMasker(shap.maskers.Masker):
+    def __call__(self, mask, x):
+        pass
+
+    def shape(self, x):
+        return (1, 1)
+
+    def data_transform(self, x):
+        return [str(x) + "_transformed"]
+
+
 def test_composite_masker_init():
     """Test Composite masker initialization."""
     masker1 = shap.maskers.Fixed()
@@ -275,17 +321,6 @@ def test_composite_masker_incompatible_rows_call():
 def test_composite_masker_joint_clustering_exception():
     """Test that joining two non-trivial clusterings raises NotImplementedError."""
 
-    class MockClusteringMasker(shap.maskers.Masker):
-        def __init__(self):
-
-            self.clustering = np.array([[0, 1, 0.5, 2]])
-
-        def __call__(self, mask, x):
-            return np.array([x])
-
-        def shape(self, x):
-            return (1, 1)
-
     masker1 = MockClusteringMasker()
     masker2 = MockClusteringMasker()
 
@@ -298,13 +333,6 @@ def test_composite_masker_joint_clustering_exception():
 def test_composite_masker_missing_clustering():
     """Test that clustering attribute is absent if any submasker lacks it."""
 
-    class NoClusteringMasker(shap.maskers.Masker):
-        def __call__(self, mask, x):
-            return np.array([x])
-
-        def shape(self, x):
-            return (1, 1)
-
     masker1 = shap.maskers.Fixed()
     masker2 = NoClusteringMasker()
 
@@ -314,20 +342,6 @@ def test_composite_masker_missing_clustering():
 
 def test_composite_masker_text_and_image_flags_true():
     """Test Composite masker sets text_data or image_data to True if any submasker has them."""
-
-    class TextMasker(shap.maskers.Masker):
-        def __init__(self):
-            self.text_data = True
-
-        def __call__(self, mask, x):
-            pass
-
-    class ImageMasker(shap.maskers.Masker):
-        def __init__(self):
-            self.image_data = True
-
-        def __call__(self, mask, x):
-            pass
 
     masker1 = shap.maskers.Fixed()
     text_masker = TextMasker()
@@ -344,16 +358,6 @@ def test_composite_masker_text_and_image_flags_true():
 
 def test_composite_masker_actual_data_transform():
     """Test Composite masker using submaskers that have a data_transform method."""
-
-    class TransformMasker(shap.maskers.Masker):
-        def __call__(self, mask, x):
-            pass
-
-        def shape(self, x):
-            return (1, 1)
-
-        def data_transform(self, x):
-            return [str(x) + "_transformed"]
 
     masker1 = TransformMasker()
     masker2 = shap.maskers.Fixed()
