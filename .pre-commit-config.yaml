@@ -45,5 +45,4 @@ repos:
         notebooks/tabular_examples/tree_based_models/Perfomance.Comparison.ipynb|
         notebooks/text_examples/sentiment_analysis/Emotion.classification.multiclass.example.ipynb|
         notebooks/text_examples/sentiment_analysis/Keras.LSTM.for.IMDB.Sentiment.Classification.ipynb|
-        notebooks/text_examples/sentiment_analysis/Positive.vs..Negative.Sentiment.Classification.ipynb
       )$
