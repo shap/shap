@@ -1,4 +1,5 @@
 import time
+
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
@@ -55,7 +56,8 @@ class SequentialPerturbation:
     Applies sequential perturbations to evaluate model explanations.
 
     Handles feature masking and computes performance curves based on feature importance.
-    """   
+    """
+
     def __init__(self, model, masker, sort_order, perturbation, linearize_link=False):
         # self.f = lambda masked, x, index: model.predict(masked)
         self.model = model if callable(model) else model.predict
