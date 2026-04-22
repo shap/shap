@@ -47,7 +47,7 @@ Models
 ======
 .. Examples for members of :ref:`shap.models <models_api>`.
 
-Overview of model-related classes available in SHAP.
+Work in progress.
 
 .. TODO: Uncomment this toctree once we have at least one example to share
     .. toctree::
