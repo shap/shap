@@ -1,5 +1,7 @@
 """This file contains tests for the Composite masker using only public API."""
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -11,7 +13,7 @@ class MockClusteringMasker(shap.maskers.Masker):
     def __init__(self):
         self.clustering = np.array([[0, 1, 0.5, 2]])
 
-    def __call__(self, mask, x):
+    def __call__(self, mask: Any, x: Any) -> Any:
         return np.array([x])
 
     def shape(self, x):
@@ -19,7 +21,7 @@ class MockClusteringMasker(shap.maskers.Masker):
 
 
 class NoClusteringMasker(shap.maskers.Masker):
-    def __call__(self, mask, x):
+    def __call__(self, mask: Any, x: Any) -> Any:
         return np.array([x])
 
     def shape(self, x):
@@ -30,7 +32,7 @@ class TextMasker(shap.maskers.Masker):
     def __init__(self):
         self.text_data = True
 
-    def __call__(self, mask, x):
+    def __call__(self, mask: Any, x: Any) -> Any:
         pass
 
 
@@ -38,12 +40,12 @@ class ImageMasker(shap.maskers.Masker):
     def __init__(self):
         self.image_data = True
 
-    def __call__(self, mask, x):
+    def __call__(self, mask: Any, x: Any) -> Any:
         pass
 
 
 class TransformMasker(shap.maskers.Masker):
-    def __call__(self, mask, x):
+    def __call__(self, mask: Any, x: Any) -> Any:
         pass
 
     def shape(self, x):
@@ -327,7 +329,7 @@ def test_composite_masker_joint_clustering_exception():
     composite = shap.maskers.Composite(masker1, masker2)
 
     with pytest.raises(NotImplementedError, match="Joining two non-trivial clusterings is not yet implemented"):
-        composite.clustering("arg1", "arg2")
+        _ = composite.clustering()  # type: ignore[operator, misc]
 
 
 def test_composite_masker_missing_clustering():
