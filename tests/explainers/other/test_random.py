@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from sklearn.linear_model import LinearRegression
+
 from shap.explainers.other._random import Random
 from shap.maskers import Independent
 
@@ -56,9 +57,7 @@ def test_random_explainer_with_call_args(model_and_data):
 def test_random_explainer_with_clustering(model_and_data):
     model, X = model_and_data
     masker = Independent(X, max_samples=50)
-    clustering = np.array([[0, 1, 0.5, 2],
-                           [2, 3, 0.8, 2],
-                           [4, 5, 1.2, 2]])
+    clustering = np.array([[0, 1, 0.5, 2], [2, 3, 0.8, 2], [4, 5, 1.2, 2]])
     masker.clustering = clustering
     explainer = Random(model.predict, masker)
     shap_values = explainer(X[:3])
@@ -68,9 +67,7 @@ def test_random_explainer_with_clustering(model_and_data):
 def test_random_explainer_clustering_callable(model_and_data):
     model, X = model_and_data
     masker = Independent(X, max_samples=50)
-    masker.clustering = lambda *args: np.array([[0, 1, 0.5, 2],
-                                                [2, 3, 0.8, 2],
-                                                [4, 5, 1.2, 2]])
+    masker.clustering = lambda *args: np.array([[0, 1, 0.5, 2], [2, 3, 0.8, 2], [4, 5, 1.2, 2]])
     explainer = Random(model.predict, masker)
     shap_values = explainer(X[:3])
     assert shap_values.values.shape == (3, 4)
