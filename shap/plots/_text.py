@@ -1,3 +1,4 @@
+import html
 import json
 import random
 import string
@@ -225,7 +226,7 @@ def text(
                 wrapper_display = "inline-block"
 
             value_label = str(output_values[i].round(3))
-
+            escaped_name = html.escape(str(name)).replace(" ##", "")
             out += f"""<div style='display: {wrapper_display}; text-align: center;'
     ><div style='display: {label_display}; color: #999; padding-top: 0px; font-size: 12px;'>{value_label}</div
         ><div style="display: inline; border-bottom: {"3px solid #000000" if i == 0 else "3px solid transparent"}; background: {rgba_css}; border-radius: 3px; padding: 0px; cursor: pointer;" id="_tp_{uuid}_output_{i}_name"
@@ -238,7 +239,7 @@ def text(
         this.parentNode.style.display = 'inline';
     }}
     _output_onclick_{uuid}({i});"
-    onmouseover="_output_onmouseover_{uuid}({i}, this);">{name.replace("<", "&lt;").replace(">", "&gt;").replace(" ##", "")}</div></div>"""
+    onmouseover="_output_onmouseover_{uuid}({i}, this);">{escaped_name}</div></div>"""
         out += "<br><br>"
         for i, name in enumerate(shap_values.output_names):
             out += f"<div id='_tp_{uuid}_output_{i}' style='display: {'block' if i == 0 else 'none'}';>"
