@@ -103,7 +103,8 @@ def test_serialization_custom_model_save():
 
 
 def test_max_evals_too_low():
-    data = np.random.rand(10, 3)
+    rs = np.random.RandomState(42)
+    data = rs.rand(10, 3)
 
     explainer = shap.explainers.PermutationExplainer(simple_sum_model, data)
 
@@ -112,7 +113,8 @@ def test_max_evals_too_low():
 
 
 def test_seed_reproducibility():
-    data = np.random.rand(10, 4)
+    rs = np.random.RandomState(42)
+    data = rs.rand(10, 4)
 
     explainer1 = shap.explainers.PermutationExplainer(simple_sum_model, data, seed=42)
     explainer2 = shap.explainers.PermutationExplainer(simple_sum_model, data, seed=42)
@@ -124,7 +126,8 @@ def test_seed_reproducibility():
 
 
 def test_main_effects():
-    data = np.random.rand(5, 3)
+    rs = np.random.RandomState(42)
+    data = rs.rand(5, 3)
 
     explainer = shap.explainers.PermutationExplainer(simple_sum_model, data)
     explanation = explainer(data, main_effects=True)
@@ -135,7 +138,8 @@ def test_main_effects():
 
 
 def test_error_bounds():
-    data = np.random.rand(5, 3)
+    rs = np.random.RandomState(42)
+    data = rs.rand(5, 3)
 
     explainer = shap.explainers.PermutationExplainer(simple_sum_model, data)
     explanation = explainer(data, error_bounds=True)
@@ -144,7 +148,8 @@ def test_error_bounds():
 
 
 def test_constant_features():
-    data = np.ones((10, 4))  # no variation
+    rs = np.random.RandomState(42)  # Adding rs here for consistency
+    data = np.ones((10, 4)) * rs.uniform(1.0, 1.0)
 
     explainer = shap.explainers.PermutationExplainer(simple_sum_model, data)
     explanation = explainer(data)
