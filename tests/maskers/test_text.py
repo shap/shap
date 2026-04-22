@@ -20,7 +20,7 @@ def test_method_token_segments_pretrained_tokenizer():
 
     test_text = "I ate a Cannoli"
     output_token_segments, _ = masker.token_segments(test_text)
-    correct_token_segments = ["", " I", " ate", " a", " Can", "no", "li", ""]
+    correct_token_segments = ["", "I ", "ate ", "a ", "Can", "no", "li", ""]
 
     assert output_token_segments == correct_token_segments
 
@@ -50,7 +50,7 @@ def test_masker_call_pretrained_tokenizer():
     test_input_mask = np.array([True, False, True, True, False, True, True, True])
 
     output_masked_text = masker(test_input_mask, test_text)
-    correct_masked_text = "[MASK] ate a [MASK]noli"
+    correct_masked_text = "[MASK]ate a [MASK]noli"
 
     assert output_masked_text[0] == correct_masked_text
 
@@ -87,6 +87,27 @@ def test_sentencepiece_tokenizer_output():
     expected_sentencepiece_tokenizer_output_processed = "This is a test statement for sentencepiece tokenizer"
     # since we expect output wrapped in a tuple hence the indexing [0][0] to extract the string
     assert sentencepiece_tokenizer_output_processed[0][0] == expected_sentencepiece_tokenizer_output_processed
+
+
+def test_token_segments_falls_back_when_offset_mapping_is_missing():
+    class MissingOffsetTokenizer:
+        def __call__(self, text, return_offsets_mapping=False):
+            if text == "":
+                return {"input_ids": []}
+            if text == "hello world":
+                return {"input_ids": [1, 2]}
+            return {"input_ids": [0]}
+
+        def convert_ids_to_tokens(self, token_ids):
+            token_map = {0: "[MASK]", 1: "hello", 2: "world"}
+            return [token_map[token_id] for token_id in token_ids]
+
+    masker = shap.maskers.Text(MissingOffsetTokenizer(), mask_token=0)
+
+    output_token_segments, token_ids = masker.token_segments("hello world")
+
+    assert output_token_segments == ["hello", " world"]
+    assert token_ids == [1, 2]
 
 
 def test_keep_prefix_suffix_tokenizer_parsing():
