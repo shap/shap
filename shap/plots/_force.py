@@ -431,7 +431,7 @@ def visualize(
     elif isinstance(e, Explanation):
         if matplotlib:
             raise ValueError("Matplotlib plot is only supported for additive explanations")
-        return SimpleListVisualizer(e)  # type: ignore[arg-type]
+        return SimpleListVisualizer(e)
     elif isinstance(e, Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
         if matplotlib:
             raise ValueError("Matplotlib plot is only supported for additive explanations")
@@ -451,22 +451,23 @@ class BaseVisualizer:
 
 
 class SimpleListVisualizer(BaseVisualizer):
-    def __init__(self, e: AdditiveExplanation) -> None:
+    def __init__(self, e: Explanation) -> None:
         if not isinstance(e, Explanation):
             emsg = "SimpleListVisualizer can only visualize Explanation objects!"
             raise TypeError(emsg)
+        ae = cast("AdditiveExplanation", e)
 
         # build the json data
         features = {}
-        for i in (j for j in range(len(e.data.group_names)) if e.effects[j] != 0):
-            features[i] = {"effect": e.effects[i], "value": e.instance.group_display_values[i]}
+        for i in (j for j in range(len(ae.data.group_names)) if ae.effects[j] != 0):
+            features[i] = {"effect": ae.effects[i], "value": ae.instance.group_display_values[i]}
         self.data = {
-            "outNames": e.model.out_names,
-            "base_value": e.base_value,
-            "link": str(e.link),
-            "featureNames": e.data.group_names,
+            "outNames": ae.model.out_names,
+            "base_value": ae.base_value,
+            "link": str(ae.link),
+            "featureNames": ae.data.group_names,
             "features": features,
-            "plot_cmap": e.plot_cmap.plot_cmap,  # type: ignore[attr-defined]
+            "plot_cmap": ae.plot_cmap.plot_cmap,  # type: ignore[attr-defined]
         }
 
     def html(self) -> str:
@@ -581,7 +582,7 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
             "featureNames": arr[0].data.group_names,
             "explanations": [],
             "plot_cmap": plot_cmap,
-            "ordering_keys": list(ordering_keys) if ordering_keys is not None else None,
+            "ordering_keys": list(ordering_keys) if hasattr(ordering_keys, "__iter__") else None,  # type: ignore[arg-type]
             "ordering_keys_time_format": ordering_keys_time_format,
         }
         for ind, e in enumerate(arr):
