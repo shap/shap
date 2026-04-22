@@ -28,7 +28,7 @@ def test_generator_input():
 def test_progress_bar_trigger(monkeypatch):
     import time
 
-    # force time to pass so progress bar logic runs
+    # force time to trigger progress bar logic
     monkeypatch.setattr(time, "time", lambda: 999999)
 
     data = [1, 2, 3]
