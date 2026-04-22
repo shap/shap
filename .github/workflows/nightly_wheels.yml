@@ -1,0 +1,147 @@
+name: Nightly wheels
+
+# Scientific Python SPEC 4 — https://scientific-python.org/specs/spec-0004/
+#
+# Builds wheels + sdist on a schedule and uploads them to the shared
+# scientific-python-nightly-wheels anaconda channel, so downstream projects
+# can pin against an unreleased shap via
+# https://anaconda.org/scientific-python-nightly-wheels/shap
+#
+# Maintainer setup required before the upload will succeed:
+#   1. A maintainer with admin access to https://anaconda.org/scientific-python-nightly-wheels/
+#      creates an anaconda upload token for the shap package.
+#   2. That token is saved as a repository secret named
+#      ``NIGHTLY_UPLOAD_TOKEN`` on github.com/shap/shap.
+#
+# Until the secret is configured the `upload_nightly` job will be skipped,
+# but the wheel build jobs will still run on schedule and surface any build
+# breakage against master.
+#
+# Closes #4079.
+
+on:
+  schedule:
+    # Run weekly on Monday 03:17 UTC. A full cibuildwheel matrix is
+    # expensive; weekly keeps CI cost modest while still giving downstream
+    # users a reasonably fresh shap.
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+# Prevent duplicate runs if a second schedule tick fires before the first finishes.
+concurrency:
+  group: nightly-wheels-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_wheels:
+    name: Build ${{ matrix.os }} nightly wheel
+    # Don't run on forks — no point burning CI minutes for contributors.
+    if: github.repository == 'shap/shap'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-14, macos-15-intel, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Install libomp (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install libomp
+          _libomp_path=$(brew --prefix libomp 2>/dev/null)/lib
+          echo "DYLD_LIBRARY_PATH=$_libomp_path:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          unset _libomp_path
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.2.1
+        env:
+          CIBW_ARCHS_LINUX: ${{ contains(matrix.os, '-arm') && 'aarch64' || 'x86_64' }}
+          CIBW_ARCHS_MACOS: ${{ matrix.os == 'macos-14' && 'arm64' || 'x86_64' }}
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          CIBW_MUSLLINUX_AARCH64_IMAGE: musllinux_1_2
+          # Skip tests for the nightly run: test runs are gated in
+          # build_wheels.yml for release builds. The scheduled matrix here
+          # exists to produce artifacts, not to re-run the test suite.
+          CIBW_TEST_COMMAND: ""
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nightly_bdist_${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  build_sdist:
+    name: Build nightly source distribution
+    if: github.repository == 'shap/shap'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build sdist
+        run: uv build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nightly_sdist
+          path: dist/*.tar.gz
+
+  upload_nightly:
+    name: Upload to scientific-python-nightly-wheels
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    # Only run on the upstream repo. The upload step itself is guarded
+    # against a missing token, so the job will succeed as a no-op until
+    # NIGHTLY_UPLOAD_TOKEN is configured.
+    if: github.repository == 'shap/shap'
+    env:
+      # Lifting the secret to the job-level env makes it available to
+      # step-level `if:` conditions (the `secrets` context is not).
+      NIGHTLY_UPLOAD_TOKEN: ${{ secrets.NIGHTLY_UPLOAD_TOKEN }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: nightly_bdist_*
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: nightly_sdist
+          path: dist
+
+      - name: List collected artifacts
+        run: ls -la dist/
+
+      - name: Warn if upload token not configured
+        if: env.NIGHTLY_UPLOAD_TOKEN == ''
+        run: |
+          echo "::warning::NIGHTLY_UPLOAD_TOKEN secret is not set; skipping upload."
+          echo "::warning::See .github/workflows/nightly_wheels.yml header for setup."
+
+      - name: Upload nightly wheels
+        if: env.NIGHTLY_UPLOAD_TOKEN != ''
+        uses: scientific-python/upload-nightly-action@b36e8c0c10dbcfd2e05bf95f17ef8c14fd708dbf  # 0.6.2
+        with:
+          artifacts_path: dist
+          anaconda_nightly_upload_token: ${{ env.NIGHTLY_UPLOAD_TOKEN }}
