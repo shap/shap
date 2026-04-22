@@ -139,7 +139,7 @@ def force(
         emsg = "The shap_values arg looks multi output, try `shap_values[i]` instead."
         raise TypeError(emsg)
 
-    link_obj: Link = cast(Link, convert_to_link(link))
+    link_obj: Link = cast("Link", convert_to_link(link))
 
     if not isinstance(shap_values, np.ndarray):
         return visualize(shap_values)  # type: ignore[arg-type]
