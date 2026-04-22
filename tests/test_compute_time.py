@@ -3,7 +3,7 @@ from shap.benchmark._compute import ComputeTime
 
 class DummyExplanation:
     """Simple mock object to simulate an Explanation."""
-    
+
     def __init__(self, compute_time, shape):
         self.compute_time = compute_time
         self.shape = shape
