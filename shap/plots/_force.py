@@ -1,5 +1,7 @@
 """Visualize the SHAP values with additive force style layouts."""
 
+from __future__ import annotations
+
 import base64
 import json
 import os
@@ -8,10 +10,14 @@ import re
 import string
 import warnings
 from collections.abc import Sequence
+from typing import IO, TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
 import scipy.sparse
+
+if TYPE_CHECKING:
+    from matplotlib.figure import Figure
 
 try:
     from IPython.display import HTML, display
@@ -28,21 +34,21 @@ from ._labels import labels
 
 
 def force(
-    base_value,
-    shap_values=None,
-    features=None,
-    feature_names=None,
-    out_names=None,
-    link="identity",
-    plot_cmap="RdBu",
-    matplotlib=False,
-    show=True,
-    figsize=(20, 3),
-    ordering_keys=None,
-    ordering_keys_time_format=None,
-    text_rotation=0,
-    contribution_threshold=0.05,
-):
+    base_value: Any,
+    shap_values: np.ndarray | list[Any] | None = None,
+    features: np.ndarray | pd.DataFrame | pd.Series | list[Any] | None = None,
+    feature_names: list[str] | None = None,
+    out_names: str | list[str] | None = None,
+    link: str | Link = "identity",
+    plot_cmap: str | list[str] = "RdBu",
+    matplotlib: bool = False,
+    show: bool = True,
+    figsize: tuple[float, float] = (20, 3),
+    ordering_keys: Sequence[Any] | None = None,
+    ordering_keys_time_format: str | None = None,
+    text_rotation: float = 0,
+    contribution_threshold: float = 0.05,
+) -> BaseVisualizer | Figure | None:
     """Visualize the given SHAP values with an additive force layout.
 
     Parameters
@@ -106,9 +112,9 @@ def force(
             else:
                 features = shap_exp.display_data
         if scipy.sparse.issparse(features):
-            features = features.toarray().flatten()
+            features = features.toarray().flatten()  # type: ignore[union-attr]
         if feature_names is None:
-            feature_names = shap_exp.feature_names
+            feature_names = shap_exp.feature_names  # type: ignore[assignment]
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
 
@@ -133,10 +139,10 @@ def force(
         emsg = "The shap_values arg looks multi output, try `shap_values[i]` instead."
         raise TypeError(emsg)
 
-    link = convert_to_link(link)
+    link_obj: Link = cast(Link, convert_to_link(link))
 
     if not isinstance(shap_values, np.ndarray):
-        return visualize(shap_values)
+        return visualize(shap_values)  # type: ignore[arg-type]
 
     # convert from a DataFrame or other types
     if isinstance(features, pd.DataFrame):
@@ -149,10 +155,10 @@ def force(
         features = features.values
     elif isinstance(features, list):
         if feature_names is None:
-            feature_names = features
+            feature_names = features  # type: ignore[assignment]
         features = None
     elif features is not None and len(features.shape) == 1 and feature_names is None:
-        feature_names = features
+        feature_names = features  # type: ignore[assignment]
         features = None
 
     if len(shap_values.shape) == 1:
@@ -188,7 +194,7 @@ def force(
             shap_values[0, :],
             None,
             instance,
-            link,
+            link_obj,
             Model(None, out_names),
             DenseData(np.zeros((1, len(feature_names))), list(feature_names)),
         )
@@ -217,7 +223,7 @@ def force(
             if features is None:
                 display_features = ["" for i in range(len(feature_names))]
             else:
-                display_features = features[k, :]
+                display_features = features[k, :]  # type: ignore[call-overload, assignment]
 
             instance = Instance(np.ones((1, len(feature_names))), display_features)
             e = AdditiveExplanation(
@@ -226,7 +232,7 @@ def force(
                 shap_values[k, :],
                 None,
                 instance,
-                link,
+                link_obj,
                 Model(None, out_names),
                 DenseData(np.ones((1, len(feature_names))), list(feature_names)),
             )
@@ -242,14 +248,24 @@ def force(
 
 
 class Explanation:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
 
 class AdditiveExplanation(Explanation):
     """Data structure for AdditiveForceVisualizer / AdditiveForceArrayVisualizer."""
 
-    def __init__(self, base_value, out_value, effects, effects_var, instance, link, model, data):
+    def __init__(
+        self,
+        base_value: float,
+        out_value: float,
+        effects: np.ndarray,
+        effects_var: np.ndarray | None,
+        instance: Instance,
+        link: Link,
+        model: Model,
+        data: DenseData,
+    ) -> None:
         """Parameters
         ----------
         base_value : float
@@ -285,14 +301,14 @@ err_msg = """
 </div>"""
 
 
-def getjs():
+def getjs() -> str:
     bundle_path = os.path.join(os.path.split(__file__)[0], "resources", "bundle.js")
     with open(bundle_path, encoding="utf-8") as f:
         bundle_data = f.read()
     return f"<script charset='utf-8'>{bundle_data}</script>"
 
 
-def initjs():
+def initjs() -> None:
     """Initialize the necessary javascript libraries for interactive force plots.
 
     Run this only in a notebook environment with IPython installed.
@@ -301,12 +317,12 @@ def initjs():
 
     logo_path = os.path.join(os.path.split(__file__)[0], "resources", "logoSmallGray.png")
     with open(logo_path, "rb") as f:
-        logo_data = f.read()
-    logo_data = base64.b64encode(logo_data).decode("utf-8")
+        logo_bytes = f.read()
+    logo_data = base64.b64encode(logo_bytes).decode("utf-8")
     display(HTML(f"<div align='center'><img src='data:image/png;base64,{logo_data}' /></div>" + getjs()))
 
 
-def save_html(out_file, plot, full_html=True):
+def save_html(out_file: str | IO[str], plot: BaseVisualizer, full_html: bool = True) -> None:
     """Save html plots to an output file.
 
     Parameters
@@ -349,11 +365,11 @@ def save_html(out_file, plot, full_html=True):
         out_file.close()
 
 
-def id_generator(size=20, chars=string.ascii_uppercase + string.digits):
+def id_generator(size: int = 20, chars: str = string.ascii_uppercase + string.digits) -> str:
     return "i" + "".join(random.choice(chars) for _ in range(size))
 
 
-def ensure_not_numpy(x):
+def ensure_not_numpy(x: Any) -> Any:
     if isinstance(x, bytes):
         return x.decode()
     elif isinstance(x, np.str_):
@@ -364,7 +380,7 @@ def ensure_not_numpy(x):
         return x
 
 
-def verify_valid_cmap(cmap):
+def verify_valid_cmap(cmap: str | list[str]) -> str | list[str]:
     """Checks that cmap is either a str or list of hex colors"""
     if not (isinstance(cmap, (str, list)) or str(type(cmap)).endswith("unicode'>")):
         emsg = f"Plot color map must be string or list! Not {type(cmap)}."
@@ -382,16 +398,16 @@ def verify_valid_cmap(cmap):
 
 
 def visualize(
-    e,
-    plot_cmap="RdBu",
-    matplotlib=False,
-    figsize=(20, 3),
-    show=True,
-    ordering_keys=None,
-    ordering_keys_time_format=None,
-    text_rotation=0,
-    min_perc=0.05,
-):
+    e: AdditiveExplanation | Explanation | Sequence[AdditiveExplanation],
+    plot_cmap: str | list[str] = "RdBu",
+    matplotlib: bool = False,
+    figsize: tuple[float, float] = (20, 3),
+    show: bool = True,
+    ordering_keys: Sequence[Any] | None = None,
+    ordering_keys_time_format: str | None = None,
+    text_rotation: float = 0,
+    min_perc: float = 0.05,
+) -> BaseVisualizer | Figure | None:
     """Main interface for switching between matplotlib / javascript force plots.
 
     Parameters
@@ -415,7 +431,7 @@ def visualize(
     elif isinstance(e, Explanation):
         if matplotlib:
             raise ValueError("Matplotlib plot is only supported for additive explanations")
-        return SimpleListVisualizer(e)
+        return SimpleListVisualizer(e)  # type: ignore[arg-type]
     elif isinstance(e, Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
         if matplotlib:
             raise ValueError("Matplotlib plot is only supported for additive explanations")
@@ -430,18 +446,19 @@ def visualize(
 
 
 class BaseVisualizer:
-    pass
+    def html(self) -> str:
+        raise NotImplementedError
 
 
 class SimpleListVisualizer(BaseVisualizer):
-    def __init__(self, e):
+    def __init__(self, e: AdditiveExplanation) -> None:
         if not isinstance(e, Explanation):
             emsg = "SimpleListVisualizer can only visualize Explanation objects!"
             raise TypeError(emsg)
 
         # build the json data
         features = {}
-        for i in filter(lambda j: e.effects[j] != 0, range(len(e.data.group_names))):
+        for i in (j for j in range(len(e.data.group_names)) if e.effects[j] != 0):
             features[i] = {"effect": e.effects[i], "value": e.instance.group_display_values[i]}
         self.data = {
             "outNames": e.model.out_names,
@@ -449,10 +466,10 @@ class SimpleListVisualizer(BaseVisualizer):
             "link": str(e.link),
             "featureNames": e.data.group_names,
             "features": features,
-            "plot_cmap": e.plot_cmap.plot_cmap,
+            "plot_cmap": e.plot_cmap.plot_cmap,  # type: ignore[attr-defined]
         }
 
-    def html(self):
+    def html(self) -> str:
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
         generated_id = id_generator()
         return f"""
@@ -464,14 +481,14 @@ class SimpleListVisualizer(BaseVisualizer):
   );
 </script>"""
 
-    def _repr_html_(self):
+    def _repr_html_(self) -> str:
         return self.html()
 
 
 class AdditiveForceVisualizer(BaseVisualizer):
     """Visualizer for a single Additive Force plot."""
 
-    def __init__(self, e, plot_cmap="RdBu"):
+    def __init__(self, e: AdditiveExplanation, plot_cmap: str | list[str] = "RdBu") -> None:
         """Parameters
         ----------
         e : AdditiveExplanation
@@ -487,7 +504,7 @@ class AdditiveForceVisualizer(BaseVisualizer):
 
         # build the json data
         features = {}
-        for i in filter(lambda j: e.effects[j] != 0, range(len(e.data.group_names))):
+        for i in (j for j in range(len(e.data.group_names)) if e.effects[j] != 0):
             features[i] = {
                 "effect": ensure_not_numpy(e.effects[i]),
                 "value": ensure_not_numpy(e.instance.group_display_values[i]),
@@ -502,7 +519,7 @@ class AdditiveForceVisualizer(BaseVisualizer):
             "plot_cmap": plot_cmap,
         }
 
-    def html(self, label_margin=20):
+    def html(self, label_margin: int = 20) -> str:
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
         self.data["labelMargin"] = label_margin
         generated_id = id_generator()
@@ -515,19 +532,31 @@ class AdditiveForceVisualizer(BaseVisualizer):
   );
 </script>"""
 
-    def matplotlib(self, figsize, show, text_rotation, min_perc=0.05):
+    def matplotlib(
+        self,
+        figsize: tuple[float, float],
+        show: bool,
+        text_rotation: float,
+        min_perc: float = 0.05,
+    ) -> Figure | None:
         fig = draw_additive_plot(self.data, figsize=figsize, show=show, text_rotation=text_rotation, min_perc=min_perc)
 
         return fig
 
-    def _repr_html_(self):
+    def _repr_html_(self) -> str:
         return self.html()
 
 
 class AdditiveForceArrayVisualizer(BaseVisualizer):
     """Visualizer for a sequence of AdditiveExplanation, as a stacked force plot."""
 
-    def __init__(self, arr, plot_cmap="RdBu", ordering_keys=None, ordering_keys_time_format=None):
+    def __init__(
+        self,
+        arr: Sequence[AdditiveExplanation],
+        plot_cmap: str | list[str] = "RdBu",
+        ordering_keys: Sequence[Any] | None = None,
+        ordering_keys_time_format: str | None = None,
+    ) -> None:
         if not isinstance(arr[0], AdditiveExplanation):
             emsg = "AdditiveForceArrayVisualizer can only visualize arrays of AdditiveExplanation objects!"
             raise TypeError(emsg)
@@ -552,7 +581,7 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
             "featureNames": arr[0].data.group_names,
             "explanations": [],
             "plot_cmap": plot_cmap,
-            "ordering_keys": list(ordering_keys) if hasattr(ordering_keys, "__iter__") else None,
+            "ordering_keys": list(ordering_keys) if ordering_keys is not None else None,
             "ordering_keys_time_format": ordering_keys_time_format,
         }
         for ind, e in enumerate(arr):
@@ -563,13 +592,13 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
                     "features": {},
                 }
             )
-            for i in filter(lambda j: e.effects[j] != 0 or e.instance.x[0, j] != 0, range(len(e.data.group_names))):
+            for i in (j for j in range(len(e.data.group_names)) if e.effects[j] != 0 or e.instance.x[0, j] != 0):
                 self.data["explanations"][-1]["features"][i] = {
                     "effect": ensure_not_numpy(e.effects[i]),
                     "value": ensure_not_numpy(e.instance.group_display_values[i]),
                 }
 
-    def html(self):
+    def html(self) -> str:
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
         _id = id_generator()
         return f"""
@@ -581,5 +610,5 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
   );
 </script>"""
 
-    def _repr_html_(self):
+    def _repr_html_(self) -> str:
         return self.html()
