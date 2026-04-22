@@ -14,9 +14,9 @@ import shap
 @pytest.mark.mpl_image_compare
 def test_summary():
     """Just make sure the summary_plot function doesn't crash."""
-    np.random.seed(0)
+    rng = np.random.default_rng(0)
     fig = plt.figure()
-    shap.summary_plot(np.random.randn(20, 5), show=False)
+    shap.summary_plot(rng.standard_normal((20, 5)), show=False)
     fig.set_layout_engine("tight")
     return fig
 
@@ -24,9 +24,9 @@ def test_summary():
 @pytest.mark.mpl_image_compare
 def test_summary_with_data():
     """Just make sure the summary_plot function doesn't crash with data."""
-    np.random.seed(0)
+    rng = np.random.default_rng(0)
     fig = plt.figure()
-    shap.summary_plot(np.random.randn(20, 5), np.random.randn(20, 5), show=False)
+    shap.summary_plot(rng.standard_normal((20, 5)), rng.standard_normal((20, 5)), show=False)
     fig.set_layout_engine("tight")
     return fig
 
@@ -34,9 +34,9 @@ def test_summary_with_data():
 @pytest.mark.mpl_image_compare
 def test_summary_multi_class():
     """Check a multiclass run."""
-    np.random.seed(0)
+    rng = np.random.default_rng(0)
     fig = plt.figure()
-    shap.summary_plot([np.random.randn(20, 5) for i in range(3)], np.random.randn(20, 5), show=False)
+    shap.summary_plot([rng.standard_normal((20, 5)) for i in range(3)], rng.standard_normal((20, 5)), show=False)
     fig.set_layout_engine("tight")
     return fig
 
@@ -46,10 +46,10 @@ def test_summary_multi_class_legend_decimals():
     """Check the functionality of printing the legend in the plot of a multiclass run when
     all the SHAP values are smaller than 1.
     """
-    np.random.seed(0)
+    rng = np.random.default_rng(0)
     fig = plt.figure()
     shap.summary_plot(
-        [np.random.randn(20, 5) for i in range(3)], np.random.randn(20, 5), show=False, show_values_in_legend=True
+        [rng.standard_normal((20, 5)) for i in range(3)], rng.standard_normal((20, 5)), show=False, show_values_in_legend=True
     )
     fig.set_layout_engine("tight")
     return fig
@@ -60,11 +60,11 @@ def test_summary_multi_class_legend():
     """Check the functionality of printing the legend in the plot of a multiclass run when
     SHAP values are bigger than 1.
     """
-    np.random.seed(0)
+    rng = np.random.default_rng(0)
     fig = plt.figure()
     shap.summary_plot(
-        [(2 + np.random.randn(20, 5)) for i in range(3)],
-        2 + np.random.randn(20, 5),
+        [(2 + rng.standard_normal((20, 5))) for i in range(3)],
+        2 + rng.standard_normal((20, 5)),
         show=False,
         show_values_in_legend=True,
     )
@@ -75,9 +75,9 @@ def test_summary_multi_class_legend():
 @pytest.mark.mpl_image_compare
 def test_summary_bar_with_data():
     """Check a bar chart."""
-    np.random.seed(0)
+    rng = np.random.default_rng(0)
     fig = plt.figure()
-    shap.summary_plot(np.random.randn(20, 5), np.random.randn(20, 5), plot_type="bar", show=False)
+    shap.summary_plot(rng.standard_normal((20, 5)), rng.standard_normal((20, 5)), plot_type="bar", show=False)
     fig.set_layout_engine("tight")
     return fig
 
@@ -85,9 +85,9 @@ def test_summary_bar_with_data():
 @pytest.mark.mpl_image_compare
 def test_summary_dot_with_data():
     """Check a dot chart."""
-    np.random.seed(0)
+    rng = np.random.default_rng(0)
     fig = plt.figure()
-    shap.summary_plot(np.random.randn(20, 5), np.random.randn(20, 5), plot_type="dot", show=False)
+    shap.summary_plot(rng.standard_normal((20, 5)), rng.standard_normal((20, 5)), plot_type="dot", show=False)
     fig.set_layout_engine("tight")
     return fig
 
@@ -98,10 +98,10 @@ def test_summary_compact_dot_with_data():
     """Check a bar chart."""
     n_samples = 100
     n_features = 5
-    np.random.seed(0)  # for reproducibility
-    X = np.random.randn(n_samples, n_features)
+    rng = np.random.default_rng(0)  # for reproducibility
+    X = rng.randn(n_samples, n_features)
     feature_names = [f"Feature {i + 1}" for i in range(n_features)]
-    shap_values = np.random.randn(n_samples, n_features, n_features)
+    shap_values = rng.randn(n_samples, n_features, n_features)
     fig = plt.figure()
 
     shap.summary_plot(shap_values, X, feature_names=feature_names, plot_type="compact_dot", show=False)
@@ -112,9 +112,9 @@ def test_summary_compact_dot_with_data():
 @pytest.mark.mpl_image_compare
 def test_summary_violin_with_data():
     """Check a violin chart."""
-    np.random.seed(0)
+    rng = np.random.default_rng(0)
     fig = plt.figure()
-    shap.summary_plot(np.random.randn(20, 5), np.random.randn(20, 5), plot_type="violin", show=False)
+    shap.summary_plot(rng.standard_normal((20, 5)), rng.standard_normal((20, 5)), plot_type="violin", show=False)
     fig.set_layout_engine("tight")
     return fig
 
@@ -122,10 +122,10 @@ def test_summary_violin_with_data():
 @pytest.mark.mpl_image_compare
 def test_summary_layered_violin_with_data():
     """Check a layered violin chart."""
-    rs = np.random.RandomState(0)
+    rng = np.random.default_rng(0)
     fig = plt.figure()
-    shap_values = rs.randn(200, 5)
-    feats = rs.randn(200, 5)
+    shap_values = rng.standard_normal((200, 5))
+    feats = rng.standard_normal((200, 5))
     shap.summary_plot(
         shap_values,
         feats,
@@ -139,9 +139,9 @@ def test_summary_layered_violin_with_data():
 @pytest.mark.mpl_image_compare(tolerance=6)
 def test_summary_with_log_scale():
     """Check a with a log scale."""
-    np.random.seed(0)
+    rng = np.random.default_rng(0)
     fig = plt.figure()
-    shap.summary_plot(np.random.randn(20, 5), use_log_scale=True, show=False)
+    shap.summary_plot(rng.standard_normal((20, 5)), use_log_scale=True, show=False)
     fig.set_layout_engine("tight")
     return fig
 
@@ -151,8 +151,8 @@ def test_summary_binary_multiclass(background):
     # See GH #2893
     lightgbm = pytest.importorskip("lightgbm")
     num_examples, num_features = 100, 3
-    rs = np.random.RandomState(0)
-    X = rs.normal(size=[num_examples, num_features])
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=[num_examples, num_features])
     y = ((2 * X[:, 0] + X[:, 1]) > 0).astype(int)
 
     train_data = lightgbm.Dataset(X, label=y)
@@ -170,9 +170,9 @@ def test_summary_multiclass_explanation():
     n_samples = 100
     n_features = 5
     n_classes = 3
-    np.random.seed(0)  # for reproducibility
-    X = np.random.randn(n_samples, n_features)
-    y = np.random.randint(0, n_classes, n_samples)
+    rng = np.random.default_rng(0)  # for reproducibility
+    X = rng.randn(n_samples, n_features)
+    y = rng.randint(0, n_classes, n_samples)
     feature_names = [f"Feature {i + 1}" for i in range(n_features)]
     model = xgboost.XGBClassifier(n_estimators=10, random_state=0, tree_method="exact", base_score=0.5).fit(X, y)
     explainer = shap.TreeExplainer(model)
@@ -221,10 +221,10 @@ def test_summary_plot_interaction():
     """Checks the summary plot with interaction effects (GH #4081)."""
     n_samples = 100
     n_features = 5
-    np.random.seed(0)  # for reproducibility
-    shap_values = np.random.randn(n_samples, n_features, n_features)
+    rng = np.random.default_rng(0)  # for reproducibility
+    shap_values = rng.randn(n_samples, n_features, n_features)
     feature_names = [f"Feature {i + 1}" for i in range(n_features)]
-    X = pd.DataFrame(np.random.randn(n_samples, n_features), columns=feature_names)
+    X = pd.DataFrame(rng.randn(n_samples, n_features), columns=feature_names)
 
     shap.summary_plot(shap_values, X)
     fig = plt.gcf()
