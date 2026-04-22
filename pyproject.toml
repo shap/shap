@@ -307,6 +307,7 @@ select = [
   "SIM101",  # flake8-simplify
   "FA",  # future annotations
   "TCH",  # Move type only imports to type-checking condition.
+  "B006",  # flake8-bugbear: no mutable default arguments
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
@@ -343,6 +344,11 @@ convention = "numpy"
 
 # Ignore notebooks in user_studies, which are not maintained
 "docs/user_studies/*.ipynb" = ["ALL"]
+
+# Example notebooks carry historical user-study-style defaults; a lint bump
+# should not rewrite reader-facing example code. Tracked for a follow-up pass.
+"notebooks/overviews/Be careful when interpreting predictive models in search of causal insights.ipynb" = ["B006"]
+"notebooks/tabular_examples/model_agnostic/Simple California Demo.ipynb" = ["B006"]
 
 # Ignore SHAP Paper, as it is an unmaintained record of a published paper
 "notebooks/tabular_examples/tree_based_models/tree_shap_paper/*"  = ["ALL"]
