@@ -59,7 +59,7 @@ class ExplanationError:
             How many permutations we will use to estimate the average explanation error for each sample. If you are running
             this benchmark on a large dataset with many samples then you can reduce this value since the final result is
             averaged over samples as well and the averages of both directly combine to reduce variance. So for 10k samples
-            num_permutations=1 is appropreiate.
+            num_permutations=1 is appropriate.
 
         link : function
             Allows for a non-linear link function to be used to bringe between the model output space and the explanation
