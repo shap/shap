@@ -49,7 +49,10 @@ def test_summary_multi_class_legend_decimals():
     rng = np.random.default_rng(0)
     fig = plt.figure()
     shap.summary_plot(
-        [rng.standard_normal((20, 5)) for i in range(3)], rng.standard_normal((20, 5)), show=False, show_values_in_legend=True
+        [rng.standard_normal((20, 5)) for i in range(3)],
+        rng.standard_normal((20, 5)),
+        show=False,
+        show_values_in_legend=True,
     )
     fig.set_layout_engine("tight")
     return fig
