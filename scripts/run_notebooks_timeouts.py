@@ -60,7 +60,6 @@ allow_to_timeout = [
     Path("text_examples/question_answering/Explaining a Question Answering Transformers Model.ipynb"),
     Path("text_examples/sentiment_analysis/Emotion classification multiclass example.ipynb"),
     Path("text_examples/sentiment_analysis/Keras LSTM for IMDB Sentiment Classification.ipynb"),
-    Path("text_examples/sentiment_analysis/Positive vs. Negative Sentiment Classification.ipynb"),
     Path("text_examples/sentiment_analysis/Using custom functions and tokenizers.ipynb"),
     Path("text_examples/summarization/Abstractive Summarization Explanation Demo.ipynb"),
     Path("text_examples/text_entailment/Textual Entailment Explanation Demo.ipynb"),
