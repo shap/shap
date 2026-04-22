@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 import sklearn
 
-from ..utils import convert_name
+from shap.utils import convert_name
+
 from . import colors
 from ._labels import labels
 

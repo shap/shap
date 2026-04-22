@@ -8,9 +8,10 @@ import numpy.typing as npt
 from numba import njit  # type: ignore[attr-defined]
 from tqdm.auto import tqdm
 
-from .. import Explanation, links
-from ..models import Model
-from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
+from shap import Explanation, links
+from shap.models import Model
+from shap.utils import MaskedModel, OpChain, make_masks, safe_isinstance
+
 from ._explainer import Explainer
 
 

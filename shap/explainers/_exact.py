@@ -7,15 +7,11 @@ import numpy as np
 import numpy.typing as npt
 from numba import njit  # type: ignore[attr-defined]
 
-from .. import links
-from .._cutils import compute_grey_code_row_values
-from ..models import Model
-from ..utils import (
-    MaskedModel,
-    delta_minimization_order,
-    make_masks,
-    shapley_coefficients,
-)
+from shap import links
+from shap._cutils import compute_grey_code_row_values
+from shap.models import Model
+from shap.utils import MaskedModel, delta_minimization_order, make_masks, shapley_coefficients
+
 from ._explainer import Explainer
 
 log = logging.getLogger("shap")

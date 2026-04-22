@@ -5,7 +5,8 @@ import time
 import numpy as np
 import sklearn
 
-from .. import __version__
+from shap import __version__
+
 from . import measures, methods
 
 try:

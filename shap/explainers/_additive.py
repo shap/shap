@@ -3,7 +3,8 @@ from typing import Any, Literal
 import numpy as np
 import numpy.typing as npt
 
-from ..utils import MaskedModel, safe_isinstance
+from shap.utils import MaskedModel, safe_isinstance
+
 from ._explainer import Explainer
 
 

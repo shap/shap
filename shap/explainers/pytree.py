@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 # import numba
-from ..utils._exceptions import ExplainerError
+from shap.utils._exceptions import ExplainerError
 
 # class TreeExplainer(Explainer):
 #     def __init__(self, model, **kwargs):

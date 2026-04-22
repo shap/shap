@@ -15,9 +15,10 @@ try:
 except ImportError:
     have_ipython = False
 
-from .._explanation import Explanation
-from ..utils import ordinal_str
-from ..utils._legacy import kmeans
+from shap._explanation import Explanation
+from shap.utils import ordinal_str
+from shap.utils._legacy import kmeans
+
 from . import colors
 
 if TYPE_CHECKING:

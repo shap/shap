@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from ..utils import hclust_ordering
-from ..utils._legacy import LogitLink, convert_to_link
+from shap.utils import hclust_ordering
+from shap.utils._legacy import LogitLink, convert_to_link
+
 from . import colors
 from ._labels import labels
 

@@ -4,7 +4,8 @@ import copy
 import queue
 import warnings
 
-from ..utils._exceptions import ConvergenceError, InvalidAction
+from shap.utils._exceptions import ConvergenceError, InvalidAction
+
 from ._action import Action
 
 

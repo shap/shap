@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Any
 import numpy as np  # numpy base
 import numpy.typing as npt
 
-from .. import links  # shap modules
-from ..explainers._explainer import Explainer
-from ..models import Model
-from ..utils import MaskedModel, make_masks, safe_isinstance
+from shap import links  # shap modules
+from shap.explainers._explainer import Explainer
+from shap.models import Model
+from shap.utils import MaskedModel, make_masks, safe_isinstance
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

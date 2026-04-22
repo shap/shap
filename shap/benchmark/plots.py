@@ -6,8 +6,9 @@ import numpy as np
 import sklearn
 from matplotlib.colors import LinearSegmentedColormap
 
-from .. import __version__
-from ..plots import colors
+from shap import __version__
+from shap.plots import colors
+
 from . import methods, metrics, models
 from .experiments import run_experiments
 

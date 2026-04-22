@@ -6,14 +6,9 @@ import numpy.typing as npt
 import pandas as pd
 from packaging import version
 
-from .._explanation import Explanation
-from ..explainers._explainer import Explainer
-from ..explainers.tf_utils import (
-    _get_graph,
-    _get_model_inputs,
-    _get_model_output,
-    _get_session,
-)
+from shap._explanation import Explanation
+from shap.explainers._explainer import Explainer
+from shap.explainers.tf_utils import _get_graph, _get_model_inputs, _get_model_output, _get_session
 
 keras = None
 tf = None

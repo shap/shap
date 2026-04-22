@@ -4,13 +4,14 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 
-from .. import links
-from ..models import Model
-from ..utils import MaskedModel, partition_tree_shuffle
+from shap import links
+from shap.models import Model
+from shap.utils import MaskedModel, partition_tree_shuffle
+
 from ._explainer import Explainer
 
 if TYPE_CHECKING:
-    from .._explanation import Explanation
+    from shap._explanation import Explanation
 
 
 class PermutationExplainer(Explainer):

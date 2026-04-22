@@ -8,12 +8,12 @@ import numpy as np
 import pandas as pd
 import scipy.sparse
 
-from .. import explainers, links, maskers, models
-from .._explanation import Explanation
-from .._serializable import Deserializer, Serializable, Serializer
-from ..utils import safe_isinstance, show_progress
-from ..utils._exceptions import InvalidAlgorithmError
-from ..utils.transformers import is_transformers_lm
+from shap import explainers, links, maskers, models
+from shap._explanation import Explanation
+from shap._serializable import Deserializer, Serializable, Serializer
+from shap.utils import safe_isinstance, show_progress
+from shap.utils._exceptions import InvalidAlgorithmError
+from shap.utils.transformers import is_transformers_lm
 
 if TYPE_CHECKING:
     from collections.abc import Callable

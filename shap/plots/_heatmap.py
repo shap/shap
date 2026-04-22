@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .. import Explanation
-from ..utils import OpChain
+from shap import Explanation
+from shap.utils import OpChain
+
 from . import colors
 from ._labels import labels
 from ._utils import convert_ordering

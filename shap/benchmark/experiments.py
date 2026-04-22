@@ -8,7 +8,8 @@ import sys
 import time
 from multiprocessing import Pool
 
-from .. import __version__, datasets
+from shap import __version__, datasets
+
 from . import metrics, models
 
 try:

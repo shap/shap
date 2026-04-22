@@ -1,7 +1,7 @@
 import numpy as np
 import sklearn
 
-from .. import (
+from shap import (
     DeepExplainer,
     GradientExplainer,
     KernelExplainer,
@@ -10,7 +10,8 @@ from .. import (
     TreeExplainer,
     kmeans,
 )
-from ..explainers import other
+from shap.explainers import other
+
 from .models import KerasWrap
 
 

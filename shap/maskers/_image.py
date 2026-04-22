@@ -5,9 +5,10 @@ import numba.typed
 import numpy as np
 from numba import njit
 
-from .._serializable import Deserializer, Serializer
-from ..utils import assert_import, record_import_error, safe_isinstance
-from ..utils._exceptions import DimensionError
+from shap._serializable import Deserializer, Serializer
+from shap.utils import assert_import, record_import_error, safe_isinstance
+from shap.utils._exceptions import DimensionError
+
 from ._masker import Masker
 
 try:

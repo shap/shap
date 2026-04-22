@@ -11,7 +11,8 @@ from typing import TypedDict, Unpack
 
 import numpy as np
 
-from ..utils._exceptions import InvalidStyleOptionError
+from shap.utils._exceptions import InvalidStyleOptionError
+
 from . import colors
 
 # Type hints, adapted from matplotlib.typing

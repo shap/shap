@@ -5,8 +5,8 @@ from typing import Any, BinaryIO, Literal, overload
 import numpy as np
 import numpy.typing as npt
 
-from .._serializable import Deserializer, Serializable, Serializer
-from ..utils import safe_isinstance
+from shap._serializable import Deserializer, Serializable, Serializer
+from shap.utils import safe_isinstance
 
 
 class Model(Serializable):

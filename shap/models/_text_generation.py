@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from .._serializable import Deserializer, Serializer
-from ..utils import safe_isinstance
+from shap._serializable import Deserializer, Serializer
+from shap.utils import safe_isinstance
+
 from ._model import Model
 
 

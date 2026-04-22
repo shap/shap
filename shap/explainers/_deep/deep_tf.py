@@ -13,9 +13,10 @@ from tensorflow.python.ops import (
     gradients_impl as tf_gradients_impl,
 )
 
-from ...utils._exceptions import DimensionError
-from .._explainer import Explainer
-from ..tf_utils import _get_graph, _get_model_inputs, _get_model_output, _get_session
+from shap.explainers._explainer import Explainer
+from shap.explainers.tf_utils import _get_graph, _get_model_inputs, _get_model_output, _get_session
+from shap.utils._exceptions import DimensionError
+
 from .deep_utils import _check_additivity
 
 if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):

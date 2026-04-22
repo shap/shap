@@ -307,6 +307,7 @@ select = [
   "SIM101",  # flake8-simplify
   "FA",  # future annotations
   "TCH",  # Move type only imports to type-checking condition.
+  "TID252",  # flake8-tidy-imports: disallow relative imports within the package
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [

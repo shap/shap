@@ -3,7 +3,8 @@ import warnings
 import numpy as np
 from packaging import version
 
-from .._explainer import Explainer
+from shap.explainers._explainer import Explainer
+
 from .deep_utils import _check_additivity
 
 

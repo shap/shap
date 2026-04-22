@@ -15,23 +15,24 @@ import scipy.sparse
 import scipy.special
 from packaging import version
 
-from .. import maskers
-from .._explanation import Explanation
-from ..utils import assert_import, record_import_error, safe_isinstance
-from ..utils._exceptions import (
+from shap import maskers
+from shap._explanation import Explanation
+from shap.utils import assert_import, record_import_error, safe_isinstance
+from shap.utils._exceptions import (
     DimensionError,
     ExplainerError,
     InvalidFeaturePerturbationError,
     InvalidMaskerError,
     InvalidModelError,
 )
-from ..utils._legacy import DenseData
-from ..utils._warnings import ExperimentalWarning
+from shap.utils._legacy import DenseData
+from shap.utils._warnings import ExperimentalWarning
+
 from ._explainer import Explainer
 from .other._ubjson import decode_ubjson_buffer
 
 try:
-    from .. import _cext  # type: ignore
+    from shap import _cext  # type: ignore
 except ImportError as e:
     record_import_error("cext", "C extension was not built during install!", e)
 

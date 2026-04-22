@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from ..._explanation import Explanation
-from .._explainer import Explainer
+from shap._explanation import Explanation
+from shap.explainers._explainer import Explainer
 
 
 class DeepExplainer(Explainer):

@@ -10,10 +10,11 @@ import numpy as np
 import pandas as pd
 from matplotlib.markers import MarkerStyle
 
-from .._explanation import Explanation
-from ..utils import approximate_interactions, convert_name
-from ..utils._exceptions import DimensionError
-from ..utils._general import encode_array_if_needed
+from shap._explanation import Explanation
+from shap.utils import approximate_interactions, convert_name
+from shap.utils._exceptions import DimensionError
+from shap.utils._general import encode_array_if_needed
+
 from . import colors
 from ._labels import labels
 from ._utils import AxisLimitSpec, parse_axis_limit

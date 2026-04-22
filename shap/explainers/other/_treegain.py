@@ -1,6 +1,6 @@
 import numpy as np
 
-from .._explainer import Explainer
+from shap.explainers._explainer import Explainer
 
 
 class TreeGain(Explainer):

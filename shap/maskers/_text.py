@@ -3,13 +3,10 @@ import re
 
 import numpy as np
 
-from .._serializable import Deserializer, Serializer
-from ..utils import safe_isinstance
-from ..utils.transformers import (
-    SENTENCEPIECE_TOKENIZERS,
-    getattr_silent,
-    parse_prefix_suffix_for_tokenizer,
-)
+from shap._serializable import Deserializer, Serializer
+from shap.utils import safe_isinstance
+from shap.utils.transformers import SENTENCEPIECE_TOKENIZERS, getattr_silent, parse_prefix_suffix_for_tokenizer
+
 from ._masker import Masker
 
 

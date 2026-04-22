@@ -6,15 +6,16 @@ import numpy as np
 import pandas as pd
 import scipy
 
-from .. import Cohorts, Explanation
-from ..utils import format_value, ordinal_str
-from ..utils._exceptions import DimensionError
+from shap import Cohorts, Explanation
+from shap.utils import format_value, ordinal_str
+from shap.utils._exceptions import DimensionError
+
 from ._labels import labels
 from ._style import get_style
 from ._utils import convert_ordering, dendrogram_coords, get_sort_order, merge_nodes, sort_inds
 
 if TYPE_CHECKING:
-    from .._explanation import OpHistoryItem
+    from shap._explanation import OpHistoryItem
 
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit

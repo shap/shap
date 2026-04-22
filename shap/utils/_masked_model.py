@@ -5,7 +5,7 @@ import numpy as np
 import scipy.sparse
 from numba import njit
 
-from .. import links
+from shap import links
 
 
 class MaskedModel:

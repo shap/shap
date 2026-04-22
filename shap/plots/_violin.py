@@ -9,7 +9,8 @@ import pandas as pd
 from packaging import version
 from scipy.stats import gaussian_kde
 
-from ..utils._exceptions import DimensionError
+from shap.utils._exceptions import DimensionError
+
 from . import colors
 from ._labels import labels
 

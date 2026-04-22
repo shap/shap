@@ -1,6 +1,7 @@
 import numpy as np
 
-from .._serializable import Deserializer, Serializer
+from shap._serializable import Deserializer, Serializer
+
 from ._masker import Masker
 
 

@@ -16,9 +16,10 @@ from matplotlib.figure import Figure
 from packaging import version
 from scipy.stats import gaussian_kde
 
-from .. import Explanation
-from ..utils import safe_isinstance
-from ..utils._exceptions import DimensionError
+from shap import Explanation
+from shap.utils import safe_isinstance
+from shap.utils._exceptions import DimensionError
+
 from . import colors
 from ._labels import labels
 from ._utils import (

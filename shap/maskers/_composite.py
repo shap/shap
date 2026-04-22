@@ -3,7 +3,8 @@ from __future__ import annotations
 import types
 from typing import Any
 
-from ..utils._exceptions import InvalidMaskerError
+from shap.utils._exceptions import InvalidMaskerError
+
 from ._masker import Masker
 
 

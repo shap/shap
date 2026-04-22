@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from .._explainer import Explainer
+from shap.explainers._explainer import Explainer
 
 try:
     import lime
