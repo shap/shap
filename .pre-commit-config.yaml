@@ -5,7 +5,7 @@ exclude: '.*tree_shap_paper.*|.*user_studies.*|.*__snapshots__.*'
 
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.15.4
+  rev: v0.15.9
   hooks:
   - id: ruff
     types_or: [python, pyi, jupyter]
@@ -45,5 +45,4 @@ repos:
         notebooks/tabular_examples/tree_based_models/Perfomance.Comparison.ipynb|
         notebooks/text_examples/sentiment_analysis/Emotion.classification.multiclass.example.ipynb|
         notebooks/text_examples/sentiment_analysis/Keras.LSTM.for.IMDB.Sentiment.Classification.ipynb|
-        notebooks/text_examples/sentiment_analysis/Positive.vs..Negative.Sentiment.Classification.ipynb
       )$
