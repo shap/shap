@@ -1,7 +1,9 @@
-import numpy as np
-import shap.utils.image as img
-import tempfile
 import os
+import tempfile
+
+import numpy as np
+
+import shap.utils.image as img
 
 
 def test_resize_image_behavior():
@@ -12,19 +14,18 @@ def test_resize_image_behavior():
 
     try:
         import cv2
+
         cv2.imwrite(path, dummy)
 
         result = img.resize_image(path, (5, 5))
 
-        
         assert isinstance(result, tuple)
 
         resized = result[0]
 
-        
         assert isinstance(resized, np.ndarray)
         assert resized.ndim == 3
-        assert resized.shape[2] == 3   # RGB channels
+        assert resized.shape[2] == 3  # RGB channels
 
     finally:
         os.remove(path)
