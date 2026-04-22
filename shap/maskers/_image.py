@@ -1,8 +1,12 @@
 # TODO: heapq in numba does not yet support Typed Lists so we can move to them yet...
+from __future__ import annotations
+
 import heapq
+from typing import Any, BinaryIO
 
 import numba.typed
 import numpy as np
+import numpy.typing as npt
 from numba import njit
 
 from .._serializable import Deserializer, Serializer
@@ -19,7 +23,18 @@ except ImportError as e:
 class Image(Masker):
     """Masks out image regions with blurring or inpainting."""
 
-    def __init__(self, mask_value, shape=None):
+    input_shape: tuple[int, ...]
+    input_mask_value: npt.NDArray[Any] | str | float | int
+    image_data: bool
+    blur_kernel: tuple[int, int] | None
+    _blur_value_cache: npt.NDArray[Any] | None
+    mask_value: npt.NDArray[Any] | str
+    clustering: npt.NDArray[Any]
+    fixed_background: bool
+    last_xid: int | None
+    immutable_outputs: bool
+
+    def __init__(self, mask_value: npt.NDArray[Any] | str | float | int, shape: tuple[int, ...] | None = None) -> None:
         """Build a new Image masker with the given masking value.
 
         Parameters
@@ -35,7 +50,7 @@ class Image(Masker):
             if isinstance(mask_value, str):
                 raise TypeError("When the mask_value is a string the shape parameter must be given!")
             self.input_shape = (
-                mask_value.shape
+                mask_value.shape  # type: ignore[union-attr]
             )  # the (1,) is because we only return a single masked sample to average over
         else:
             self.input_shape = shape
@@ -45,7 +60,7 @@ class Image(Masker):
         # This is the shape of the masks we expect
         self.shape = (
             1,
-            np.prod(self.input_shape),
+            int(np.prod(self.input_shape)),
         )  # the (1, ...) is because we only return a single masked sample to average over
 
         self.image_data = True
@@ -53,12 +68,12 @@ class Image(Masker):
         self.blur_kernel = None
         self._blur_value_cache = None
         if issubclass(type(mask_value), np.ndarray):
-            self.mask_value = mask_value.flatten()
+            self.mask_value = mask_value.flatten()  # type: ignore[union-attr]
         elif isinstance(mask_value, str):
             assert_import("cv2")
             self.mask_value = mask_value
             if mask_value.startswith("blur("):
-                self.blur_kernel = tuple(map(int, mask_value[5:-1].split(",")))
+                self.blur_kernel = tuple(map(int, mask_value[5:-1].split(",")))  # type: ignore[assignment]
         else:
             self.mask_value = np.ones(self.input_shape).flatten() * mask_value
         self.build_partition_tree()
@@ -72,7 +87,7 @@ class Image(Masker):
         # flag that we return outputs that will not get changed by later masking calls
         self.immutable_outputs = True
 
-    def __call__(self, mask, x):
+    def __call__(self, mask: npt.NDArray[Any] | bool | None, x: Any) -> tuple[npt.NDArray[Any]]:  # type: ignore[override]
         if safe_isinstance(x, "torch.Tensor"):
             x = x.cpu().numpy()
 
@@ -104,19 +119,20 @@ class Image(Masker):
                     self._blur_value_cache = cv2.blur(x.reshape(self.input_shape), self.blur_kernel).ravel()
                     self.last_xid = id(x)
                 out = x.copy()
+                assert self._blur_value_cache is not None
                 out[~mask] = self._blur_value_cache[~mask]
 
             elif self.mask_value == "inpaint_telea":
-                out = self.inpaint(x, ~mask, "INPAINT_TELEA")
+                out = self.inpaint(x, ~mask, "INPAINT_TELEA")  # type: ignore[arg-type]
             elif self.mask_value == "inpaint_ns":
-                out = self.inpaint(x, ~mask, "INPAINT_NS")
+                out = self.inpaint(x, ~mask, "INPAINT_NS")  # type: ignore[arg-type]
         else:
             out = x.copy()
             out[~mask] = self.mask_value[~mask]
 
         return (out.reshape(1, *in_shape),)
 
-    def inpaint(self, x, mask, method):
+    def inpaint(self, x: npt.NDArray[Any], mask: npt.NDArray[Any], method: str) -> npt.NDArray[Any]:
         """Fill in the masked parts of the image through inpainting."""
         reshaped_mask = mask.reshape(self.input_shape).astype(np.uint8).max(2)
         if reshaped_mask.sum() == np.prod(self.input_shape[:-1]):
@@ -132,7 +148,7 @@ class Image(Masker):
             .ravel()
         )
 
-    def build_partition_tree(self):
+    def build_partition_tree(self) -> None:
         """This partitions an image into a herarchical clustering based on axis-aligned splits."""
         xmin = 0
         xmax = self.input_shape[0]
@@ -149,7 +165,7 @@ class Image(Masker):
         _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q)
         self.clustering = clustering
 
-    def save(self, out_file):
+    def save(self, out_file: BinaryIO) -> None:
         """Write a Image masker to a file stream."""
         super().save(out_file)
 
@@ -159,7 +175,7 @@ class Image(Masker):
             s.save("shape", self.input_shape)
 
     @classmethod
-    def load(cls, in_file, instantiate=True):
+    def load(cls, in_file: BinaryIO, instantiate: bool = True) -> Image | dict[str, Any]:
         """Load a Image masker from a file stream."""
         if instantiate:
             return cls._instantiated_load(in_file)
@@ -171,8 +187,20 @@ class Image(Masker):
         return kwargs
 
 
-@njit
-def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q):
+@njit  # type: ignore[misc]
+def _jit_build_partition_tree(
+    xmin: int,
+    xmax: int,
+    ymin: int,
+    ymax: int,
+    zmin: int,
+    zmax: int,
+    total_ywidth: int,
+    total_zwidth: int,
+    M: int,
+    clustering: npt.NDArray[Any],
+    q: Any,
+) -> None:
     """This partitions an image into a herarchical clustering based on axis-aligned splits."""
     # heapq.heappush(q, (0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
 
