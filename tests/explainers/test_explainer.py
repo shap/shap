@@ -26,6 +26,40 @@ def test_explainer_to_permutationexplainer():
         _ = explainer(X_test)
 
 
+def test_explainer_algorithm_kernel():
+    """Checks that Explainer dispatches to KernelExplainer when ``algorithm='kernel'`` is set.
+
+    GH #3996.
+    """
+    X_train, _, y_train, _ = sklearn.model_selection.train_test_split(
+        *shap.datasets.adult(), test_size=0.1, random_state=0
+    )
+    lr = sklearn.linear_model.LogisticRegression(solver="liblinear")
+    lr.fit(X_train, y_train)
+
+    # KernelExplainer warns about background sets > 100 rows; keep the sample
+    # small so the test stays fast and quiet.
+    explainer = shap.Explainer(lr.predict_proba, masker=X_train.iloc[:50], algorithm="kernel")
+    assert isinstance(explainer, shap.KernelExplainer)
+
+
+def test_explainer_rejects_unknown_algorithm():
+    """Unknown algorithm strings should raise InvalidAlgorithmError.
+
+    Guards the else-branch of the dispatch against silent fallthrough.
+    """
+    from shap.utils._exceptions import InvalidAlgorithmError
+
+    X_train, _, y_train, _ = sklearn.model_selection.train_test_split(
+        *shap.datasets.adult(), test_size=0.1, random_state=0
+    )
+    lr = sklearn.linear_model.LogisticRegression(solver="liblinear")
+    lr.fit(X_train, y_train)
+
+    with pytest.raises(InvalidAlgorithmError, match="Unknown algorithm"):
+        shap.Explainer(lr.predict_proba, masker=X_train.iloc[:20], algorithm="not-a-real-algorithm")  # type: ignore[arg-type]
+
+
 def test_wrapping_for_text_to_text_teacher_forcing_model():
     """This tests using the Explainer class to auto wrap a masker in a text to text scenario."""
     pytest.importorskip("torch")
