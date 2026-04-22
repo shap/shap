@@ -13,7 +13,7 @@ class MockClusteringMasker(shap.maskers.Masker):
     def __init__(self):
         self.clustering = np.array([[0, 1, 0.5, 2]])
 
-    def __call__(self, mask: Any, x: Any) -> Any:
+    def __call__(self, mask: Any, x: Any) -> Any:  # type: ignore[override]
         return np.array([x])
 
     def shape(self, x):
@@ -21,7 +21,7 @@ class MockClusteringMasker(shap.maskers.Masker):
 
 
 class NoClusteringMasker(shap.maskers.Masker):
-    def __call__(self, mask: Any, x: Any) -> Any:
+    def __call__(self, mask: Any, x: Any) -> Any:  # type: ignore[override]
         return np.array([x])
 
     def shape(self, x):
@@ -32,7 +32,7 @@ class TextMasker(shap.maskers.Masker):
     def __init__(self):
         self.text_data = True
 
-    def __call__(self, mask: Any, x: Any) -> Any:
+    def __call__(self, mask: Any, x: Any) -> Any:  # type: ignore[override]
         pass
 
 
@@ -40,12 +40,12 @@ class ImageMasker(shap.maskers.Masker):
     def __init__(self):
         self.image_data = True
 
-    def __call__(self, mask: Any, x: Any) -> Any:
+    def __call__(self, mask: Any, x: Any) -> Any:  # type: ignore[override]
         pass
 
 
 class TransformMasker(shap.maskers.Masker):
-    def __call__(self, mask: Any, x: Any) -> Any:
+    def __call__(self, mask: Any, x: Any) -> Any:  # type: ignore[override]
         pass
 
     def shape(self, x):
