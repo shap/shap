@@ -217,15 +217,15 @@ def text(
             scaled_value = 0.5 + 0.5 * output_values[i] / (output_max + 1e-8)
             color = colors.red_transparent_blue(scaled_value)
             rgba_css = _css_rgba(color[0] * 255, color[1] * 255, color[2] * 255, color[3])
-            
+
             label_display = "none"
             wrapper_display = "inline"
             if i in top_inds_outputs:
                 label_display = "block"
                 wrapper_display = "inline-block"
-            
+
             value_label = str(output_values[i].round(3))
-            
+
             out += f"""<div style='display: {wrapper_display}; text-align: center;'
     ><div style='display: {label_display}; color: #999; padding-top: 0px; font-size: 12px;'>{value_label}</div
         ><div style="display: inline; border-bottom: {"3px solid #000000" if i == 0 else "3px solid transparent"}; background: {rgba_css}; border-radius: 3px; padding: 0px; cursor: pointer;" id="_tp_{uuid}_output_{i}_name"
@@ -238,7 +238,7 @@ def text(
         this.parentNode.style.display = 'inline';
     }}
     _output_onclick_{uuid}({i});"
-    onmouseover="_output_onmouseover_{uuid}({i}, this);">{name.replace('<', '&lt;').replace('>', '&gt;').replace(' ##', '')}</div></div>"""
+    onmouseover="_output_onmouseover_{uuid}({i}, this);">{name.replace("<", "&lt;").replace(">", "&gt;").replace(" ##", "")}</div></div>"""
         out += "<br><br>"
         for i, name in enumerate(shap_values.output_names):
             out += f"<div id='_tp_{uuid}_output_{i}' style='display: {'block' if i == 0 else 'none'}';>"
