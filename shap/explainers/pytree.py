@@ -8,8 +8,8 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-import pandas as pd
 import numpy.typing as npt
+import pandas as pd
 
 # import numba
 from ..utils._exceptions import ExplainerError
