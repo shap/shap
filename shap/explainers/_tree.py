@@ -7,6 +7,7 @@ import os
 import time
 import warnings
 from typing import Any, Literal
+from collections import deque
 
 import numpy as np
 import numpy.typing as npt
@@ -1924,9 +1925,9 @@ class SingleTree:
             self.node_sample_weight = np.empty(num_nodes, dtype=np.float64)
 
             # BFS traversal through the tree structure
-            visited, queue = [], [start]
+            visited, queue = [], deque([start])
             while queue:
-                vertex = queue.pop(0)  # TODO(perf): benchmark this against deque.popleft()
+                vertex = queue.popleft()
                 is_branch_node = "split_index" in vertex
                 if is_branch_node:
                     vsplit_idx: int = vertex["split_index"]
