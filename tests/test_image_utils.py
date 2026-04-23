@@ -1,25 +1,19 @@
-
 import sys
 import types
 
 # Mock shap to avoid loading full package
-sys.modules['shap'] = types.ModuleType("shap")
+sys.modules["shap"] = types.ModuleType("shap")
 
 import os
 import sys
+
 import numpy as np
-import pytest
 
 # Add path to directly access image.py (bypass shap import)
 sys.path.append(os.path.abspath("shap/utils"))
 
-from image import (
-    check_valid_image,
-    is_empty,
-    make_dir,
-    save_image,
-    resize_image
-)
+from image import check_valid_image, is_empty, make_dir, resize_image, save_image
+
 
 def test_check_valid_image():
     assert check_valid_image("image.jpg") == True
@@ -62,6 +56,7 @@ def test_resize_image_no_resize(tmp_path):
     file_path = tmp_path / "img.png"
 
     import matplotlib.pyplot as plt
+
     plt.imsave(file_path, img)
 
     resized_img, path = resize_image(file_path, tmp_path)
