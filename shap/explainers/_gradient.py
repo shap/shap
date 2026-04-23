@@ -224,7 +224,7 @@ class _TFGradient(Explainer):
 
                 self.model = keras.Model(model[0], model[1])  # type: ignore[attr-defined]
             else:
-                self.model = keras.Model(model.inputs, model.layers[-1].output)
+                self.model = keras.Model(model.inputs, model.layers[-1].output)  # type: ignore[attr-defined]
 
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
