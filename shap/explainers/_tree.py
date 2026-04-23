@@ -367,7 +367,7 @@ class TreeExplainer(Explainer):
 
     def __call__(self, *args: Any, **kwargs: Any) -> Explanation:
         """Calculate the SHAP values for the model applied to the data.
-        
+
         Parameters
         ----------
         X : Any
@@ -386,11 +386,11 @@ class TreeExplainer(Explainer):
             shap.Explanation object containing the given data and the SHAP values.
         """
         # Extract parameters
-        X = args[0] if len(args) > 0 else kwargs.get('X')
-        y = args[1] if len(args) > 1 else kwargs.get('y', None)
-        interactions = kwargs.get('interactions', False)
-        check_additivity = kwargs.get('check_additivity', True)
-        approximate = kwargs.get('approximate', False)
+        X = args[0] if len(args) > 0 else kwargs.get("X")
+        y = args[1] if len(args) > 1 else kwargs.get("y", None)
+        interactions = kwargs.get("interactions", False)
+        check_additivity = kwargs.get("check_additivity", True)
+        approximate = kwargs.get("approximate", False)
         start_time = time.time()
 
         feature_names: Any
@@ -1813,7 +1813,7 @@ class SingleTree:
     children_default: npt.NDArray[np.int32]
     features: npt.NDArray[np.int32]
     thresholds: npt.NDArray[np.float64]
-    threshold_types: npt.NDArray[np.int32]  # ← Also add this missing one!
+    threshold_types: npt.NDArray[np.int32]
     values: npt.NDArray[np.float64]
     node_sample_weight: npt.NDArray[np.float64]
     max_depth: int
