@@ -3,7 +3,12 @@ It is primarily for illustration since it is slower than the 'tree'
 module which uses a compiled C++ implementation.
 """
 
+from __future__ import annotations
+
+from typing import Any
+
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 # import numba
@@ -140,13 +145,20 @@ from ..utils._exceptions import ExplainerError
 class TreeExplainer:
     """A pure Python (slow) implementation of Tree SHAP."""
 
-    def __init__(self, model, **kwargs):
+    model_type: str
+    trees: list[Tree] | Any  # Can be list[Tree] for internal or booster for xgboost/lightgbm
+    feature_indexes: npt.NDArray[np.int32] | None
+    zero_fractions: npt.NDArray[np.float64] | None
+    one_fractions: npt.NDArray[np.float64] | None
+    pweights: npt.NDArray[np.float64] | None
+
+    def __init__(self, model: Any, **kwargs: Any) -> None:
         self.model_type = "internal"
 
         if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
-            self.trees = [Tree(e.tree_) for e in model.estimators_]
+            self.trees = [Tree(e.tree_) for e in model.estimators_]  # type: ignore[attr-defined]
         elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
-            self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
+            self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]  # type: ignore[attr-defined]
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
             self.model_type = "xgboost"
             self.trees = model
@@ -156,16 +168,23 @@ class TreeExplainer:
         else:
             raise ExplainerError("Model type not supported by TreeExplainer: " + str(type(model)))
 
+        self.feature_indexes = None
+        self.zero_fractions = None
+        self.one_fractions = None
+        self.pweights = None
+
         if self.model_type == "internal":
             # Preallocate space for the unique path data
-            maxd = np.max([t.max_depth for t in self.trees]) + 2
+            maxd = int(np.max([t.max_depth for t in self.trees])) + 2  # type: ignore[union-attr]
             s = (maxd * (maxd + 1)) // 2
             self.feature_indexes = np.zeros(s, dtype=np.int32)
             self.zero_fractions = np.zeros(s, dtype=np.float64)
             self.one_fractions = np.zeros(s, dtype=np.float64)
             self.pweights = np.zeros(s, dtype=np.float64)
 
-    def shap_values(self, X, tree_limit=-1, **kwargs):
+    def shap_values(
+        self, X: Any, tree_limit: int = -1, **kwargs: Any
+    ) -> npt.NDArray[np.float64] | list[npt.NDArray[np.float64]]:
         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
         # these are about 10x faster than the numba jit'd implementation below...
         if self.model_type == "xgboost":
@@ -175,9 +194,9 @@ class TreeExplainer:
                 X = xgboost.DMatrix(X)
             if tree_limit == -1:
                 tree_limit = 0
-            return self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
+            return self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)  # type: ignore[union-attr]
         elif self.model_type == "lightgbm":
-            return self.trees.predict(X, num_iteration=tree_limit, pred_contrib=True)
+            return self.trees.predict(X, num_iteration=tree_limit, pred_contrib=True)  # type: ignore[union-attr]
 
         # convert dataframes
         if isinstance(X, (pd.Series, pd.DataFrame)):
@@ -186,35 +205,36 @@ class TreeExplainer:
         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
-        n_outputs = self.trees[0].values.shape[1]
+        n_outputs = self.trees[0].values.shape[1]  # type: ignore[index]
 
         # single instance
         if len(X.shape) == 1:
-            phi = np.zeros(X.shape[0] + 1, n_outputs)
+            phi: npt.NDArray[np.float64] = np.zeros((X.shape[0] + 1, n_outputs))
             x_missing = np.zeros(X.shape[0], dtype=bool)
-            for t in self.trees:
+            for t in self.trees:  # type: ignore[union-attr]
                 self.tree_shap(t, X, x_missing, phi)
-            phi /= len(self.trees)
+            phi /= len(self.trees)  # type: ignore[arg-type]
 
             if n_outputs == 1:
                 return phi[:, 0]
             else:
-                return [phi[:, i] for i in range(n_outputs)]
+                return [phi[:, i] for i in range(n_outputs)]  # type: ignore[return-value]
 
         elif len(X.shape) == 2:
             phi = np.zeros((X.shape[0], X.shape[1] + 1, n_outputs))
             x_missing = np.zeros(X.shape[1], dtype=bool)
             for i in range(X.shape[0]):
-                for t in self.trees:
+                for t in self.trees:  # type: ignore[union-attr]
                     self.tree_shap(t, X[i, :], x_missing, phi[i, :, :])
-            phi /= len(self.trees)
+            phi /= len(self.trees)  # type: ignore[arg-type]
 
             if n_outputs == 1:
                 return phi[:, :, 0]
             else:
-                return [phi[:, :, i] for i in range(n_outputs)]
+                return [phi[:, :, i] for i in range(n_outputs)]  # type: ignore[return-value]
+        return np.array([])  # fallback
 
-    def shap_interaction_values(self, X, tree_limit=-1, **kwargs):
+    def shap_interaction_values(self, X: Any, tree_limit: int = -1, **kwargs: Any) -> npt.NDArray[np.float64]:
         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
         if self.model_type == "xgboost":
             import xgboost
@@ -223,41 +243,51 @@ class TreeExplainer:
                 X = xgboost.DMatrix(X)
             if tree_limit == -1:
                 tree_limit = 0
-            return self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)
+            # self.trees is the booster object for xgboost
+            return self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)  # type: ignore[union-attr]
         else:
             raise NotImplementedError("Interaction values not yet supported for model type: " + str(type(X)))
 
-    def tree_shap(self, tree, x, x_missing, phi, condition=0, condition_feature=0):
+    def tree_shap(
+        self,
+        tree: Tree,
+        x: npt.NDArray[np.float64],
+        x_missing: npt.NDArray[np.bool_],
+        phi: npt.NDArray[np.float64],
+        condition: int = 0,
+        condition_feature: int = 0,
+    ) -> None:
         # update the bias term, which is the last index in phi
         # (note the paper has this as phi_0 instead of phi_M)
         if condition == 0:
             phi[-1, :] += tree.values[0, :]
 
         # start the recursive algorithm
-        tree_shap_recursive(
-            tree.children_left,
-            tree.children_right,
-            tree.children_default,
-            tree.features,
-            tree.thresholds,
-            tree.values,
-            tree.node_sample_weight,
-            x,
-            x_missing,
-            phi,
-            0,
-            0,
-            self.feature_indexes,
-            self.zero_fractions,
-            self.one_fractions,
-            self.pweights,
-            1,
-            1,
-            -1,
-            condition,
-            condition_feature,
-            1,
-        )
+        if self.feature_indexes is not None:
+            tree_shap_recursive(
+                tree.children_left,
+                tree.children_right,
+                tree.children_default,
+                tree.features,
+                tree.thresholds,
+                tree.values,
+                tree.node_sample_weight,
+                x,
+                x_missing,
+                phi,
+                0,
+                0,
+                self.feature_indexes,
+                self.zero_fractions,  # type: ignore[arg-type]
+                self.one_fractions,  # type: ignore[arg-type]
+                self.pweights,  # type: ignore[arg-type]
+                1,
+                1,
+                -1,
+                condition,
+                condition_feature,
+                1,
+            )
 
 
 # extend our decision path with a fraction of one and zero extensions
@@ -334,7 +364,16 @@ class Tree:
     #         self.values, 0
     #     )
 
-    def __init__(self, tree, normalize=False):
+    children_left: npt.NDArray[np.int32]
+    children_right: npt.NDArray[np.int32]
+    children_default: npt.NDArray[np.int32]
+    features: npt.NDArray[np.int32]
+    thresholds: npt.NDArray[np.float64]
+    values: npt.NDArray[np.float64]
+    node_sample_weight: npt.NDArray[np.float64]
+    max_depth: int
+
+    def __init__(self, tree: Any, normalize: bool = False) -> None:
         if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)
@@ -357,7 +396,14 @@ class Tree:
 
 
 # @numba.jit(nopython=True)
-def compute_expectations(children_left, children_right, node_sample_weight, values, i, depth=0):
+def compute_expectations(
+    children_left: npt.NDArray[np.int32],
+    children_right: npt.NDArray[np.int32],
+    node_sample_weight: npt.NDArray[np.float64],
+    values: npt.NDArray[np.float64],
+    i: int,
+    depth: int = 0,
+) -> int:
     if children_right[i] == -1:
         values[i, :] = values[i, :]
         return 0
@@ -376,29 +422,29 @@ def compute_expectations(children_left, children_right, node_sample_weight, valu
 # recursive computation of SHAP values for a decision tree
 # @numba.jit(nopython=True, nogil=True)
 def tree_shap_recursive(
-    children_left,
-    children_right,
-    children_default,
-    features,
-    thresholds,
-    values,
-    node_sample_weight,
-    x,
-    x_missing,
-    phi,
-    node_index,
-    unique_depth,
-    parent_feature_indexes,
-    parent_zero_fractions,
-    parent_one_fractions,
-    parent_pweights,
-    parent_zero_fraction,
-    parent_one_fraction,
-    parent_feature_index,
-    condition,
-    condition_feature,
-    condition_fraction,
-):
+    children_left: npt.NDArray[np.int32],
+    children_right: npt.NDArray[np.int32],
+    children_default: npt.NDArray[np.int32],
+    features: npt.NDArray[np.int32],
+    thresholds: npt.NDArray[np.float64],
+    values: npt.NDArray[np.float64],
+    node_sample_weight: npt.NDArray[np.float64],
+    x: npt.NDArray[np.float64],
+    x_missing: npt.NDArray[np.bool_],
+    phi: npt.NDArray[np.float64],
+    node_index: int,
+    unique_depth: int,
+    parent_feature_indexes: npt.NDArray[np.int32],
+    parent_zero_fractions: npt.NDArray[np.float64],
+    parent_one_fractions: npt.NDArray[np.float64],
+    parent_pweights: npt.NDArray[np.float64],
+    parent_zero_fraction: float,
+    parent_one_fraction: float,
+    parent_feature_index: int,
+    condition: int,
+    condition_feature: int,
+    condition_fraction: float,
+) -> None:
     # stop if we have no weight coming down to us
     if condition_fraction == 0.0:
         return
