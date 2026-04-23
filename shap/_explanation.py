@@ -319,28 +319,22 @@ class Explanation(metaclass=MetaExplanation):
         if not isinstance(item, tuple):
             item = (item,)
 
-        # 1. Expand the item tuple to map exactly to the object's dimensions
-        full_item = [slice(None)] * len(self.shape)
+        new_item = list(item)
         
-        if Ellipsis in item:
-            e_idx = item.index(Ellipsis)
-            for i in range(e_idx):
-                full_item[i] = item[i]
-            for i in range(1, len(item) - e_idx):
-                full_item[-i] = item[-i]
-        else:
-            for i in range(len(item)):
-                full_item[i] = item[i]
-
-        # 2. Convert strings to integers
-        for i in range(len(full_item)):
-            t = full_item[i]
+        # 1. Convert Strings/OpChains to Integers
+        for i, t in enumerate(new_item):
+            if isinstance(t, OpChain):
+                t = t.apply(self)
+            elif isinstance(t, Explanation):
+                t = t.values
+            
             if isinstance(t, str):
                 found_idx = None
                 for attr_name in ["output_names", "feature_names"]:
                     meta = getattr(self, attr_name, None)
                     if meta is not None:
                         names_vec = np.asarray(meta)
+                        # Search the first row if 2D metadata
                         search_vec = names_vec[0] if names_vec.ndim == 2 else names_vec
                         idxs = np.where(search_vec == t)[0]
                         if len(idxs) > 0:
@@ -348,52 +342,21 @@ class Explanation(metaclass=MetaExplanation):
                             break
                 
                 if found_idx is not None:
-                    full_item[i] = found_idx
+                    new_item[i] = found_idx
                 else:
-                    raise ValueError(f"Name '{t}' not found in metadata.")
-            
-            if isinstance(full_item[i], (np.integer, np.int64, np.int32)):
-                full_item[i] = int(full_item[i])
+                    raise ValueError(f"The name '{t}' was not found in metadata.")
+            elif isinstance(t, (np.integer, np.int64, np.int32)):
+                new_item[i] = int(t)
 
-        # 3. Finalize and Slice
-        final_item = tuple(full_item)
+        final_item = tuple(new_item)
         if len(final_item) == 0:
             return self
         
+        # 2. Native Shallow Copy & Slicer Delegation
+        # By translating strings to pure integers, we safely bypass the buggy
+        # manual reconstruction from #4633 and unlock Slicer's native zero-copy views.
         new_self = copy.copy(self)
-        
-        # --- THE "TRUE VIEW" OVERRIDE ---
-        # 1. Pre-slice the heavy NumPy arrays manually using the FULL tuple.
-        # This guarantees a NumPy view and bypasses the Slicer's max_dim truncation.
-        sliced_arrays = {}
-        for attr in ["values", "data", "base_values"]:
-            arr = getattr(self, attr, None)
-            if isinstance(arr, np.ndarray):
-                try:
-                    # Slice with exactly as many dimensions as this specific array has
-                    sliced_arrays[attr] = arr[final_item[:arr.ndim]]
-                except IndexError:
-                    pass
-        
-        # 2. Let the Slicer handle metadata and dimensions it tracks safely
-        try:
-            max_dim = getattr(self._s, "max_dim", len(self.shape))
-            new_self._s = self._s.__getitem__(final_item[:max_dim])
-        except Exception:
-            pass
-
-        # 3. Inject our perfect NumPy views back into the object
-        for attr, view_arr in sliced_arrays.items():
-            try:
-                # Try standard property assignment (works in most SHAP versions)
-                setattr(new_self, attr, view_arr)
-            except AttributeError:
-                # Deep fallback for strict internal Slicer objects
-                try:
-                    if hasattr(new_self._s, "_objects") and attr in new_self._s._objects:
-                        new_self._s._objects[attr].o = view_arr
-                except Exception:
-                    pass
+        new_self._s = self._s.__getitem__(final_item)
 
         new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(final_item,), prev_shape=self.shape))
         return new_self
