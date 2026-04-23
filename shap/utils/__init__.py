@@ -1,3 +1,4 @@
+from ._interaction import rank_interactions
 from ._clustering import (
     delta_minimization_order,
     hclust,
