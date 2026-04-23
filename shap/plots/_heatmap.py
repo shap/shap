@@ -31,8 +31,9 @@ def heatmap(
     Parameters
     ----------
     shap_values : shap.Explanation
-        A multi-row :class:`.Explanation` object that we want to visualize in a
-        cluster ordering.
+        A :class:`.Explanation` object that we want to visualize in a cluster
+        ordering. Single-row explanations are supported, but they are shown
+        without clustering.
 
     instance_order : OpChain or numpy.ndarray
         A function that returns a sort ordering given a matrix of SHAP values and an axis, or
@@ -83,7 +84,7 @@ def heatmap(
     elif not hasattr(feature_order, "__len__"):
         raise Exception(f"Unsupported feature_order: {str(feature_order)}!")
     xlabel = "Instances"
-    if values.shape[0] < 2:
+    if values.shape[0] == 1:
         instance_order = np.arange(values.shape[0])
     else:
         instance_order = convert_ordering(instance_order, shap_values)
