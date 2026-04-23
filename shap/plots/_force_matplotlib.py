@@ -1,18 +1,21 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 from matplotlib import lines
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 from matplotlib.font_manager import FontProperties
 from matplotlib.patches import PathPatch, Polygon
 from matplotlib.path import Path
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
 
 
 def draw_bars(
