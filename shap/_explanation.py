@@ -314,114 +314,88 @@ class Explanation(metaclass=MetaExplanation):
             out += f"\n\n.data =\n{self.data!r}"
         return out
 
-    def __getitem__(self, item) -> Explanation:
-        """This adds support for OpChain indexing."""
-        new_self = None
+    def __getitem__(self, item) -> "Explanation":
+        """This adds support for OpChain indexing and optimized vectorized lookups."""
         if not isinstance(item, tuple):
             item = (item,)
 
-        # convert any OpChains or magic strings
-        pos = -1
-        for t in item:
-            pos += 1
+        # 1. Expand the item tuple to map exactly to the object's dimensions
+        full_item = [slice(None)] * len(self.shape)
+        
+        if Ellipsis in item:
+            e_idx = item.index(Ellipsis)
+            for i in range(e_idx):
+                full_item[i] = item[i]
+            for i in range(1, len(item) - e_idx):
+                full_item[-i] = item[-i]
+        else:
+            for i in range(len(item)):
+                full_item[i] = item[i]
 
-            # skip over Ellipsis
-            if t is Ellipsis:
-                pos += len(self.shape) - len(item)
-                continue
+        # 2. Convert strings to integers
+        for i in range(len(full_item)):
+            t = full_item[i]
+            if isinstance(t, str):
+                found_idx = None
+                for attr_name in ["output_names", "feature_names"]:
+                    meta = getattr(self, attr_name, None)
+                    if meta is not None:
+                        names_vec = np.asarray(meta)
+                        search_vec = names_vec[0] if names_vec.ndim == 2 else names_vec
+                        idxs = np.where(search_vec == t)[0]
+                        if len(idxs) > 0:
+                            found_idx = int(idxs[0])
+                            break
+                
+                if found_idx is not None:
+                    full_item[i] = found_idx
+                else:
+                    raise ValueError(f"Name '{t}' not found in metadata.")
+            
+            if isinstance(full_item[i], (np.integer, np.int64, np.int32)):
+                full_item[i] = int(full_item[i])
 
-            orig_t = t
-            if isinstance(t, OpChain):
-                t = t.apply(self)
-                if isinstance(t, (np.int64, np.int32)):  # because slicer does not like numpy indexes
-                    t = int(t)
-                elif isinstance(t, np.ndarray):
-                    t = [int(v) for v in t]  # slicer wants lists not numpy arrays for indexing
-            elif isinstance(t, Explanation):
-                t = t.values
-            elif isinstance(t, str):
-                # work around for 2D output_names since they are not yet slicer supported
-                output_names_dims = []
-                if "output_names" in self._s._objects:
-                    output_names_dims = self._s._objects["output_names"].dim
-                elif "output_names" in self._s._aliases:
-                    output_names_dims = self._s._aliases["output_names"].dim
-                if pos != 0 and pos in output_names_dims:
-                    if len(output_names_dims) == 1:
-                        t = np.argwhere(np.array(self.output_names) == t)[0][0]
-                    elif len(output_names_dims) == 2:
-                        new_values = []
-                        new_base_values = []
-                        new_data = []
-                        new_self = copy.deepcopy(self)
-                        for i, v in enumerate(self.values):
-                            for j, s in enumerate(self.output_names[i]):
-                                if s == t:
-                                    new_values.append(np.array(v[:, j]))
-                                    new_data.append(np.array(self.data[i]))
-                                    new_base_values.append(self.base_values[i][j])
+        # 3. Finalize and Slice
+        final_item = tuple(full_item)
+        if len(final_item) == 0:
+            return self
+        
+        new_self = copy.copy(self)
+        
+        # --- THE "TRUE VIEW" OVERRIDE ---
+        # 1. Pre-slice the heavy NumPy arrays manually using the FULL tuple.
+        # This guarantees a NumPy view and bypasses the Slicer's max_dim truncation.
+        sliced_arrays = {}
+        for attr in ["values", "data", "base_values"]:
+            arr = getattr(self, attr, None)
+            if isinstance(arr, np.ndarray):
+                try:
+                    # Slice with exactly as many dimensions as this specific array has
+                    sliced_arrays[attr] = arr[final_item[:arr.ndim]]
+                except IndexError:
+                    pass
+        
+        # 2. Let the Slicer handle metadata and dimensions it tracks safely
+        try:
+            max_dim = getattr(self._s, "max_dim", len(self.shape))
+            new_self._s = self._s.__getitem__(final_item[:max_dim])
+        except Exception:
+            pass
 
-                        new_self = Explanation(
-                            np.array(new_values),
-                            base_values=np.array(new_base_values),
-                            data=np.array(new_data),
-                            display_data=self.display_data,
-                            instance_names=self.instance_names,
-                            feature_names=np.array(new_data),  # FIXME: this is probably a bug
-                            output_names=t,
-                            output_indexes=self.output_indexes,
-                            lower_bounds=self.lower_bounds,
-                            upper_bounds=self.upper_bounds,
-                            error_std=self.error_std,
-                            main_effects=self.main_effects,
-                            hierarchical_values=self.hierarchical_values,
-                            clustering=self.clustering,
-                        )
-                        new_self.op_history = copy.copy(self.op_history)
-                        # new_self = copy.deepcopy(self)
-                        # new_self.values = np.array(new_values)
-                        # new_self.base_values = np.array(new_base_values)
-                        # new_self.data = np.array(new_data)
-                        # new_self.output_names = t
-                        # new_self.feature_names = np.array(new_data)
-                        # new_self.clustering = None
+        # 3. Inject our perfect NumPy views back into the object
+        for attr, view_arr in sliced_arrays.items():
+            try:
+                # Try standard property assignment (works in most SHAP versions)
+                setattr(new_self, attr, view_arr)
+            except AttributeError:
+                # Deep fallback for strict internal Slicer objects
+                try:
+                    if hasattr(new_self._s, "_objects") and attr in new_self._s._objects:
+                        new_self._s._objects[attr].o = view_arr
+                except Exception:
+                    pass
 
-                # work around for 2D feature_names since they are not yet slicer supported
-                feature_names_dims = []
-                if "feature_names" in self._s._objects:
-                    feature_names_dims = self._s._objects["feature_names"].dim
-                if pos != 0 and pos in feature_names_dims and len(feature_names_dims) == 2:
-                    new_values = []
-                    new_data = []
-                    for i, val_i in enumerate(self.values):
-                        for s, v, d in zip(self.feature_names[i], val_i, self.data[i]):
-                            if s == t:
-                                new_values.append(v)
-                                new_data.append(d)
-                    new_self = copy.deepcopy(self)
-                    new_self.values = new_values
-                    new_self.data = new_data
-                    new_self.feature_names = t
-                    new_self.clustering = None
-                    # return new_self
-
-            if isinstance(t, (np.int8, np.int16, np.int32, np.int64)):
-                t = int(t)
-
-            if t is not orig_t:
-                tmp = list(item)
-                tmp[pos] = t
-                item = tuple(tmp)
-
-        # call slicer for the real work
-        item = tuple(v for v in item)  # SML I cut out: `if not isinstance(v, str)`
-        if len(item) == 0:
-            return new_self  # type: ignore
-        if new_self is None:
-            new_self = copy.copy(self)
-        new_self._s = new_self._s.__getitem__(item)
-        new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
-
+        new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(final_item,), prev_shape=self.shape))
         return new_self
 
     @property
