@@ -234,7 +234,7 @@ class TreeExplainer:
                 return [phi[:, :, i] for i in range(n_outputs)]  # type: ignore[return-value]
         return np.array([])  # fallback
 
-    def shap_interaction_values(self, X, tree_limit=-1, **kwargs):
+    def shap_interaction_values(self, X: Any, tree_limit: int = -1, **kwargs: Any) -> npt.NDArray[np.float64]:
         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
         if self.model_type == "xgboost":
             import xgboost
@@ -243,7 +243,8 @@ class TreeExplainer:
                 X = xgboost.DMatrix(X)
             if tree_limit == -1:
                 tree_limit = 0
-            return self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)
+            # self.trees is the booster object for xgboost
+            return self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)  # type: ignore[union-attr]
         else:
             raise NotImplementedError("Interaction values not yet supported for model type: " + str(type(X)))
 
