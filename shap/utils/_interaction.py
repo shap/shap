@@ -3,6 +3,7 @@ Utilities for ranking feature interactions using SHAP values.
 """
 
 import numpy as np
+
 from ._general import approximate_interactions
 
 
@@ -26,7 +27,6 @@ def rank_interactions(shap_values, X, feature_names=None, max_pairs=None):
     list of tuples
         Sorted list of (feature_i, feature_j, score).
     """
-
     shap_values = np.asarray(shap_values)
     n_features = shap_values.shape[1]
 
@@ -46,10 +46,7 @@ def rank_interactions(shap_values, X, feature_names=None, max_pairs=None):
 
             interaction_scores[pair] = interaction_scores.get(pair, 0.0) + abs(score)
 
-    ranked_pairs = [
-        (feature_names[i], feature_names[j], score)
-        for (i, j), score in interaction_scores.items()
-    ]
+    ranked_pairs = [(feature_names[i], feature_names[j], score) for (i, j), score in interaction_scores.items()]
 
     ranked_pairs.sort(key=lambda x: x[2], reverse=True)
 

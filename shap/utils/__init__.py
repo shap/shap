@@ -1,4 +1,3 @@
-from ._interaction import rank_interactions
 from ._clustering import (
     delta_minimization_order,
     hclust,
@@ -20,6 +19,7 @@ from ._general import (
     shapley_coefficients,
     suppress_stderr,
 )
+from ._interaction import rank_interactions
 from ._masked_model import MaskedModel, make_masks
 from ._show_progress import show_progress
 
