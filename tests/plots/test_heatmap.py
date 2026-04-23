@@ -25,3 +25,18 @@ def test_heatmap_feature_order(explainer):
     )
     plt.tight_layout()
     return fig
+
+
+def test_heatmap_single_row_explanation():
+    """Heatmap should handle a single-row Explanation without clustering failures."""
+    ex = shap.Explanation(
+        values=np.array([[1.0, -2.0, 3.0]]),
+        base_values=np.array([0.0]),
+        data=np.array([[10.0, 20.0, 30.0]]),
+        feature_names=["a", "b", "c"],
+    )
+
+    ax = shap.plots.heatmap(ex, show=False)
+    plt.tight_layout()
+
+    assert ax is not None

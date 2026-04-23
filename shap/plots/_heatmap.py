@@ -83,7 +83,10 @@ def heatmap(
     elif not hasattr(feature_order, "__len__"):
         raise Exception(f"Unsupported feature_order: {str(feature_order)}!")
     xlabel = "Instances"
-    instance_order = convert_ordering(instance_order, shap_values)
+    if values.shape[0] < 2:
+        instance_order = np.arange(values.shape[0])
+    else:
+        instance_order = convert_ordering(instance_order, shap_values)
     # if issubclass(type(instance_order), OpChain):
     #     #xlabel += " " + instance_order.summary_string("SHAP values")
     #     instance_order = instance_order.apply(Explanation(values))
