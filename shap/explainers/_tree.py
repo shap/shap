@@ -6,8 +6,8 @@ import json
 import os
 import time
 import warnings
-from typing import Any, Literal
 from collections import deque
+from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
