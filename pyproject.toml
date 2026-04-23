@@ -189,7 +189,6 @@ module = [
   # "shap.explainers._partition",      # NOW TYPE CHECKED - type hints added
   # "shap.explainers._permutation",    # NOW TYPE CHECKED - type hints added
   # "shap.explainers._sampling",       # NOW TYPE CHECKED - type hints added
-  # "shap.explainers._tree",           # NOW TYPE CHECKED - type hints added
   # "shap.explainers._coalition",      # NOW TYPE CHECKED - type hints added
   "shap.explainers.other._random",
   "shap.explainers.pytree",
