@@ -6,7 +6,7 @@ import json
 import os
 import time
 import warnings
-from typing import Any, Literal, Final
+from typing import Any, Final, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -381,6 +381,7 @@ class TreeExplainer(Explainer):
             Whether to compute the SHAP interaction values.
         check_additivity: bool
             Check if the sum of the SHAP values equals the output of the model.
+
         Returns
         -------
             shap.Explanation object containing the given data and the SHAP values.
