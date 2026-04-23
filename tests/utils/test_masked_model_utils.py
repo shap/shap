@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 
 from shap.utils._masked_model import (
-    _upcast_array,
     _assert_output_input_match,
     _convert_delta_mask_to_full,
+    _upcast_array,
 )
 
 
