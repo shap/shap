@@ -17,3 +17,9 @@ def test_logit_round_trips_finite_probabilities():
 
     assert np.all(np.isfinite(logits))
     assert np.allclose(logit.inverse(logits), values, rtol=1e-12, atol=0.0)
+
+
+def test_logit_supports_scalar_inputs():
+    value = 0.5
+    assert logit(value) == 0.0
+    assert logit.inverse(logit(value)) == value
