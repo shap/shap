@@ -62,9 +62,7 @@ def test_sort_false(shap_values_2d, group_mask):
     """Line 61: sort=False path."""
     feature_names = ["a", "b", "c", "d", "e"]
     ax = plt.subplots()[1]
-    shap.plots.group_difference(
-        shap_values_2d, group_mask, feature_names=feature_names, sort=False, show=False, ax=ax
-    )
+    shap.plots.group_difference(shap_values_2d, group_mask, feature_names=feature_names, sort=False, show=False, ax=ax)
     tick_labels = [t.get_text() for t in ax.get_yticklabels()]
     assert set(tick_labels) == set(feature_names)
 
