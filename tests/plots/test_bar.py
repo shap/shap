@@ -110,3 +110,21 @@ def test_bar_raises_error_for_empty_explanation(explainer):
     shap_values = explainer(explainer.data)
     with pytest.raises(ValueError, match="The passed Explanation is empty"):
         shap.plots.bar(shap_values[0:0], show=False)
+
+
+def test_bar_raises_error_for_invalid_coalition(explainer):
+    shap_values = explainer(explainer.data)
+    clustering = shap.utils.hclust(explainer.data, metric="correlation")
+    with pytest.raises(TypeError, match="The coalition argument must be an boolean value!"):
+        shap.plots.bar(shap_values, clustering=clustering, clustering_cutoff=0.2, coalition="Test")
+
+
+def test_bar_coalition_run(explainer):
+    shap_values = explainer(explainer.data)
+    clustering = shap.utils.hclust(explainer.data, metric="correlation")
+    ax = shap.plots.bar(shap_values, clustering=clustering, clustering_cutoff=0, coalition=True, show=False)
+
+    assert ax is not None
+    assert len(ax.patches) == 10
+
+    plt.close(ax.figure)
