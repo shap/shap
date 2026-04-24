@@ -18,6 +18,7 @@ def test_random_dependence_no_interaction():
     shap.dependence_plot(0, np.random.randn(20, 5), np.random.randn(20, 5), show=False, interaction_index=None)
 
 
+@pytest.mark.mpl_image_compare
 def test_partial_dependence_custom_ax():
     """Ensure the ax parameter is respected — GH #3206."""
     sklearn = pytest.importorskip("sklearn")
@@ -38,7 +39,7 @@ def test_partial_dependence_custom_ax():
         show=False,
     )
     assert returned_ax is expected_ax, "partial_dependence_plot must draw on the provided ax"
-    plt.close(fig)
+    return fig
 
 
 def test_dependence_use_line_collection_bug():
