@@ -58,3 +58,18 @@ def test_action_comparisons_and_properties():
     # Test default initialized properties
     assert action_cheap._group_index == 0
     assert action_cheap._grouped_index == 0
+
+
+def test_action_invalid_cost_type():
+    with pytest.raises(TypeError):
+        shap.actions.Action(cost="invalid")
+
+
+def test_action_negative_cost():
+    with pytest.raises(ValueError):
+        shap.actions.Action(cost=-5)
+
+
+def test_action_valid_cost():
+    a = shap.actions.Action(cost=10)
+    assert a.cost == 10
