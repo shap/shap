@@ -314,26 +314,31 @@ class Explanation(metaclass=MetaExplanation):
             out += f"\n\n.data =\n{self.data!r}"
         return out
 
-    def __getitem__(self, item) -> "Explanation":
+    def __getitem__(self, item) -> Explanation:
         """This adds support for OpChain indexing and optimized vectorized lookups."""
         if not isinstance(item, tuple):
             item = (item,)
 
         # 1. Safely locate Ellipsis (avoiding NumPy boolean ambiguity arrays)
         e_idx = next((i for i, x in enumerate(item) if x is Ellipsis), None)
-        
+
         full_item = [slice(None)] * len(self.shape)
         if e_idx is not None:
-            for i in range(e_idx): full_item[i] = item[i]
-            for i in range(1, len(item) - e_idx): full_item[-i] = item[-i]
+            for i in range(e_idx):
+                full_item[i] = item[i]
+            for i in range(1, len(item) - e_idx):
+                full_item[-i] = item[-i]
         else:
-            for i in range(len(item)): full_item[i] = item[i]
+            for i in range(len(item)):
+                full_item[i] = item[i]
 
         # 2. String to Integer Lookups
         for i, t in enumerate(full_item):
-            if isinstance(t, OpChain): t = t.apply(self)
-            elif isinstance(t, Explanation): t = t.values
-            
+            if isinstance(t, OpChain):
+                t = t.apply(self)
+            elif isinstance(t, Explanation):
+                t = t.values
+
             if isinstance(t, str):
                 found_idx = None
                 for attr_name in ["output_names", "feature_names"]:
@@ -345,14 +350,17 @@ class Explanation(metaclass=MetaExplanation):
                         if len(idxs) > 0:
                             found_idx = int(idxs[0])
                             break
-                if found_idx is not None: full_item[i] = found_idx
-                else: raise ValueError(f"The name '{t}' was not found in metadata.")
+                if found_idx is not None:
+                    full_item[i] = found_idx
+                else:
+                    raise ValueError(f"The name '{t}' was not found in metadata.")
             elif isinstance(t, (np.integer, np.int64, np.int32)):
                 full_item[i] = int(t)
 
         final_item = tuple(full_item)
-        if len(final_item) == 0: return self
-        
+        if len(final_item) == 0:
+            return self
+
         # 3. Native Delegation with 3D Heterogeneous Array Fallback
         try:
             # Fast-path: Slicer handles homogeneous dimensions perfectly
@@ -361,7 +369,7 @@ class Explanation(metaclass=MetaExplanation):
             # IMPORTANT: Save the original user `item` to keep Cohort tracking perfectly intact
             new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
             return new_self
-            
+
         except IndexError:
             # Fallback: Slicer crashes on 3D tuples applied to 2D arrays (e.g., `data`).
             Instances = final_item[0]
@@ -371,37 +379,51 @@ class Explanation(metaclass=MetaExplanation):
             kwargs = {}
             if getattr(self, "values", None) is not None:
                 kwargs["values"] = self.values[final_item]
-                
+
             if getattr(self, "data", None) is not None:
                 if isinstance(self.data, np.ndarray):
-                    kwargs["data"] = self.data[(Instances, Features)[:self.data.ndim]]
-                else: kwargs["data"] = self.data
-                
+                    kwargs["data"] = self.data[(Instances, Features)[: self.data.ndim]]
+                else:
+                    kwargs["data"] = self.data
+
             if getattr(self, "base_values", None) is not None:
                 bv = self.base_values
                 if isinstance(bv, np.ndarray):
-                    if bv.ndim == 2: kwargs["base_values"] = bv[Instances, Outputs]
+                    if bv.ndim == 2:
+                        kwargs["base_values"] = bv[Instances, Outputs]
                     elif bv.ndim == 1:
                         if len(self.shape) == 3 and bv.shape[0] == self.shape[2]:
                             kwargs["base_values"] = bv[Outputs]
-                        else: kwargs["base_values"] = bv[Instances]
-                    else: kwargs["base_values"] = bv
-                else: kwargs["base_values"] = bv
+                        else:
+                            kwargs["base_values"] = bv[Instances]
+                    else:
+                        kwargs["base_values"] = bv
+                else:
+                    kwargs["base_values"] = bv
 
             if getattr(self, "display_data", None) is not None:
                 if isinstance(self.display_data, np.ndarray):
-                    kwargs["display_data"] = self.display_data[(Instances, Features)[:self.display_data.ndim]]
-                else: kwargs["display_data"] = self.display_data
+                    kwargs["display_data"] = self.display_data[(Instances, Features)[: self.display_data.ndim]]
+                else:
+                    kwargs["display_data"] = self.display_data
 
             if getattr(self, "feature_names", None) is not None:
                 fn = np.asarray(self.feature_names)
                 sliced_fn = fn[Features] if fn.ndim == 1 else (fn[Instances, Features] if fn.ndim == 2 else fn)
-                kwargs["feature_names"] = sliced_fn.tolist() if isinstance(self.feature_names, list) and hasattr(sliced_fn, "tolist") else sliced_fn
-                
+                kwargs["feature_names"] = (
+                    sliced_fn.tolist()
+                    if isinstance(self.feature_names, list) and hasattr(sliced_fn, "tolist")
+                    else sliced_fn
+                )
+
             if getattr(self, "output_names", None) is not None:
                 on = np.asarray(self.output_names)
                 sliced_on = on[Outputs] if on.ndim == 1 else (on[Instances, Outputs] if on.ndim == 2 else on)
-                kwargs["output_names"] = sliced_on.tolist() if isinstance(self.output_names, list) and hasattr(sliced_on, "tolist") else sliced_on
+                kwargs["output_names"] = (
+                    sliced_on.tolist()
+                    if isinstance(self.output_names, list) and hasattr(sliced_on, "tolist")
+                    else sliced_on
+                )
 
             # Reconstruct safely
             new_exp = self.__class__(**kwargs)
