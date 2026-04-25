@@ -20,6 +20,7 @@ def test_group_difference(explainer):
     plt.tight_layout()
     return fig
 
+
 @pytest.fixture
 def shap_values_2d():
     np.random.seed(42)
