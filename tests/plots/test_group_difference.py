@@ -20,13 +20,6 @@ def test_group_difference(explainer):
     plt.tight_layout()
     return fig
 
-
-@pytest.fixture(autouse=True)
-def close_plots():
-    yield
-    plt.close("all")
-
-
 @pytest.fixture
 def shap_values_2d():
     np.random.seed(42)
@@ -41,7 +34,7 @@ def group_mask():
 
 
 def test_1d_input_no_feature_names(group_mask):
-    """Lines 48-50: 1D input with no feature_names."""
+    """1D input with no feature_names should set label to empty string."""
     np.random.seed(0)
     shap_values_1d = np.random.randn(100)
     ax = plt.subplots()[1]
@@ -51,7 +44,7 @@ def test_1d_input_no_feature_names(group_mask):
 
 
 def test_auto_feature_names(shap_values_2d, group_mask):
-    """Line 54: auto-generate Feature i names."""
+    """Auto-generate Feature i names when none provided."""
     ax = plt.subplots()[1]
     shap.plots.group_difference(shap_values_2d, group_mask, feature_names=None, show=False, ax=ax)
     tick_labels = [t.get_text() for t in ax.get_yticklabels()]
@@ -59,7 +52,7 @@ def test_auto_feature_names(shap_values_2d, group_mask):
 
 
 def test_sort_false(shap_values_2d, group_mask):
-    """Line 61: sort=False path."""
+    """sort=False should preserve original feature order."""
     feature_names = ["a", "b", "c", "d", "e"]
     ax = plt.subplots()[1]
     shap.plots.group_difference(
@@ -70,20 +63,20 @@ def test_sort_false(shap_values_2d, group_mask):
 
 
 def test_max_display(shap_values_2d, group_mask):
-    """Line 64: max_display limits bars."""
+    """max_display should limit the number of bars shown."""
     ax = plt.subplots()[1]
     shap.plots.group_difference(shap_values_2d, group_mask, max_display=3, show=False, ax=ax)
     assert len(ax.patches) == 3
 
 
 def test_no_ax_creates_figure(shap_values_2d, group_mask):
-    """Lines 70-71: no ax provided, function creates its own figure."""
+    """When no ax is provided, function should create its own figure."""
     shap.plots.group_difference(shap_values_2d, group_mask, show=False)
     assert plt.get_fignums()
 
 
 def test_show_true_calls_plt_show(shap_values_2d, group_mask, monkeypatch):
-    """Line 92: show=True calls plt.show()."""
+    """show=True without ax should call plt.show()."""
     called = []
     monkeypatch.setattr(plt, "show", lambda: called.append(1))
     shap.plots.group_difference(shap_values_2d, group_mask, show=True)
