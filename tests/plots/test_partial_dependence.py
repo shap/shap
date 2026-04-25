@@ -1,8 +1,5 @@
 """Tests for shap.partial_dependence_plot."""
 
-import matplotlib
-
-matplotlib.use("Agg")  # headless backend so tests don't pop windows
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -34,7 +31,7 @@ def test_partial_dependence_respects_custom_ax():
     def model(x):
         return x[:, 0] + 0.5 * x[:, 1]
 
-    fig, axes = plt.subplots(1, 2)
+    _, axes = plt.subplots(1, 2)
     try:
         shap.partial_dependence_plot(
             0,
