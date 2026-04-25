@@ -48,5 +48,4 @@ six==1.17.0
 slicer==0.0.8
 threadpoolctl==3.6.0
 tqdm==4.67.1
-typing-extensions==4.12.2
 tzdata==2025.2
