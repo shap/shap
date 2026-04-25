@@ -120,8 +120,13 @@ def scatter(
     Returns
     -------
     ax : matplotlib Axes object
-        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it. Only
-        returned if ``show=False``.
+        When a **single feature** is plotted and ``show=False``, returns the
+        :external+mpl:class:`~matplotlib.axes.Axes` object so the plot can be
+        further customised.
+    fig : matplotlib Figure object
+        When **multiple features** are plotted and ``show=False``, returns the
+        :external+mpl:class:`~matplotlib.figure.Figure` object containing all
+        subplots. Use ``fig.axes`` to access the individual Axes.
 
     Examples
     --------

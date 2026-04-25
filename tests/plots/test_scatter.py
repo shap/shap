@@ -73,7 +73,6 @@ def test_scatter_multifeature_show_false_returns_figure(explainer):
     result = shap.plots.scatter(explanation[:, ["Age", "Workclass"]], show=False)
     assert result is not None, "scatter() returned None with show=False; expected a matplotlib Figure"
     assert hasattr(result, "savefig"), f"Expected a Figure object, got {type(result)}"
-    plt.close("all")
 
 
 @pytest.fixture()
