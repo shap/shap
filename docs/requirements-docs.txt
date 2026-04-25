@@ -109,7 +109,7 @@ myst-parser==5.0.0
     # via shap (pyproject.toml)
 nbclient==0.10.4
     # via nbconvert
-nbconvert==7.17.0
+nbconvert==7.17.1
     # via nbsphinx
 nbformat==5.10.4
     # via
