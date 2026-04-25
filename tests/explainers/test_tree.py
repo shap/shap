@@ -1989,7 +1989,7 @@ def test_lightgbm_interactions():
 
     model = lightgbm.LGBMClassifier(n_estimators=10, max_depth=3).fit(X, y)
     explainer = shap.TreeExplainer(model)
-    predicted = model.predict(X, raw_score=True)
+    predicted = model.predict(pd.DataFrame(X, columns=model.feature_names_in_), raw_score=True)
     explanation = explainer(X, interactions=False)
     np.testing.assert_allclose(explanation.values.sum(axis=(1)) + explanation.base_values, predicted)
 
@@ -1998,7 +1998,7 @@ def test_lightgbm_interactions():
 
     # test flat input
     explanation_flat = explainer(X[0, :], interactions=True)
-    predicted_flat = model.predict(X[[0], :], raw_score=True)
+    predicted_flat = model.predict(pd.DataFrame(X[[0], :], columns=model.feature_names_in_), raw_score=True)
 
     np.testing.assert_allclose(
         explanation_flat.values.sum((0, 1)) + explanation_flat.base_values[0], predicted_flat[0], atol=1e-4
@@ -2593,7 +2593,7 @@ def test_tree_explainer_with_lightgbm_regressor():
     assert shap_values.shape == (10, 5)
 
     # Check additivity
-    predictions = model.predict(X[:10])
+    predictions = model.predict(pd.DataFrame(X[:10], columns=model.feature_names_in_))
     assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
 
 
@@ -2614,7 +2614,7 @@ def test_tree_explainer_with_lightgbm_classifier():
     assert shap_values.shape == (10, 4) or (isinstance(shap_values, list) and len(shap_values) == 2)
 
     # Check additivity (SHAP values are in raw score space, not probability space)
-    predictions = model.predict(X[:10], raw_score=True)
+    predictions = model.predict(pd.DataFrame(X[:10], columns=model.feature_names_in_), raw_score=True)
     if isinstance(shap_values, list):
         shap_sum = shap_values[1].sum(1) + explainer.expected_value[1]
     else:
