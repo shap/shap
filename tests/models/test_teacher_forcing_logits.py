@@ -1,4 +1,5 @@
 import platform
+
 """This file contains tests for the TeacherForcingLogits class."""
 
 import numpy as np
