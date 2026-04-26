@@ -1,4 +1,4 @@
-"""Unit tests for the Exact explainer."""
+"""Unit tests for the ActionOptimizer."""
 
 import numpy as np
 import pandas as pd

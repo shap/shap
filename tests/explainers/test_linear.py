@@ -7,8 +7,9 @@ from sklearn.datasets import make_multilabel_classification
 from sklearn.linear_model import LogisticRegression, Ridge
 
 import shap
+import shap.maskers
 from shap import maskers
-from shap.utils._exceptions import InvalidFeaturePerturbationError
+from shap.utils._exceptions import DimensionError, InvalidFeaturePerturbationError, InvalidModelError
 
 
 def test_tied_pair():
@@ -262,3 +263,71 @@ def test_interventional_multi_regression():
     explainer = shap.explainers.LinearExplainer(model, maskers.Independent(X))
     shap_values = explainer.shap_values(X)
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, outputs, atol=1e-6)
+
+
+def test_invalid_model_type_raises():
+    # Passing a string instead of a model or (coef, intercept) tuple
+    with pytest.raises(InvalidModelError, match="An unknown model type was passed"):
+        shap.LinearExplainer("this_is_not_a_model", np.ones((10, 3)))
+
+
+def test_dimension_error_on_high_dim_data():
+    beta = np.array([1, 0, 0])
+    X_background = np.ones((10, 3))
+    explainer = shap.LinearExplainer((beta, 0), X_background)
+
+    # Create 3D data (e.g., an image batch shape)
+    X_eval = np.ones((2, 2, 3))
+
+    with pytest.raises(DimensionError, match="Instance must have 1 or 2 dimensions"):
+        explainer.shap_values(X_eval)
+
+
+def test_feature_dependence_deprecation():
+    beta = np.array([1, 0])
+    X_background = np.ones((10, 2))
+
+    with pytest.raises(ValueError, match="The option feature_dependence has been renamed to feature_perturbation!"):
+        shap.LinearExplainer((beta, 0), X_background, feature_dependence="interventional")
+
+
+def test_missing_background_data():
+    beta = np.array([1, 0])
+
+    bad_masker = shap.maskers.Independent(np.ones((1, 2)))
+    bad_masker.data = None
+    bad_masker.mean = None
+    bad_masker.cov = None
+
+    with pytest.raises(ValueError, match="A background data distribution must be provided!"):
+        shap.LinearExplainer((beta, 0), bad_masker)
+
+
+def test_explain_row_multiple_args():
+    beta = np.array([1, 0])
+    X_background = np.ones((10, 2))
+    explainer = shap.LinearExplainer((beta, 0), X_background)
+
+    with pytest.raises(AssertionError, match="Only single-argument functions are supported by the Linear explainer!"):
+        # Passing two data arguments instead of one
+        explainer.explain_row(
+            np.ones(2), np.ones(2), max_evals=100, main_effects=False, error_bounds=False, outputs=None, silent=True
+        )
+
+
+def test_parse_model_multiclass_single_class_fallback():
+    class MockModel:
+        def __init__(self):
+            # Shape is (1, 2) which triggers the len(shape) > 1 and shape[0] == 1 condition
+            self.coef_ = np.array([[0.5, 0.5]])
+            # List-type intercept to trigger the TypeError fallback
+            self.intercept_ = [0.1]
+
+    model = MockModel()
+    X_background = np.ones((10, 2))
+
+    explainer = shap.LinearExplainer(model, X_background)
+
+    # Assert the parser correctly flattened the coef and grabbed the first element of the intercept
+    assert np.array_equal(explainer.coef, np.array([0.5, 0.5]))
+    assert explainer.intercept == 0.1
