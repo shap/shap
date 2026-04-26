@@ -1,12 +1,11 @@
 import re
 import warnings
-import pytest
 
 import numpy as np
+import pytest
 
 import shap
-
-from shap.plots._text import _css_rgba, text, process_shap_values, svg_force_plot, unpack_shap_explanation_contents
+from shap.plots._text import _css_rgba, process_shap_values, svg_force_plot, text, unpack_shap_explanation_contents
 
 
 def test_text_plot_rgba_css_uses_plain_floats():
@@ -68,11 +67,7 @@ def test_css_rgba_numpy_input():
 
 
 def test_text_returns_html_string():
-    sv = shap.Explanation(
-        values=np.array([0.5, -0.2]),
-        base_values=0.0,
-        data=np.array(["good", "bad"])
-    )
+    sv = shap.Explanation(values=np.array([0.5, -0.2]), base_values=0.0, data=np.array(["good", "bad"]))
     result = text(sv, display=False)
 
     assert isinstance(result, str)
@@ -81,11 +76,7 @@ def test_text_returns_html_string():
 
 
 def test_text_escapes_html_tokens():
-    sv = shap.Explanation(
-        values=np.array([0.5]),
-        base_values=0.0,
-        data=np.array(["<script>"])
-    )
+    sv = shap.Explanation(values=np.array([0.5]), base_values=0.0, data=np.array(["<script>"]))
     result = text(sv, display=False)
 
     assert "<script>" not in result
@@ -93,11 +84,7 @@ def test_text_escapes_html_tokens():
 
 
 def test_text_display_true_returns_none():
-    sv = shap.Explanation(
-        values=np.array([0.5]),
-        base_values=0.0,
-        data=np.array(["good"])
-    )
+    sv = shap.Explanation(values=np.array([0.5]), base_values=0.0, data=np.array(["good"]))
     assert text(sv, display=True) is None
 
 
@@ -105,9 +92,7 @@ def test_process_shap_values_basic():
     tokens = np.array(["good", "bad"])
     values = np.array([0.5, -0.2])
 
-    out_tokens, out_values, group_sizes = process_shap_values(
-        tokens, values, grouping_threshold=0.01, separator=""
-    )
+    out_tokens, out_values, group_sizes = process_shap_values(tokens, values, grouping_threshold=0.01, separator="")
 
     assert list(out_tokens) == ["good", "bad"]
     assert list(out_values) == [0.5, -0.2]
@@ -127,7 +112,7 @@ def test_text_with_output_names():
         values=np.array([[0.5, -0.2]]),
         base_values=np.array([0.0, 0.0]),
         data=np.array(["good"]),
-        output_names=["positive", "negative"]
+        output_names=["positive", "negative"],
     )
     result = text(sv, display=False)
 
@@ -144,18 +129,14 @@ def test_svg_force_plot_returns_valid_svg():
         uuid="test",
         xmin=-1,
         xmax=1,
-        output_name=""
+        output_name="",
     )
     assert result.strip().startswith("<svg")
     assert "</svg>" in result
 
 
 def test_text_single_token():
-    sv = shap.Explanation(
-        values=np.array([0.0]),
-        base_values=0.0,
-        data=np.array(["test"])
-    )
+    sv = shap.Explanation(values=np.array([0.0]), base_values=0.0, data=np.array(["test"]))
     result = text(sv, display=False)
 
     assert isinstance(result, str)
@@ -167,11 +148,7 @@ def test_process_shap_values_return_metadata():
     values = np.array([0.3, -0.1])
 
     out_tokens, out_values, group_sizes, token_map, collapsed_ids = process_shap_values(
-        tokens,
-        values,
-        grouping_threshold=0.01,
-        separator="",
-        return_meta_data=True
+        tokens, values, grouping_threshold=0.01, separator="", return_meta_data=True
     )
 
     assert list(out_tokens) == ["hello", "world"]
@@ -179,16 +156,8 @@ def test_process_shap_values_return_metadata():
 
 
 def test_positive_and_negative_tokens_get_different_colors():
-    pos = shap.Explanation(
-        values=np.array([0.9]),
-        base_values=0.0,
-        data=np.array(["great"])
-    )
-    neg = shap.Explanation(
-        values=np.array([-0.9]),
-        base_values=0.0,
-        data=np.array(["great"])
-    )
+    pos = shap.Explanation(values=np.array([0.9]), base_values=0.0, data=np.array(["great"]))
+    neg = shap.Explanation(values=np.array([-0.9]), base_values=0.0, data=np.array(["great"]))
 
     assert text(pos, display=False) != text(neg, display=False)
 
@@ -201,11 +170,7 @@ def test_css_rgba_each_part_is_a_plain_number():
 
 
 def test_unpack_shap_explanation_contents_basic():
-    sv = shap.Explanation(
-        values=np.array([0.5, -0.2]),
-        base_values=0.0,
-        data=np.array(["good", "bad"])
-    )
+    sv = shap.Explanation(values=np.array([0.5, -0.2]), base_values=0.0, data=np.array(["good", "bad"]))
     values, clustering = unpack_shap_explanation_contents(sv)
 
     assert list(values) == [0.5, -0.2]
@@ -217,7 +182,7 @@ def test_unpack_shap_explanation_contents_uses_hierarchical_values_when_present(
         values=np.array([0.5, -0.2]),
         base_values=0.0,
         data=np.array(["good", "bad"]),
-        hierarchical_values=np.array([0.9, -0.4])
+        hierarchical_values=np.array([0.9, -0.4]),
     )
     values, clustering = unpack_shap_explanation_contents(sv)
 
@@ -227,10 +192,7 @@ def test_unpack_shap_explanation_contents_uses_hierarchical_values_when_present(
 def test_unpack_shap_explanation_contents_returns_clustering():
     clustering = np.array([[0.0, 1.0, 1.0, 2.0]])
     sv = shap.Explanation(
-        values=np.array([0.5, -0.2]),
-        base_values=0.0,
-        data=np.array(["good", "bad"]),
-        clustering=clustering
+        values=np.array([0.5, -0.2]), base_values=0.0, data=np.array(["good", "bad"]), clustering=clustering
     )
     values, returned_clustering = unpack_shap_explanation_contents(sv)
 
@@ -256,9 +218,7 @@ def test_text_old_emits_future_warning():
 
 def test_text_num_starting_labels():
     sv = shap.Explanation(
-        values=np.array([0.9, 0.1, -0.8]),
-        base_values=0.0,
-        data=np.array(["great", "okay", "terrible"])
+        values=np.array([0.9, 0.1, -0.8]), base_values=0.0, data=np.array(["great", "okay", "terrible"])
     )
     result = text(sv, num_starting_labels=1, display=False)
 
@@ -270,9 +230,7 @@ def test_text_with_separator():
     tokens = np.array(["hello", "world"])
     values = np.array([0.3, -0.1])
 
-    out_tokens, out_values, group_sizes = process_shap_values(
-        tokens, values, grouping_threshold=0.01, separator=" "
-    )
+    out_tokens, out_values, group_sizes = process_shap_values(tokens, values, grouping_threshold=0.01, separator=" ")
 
     assert list(out_tokens) == ["hello", "world"]
 
@@ -286,6 +244,6 @@ def test_svg_force_plot_contains_base_value_label():
         uuid="test",
         xmin=-1,
         xmax=1,
-        output_name=""
+        output_name="",
     )
     assert "base value" in result
