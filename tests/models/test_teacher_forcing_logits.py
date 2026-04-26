@@ -1,6 +1,6 @@
-import platform
-
 """This file contains tests for the TeacherForcingLogits class."""
+
+import platform
 
 import numpy as np
 import pytest
