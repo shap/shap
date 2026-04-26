@@ -1,5 +1,4 @@
 import numpy as np
-from transformers import AutoTokenizer
 
 import shap.benchmark as benchmark
 from shap.maskers import FixedComposite, Image, Impute, Independent, Partition, Text
@@ -35,7 +34,7 @@ def test_init(random_seed):
     )
     assert sequential_perturbation.data_type == "tabular"
 
-    text_masker = Text(AutoTokenizer.from_pretrained("nateraw/bert-base-uncased-emotion", use_fast=True))
+    text_masker = Text(None)
     sequential_perturbation = benchmark.perturbation.SequentialPerturbation(
         model, text_masker, sort_order, perturbation
     )
