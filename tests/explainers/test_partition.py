@@ -116,9 +116,7 @@ def test_explain_with_fixed_context(fixed_context):
     explanation = explainer(X[:2], fixed_context=fixed_context, silent=True)
     # For a linear model, additivity should hold up to small numerical noise
     preds = X[:2] @ np.array([1.0, -2.0, 0.5, 0.3])
-    np.testing.assert_allclose(
-        explanation.values.sum(axis=1) + explanation.base_values, preds, atol=1e-6
-    )
+    np.testing.assert_allclose(explanation.values.sum(axis=1) + explanation.base_values, preds, atol=1e-6)
 
 
 def test_call_args_set_default_kwargs():
