@@ -8,21 +8,26 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
-import scipy.cluster
-import scipy.sparse
-import scipy.spatial
-import sklearn
 from slicer import Alias, Obj, Slicer
 
-from .utils._clustering import hclust_ordering
-from .utils._exceptions import DimensionError
-from .utils._general import OpChain
+_op_chain_root = None
 
-op_chain_root = OpChain("shap.Explanation")
+
+def _get_op_chain_root():
+    global _op_chain_root
+    if _op_chain_root is None:
+        from .utils._general import OpChain
+
+        _op_chain_root = OpChain("shap.Explanation")
+    return _op_chain_root
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+
+    import pandas as pd
+
+    from .utils._general import OpChain
 
 
 @dataclass
@@ -40,57 +45,57 @@ class MetaExplanation(type):
     """This metaclass exposes the Explanation object's class methods for creating template op chains."""
 
     def __getitem__(cls, item: Any) -> OpChain:
-        return op_chain_root.__getitem__(item)
+        return _get_op_chain_root().__getitem__(item)
 
     @property
     def abs(cls) -> OpChain:
         """Element-wise absolute value op."""
-        return op_chain_root.abs
+        return _get_op_chain_root().abs
 
     @property
     def identity(cls) -> OpChain:
         """A no-op."""
-        return op_chain_root.identity
+        return _get_op_chain_root().identity
 
     @property
     def argsort(cls) -> OpChain:
         """Numpy style argsort."""
-        return op_chain_root.argsort
+        return _get_op_chain_root().argsort
 
     @property
     def flip(cls) -> OpChain:
         """Numpy style flip."""
-        return op_chain_root.flip
+        return _get_op_chain_root().flip
 
     @property
     def sum(cls) -> OpChain:
         """Numpy style sum."""
-        return op_chain_root.sum
+        return _get_op_chain_root().sum
 
     @property
     def max(cls) -> OpChain:
         """Numpy style max."""
-        return op_chain_root.max
+        return _get_op_chain_root().max
 
     @property
     def min(cls) -> OpChain:
         """Numpy style min."""
-        return op_chain_root.min
+        return _get_op_chain_root().min
 
     @property
     def mean(cls) -> OpChain:
         """Numpy style mean."""
-        return op_chain_root.mean
+        return _get_op_chain_root().mean
 
     @property
     def sample(cls) -> OpChain:
         """Numpy style sample."""
-        return op_chain_root.sample
+        return _get_op_chain_root().sample
 
     @property
     def hclust(cls) -> OpChain:
         """Hierarchical clustering op."""
-        return op_chain_root.hclust
+        return _get_op_chain_root().hclust
 
 
 class Explanation(metaclass=MetaExplanation):
@@ -230,6 +235,8 @@ class Explanation(metaclass=MetaExplanation):
 
     @display_data.setter
     def display_data(self, new_display_data):
+        import pandas as pd
+
         if isinstance(new_display_data, pd.DataFrame):
             new_display_data = new_display_data.values
         self._s.display_data = new_display_data
@@ -321,6 +328,8 @@ class Explanation(metaclass=MetaExplanation):
             item = (item,)
 
         # convert any OpChains or magic strings
+        from .utils._general import OpChain
+
         pos = -1
         for t in item:
             pos += 1
@@ -579,6 +588,8 @@ class Explanation(metaclass=MetaExplanation):
             return self._numpy_func("sum", axis=axis)
         if axis == 1 or len(self.shape) == 1:
             return group_features(self, grouping)
+        from .utils._exceptions import DimensionError
+
         raise DimensionError("Only axis = 1 is supported for grouping right now...")
 
     def percentile(self, q: float, axis: int | None = None) -> Explanation:
@@ -641,10 +652,14 @@ class Explanation(metaclass=MetaExplanation):
         values = self.values
 
         if len(values.shape) != 2:
+            from .utils._exceptions import DimensionError
+
             raise DimensionError("The hclust order only supports 2D arrays right now!")
 
         if axis == 1:
             values = values.T
+
+        from .utils._clustering import hclust_ordering
 
         return hclust_ordering(X=values, metric=metric)
 
@@ -830,6 +845,8 @@ def _compute_shape(x) -> tuple[int | None, ...]:
 
     if not hasattr(x, "__len__") or isinstance(x, str):
         return tuple()
+    import scipy.sparse
+
     if not scipy.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):
         return (None,)
     if isinstance(x, dict):
@@ -961,6 +978,8 @@ class Cohorts:
 def _auto_cohorts(shap_values: Explanation, max_cohorts: int) -> Cohorts:
     """This uses a DecisionTreeRegressor to build a group of cohorts with similar SHAP values."""
     # fit a decision tree that well separates the SHAP values
+    import sklearn
+
     m = sklearn.tree.DecisionTreeRegressor(max_leaf_nodes=max_cohorts)
     m.fit(shap_values.data, shap_values.values)
 
