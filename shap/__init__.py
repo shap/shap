@@ -1,3 +1,4 @@
+import importlib
 import os
 
 import lazy_loader as lazy
@@ -5,7 +6,20 @@ import lazy_loader as lazy
 from ._explanation import Cohorts as Cohorts
 from ._explanation import Explanation as Explanation
 
-__getattr__, __dir__, __all__ = lazy.attach_stub(__name__, __file__)
+_lazy_getattr, __dir__, __all__ = lazy.attach_stub(__name__, __file__)
+
+__all__.append("_cext_gpu")
+
+
+def __getattr__(name: str):
+    if name == "_cext_gpu":
+        try:
+            module = importlib.import_module(f".{name}", __name__)
+        except ImportError as exc:
+            raise ImportError("cuda extension was not built during install!") from exc
+        globals()[name] = module
+        return module
+    return _lazy_getattr(name)
 
 
 try:
