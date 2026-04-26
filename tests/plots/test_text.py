@@ -57,16 +57,19 @@ def test_single_text_to_text():
 
 
 def test_css_rgba_basic():
+    """Test the _css_rgba function."""
     assert _css_rgba(255, 0, 0, 0.5) == "rgba(255.0, 0.0, 0.0, 0.5)"
 
 
 def test_css_rgba_numpy_input():
+    """Test the _css_rgba function with numpy inputs."""
     result = _css_rgba(np.float64(255), np.float64(0), np.float64(0), np.float64(0.5))
     assert "np.float64" not in result
     assert result == "rgba(255.0, 0.0, 0.0, 0.5)"
 
 
 def test_text_returns_html_string():
+    """Test the text function returns an HTML string."""
     sv = shap.Explanation(values=np.array([0.5, -0.2]), base_values=0.0, data=np.array(["good", "bad"]))
     result = text(sv, display=False)
 
@@ -76,6 +79,7 @@ def test_text_returns_html_string():
 
 
 def test_text_escapes_html_tokens():
+    """Test the text function escapes HTML tokens."""
     sv = shap.Explanation(values=np.array([0.5]), base_values=0.0, data=np.array(["<script>"]))
     result = text(sv, display=False)
 
@@ -84,11 +88,13 @@ def test_text_escapes_html_tokens():
 
 
 def test_text_display_true_returns_none():
+    """Test the text function returns None when display is True."""
     sv = shap.Explanation(values=np.array([0.5]), base_values=0.0, data=np.array(["good"]))
     assert text(sv, display=True) is None
 
 
 def test_process_shap_values_basic():
+    """Test the process_shap_values function."""
     tokens = np.array(["good", "bad"])
     values = np.array([0.5, -0.2])
 
@@ -100,6 +106,7 @@ def test_process_shap_values_basic():
 
 
 def test_process_shap_values_raises_error_without_clustering():
+    """Test the process_shap_values function raises an error without clustering."""
     tokens = np.array(["a", "b"])
     values = np.array([0.1, 0.2, 0.3])
 
@@ -108,6 +115,7 @@ def test_process_shap_values_raises_error_without_clustering():
 
 
 def test_text_with_output_names():
+    """Test the text function with output names."""
     sv = shap.Explanation(
         values=np.array([[0.5, -0.2]]),
         base_values=np.array([0.0, 0.0]),
@@ -121,6 +129,7 @@ def test_text_with_output_names():
 
 
 def test_svg_force_plot_returns_valid_svg():
+    """Test the svg_force_plot function returns valid SVG."""
     result = svg_force_plot(
         values=np.array([0.5, -0.2]),
         base_values=0.0,
@@ -136,6 +145,7 @@ def test_svg_force_plot_returns_valid_svg():
 
 
 def test_text_single_token():
+    """Test the text function with a single token."""
     sv = shap.Explanation(values=np.array([0.0]), base_values=0.0, data=np.array(["test"]))
     result = text(sv, display=False)
 
@@ -144,6 +154,7 @@ def test_text_single_token():
 
 
 def test_process_shap_values_return_metadata():
+    """Test the process_shap_values function with return_meta_data=True."""
     tokens = np.array(["hello", "world"])
     values = np.array([0.3, -0.1])
 
@@ -156,6 +167,7 @@ def test_process_shap_values_return_metadata():
 
 
 def test_positive_and_negative_tokens_get_different_colors():
+    """Test that positive and negative tokens get different colors."""
     pos = shap.Explanation(values=np.array([0.9]), base_values=0.0, data=np.array(["great"]))
     neg = shap.Explanation(values=np.array([-0.9]), base_values=0.0, data=np.array(["great"]))
 
@@ -163,6 +175,7 @@ def test_positive_and_negative_tokens_get_different_colors():
 
 
 def test_css_rgba_each_part_is_a_plain_number():
+    """Test that each part of the RGBA color is a plain number."""
     result = _css_rgba(np.float64(128), np.float64(64), np.float64(32), np.float64(0.7))
     inner = result[5:-1]
     for part in inner.split(","):
@@ -170,6 +183,7 @@ def test_css_rgba_each_part_is_a_plain_number():
 
 
 def test_unpack_shap_explanation_contents_basic():
+    """Test the unpack_shap_explanation_contents function with basic inputs."""
     sv = shap.Explanation(values=np.array([0.5, -0.2]), base_values=0.0, data=np.array(["good", "bad"]))
     values, clustering = unpack_shap_explanation_contents(sv)
 
@@ -178,6 +192,7 @@ def test_unpack_shap_explanation_contents_basic():
 
 
 def test_unpack_shap_explanation_contents_uses_hierarchical_values_when_present():
+    """Test the unpack_shap_explanation_contents function with hierarchical values."""
     sv = shap.Explanation(
         values=np.array([0.5, -0.2]),
         base_values=0.0,
@@ -190,6 +205,7 @@ def test_unpack_shap_explanation_contents_uses_hierarchical_values_when_present(
 
 
 def test_unpack_shap_explanation_contents_returns_clustering():
+    """Test the unpack_shap_explanation_contents function returns clustering."""
     clustering = np.array([[0.0, 1.0, 1.0, 2.0]])
     sv = shap.Explanation(
         values=np.array([0.5, -0.2]), base_values=0.0, data=np.array(["good", "bad"]), clustering=clustering
@@ -201,6 +217,7 @@ def test_unpack_shap_explanation_contents_returns_clustering():
 
 
 def test_text_old_emits_future_warning():
+    """Test that the text_old function emits a FutureWarning."""
     from shap.plots._text import text_old
 
     shap_values = np.array([0.5, -0.2])
@@ -217,6 +234,7 @@ def test_text_old_emits_future_warning():
 
 
 def test_text_num_starting_labels():
+    """Test that the text function with num_starting_labels works correctly."""
     sv = shap.Explanation(
         values=np.array([0.9, 0.1, -0.8]), base_values=0.0, data=np.array(["great", "okay", "terrible"])
     )
@@ -227,6 +245,7 @@ def test_text_num_starting_labels():
 
 
 def test_text_with_separator():
+    """Test that the text function with a separator works correctly."""
     tokens = np.array(["hello", "world"])
     values = np.array([0.3, -0.1])
 
@@ -236,6 +255,7 @@ def test_text_with_separator():
 
 
 def test_svg_force_plot_contains_base_value_label():
+    """Test that the svg_force_plot function contains a base value label."""
     result = svg_force_plot(
         values=np.array([0.5, -0.2]),
         base_values=0.0,
