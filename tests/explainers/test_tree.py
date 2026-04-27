@@ -3015,13 +3015,14 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
-    
+
 
 def test_tree_ensemble_from_trees_random_forest_classifier():
     """Test TreeEnsemble.from_trees with sklearn RandomForestClassifier."""
     pytest.importorskip("sklearn")
     from sklearn.datasets import load_iris
     from sklearn.ensemble import RandomForestClassifier
+
     from shap.explainers._tree import TreeEnsemble
 
     X, y = load_iris(return_X_y=True)
@@ -3040,6 +3041,7 @@ def test_tree_ensemble_from_trees_random_forest_regressor():
     pytest.importorskip("sklearn")
     from sklearn.datasets import load_diabetes
     from sklearn.ensemble import RandomForestRegressor
+
     from shap.explainers._tree import TreeEnsemble
 
     X, y = load_diabetes(return_X_y=True)
@@ -3057,6 +3059,7 @@ def test_tree_ensemble_from_trees_single_decision_tree():
     pytest.importorskip("sklearn")
     from sklearn.datasets import load_iris
     from sklearn.tree import DecisionTreeClassifier
+
     from shap.explainers._tree import TreeEnsemble
 
     X, y = load_iris(return_X_y=True)

@@ -1578,6 +1578,7 @@ class TreeEnsemble:
                 self.base_offset = (np.ones(self.num_outputs) * self.base_offset).astype(self.internal_dtype)
             self.base_offset = self.base_offset.flatten()
             assert len(self.base_offset) == self.num_outputs
+
     @classmethod
     def from_trees(
         cls,
@@ -1590,7 +1591,7 @@ class TreeEnsemble:
         objective: str | None = None,
         data: npt.NDArray[Any] | None = None,
         data_missing: npt.NDArray[np.bool_] | None = None,
-    ) -> "TreeEnsemble":
+    ) -> TreeEnsemble:
         """Create a TreeEnsemble directly from a list of scikit-learn tree objects.
 
         This classmethod provides a standardized interface for constructing a
@@ -1683,6 +1684,7 @@ class TreeEnsemble:
                 break
 
         return obj
+
     def _set_xgboost_model_attributes(
         self,
         data: npt.NDArray[Any] | None,
