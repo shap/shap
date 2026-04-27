@@ -70,8 +70,7 @@ def _aggregate_shap_values(
 
     if values.ndim < 2:
         raise ValueError(
-            "SHAP values must have at least 2 dimensions "
-            f"(n_samples, n_features), got shape {values.shape}."
+            f"SHAP values must have at least 2 dimensions (n_samples, n_features), got shape {values.shape}."
         )
 
     if method == "mean_abs":
@@ -81,10 +80,7 @@ def _aggregate_shap_values(
     elif method == "max_abs":
         return np.abs(values).max(axis=0)
     else:
-        raise ValueError(
-            f"Unknown aggregation method '{method}'. "
-            "Choose from 'mean_abs', 'mean', or 'max_abs'."
-        )
+        raise ValueError(f"Unknown aggregation method '{method}'. Choose from 'mean_abs', 'mean', or 'max_abs'.")
 
 
 def rank_features(
@@ -224,17 +220,11 @@ def select_features(
     from sklearn.model_selection import cross_val_score
 
     if method not in ("forward", "backward"):
-        raise ValueError(
-            f"Unknown selection method '{method}'. "
-            "Choose from 'forward' or 'backward'."
-        )
+        raise ValueError(f"Unknown selection method '{method}'. Choose from 'forward' or 'backward'.")
 
     n_features = X.shape[1]
     if min_features < 1 or min_features > n_features:
-        raise ValueError(
-            f"min_features must be between 1 and {n_features}, "
-            f"got {min_features}."
-        )
+        raise ValueError(f"min_features must be between 1 and {n_features}, got {min_features}.")
 
     ranking = rank_features(shap_values, method=aggregation)
     ranked_indices = ranking["ranked_indices"]

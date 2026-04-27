@@ -9,7 +9,6 @@ from sklearn.ensemble import RandomForestClassifier
 
 import shap
 
-
 # ──────────────────── Fixtures ────────────────────
 
 
@@ -74,8 +73,7 @@ class TestRankFeatures:
 
         for i in range(len(scores) - 1):
             assert scores[i] >= scores[i + 1], (
-                f"Score at position {i} ({scores[i]:.4f}) is less than "
-                f"score at position {i + 1} ({scores[i + 1]:.4f})"
+                f"Score at position {i} ({scores[i]:.4f}) is less than score at position {i + 1} ({scores[i + 1]:.4f})"
             )
 
     def test_custom_feature_names(self, shap_explanation):
@@ -114,9 +112,7 @@ class TestRankFeatures:
 class TestSelectFeatures:
     """Tests for shap.utils.select_features."""
 
-    def test_backward_selection(
-        self, shap_explanation, trained_model, classification_data
-    ):
+    def test_backward_selection(self, shap_explanation, trained_model, classification_data):
         """Backward selection should return a valid result dict."""
         X, y = classification_data
         result = shap.utils.select_features(
@@ -133,9 +129,7 @@ class TestSelectFeatures:
         assert "scores" in result
         assert "best_score" in result
 
-    def test_forward_selection(
-        self, shap_explanation, trained_model, classification_data
-    ):
+    def test_forward_selection(self, shap_explanation, trained_model, classification_data):
         """Forward selection should return a valid result dict."""
         X, y = classification_data
         result = shap.utils.select_features(
@@ -150,9 +144,7 @@ class TestSelectFeatures:
         assert "selected_indices" in result
         assert len(result["selected_indices"]) >= 1
 
-    def test_selected_is_subset(
-        self, shap_explanation, trained_model, classification_data
-    ):
+    def test_selected_is_subset(self, shap_explanation, trained_model, classification_data):
         """Selected features should be a subset of all features."""
         X, y = classification_data
         result = shap.utils.select_features(
@@ -168,9 +160,7 @@ class TestSelectFeatures:
         for idx in result["selected_indices"]:
             assert 0 <= idx < n_features
 
-    def test_min_features_respected(
-        self, shap_explanation, trained_model, classification_data
-    ):
+    def test_min_features_respected(self, shap_explanation, trained_model, classification_data):
         """The min_features constraint should be respected."""
         X, y = classification_data
         result = shap.utils.select_features(
@@ -185,9 +175,7 @@ class TestSelectFeatures:
 
         assert len(result["selected_indices"]) >= 3
 
-    def test_scores_track_all_steps(
-        self, shap_explanation, trained_model, classification_data
-    ):
+    def test_scores_track_all_steps(self, shap_explanation, trained_model, classification_data):
         """The scores list should have one entry per evaluation step."""
         X, y = classification_data
         n_features = X.shape[1]
@@ -205,9 +193,7 @@ class TestSelectFeatures:
         # backward: evaluates from n_features down to 1
         assert len(result["scores"]) == n_features
 
-    def test_invalid_method_raises(
-        self, shap_explanation, trained_model, classification_data
-    ):
+    def test_invalid_method_raises(self, shap_explanation, trained_model, classification_data):
         """An invalid selection method should raise ValueError."""
         X, y = classification_data
         with pytest.raises(ValueError, match="Unknown selection method"):
@@ -220,9 +206,7 @@ class TestSelectFeatures:
                 cv=3,
             )
 
-    def test_invalid_min_features_raises(
-        self, shap_explanation, trained_model, classification_data
-    ):
+    def test_invalid_min_features_raises(self, shap_explanation, trained_model, classification_data):
         """Invalid min_features should raise ValueError."""
         X, y = classification_data
         with pytest.raises(ValueError, match="min_features must be between"):
@@ -235,9 +219,7 @@ class TestSelectFeatures:
                 cv=3,
             )
 
-    def test_best_score_is_max(
-        self, shap_explanation, trained_model, classification_data
-    ):
+    def test_best_score_is_max(self, shap_explanation, trained_model, classification_data):
         """best_score should equal the maximum score across all steps."""
         X, y = classification_data
         result = shap.utils.select_features(

@@ -5,6 +5,7 @@ from ._clustering import (
     partition_tree,
     partition_tree_shuffle,
 )
+from ._feature_selection import rank_features, select_features
 from ._general import (
     OpChain,
     approximate_interactions,
@@ -19,7 +20,6 @@ from ._general import (
     shapley_coefficients,
     suppress_stderr,
 )
-from ._feature_selection import rank_features, select_features
 from ._masked_model import MaskedModel, make_masks
 from ._show_progress import show_progress
 
