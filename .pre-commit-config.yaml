@@ -5,7 +5,7 @@ exclude: '.*tree_shap_paper.*|.*user_studies.*|.*__snapshots__.*'
 
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.15.9
+  rev: v0.15.4
   hooks:
   - id: ruff
     types_or: [python, pyi, jupyter]
@@ -39,7 +39,6 @@ repos:
         notebooks/image_examples/image_captioning/Image.Captioning.using.Azure.Cognitive.Services.ipynb|
         notebooks/image_examples/image_captioning/Image.Captioning.using.Open.Source.ipynb|
         notebooks/image_examples/image_classification/Image.Multi.Class.ipynb|
-        notebooks/tabular_examples/model_agnostic/Census.income.classification.with.scikit-learn.ipynb|
         notebooks/tabular_examples/model_agnostic/Squashing.Effect.ipynb|
 
         notebooks/tabular_examples/tree_based_models/Perfomance.Comparison.ipynb|
