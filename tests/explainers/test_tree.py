@@ -3015,3 +3015,62 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+    
+
+def test_tree_ensemble_from_trees_random_forest_classifier():
+    """Test TreeEnsemble.from_trees with sklearn RandomForestClassifier."""
+    pytest.importorskip("sklearn")
+    from sklearn.datasets import load_iris
+    from sklearn.ensemble import RandomForestClassifier
+    from shap.explainers._tree import TreeEnsemble
+
+    X, y = load_iris(return_X_y=True)
+    model = RandomForestClassifier(n_estimators=10, random_state=42).fit(X, y)
+
+    ensemble = TreeEnsemble.from_trees(model.estimators_, normalize=True)
+
+    assert ensemble is not None
+    assert len(ensemble.trees) == 10
+    assert ensemble.model_type == "internal"
+    assert ensemble.tree_output == "raw_value"
+
+
+def test_tree_ensemble_from_trees_random_forest_regressor():
+    """Test TreeEnsemble.from_trees with sklearn RandomForestRegressor."""
+    pytest.importorskip("sklearn")
+    from sklearn.datasets import load_diabetes
+    from sklearn.ensemble import RandomForestRegressor
+    from shap.explainers._tree import TreeEnsemble
+
+    X, y = load_diabetes(return_X_y=True)
+    model = RandomForestRegressor(n_estimators=10, random_state=42).fit(X, y)
+
+    ensemble = TreeEnsemble.from_trees(model.estimators_, normalize=False)
+
+    assert ensemble is not None
+    assert len(ensemble.trees) == 10
+    assert ensemble.model_type == "internal"
+
+
+def test_tree_ensemble_from_trees_single_decision_tree():
+    """Test TreeEnsemble.from_trees with a single DecisionTreeClassifier."""
+    pytest.importorskip("sklearn")
+    from sklearn.datasets import load_iris
+    from sklearn.tree import DecisionTreeClassifier
+    from shap.explainers._tree import TreeEnsemble
+
+    X, y = load_iris(return_X_y=True)
+    model = DecisionTreeClassifier(random_state=42).fit(X, y)
+
+    ensemble = TreeEnsemble.from_trees([model], normalize=True)
+
+    assert ensemble is not None
+    assert len(ensemble.trees) == 1
+
+
+def test_tree_ensemble_from_trees_empty_raises():
+    """Test that from_trees raises ValueError on empty list."""
+    from shap.explainers._tree import TreeEnsemble
+
+    with pytest.raises(ValueError, match="must not be empty"):
+        TreeEnsemble.from_trees([])
