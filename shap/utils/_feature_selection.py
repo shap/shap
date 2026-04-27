@@ -20,12 +20,13 @@ Typical usage:
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import numpy.typing as npt
 
     from .._explanation import Explanation
@@ -228,7 +229,6 @@ def select_features(
 
     ranking = rank_features(shap_values, method=aggregation)
     ranked_indices = ranking["ranked_indices"]
-    feature_names = ranking["feature_names"]
 
     scores: list[tuple[int, float]] = []
 
