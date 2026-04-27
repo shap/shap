@@ -114,6 +114,7 @@ def test_explain_with_fixed_context(fixed_context):
     """fixed_context = 0 and 1 both produce additive Explanations."""
     explainer, X = _toy_partition_explainer()
     explanation = explainer(X[:2], fixed_context=fixed_context, silent=True)
+    assert isinstance(explanation, shap.Explanation)
     # For a linear model, additivity should hold up to small numerical noise
     preds = X[:2] @ np.array([1.0, -2.0, 0.5, 0.3])
     np.testing.assert_allclose(explanation.values.sum(axis=1) + explanation.base_values, preds, atol=1e-6)
@@ -133,6 +134,7 @@ def test_call_args_set_default_kwargs():
     assert explainer.__call__.__kwdefaults__["max_evals"] == 64
     # and the explainer should still work with the overridden default
     explanation = explainer(X[:1], silent=True)
+    assert isinstance(explanation, shap.Explanation)
     assert explanation.values.shape[0] == 1
 
 
@@ -165,4 +167,5 @@ def test_explain_with_outputs_opchain():
     explainer = shap.explainers.PartitionExplainer(model, masker)
     # use the argsort OpChain to select outputs dynamically per row
     explanation = explainer(X[:1], outputs=shap.Explanation.argsort, silent=True)
+    assert isinstance(explanation, shap.Explanation)
     assert explanation.values.shape[0] == 1
