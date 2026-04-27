@@ -9,7 +9,7 @@ from sklearn.linear_model import LogisticRegression, Ridge
 import shap
 import shap.maskers
 from shap import maskers
-from shap.utils._exceptions import DimensionError, InvalidFeaturePerturbationError, InvalidModelError
+from shap.utils._exceptions import InvalidFeaturePerturbationError
 
 
 def test_tied_pair():
@@ -268,6 +268,7 @@ def test_interventional_multi_regression():
 def test_linear_explainer_warns_singular_covariance():
     """LinearExplainer should warn when n_samples <= n_features."""
     import warnings
+
     from sklearn.linear_model import LinearRegression
 
     rng = np.random.default_rng(42)
