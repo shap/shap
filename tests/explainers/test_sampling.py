@@ -56,9 +56,7 @@ def test_front_page_model_agnostic():
 
 def test_sampling_explainer_with_pandas_input_call():
     """Test __call__ method with pandas DataFrame input returns Explanation object."""
-    explainer = shap.SamplingExplainer(
-        lambda x: np.zeros(x.shape[0]), np.ones((5, 4)), nsamples=100
-    )
+    explainer = shap.SamplingExplainer(lambda x: np.zeros(x.shape[0]), np.ones((5, 4)), nsamples=100)
     X = pd.DataFrame(np.ones((2, 4)), columns=["a", "b", "c", "d"])
     result = explainer(X, nsamples=100)
     assert hasattr(result, "values")
@@ -68,9 +66,7 @@ def test_sampling_explainer_with_pandas_input_call():
 
 def test_sampling_explainer_with_numpy_input_call():
     """Test __call__ method with numpy array input returns Explanation object."""
-    explainer = shap.SamplingExplainer(
-        lambda x: np.zeros(x.shape[0]), np.ones((5, 4)), nsamples=100
-    )
+    explainer = shap.SamplingExplainer(lambda x: np.zeros(x.shape[0]), np.ones((5, 4)), nsamples=100)
     X = np.ones((2, 4))
     result = explainer(X, nsamples=100)
     assert hasattr(result, "values")
@@ -81,9 +77,7 @@ def test_sampling_explainer_single_varying_feature():
     """Test explain() when only one feature varies — phi should capture all effect."""
     background = np.zeros((10, 3))
     # model returns sum of features
-    explainer = shap.SamplingExplainer(
-        lambda x: x.sum(axis=1), background, nsamples=100
-    )
+    explainer = shap.SamplingExplainer(lambda x: x.sum(axis=1), background, nsamples=100)
     # only first feature varies from background (all zeros)
     x = np.array([[5.0, 0.0, 0.0]])
     shap_values = explainer.shap_values(x, nsamples=100)
@@ -94,9 +88,7 @@ def test_sampling_explainer_single_varying_feature():
 def test_sampling_explainer_no_varying_feature():
     """Test explain() when no features vary — all phi should be zero."""
     background = np.ones((10, 3))
-    explainer = shap.SamplingExplainer(
-        lambda x: x.sum(axis=1), background, nsamples=100
-    )
+    explainer = shap.SamplingExplainer(lambda x: x.sum(axis=1), background, nsamples=100)
     # input same as background mean — no variation
     x = np.ones((1, 3))
     shap_values = explainer.shap_values(x, nsamples=100)
@@ -116,9 +108,7 @@ def test_sampling_explainer_invalid_link():
 def test_sampling_estimate_shape():
     """Test that sampling_estimate returns correct shapes."""
     background = np.random.rand(20, 4)
-    explainer = shap.SamplingExplainer(
-        lambda x: x.sum(axis=1), background, nsamples=100
-    )
+    explainer = shap.SamplingExplainer(lambda x: x.sum(axis=1), background, nsamples=100)
     x = np.random.rand(4)
     explainer.X_masked = np.zeros((200, 4))
     mean, var = explainer.sampling_estimate(0, lambda x: x.sum(axis=1), x, background, nsamples=10)
@@ -128,6 +118,7 @@ def test_sampling_estimate_shape():
 def test_sampling_explainer_multioutput():
     """Test SamplingExplainer with multi-output model."""
     background = np.zeros((10, 3))
+
     # model returns 2 outputs
     def multi_output(x):
         return np.column_stack([x.sum(axis=1), x.sum(axis=1) * 2])
