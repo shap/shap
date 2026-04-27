@@ -543,11 +543,22 @@ class TreeExplainer(Explainer):
         np.array
             Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
-            For each output, the SHAP values (summed across all features) plus the
-            expected value equals the model's output for that sample:
+            For each output, the sum of the SHAP values plus the ``expected_value``
+            equals the model's output (in the specified output space):
 
-            * Single output: ``shap_values[i, :].sum() + expected_value = model_output[i]``
-            * Multiple outputs: ``shap_values[i, :, j].sum() + expected_value[j] = model_output[i, j]``
+            * Single output: ``shap_values[i, :].sum() + expected_value = f(x)[i]``
+            * Multiple outputs: ``shap_values[i, :, j].sum() + expected_value[j] = f(x)[i, j]``
+
+            .. note::
+               The ``f(x)`` value is NOT necessarily what ``model.predict()``
+               or ``model.predict_proba()`` returns. For example, for an XGBoost Classifier with the default
+               ``model_output="raw"``, the explainer returns log-odds (margins).
+               To compare this mathematically against ``predict_proba()`` probabilities,
+               a logistic inverse-transform (e.g., ``scipy.special.expit``) must be applied
+               to the sum.
+
+               Furthermore, the additivity formula requires SHAP values and model
+               predictions to be computed on the same samples in the same order.
 
             The shape of the returned array depends on the number of model outputs:
 
@@ -893,6 +904,7 @@ class TreeExplainer(Explainer):
                     f" was {sum_val[ind]:f}, while the model output was {model_output[ind]:f}. If this"
                     " difference is acceptable you can set check_additivity=False to disable this check."
                 )
+
                 raise ExplainerError(err_msg)
 
         if isinstance(phi, list):
@@ -1594,7 +1606,7 @@ class TreeEnsemble:
 
     @property
     def num_outputs(self) -> int:
-        # Currrently, XGBoost models derive the num_outputs attribute from the input
+        # Currently, XGBoost models derive the num_outputs attribute from the input
         # models, which is set during model load.
         if self.model_type == "xgboost":
             assert hasattr(self, "_xgboost_n_outputs")

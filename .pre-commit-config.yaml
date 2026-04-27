@@ -41,7 +41,7 @@ repos:
         notebooks/image_examples/image_classification/Image.Multi.Class.ipynb|
         notebooks/tabular_examples/model_agnostic/Census.income.classification.with.scikit-learn.ipynb|
         notebooks/tabular_examples/model_agnostic/Squashing.Effect.ipynb|
-        notebooks/tabular_examples/tree_based_models/Fitting.a.Linear.Simulation.with.XGBoost.ipynb|
+
         notebooks/tabular_examples/tree_based_models/Perfomance.Comparison.ipynb|
         notebooks/text_examples/sentiment_analysis/Emotion.classification.multiclass.example.ipynb|
         notebooks/text_examples/sentiment_analysis/Keras.LSTM.for.IMDB.Sentiment.Classification.ipynb|
