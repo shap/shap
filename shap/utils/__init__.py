@@ -19,6 +19,7 @@ from ._general import (
     shapley_coefficients,
     suppress_stderr,
 )
+from ._feature_selection import rank_features, select_features
 from ._masked_model import MaskedModel, make_masks
 from ._show_progress import show_progress
 
@@ -35,9 +36,11 @@ __all__ = [
     "format_value",
     "ordinal_str",
     "potential_interactions",
+    "rank_features",
     "record_import_error",
     "safe_isinstance",
     "sample",
+    "select_features",
     "shapley_coefficients",
     "suppress_stderr",
     "MaskedModel",
