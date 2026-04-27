@@ -1,15 +1,25 @@
+import importlib.util
 import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
+
+
+def _shap_parent_path() -> str:
+    spec = importlib.util.find_spec("shap")
+    if spec is not None and spec.submodule_search_locations:
+        return str(Path(next(iter(spec.submodule_search_locations))).parent)
+    return str(Path(__file__).resolve().parents[1])
 
 
 def _run_python(code: str, *, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     full_env = os.environ.copy()
     # Keep subprocess checks isolated from outer test runner eager-import mode.
     full_env.pop("EAGER_IMPORT", None)
+    full_env["PYTHONPATH"] = os.pathsep.join(path for path in [_shap_parent_path(), full_env.get("PYTHONPATH")] if path)
     if env:
         full_env.update(env)
     return subprocess.run(
@@ -70,7 +80,6 @@ def test_all_public_api_names_are_accessible():
         "import shap\n"
         "missing = []\n"
         "has_matplotlib = importlib.util.find_spec('matplotlib') is not None\n"
-        "has_cext = importlib.util.find_spec('shap._cext') is not None\n"
         "has_cext_gpu = importlib.util.find_spec('shap._cext_gpu') is not None\n"
         "plot_names = {\n"
         "  'plots', 'bar_plot', 'summary_plot', 'decision_plot', 'multioutput_decision_plot',\n"
@@ -78,13 +87,13 @@ def test_all_public_api_names_are_accessible():
         "  'heatmap_plot', 'image_plot', 'monitoring_plot', 'partial_dependence_plot',\n"
         "  'dependence_plot', 'text_plot', 'violin_plot', 'waterfall_plot'\n"
         "}\n"
-        "optional_cext_names = {'_cext', '_cext_gpu'}\n"
+        "optional_cext_names = {'_cext_gpu'}\n"
         "for name in shap.__all__:\n"
         "  try:\n"
         "    getattr(shap, name)\n"
         "  except Exception as exc:\n"
         "    if ((has_matplotlib or name not in plot_names) and\n"
-        "        ((has_cext and has_cext_gpu) or name not in optional_cext_names)):\n"
+        "        (has_cext_gpu or name not in optional_cext_names)):\n"
         "      missing.append([name, type(exc).__name__, str(exc)])\n"
         "print(json.dumps(missing))\n"
     )
