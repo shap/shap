@@ -7,8 +7,9 @@ from sklearn.datasets import make_multilabel_classification
 from sklearn.linear_model import LogisticRegression, Ridge
 
 import shap
+import shap.maskers
 from shap import maskers
-from shap.utils._exceptions import InvalidFeaturePerturbationError
+from shap.utils._exceptions import DimensionError, InvalidFeaturePerturbationError, InvalidModelError
 
 
 def test_tied_pair():
@@ -267,11 +268,7 @@ def test_interventional_multi_regression():
 def test_linear_explainer_warns_singular_covariance():
     """LinearExplainer should warn when n_samples <= n_features."""
     import warnings
-
-    import numpy as np
     from sklearn.linear_model import LinearRegression
-
-    import shap
 
     rng = np.random.default_rng(42)
     n_features = 10
