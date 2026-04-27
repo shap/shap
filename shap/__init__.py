@@ -30,6 +30,14 @@ _no_matplotlib_warning = (
 )
 
 
+# other stuff :)
+from . import datasets, links, utils  # noqa: E402
+from .actions._optimizer import ActionOptimizer  # noqa: E402
+from .utils import approximate_interactions, sample  # noqa: E402
+
+# from . import benchmark
+from .utils._legacy import kmeans  # noqa: E402
+
 # plotting (only loaded if matplotlib is present)
 
 
@@ -89,15 +97,6 @@ else:
     # If not, we need to define something that will issue a meaningful warning message
     # (rather than ModuleNotFound).
     plots = UnsupportedModule()  # type: ignore
-
-
-# other stuff :)
-from . import datasets, links, utils  # noqa: E402
-from .actions._optimizer import ActionOptimizer  # noqa: E402
-from .utils import approximate_interactions, sample  # noqa: E402
-
-# from . import benchmark
-from .utils._legacy import kmeans  # noqa: E402
 
 # Use __all__ to let type checkers know what is part of the public API.
 __all__ = [
