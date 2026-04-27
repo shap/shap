@@ -19,9 +19,7 @@ def test_falcon():
     name = "fxmarty/really-tiny-falcon-testing"
     try:
         tokenizer = transformers.AutoTokenizer.from_pretrained(name)
-        model = transformers.AutoModelForCausalLM.from_pretrained(
-            name, trust_remote_code=True
-        )
+        model = transformers.AutoModelForCausalLM.from_pretrained(name, trust_remote_code=True)
     except requests.exceptions.RequestException:
         pytest.xfail(reason="Connection error to transformers model")
 
