@@ -1,12 +1,24 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from types import ModuleType
 
 tf: ModuleType | None = None
+
+
+class TFModel(Protocol):
+    """Structural type for TensorFlow Keras models used by the TF-based explainers.
+
+    Captures the attributes accessed in this module so callers can pass any
+    Keras-style model without importing TensorFlow at type-check time.
+    """
+
+    inputs: Any
+    outputs: Any
+    layers: list[Any]
 
 
 def _import_tf() -> None:
@@ -54,7 +66,7 @@ def _get_graph(explainer: Any) -> Any:
         return graph
 
 
-def _get_model_inputs(model: Any) -> Any:
+def _get_model_inputs(model: TFModel | tuple[Any, Any]) -> Any:
     """Common utility to determine the model inputs.
 
     Parameters
@@ -64,6 +76,8 @@ def _get_model_inputs(model: Any) -> Any:
 
     """
     _import_tf()
+    if isinstance(model, tuple):
+        return model[0]
     if (
         str(type(model)).endswith("keras.engine.sequential.Sequential'>")
         or str(type(model)).endswith("keras.models.Sequential'>")
@@ -71,14 +85,12 @@ def _get_model_inputs(model: Any) -> Any:
         or isinstance(model, tf.keras.Model)  # type: ignore[union-attr]
     ):
         return model.inputs
-    if str(type(model)).endswith("tuple'>"):
-        return model[0]
 
     emsg = f"{type(model)} is not currently a supported model type!"
     raise ValueError(emsg)
 
 
-def _get_model_output(model: Any) -> Any:
+def _get_model_output(model: TFModel | tuple[Any, Any]) -> Any:
     """Common utility to determine the model output.
 
     Parameters
@@ -88,6 +100,8 @@ def _get_model_output(model: Any) -> Any:
 
     """
     _import_tf()
+    if isinstance(model, tuple):
+        return model[1]
     if (
         str(type(model)).endswith("keras.engine.sequential.Sequential'>")
         or str(type(model)).endswith("keras.models.Sequential'>")
@@ -100,8 +114,6 @@ def _get_model_output(model: Any) -> Any:
             return model.outputs[0]
         else:
             return model.layers[-1].output
-    if str(type(model)).endswith("tuple'>"):
-        return model[1]
 
     emsg = f"{type(model)} is not currently a supported model type!"
     raise ValueError(emsg)
