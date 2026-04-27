@@ -1,6 +1,8 @@
 """Unit tests for the AdditiveExplainer."""
+
 import numpy as np
 import pytest
+
 import shap
 from shap.explainers._additive import AdditiveExplainer
 
