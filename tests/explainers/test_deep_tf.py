@@ -567,7 +567,7 @@ def test_tf_deep_multi_output_shap_values_shape():
 
 def test_tensors_blocked_by_false_empty():
     """tensors_blocked_by_false returns empty list for empty input."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from shap.explainers._deep.deep_tf import tensors_blocked_by_false
 
     result = tensors_blocked_by_false([])
@@ -701,7 +701,7 @@ def test_custom_record_gradient_resource_gather_resets_dtype():
 
 def test_break_dependence_returns_none_for_all_inputs():
     """break_dependence always returns [None, ...] for all op inputs."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from unittest.mock import MagicMock
 
     from shap.explainers._deep.deep_tf import break_dependence
@@ -714,7 +714,7 @@ def test_break_dependence_returns_none_for_all_inputs():
 
 def test_passthrough_strips_shap_prefix():
     """passthrough removes 'shap_' prefix and calls orig_grads."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from unittest.mock import MagicMock
 
     from shap.explainers._deep.deep_tf import passthrough
@@ -725,14 +725,14 @@ def test_passthrough_strips_shap_prefix():
     op = MagicMock()
     op.type = "shap_Identity"
 
-    result = passthrough(explainer, op, "some_grad")
+    passthrough(explainer, op, "some_grad")
     assert op.type == "Identity"
     explainer.orig_grads["Identity"].assert_called_once()
 
 
 def test_nonlinearity_2d_handler_non_zero_one_inputs_raises():
     """nonlinearity_2d_handler raises Exception when input_ind0/1 aren't 0,1."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from shap.explainers._deep.deep_tf import nonlinearity_2d_handler
 
     with pytest.raises(Exception, match="TODO"):
