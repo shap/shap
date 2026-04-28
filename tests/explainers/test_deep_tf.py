@@ -567,7 +567,7 @@ def test_tf_deep_multi_output_shap_values_shape():
 
 def test_tensors_blocked_by_false_empty():
     """tensors_blocked_by_false returns empty list for empty input."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from shap.explainers._deep.deep_tf import tensors_blocked_by_false
 
     result = tensors_blocked_by_false([])
@@ -576,7 +576,7 @@ def test_tensors_blocked_by_false_empty():
 
 def test_tensors_blocked_by_false_non_switch():
     """Non-Switch ops are recursed through without blocking."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from shap.explainers._deep.deep_tf import tensors_blocked_by_false
 
     with tf.compat.v1.Graph().as_default():
@@ -588,7 +588,7 @@ def test_tensors_blocked_by_false_non_switch():
 
 def test_backward_walk_ops_basic():
     """backward_walk_ops discovers the ops in a simple graph."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from shap.explainers._deep.deep_tf import backward_walk_ops
 
     with tf.compat.v1.Graph().as_default():
@@ -601,7 +601,7 @@ def test_backward_walk_ops_basic():
 
 def test_backward_walk_ops_blacklist():
     """op_type_blacklist prevents traversal through blacklisted types."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from shap.explainers._deep.deep_tf import backward_walk_ops
 
     with tf.compat.v1.Graph().as_default():
@@ -615,7 +615,7 @@ def test_backward_walk_ops_blacklist():
 
 def test_forward_walk_ops_basic():
     """forward_walk_ops only returns ops that are within_ops."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from shap.explainers._deep.deep_tf import backward_walk_ops, forward_walk_ops
 
     with tf.compat.v1.Graph().as_default():
@@ -639,7 +639,7 @@ def test_forward_walk_ops_basic():
 
 def test_custom_record_gradient_non_resource_gather():
     """For non-ResourceGather ops, custom_record_gradient calls original without dtype swap."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from unittest.mock import MagicMock, patch
 
     from shap.explainers._deep.deep_tf import custom_record_gradient
@@ -668,7 +668,7 @@ def test_custom_record_gradient_non_resource_gather():
 
 def test_custom_record_gradient_resource_gather_resets_dtype():
     """ResourceGather with int32 index: dtype is temporarily swapped then restored."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from unittest.mock import MagicMock, patch
 
     from shap.explainers._deep.deep_tf import custom_record_gradient
@@ -701,7 +701,7 @@ def test_custom_record_gradient_resource_gather_resets_dtype():
 
 def test_break_dependence_returns_none_for_all_inputs():
     """break_dependence always returns [None, ...] for all op inputs."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from unittest.mock import MagicMock
 
     from shap.explainers._deep.deep_tf import break_dependence
@@ -714,7 +714,7 @@ def test_break_dependence_returns_none_for_all_inputs():
 
 def test_passthrough_strips_shap_prefix():
     """passthrough removes 'shap_' prefix and calls orig_grads."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from unittest.mock import MagicMock
 
     from shap.explainers._deep.deep_tf import passthrough
@@ -732,7 +732,7 @@ def test_passthrough_strips_shap_prefix():
 
 def test_nonlinearity_2d_handler_non_zero_one_inputs_raises():
     """nonlinearity_2d_handler raises Exception when input_ind0/1 aren't 0,1."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from shap.explainers._deep.deep_tf import nonlinearity_2d_handler
 
     with pytest.raises(Exception, match="TODO"):
@@ -741,7 +741,7 @@ def test_nonlinearity_2d_handler_non_zero_one_inputs_raises():
 
 def test_linearity_with_excluded_handler_excluded_varies_raises():
     """linearity_with_excluded_handler asserts excluded inputs don't vary."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     from unittest.mock import MagicMock
 
     from shap.explainers._deep.deep_tf import linearity_with_excluded_handler
@@ -765,7 +765,7 @@ def test_linearity_with_excluded_handler_excluded_varies_raises():
 
 def test_tf_deep_expected_value_shape_single_output():
     """expected_value is a scalar (or 1-element tensor) for single-output."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     import shap
 
     rs = np.random.RandomState(80)
@@ -783,7 +783,7 @@ def test_tf_deep_expected_value_shape_single_output():
 
 def test_tf_deep_expected_value_shape_multi_output():
     """expected_value has one entry per output class."""
-    tf = _skip_if_no_tf()
+    _skip_if_no_tf()
     import shap
 
     rs = np.random.RandomState(81)
