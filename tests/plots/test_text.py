@@ -58,19 +58,19 @@ def test_text_plot_strips_special_tokens():
     test_values = np.array([0.5, -0.2])
     test_base_values = 0.0
     test_data = np.array(["ĠHello", "▁world"], dtype=object)
-    
+
     exp = shap.Explanation(
         values=test_values,
         base_values=test_base_values,
         data=test_data,
     )
-    
+
     html = shap.plots.text(exp, display=False)
-    
+
     # Assert the special tokens are gone
     assert "Ġ" not in html
     assert "▁" not in html
-    
+
     # Assert the actual text remains
     assert "Hello" in html
     assert "world" in html
