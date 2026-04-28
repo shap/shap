@@ -324,7 +324,7 @@ def keep_absolute_impute__roc_auc(X, y, model_generator, method_name, num_fcount
     sort_order = 19
     """
     return __run_measure(
-        measures.keep_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score
+        measures.keep_impute, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score
     )
 
 
@@ -368,7 +368,7 @@ def remove_absolute_impute__roc_auc(X, y, model_generator, method_name, num_fcou
     sort_order = 9
     """
     return __run_measure(
-        measures.remove_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score
+        measures.remove_impute, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score
     )
 
 
