@@ -51,9 +51,7 @@ def test_partial_dependence_ax_is_used_when_provided():
     returned_fig, returned_ax = partial_dependence(0, _simple_model, data, ax=target_ax, show=False)
 
     # The axes drawn into must be the one we passed
-    assert returned_ax is target_ax, (
-        "partial_dependence ignored the ax parameter and drew onto a different axes"
-    )
+    assert returned_ax is target_ax, "partial_dependence ignored the ax parameter and drew onto a different axes"
     # The figure must match the one that owns our axes
     assert returned_fig is target_ax.figure
 
@@ -68,9 +66,7 @@ def test_partial_dependence_ax_figure_matches():
     outer_fig, outer_ax = plt.subplots()
     returned_fig, _ = partial_dependence(0, _simple_model, data, ax=outer_ax, show=False)
 
-    assert returned_fig is outer_fig, (
-        "partial_dependence returned a different figure from the one that owns ax"
-    )
+    assert returned_fig is outer_fig, "partial_dependence returned a different figure from the one that owns ax"
     plt.close("all")
 
 
