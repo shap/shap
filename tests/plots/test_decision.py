@@ -443,11 +443,12 @@ def test_multioutput_decision_raises(values_features):
 # shap.multioutput_decision_plot([ev[0]], [sh[0]], idx, features=X.to_numpy(), legend_labels=labels)
 #
 
+
 def test_decision_plot_with_ax(values_features):
     """Test that decision_plot works with a provided matplotlib Axes object."""
     fig, ax = plt.subplots()
     shap_values, X = values_features
-    
+
     result = shap.decision_plot(
         shap_values.base_values[0, 1],
         shap_values.values[:, :, 1],
@@ -456,7 +457,7 @@ def test_decision_plot_with_ax(values_features):
         title="Decision Plot with provided Axes",
         link="identity",
     )
-    
+
     # When show=False and return_objects=False (default), should return the Axes
     assert result is ax
     assert ax.get_title() == "Decision Plot with provided Axes"
@@ -467,36 +468,36 @@ def test_decision_plot_with_ax(values_features):
 def test_decision_plot_ax_no_show_no_return_objects(values_features):
     """Test decision_plot returns Axes when show=False and return_objects=False."""
     shap_values, X = values_features
-    
+
     result = shap.decision_plot(
         shap_values.base_values[0, 1],
         shap_values.values[:, :, 1],
         show=False,
         return_objects=False,
     )
-    
+
     # Should return the Axes object
     assert result is not None
-    assert hasattr(result, 'plot')  # Check it's a matplotlib Axes
+    assert hasattr(result, "plot")  # Check it's a matplotlib Axes
     plt.close()
 
 
 def test_decision_plot_ax_with_return_objects(values_features):
     """Test decision_plot returns DecisionPlotResult when return_objects=True, even with show=False."""
     shap_values, X = values_features
-    
+
     result = shap.decision_plot(
         shap_values.base_values[0, 1],
         shap_values.values[:, :, 1],
         show=False,
         return_objects=True,
     )
-    
+
     # Should return DecisionPlotResult, not Axes
     assert result is not None
-    assert hasattr(result, 'base_value')
-    assert hasattr(result, 'shap_values')
-    assert hasattr(result, 'feature_names')
+    assert hasattr(result, "base_value")
+    assert hasattr(result, "shap_values")
+    assert hasattr(result, "feature_names")
     plt.close()
 
 
@@ -504,19 +505,19 @@ def test_multioutput_decision_with_ax(values_features):
     """Test multioutput_decision works with a provided matplotlib Axes object."""
     fig, ax = plt.subplots()
     adult_rfc_shap_values, X = values_features
-    
+
     adult_rfc_shap_values_list = [adult_rfc_shap_values.values[:, :, i] for i in range(adult_rfc_shap_values.shape[2])]
     base_values_list = list(adult_rfc_shap_values.base_values[0, :])
-    
+
     result = shap.multioutput_decision_plot(
-        base_values_list, 
-        adult_rfc_shap_values_list, 
-        row_index=0, 
-        features=X, 
+        base_values_list,
+        adult_rfc_shap_values_list,
+        row_index=0,
+        features=X,
         show=False,
         ax=ax,
     )
-    
+
     # When show=False and return_objects=False (default), should return the Axes
     if result is not None:
         assert result is ax
@@ -526,19 +527,19 @@ def test_multioutput_decision_with_ax(values_features):
 def test_multioutput_decision_ax_no_show(values_features):
     """Test multioutput_decision returns Axes when show=False."""
     adult_rfc_shap_values, X = values_features
-    
+
     adult_rfc_shap_values_list = [adult_rfc_shap_values.values[:, :, i] for i in range(adult_rfc_shap_values.shape[2])]
     base_values_list = list(adult_rfc_shap_values.base_values[0, :])
-    
+
     result = shap.multioutput_decision_plot(
-        base_values_list, 
-        adult_rfc_shap_values_list, 
-        row_index=0, 
-        features=X, 
+        base_values_list,
+        adult_rfc_shap_values_list,
+        row_index=0,
+        features=X,
         show=False,
     )
-    
+
     # Should return the Axes object
     assert result is not None
-    assert hasattr(result, 'plot')  # Check it's a matplotlib Axes
+    assert hasattr(result, "plot")  # Check it's a matplotlib Axes
     plt.close()
