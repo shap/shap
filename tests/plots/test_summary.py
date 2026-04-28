@@ -123,11 +123,9 @@ def test_summary_compact_dot_with_data():
 @pytest.mark.mpl_image_compare
 def test_summary_violin_with_data():
     """Check a violin chart."""
-    rng = np.random.default_rng(0)
+    np.random.seed(0)
     fig = plt.figure()
-    shap.summary_plot(
-        rng.standard_normal(size=(20, 5)), rng.standard_normal(size=(20, 5)), plot_type="violin", show=False, rng=rng
-    )
+    shap.summary_plot(np.random.randn(20, 5), np.random.randn(20, 5), plot_type="violin", show=False)
     fig.set_layout_engine("tight")
     return fig
 
@@ -135,11 +133,16 @@ def test_summary_violin_with_data():
 @pytest.mark.mpl_image_compare
 def test_summary_layered_violin_with_data():
     """Check a layered violin chart."""
-    rng = np.random.default_rng(0)
+    rs = np.random.RandomState(0)
     fig = plt.figure()
-    shap_values = rng.standard_normal(size=(200, 5))
-    feats = rng.standard_normal(size=(200, 5))
-    shap.summary_plot(shap_values, feats, plot_type="layered_violin", show=False, rng=np.random.default_rng(0))
+    shap_values = rs.randn(200, 5)
+    feats = rs.randn(200, 5)
+    shap.summary_plot(
+        shap_values,
+        feats,
+        plot_type="layered_violin",
+        show=False,
+    )
     fig.set_layout_engine("tight")
     return fig
 
