@@ -191,7 +191,7 @@ module = [
   # "shap.explainers._sampling",       # NOW TYPE CHECKED - type hints added
   # "shap.explainers._tree",           # NOW TYPE CHECKED - type hints added
   # "shap.explainers._coalition",      # NOW TYPE CHECKED - type hints added
-  "shap.explainers.other._random",
+  # "shap.explainers.other._random",  # NOW TYPE CHECKED - type hints added
   "shap.explainers.pytree",
   "shap.explainers.tf_utils",
   # "shap.maskers._composite",  # NOW TYPE CHECKED - type hints added
