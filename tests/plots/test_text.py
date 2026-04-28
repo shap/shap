@@ -51,3 +51,26 @@ def test_single_text_to_text():
         hierarchical_values=[test_hierarchical_values],
     )
     shap.plots.text(shap_values_test)
+
+
+def test_text_plot_strips_special_tokens():
+    """Ensure special tokens like Ġ and ▁ are stripped from the HTML output (GH #3660)."""
+    test_values = np.array([0.5, -0.2])
+    test_base_values = 0.0
+    test_data = np.array(["ĠHello", "▁world"], dtype=object)
+    
+    exp = shap.Explanation(
+        values=test_values,
+        base_values=test_base_values,
+        data=test_data,
+    )
+    
+    html = shap.plots.text(exp, display=False)
+    
+    # Assert the special tokens are gone
+    assert "Ġ" not in html
+    assert "▁" not in html
+    
+    # Assert the actual text remains
+    assert "Hello" in html
+    assert "world" in html
