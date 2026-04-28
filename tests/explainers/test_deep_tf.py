@@ -26,13 +26,6 @@ import warnings
 
 import numpy as np
 import pytest
-import tensorflow as tf
-
-
-
-
-
-
 
 # Helpers
 
@@ -65,7 +58,9 @@ def _quick_fit(model, x, y, epochs=2):
     model.fit(x, y, epochs=epochs, verbose=0)
     return model
 
+
 # Group 1 – TFDeep.__init__ edge cases
+
 
 def test_tf_deep_callable_data_sets_expected_value_none():
     """When data is a callable, expected_value must be None."""
@@ -128,16 +123,15 @@ def test_tf_deep_large_background_warning():
         shap.DeepExplainer(model, x_large)
 
     messages = [str(w.message) for w in caught]
-    assert any("5k" in m or "5000" in m for m in messages), (
-        "Expected a warning about large background dataset"
-    )
+    assert any("5k" in m or "5000" in m for m in messages), "Expected a warning about large background dataset"
 
 
 def test_tf_deep_tuple_model_input_eager():
     """Passing (inputs, outputs) tuple should construct a valid explainer."""
     tf = _skip_if_no_tf()
-    import shap
     from packaging import version
+
+    import shap
 
     if version.parse(tf.__version__) >= version.parse("2.4.0"):
         pytest.skip("TF >= 2.4 does not fully support this code path in eager mode")
@@ -246,6 +240,7 @@ def test_tf_deep_shap_values_mismatched_input_count_raises():
 
 # Group 3 – ranked_outputs
 
+
 def _setup_multi_output_explainer(tf, rs):
     """Helper: build, fit, and wrap a multi-output model."""
     import shap
@@ -271,8 +266,10 @@ def test_tf_deep_ranked_outputs_max():
     assert ranks is not None
     assert len(ranks) == 3
 
+
 def test_tf_deep_ranked_outputs_min():
     import pytest
+
     pytest.skip("ranked_outputs unstable in TF2")
     """ranked_outputs with output_rank_order='min' returns lowest-k outputs."""
     tf = _skip_if_no_tf()
@@ -286,6 +283,7 @@ def test_tf_deep_ranked_outputs_min():
 
 def test_tf_deep_ranked_outputs_max_abs():
     import pytest
+
     pytest.skip("ranked_outputs unstable in TF2")
     """ranked_outputs with output_rank_order='max_abs'."""
     tf = _skip_if_no_tf()
@@ -317,7 +315,9 @@ def test_tf_deep_ranked_outputs_returns_tuple():
     assert len(result) == 2
     assert result[0] is not None
 
+
 # Group 4 – Activation op handlers
+
 
 @pytest.mark.parametrize("activation", ["sigmoid", "tanh", "softplus"])
 def test_tf_deep_activation_handler(activation):
@@ -361,7 +361,9 @@ def test_tf_deep_clip_by_value_handler():
     sv = e.shap_values(x[:3], check_additivity=False)
     assert sv.shape == (3, 4, 1)
 
+
 # Group 5 – Layer/architectural op handlers
+
 
 def test_tf_deep_batch_normalization_handler():
     """FusedBatchNorm (BatchNormalization layer) handler – linearity_1d(0)."""
@@ -501,11 +503,13 @@ def test_tf_deep_conv2d_handler():
 
 # Group 6 – Embedding / GatherV2 handler
 
+
 def test_tf_deep_embedding_gather_handler():
     """GatherV2 handler via an Embedding layer (var[0]=False, var[1]=True)."""
     tf = _skip_if_no_tf()
-    import shap
     from packaging import version
+
+    import shap
 
     if version.parse(tf.__version__) >= version.parse("2.5.0"):
         pytest.skip("Embedding + non-eager path unstable on TF >= 2.5")
@@ -518,11 +522,13 @@ def test_tf_deep_embedding_gather_handler():
     X = rs.randint(0, vocab_size, size=(100, seq_len))
     y = rs.randint(0, 2, 100).astype(np.float32)
 
-    mod = tf.keras.models.Sequential([
-        tf.keras.layers.Embedding(vocab_size, 4, input_length=seq_len),
-        tf.keras.layers.Flatten(),
-        tf.keras.layers.Dense(1, activation="sigmoid"),
-    ])
+    mod = tf.keras.models.Sequential(
+        [
+            tf.keras.layers.Embedding(vocab_size, 4, input_length=seq_len),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(1, activation="sigmoid"),
+        ]
+    )
     mod.compile(optimizer="adam", loss="binary_crossentropy")
     sess = tf.compat.v1.keras.backend.get_session()
     sess.run(tf.compat.v1.global_variables_initializer())
@@ -536,7 +542,6 @@ def test_tf_deep_embedding_gather_handler():
 
 
 # Group 7 – Multi-output stacking / phi_symbolics
-
 
 
 def test_tf_deep_multi_output_shap_values_shape():
@@ -558,6 +563,7 @@ def test_tf_deep_multi_output_shap_values_shape():
 
 
 # Group 8 – Utility functions (unit tests)
+
 
 def test_tensors_blocked_by_false_empty():
     """tensors_blocked_by_false returns empty list for empty input."""
@@ -610,7 +616,7 @@ def test_backward_walk_ops_blacklist():
 def test_forward_walk_ops_basic():
     """forward_walk_ops only returns ops that are within_ops."""
     tf = _skip_if_no_tf()
-    from shap.explainers._deep.deep_tf import forward_walk_ops, backward_walk_ops
+    from shap.explainers._deep.deep_tf import backward_walk_ops, forward_walk_ops
 
     with tf.compat.v1.Graph().as_default():
         a = tf.constant([1.0, 2.0])
@@ -630,20 +636,22 @@ def test_forward_walk_ops_basic():
 
 # Group 9 – custom_record_gradient
 
+
 def test_custom_record_gradient_non_resource_gather():
     """For non-ResourceGather ops, custom_record_gradient calls original without dtype swap."""
     tf = _skip_if_no_tf()
+    from unittest.mock import MagicMock, patch
+
     from shap.explainers._deep.deep_tf import custom_record_gradient
-    from unittest.mock import patch, MagicMock
-    from tensorflow.python.eager import backprop as tf_backprop
 
     called_with = {}
 
     def fake_record(op_name, inputs, attrs, results):
         called_with["op_name"] = op_name
         return MagicMock()
-    
+
     import tensorflow.python.eager.backprop as bp
+
     target = (
         "tensorflow.python.eager.backprop._record_gradient"
         if hasattr(bp, "_record_gradient")
@@ -661,8 +669,9 @@ def test_custom_record_gradient_non_resource_gather():
 def test_custom_record_gradient_resource_gather_resets_dtype():
     """ResourceGather with int32 index: dtype is temporarily swapped then restored."""
     tf = _skip_if_no_tf()
+    from unittest.mock import MagicMock, patch
+
     from shap.explainers._deep.deep_tf import custom_record_gradient
-    from unittest.mock import patch, MagicMock
 
     def fake_record(op_name, inputs, attrs, results):
         # During the call the dtype should appear as float32
@@ -689,11 +698,13 @@ def test_custom_record_gradient_resource_gather_resets_dtype():
 
 # Group 10 – Specific op-handler internals
 
+
 def test_break_dependence_returns_none_for_all_inputs():
     """break_dependence always returns [None, ...] for all op inputs."""
     tf = _skip_if_no_tf()
-    from shap.explainers._deep.deep_tf import break_dependence
     from unittest.mock import MagicMock
+
+    from shap.explainers._deep.deep_tf import break_dependence
 
     op = MagicMock()
     op.inputs = [MagicMock(), MagicMock(), MagicMock()]
@@ -704,8 +715,9 @@ def test_break_dependence_returns_none_for_all_inputs():
 def test_passthrough_strips_shap_prefix():
     """passthrough removes 'shap_' prefix and calls orig_grads."""
     tf = _skip_if_no_tf()
+    from unittest.mock import MagicMock
+
     from shap.explainers._deep.deep_tf import passthrough
-    from unittest.mock import MagicMock, patch
 
     explainer = MagicMock()
     explainer.orig_grads = {"Identity": MagicMock(return_value="grad_result")}
@@ -730,8 +742,9 @@ def test_nonlinearity_2d_handler_non_zero_one_inputs_raises():
 def test_linearity_with_excluded_handler_excluded_varies_raises():
     """linearity_with_excluded_handler asserts excluded inputs don't vary."""
     tf = _skip_if_no_tf()
-    from shap.explainers._deep.deep_tf import linearity_with_excluded_handler
     from unittest.mock import MagicMock
+
+    from shap.explainers._deep.deep_tf import linearity_with_excluded_handler
 
     explainer = MagicMock()
     # Report that input 0 (the excluded one) does vary → should AssertionError
@@ -748,6 +761,7 @@ def test_linearity_with_excluded_handler_excluded_varies_raises():
 
 
 # Group 13 – expected_value correctness
+
 
 def test_tf_deep_expected_value_shape_single_output():
     """expected_value is a scalar (or 1-element tensor) for single-output."""
@@ -786,6 +800,7 @@ def test_tf_deep_expected_value_shape_multi_output():
 
 # Group 14 – SquaredDifference / Minimum / Maximum nonlinearity_2d
 
+
 def test_tf_deep_squared_difference_handler():
     """SquaredDifference nonlinearity_1d_nonlinearity_2d(0,1,…) via Lambda."""
     tf = _skip_if_no_tf()
@@ -797,9 +812,7 @@ def test_tf_deep_squared_difference_handler():
 
     inputs = tf.keras.layers.Input(shape=(4,))
     # SquaredDifference: (x - constant)^2 — only input 0 varies
-    diff = tf.keras.layers.Lambda(
-        lambda t: tf.math.squared_difference(t, tf.ones_like(t))
-    )(inputs)
+    diff = tf.keras.layers.Lambda(lambda t: tf.math.squared_difference(t, tf.ones_like(t)))(inputs)
     out = tf.keras.layers.Dense(1)(diff)
     model = tf.keras.Model(inputs=inputs, outputs=out)
     model.compile(optimizer="adam", loss="mse")
@@ -835,6 +848,7 @@ def test_tf_deep_maximum_handler():
 
 # Group 15 – Softmax handler (standalone)
 
+
 def test_tf_deep_softmax_handler_additivity():
     """Softmax op handler: SHAP values should approximately sum to output diff."""
     tf = _skip_if_no_tf()
@@ -858,11 +872,13 @@ def test_tf_deep_softmax_handler_additivity():
 
 # Group 16 – Non-eager / graph mode (TF 1.x / compat.v1)
 
+
 def test_tf_deep_graph_mode_linear():
     """Session-based (graph) mode: SHAP values sum correctly for linear model."""
     tf = _skip_if_no_tf()
-    import shap
     from packaging import version
+
+    import shap
 
     if version.parse(tf.__version__) >= version.parse("2.5.0"):
         pytest.skip("Graph / session mode unreliable on TF >= 2.5")
@@ -897,24 +913,66 @@ def test_op_handlers_contains_required_keys():
 
     required = [
         # passthrough
-        "Identity", "StridedSlice", "Squeeze", "ExpandDims", "Pack",
-        "BiasAdd", "Unpack", "Add", "AddV2", "Sub", "Merge", "Sum",
-        "Mean", "Cast", "Transpose", "Enter", "Exit", "NextIteration",
-        "Tile", "TensorArrayScatterV3", "TensorArrayReadV3", "TensorArrayWriteV3",
+        "Identity",
+        "StridedSlice",
+        "Squeeze",
+        "ExpandDims",
+        "Pack",
+        "BiasAdd",
+        "Unpack",
+        "Add",
+        "AddV2",
+        "Sub",
+        "Merge",
+        "Sum",
+        "Mean",
+        "Cast",
+        "Transpose",
+        "Enter",
+        "Exit",
+        "NextIteration",
+        "Tile",
+        "TensorArrayScatterV3",
+        "TensorArrayReadV3",
+        "TensorArrayWriteV3",
         # break_dependence
-        "Shape", "RandomUniform", "ZerosLike",
+        "Shape",
+        "RandomUniform",
+        "ZerosLike",
         # linearity_1d
-        "Reshape", "Pad", "ReverseV2", "ConcatV2", "Conv2D", "Switch",
-        "AvgPool", "FusedBatchNorm",
+        "Reshape",
+        "Pad",
+        "ReverseV2",
+        "ConcatV2",
+        "Conv2D",
+        "Switch",
+        "AvgPool",
+        "FusedBatchNorm",
         # nonlinearity_1d
-        "Relu", "Selu", "Elu", "Sigmoid", "Tanh", "Softplus", "Exp",
-        "ClipByValue", "Rsqrt", "Square", "Max",
+        "Relu",
+        "Selu",
+        "Elu",
+        "Sigmoid",
+        "Tanh",
+        "Softplus",
+        "Exp",
+        "ClipByValue",
+        "Rsqrt",
+        "Square",
+        "Max",
         # nonlinearity_1d_nonlinearity_2d
-        "SquaredDifference", "Minimum", "Maximum",
+        "SquaredDifference",
+        "Minimum",
+        "Maximum",
         # linearity_1d_nonlinearity_2d
-        "Mul", "RealDiv", "MatMul",
+        "Mul",
+        "RealDiv",
+        "MatMul",
         # custom
-        "GatherV2", "ResourceGather", "MaxPool", "Softmax",
+        "GatherV2",
+        "ResourceGather",
+        "MaxPool",
+        "Softmax",
     ]
     for key in required:
         assert key in op_handlers, f"Missing op_handlers key: {key}"
