@@ -2,7 +2,7 @@ import os
 from importlib import import_module
 from typing import Any, NoReturn
 
-import lazy_loader as lazy  # type: ignore[import-untyped]
+import lazy_loader as lazy
 
 
 def _eager_import_enabled() -> bool:

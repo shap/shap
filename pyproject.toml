@@ -216,6 +216,7 @@ module = [
   "cloudpickle",
   "cv2",
   "IPython.*",
+  "lazy_loader",
   "lightgbm.*",
   "lime.*",
   "numba",

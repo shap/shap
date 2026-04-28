@@ -1,4 +1,4 @@
-import lazy_loader as lazy  # type: ignore[import-untyped]
+import lazy_loader as lazy
 
 try:
     import matplotlib  # noqa: F401
@@ -18,6 +18,7 @@ def __getattr__(name: str):
 
 def __dir__() -> list[str]:
     return __all__.copy()
+
 
 __all__ = [
     "bar",
