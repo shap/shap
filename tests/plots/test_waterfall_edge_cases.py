@@ -1,21 +1,11 @@
 """Edge-case and behavioral tests for the waterfall plot."""
 
-import matplotlib
-matplotlib.use("Agg")
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
 
 import shap
-
-
-@pytest.fixture(autouse=True)
-def _close_figures_between_tests():
-    plt.close("all")
-    yield
-    plt.close("all")
 
 
 def _make_explanation(values, *, data=None, feature_names=None, base_value=0.0):
@@ -44,7 +34,6 @@ def test_waterfall_show_false_returns_current_axis():
     ax = shap.plots.waterfall(explanation, show=False)
 
     assert ax is plt.gca()
-    assert ax is not None
 
 
 def test_waterfall_empty_values_not_supported():
@@ -59,7 +48,12 @@ def test_waterfall_empty_values_not_supported():
 def test_waterfall_feature_names_fallback_when_none():
     """Ensure fallback feature naming works when feature_names=None."""
     plt.figure()
-    explanation = _make_explanation([0.4, -0.2], data=None, feature_names=None)
+    explanation = shap.Explanation(
+        values=np.array([0.4, -0.2]),
+        base_values=0.0,
+        data=None,
+        feature_names=None,
+    )
 
     ax = shap.plots.waterfall(explanation, show=False)
     tick_text = [tick.get_text().strip() for tick in ax.get_yticklabels() if tick.get_text().strip()]
@@ -95,7 +89,6 @@ def test_waterfall_all_positive_values_render_positive_contributions():
     ax = shap.plots.waterfall(explanation, show=False)
 
     assert ax is plt.gca()
-    assert ax is not None
 
 
 def test_waterfall_all_negative_values_render_negative_contributions():
@@ -107,7 +100,6 @@ def test_waterfall_all_negative_values_render_negative_contributions():
     ax = shap.plots.waterfall(explanation, show=False)
 
     assert ax is plt.gca()
-    assert ax is not None
 
 
 def test_waterfall_respects_max_display():
@@ -123,8 +115,10 @@ def test_waterfall_respects_max_display():
 
     # allow small flexibility due to "others" grouping
     assert len(tick_labels) > 0
+    assert len(tick_labels) <= len(values) + 2  # allow flexibility
+
 
 def test_waterfall_rejects_non_explanation():
     """Ensure non-Explanation inputs raise TypeError."""
     with pytest.raises(TypeError):
-        shap.plots.waterfall([1, 2, 3])
+        shap.plots.waterfall([1, 2, 3], show=False)
