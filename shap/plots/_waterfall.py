@@ -13,7 +13,7 @@ from ._style import get_style
 # plot that is associated with that feature get overlaid on the plot...it would quickly allow users to answer
 # why a feature is pushing down or up. Perhaps the best way to do this would be with an ICE plot hanging off
 # of the bar...
-def waterfall(shap_values, max_display=10, ax=None, show=True):
+def waterfall(shap_values, max_display=10, show=True, ax=None):
     """Plots an explanation of a single prediction as a waterfall plot.
 
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
@@ -52,6 +52,11 @@ def waterfall(shap_values, max_display=10, ax=None, show=True):
     # Turn off interactive plot
     if show is False:
         plt.ioff()
+
+    ax_provided = ax is not None
+    if ax is None:
+        ax = plt.gca()
+    fig = ax.get_figure()
 
     # make sure the input is an Explanation object
     if not isinstance(shap_values, Explanation):
@@ -109,11 +114,8 @@ def waterfall(shap_values, max_display=10, ax=None, show=True):
     plt.gcf().set_size_inches(8, num_features * row_height + 1.5)
     """
 
-    if ax is None:
-        ax = plt.gca()
-        # Only modify the figure size if ax was not passed in
-        # compute our figure size based on how many features we are showing
-        fig = plt.gcf()
+    # Only modify the figure size if ax was not passed in
+    if not ax_provided:
         row_height = 0.5
         fig.set_size_inches(8, num_features * row_height + 1.5)
 
