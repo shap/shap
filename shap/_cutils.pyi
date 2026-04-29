@@ -12,8 +12,7 @@ def compute_grey_code_row_values(
     shapley_coeff: Annotated[NDArray[numpy.float64], dict(shape=(None,), device="cpu")],
     extended_delta_indexes: Annotated[NDArray[numpy.uint64], dict(shape=(None,), device="cpu")],
     noop_code: int,
-) -> None:
-    """Compute the row values for the grey code algorithm in 1D"""
+) -> None: ...
 
 @overload
 def compute_grey_code_row_values(
@@ -24,8 +23,7 @@ def compute_grey_code_row_values(
     shapley_coeff: Annotated[NDArray[numpy.float64], dict(shape=(None,), device="cpu")],
     extended_delta_indexes: Annotated[NDArray[numpy.uint64], dict(shape=(None,), device="cpu")],
     noop_code: int,
-) -> None:
-    """Compute the row values for the grey code algorithm in 2D"""
+) -> None: ...
 
 def compute_exp_val(
     nsamples_run: int,
