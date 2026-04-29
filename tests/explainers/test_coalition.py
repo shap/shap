@@ -2,15 +2,15 @@
 
 import numpy as np
 import pandas as pd
+import pytest
 from conftest import compare_numpy_outputs_against_baseline
+from sklearn.datasets import load_iris
+from sklearn.ensemble import RandomForestClassifier
 
 import shap
 from shap.explainers._coalition import create_partition_hierarchy
 
 from . import common
-import pytest
-from sklearn.datasets import load_iris
-from sklearn.ensemble import RandomForestClassifier
 
 
 @compare_numpy_outputs_against_baseline(func_file=__file__)
