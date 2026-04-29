@@ -513,7 +513,7 @@ def shorten_text(text, length_limit):
 
 
 def is_color_map(color):
-    safe_isinstance(color, "matplotlib.colors.Colormap")
+    return safe_isinstance(color, "matplotlib.colors.Colormap")
 
 
 # TODO: remove unused title argument / use title argument
