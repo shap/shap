@@ -153,6 +153,10 @@ class KernelExplainer(Explainer):
                 + "summarize the background as K samples."
             )
 
+        # validate background dataset is not empty
+        if self.data.data.shape[0] == 0:
+            raise ValueError("Background dataset cannot be empty")
+
         # init our parameters
         self.N = self.data.data.shape[0]
         self.P = self.data.data.shape[1]
