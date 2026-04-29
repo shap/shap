@@ -33,7 +33,8 @@ def test_single_text_to_text():
 
 def test_multi_row_values():
     """For multi row text plot logic"""
-    test_values = np.random.randn(2, 3)
+    rs = np.random.RandomState(42)
+    test_values = rs.randn(2, 3)
 
     test_base_values = np.array([0.1, 0.3])
 
@@ -44,4 +45,12 @@ def test_multi_row_values():
     shap_values_test = shap.Explanation(
         values=test_values, base_values=test_base_values, data=test_data, output_names=test_output_names
     )
-    shap.plots.text(shap_values_test, display=False)
+
+    output_html = shap.plots.text(shap_values_test, display=False)
+
+    assert isinstance(output_html, str)
+    assert "Positive Sentiment" in output_html
+    assert "[0]" in output_html
+    assert "[1]" in output_html
+    assert "Hello" in output_html
+    assert "Testing" in output_html
