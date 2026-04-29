@@ -2006,7 +2006,6 @@ class XGBTreeModelLoader(BaseTreeModelLoader):
         print("--- gbtree specific parameters ---")
         print("num_feature =", self.num_feature)
 
-
     def load(
         self,
         ensemble: Any,
@@ -2016,7 +2015,9 @@ class XGBTreeModelLoader(BaseTreeModelLoader):
     ) -> None:
         ensemble.model_type = "xgboost"
         # Store original model for get_booster cases
-        if safe_isinstance(self.model, ["xgboost.sklearn.XGBClassifier", "xgboost.sklearn.XGBRegressor", "xgboost.sklearn.XGBRanker"]):
+        if safe_isinstance(
+            self.model, ["xgboost.sklearn.XGBClassifier", "xgboost.sklearn.XGBRegressor", "xgboost.sklearn.XGBRanker"]
+        ):
             ensemble.original_model = self.model.get_booster()
             ensemble.input_dtype = np.float32
         else:
@@ -2037,7 +2038,9 @@ class XGBTreeModelLoader(BaseTreeModelLoader):
         ensemble.tree_limit = (best_iteration + 1) * ensemble.num_stacked_models
         ensemble._xgboost_n_outputs = self.n_targets
 
-        if safe_isinstance(self.model, ["xgboost.sklearn.XGBClassifier", "xgboost.sklearn.XGBRegressor", "xgboost.sklearn.XGBRanker"]):
+        if safe_isinstance(
+            self.model, ["xgboost.sklearn.XGBClassifier", "xgboost.sklearn.XGBRegressor", "xgboost.sklearn.XGBRanker"]
+        ):
             if safe_isinstance(self.model, "xgboost.sklearn.XGBClassifier"):
                 if ensemble.model_output == "predict_proba":
                     if ensemble.num_stacked_models == 1:
@@ -2237,7 +2240,13 @@ class SklearnTreeModelLoader(BaseTreeModelLoader):
         model = self.model
         objective_name_map = ensemble.objective_name_map
 
-        if safe_isinstance(model, ["imblearn.ensemble._forest.BalancedRandomForestClassifier", "imblearn.ensemble.BalancedRandomForestClassifier"]):
+        if safe_isinstance(
+            model,
+            [
+                "imblearn.ensemble._forest.BalancedRandomForestClassifier",
+                "imblearn.ensemble.BalancedRandomForestClassifier",
+            ],
+        ):
             ensemble.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_)
             ensemble.trees = [
@@ -2262,19 +2271,37 @@ class SklearnTreeModelLoader(BaseTreeModelLoader):
                 for e, f in zip(model.detector_.estimators_, model.detector_.estimators_features_)
             ]
             ensemble.tree_output = "raw_value"
-        elif safe_isinstance(model, ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor", "econml.grf._base_grftree.GRFTree", "causalml.inference.tree.causal.causaltree.CausalTreeRegressor"]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.tree.DecisionTreeRegressor",
+                "sklearn.tree.tree.DecisionTreeRegressor",
+                "econml.grf._base_grftree.GRFTree",
+                "causalml.inference.tree.causal.causaltree.CausalTreeRegressor",
+            ],
+        ):
             ensemble.internal_dtype = model.tree_.value.dtype.type
             ensemble.input_dtype = np.float32
             ensemble.trees = [SingleTree(model.tree_, data=data, data_missing=data_missing)]
             ensemble.objective = objective_name_map.get(model.criterion, None)
             ensemble.tree_output = "raw_value"
-        elif safe_isinstance(model, ["sklearn.tree.DecisionTreeClassifier", "sklearn.tree.tree.DecisionTreeClassifier"]):
+        elif safe_isinstance(
+            model, ["sklearn.tree.DecisionTreeClassifier", "sklearn.tree.tree.DecisionTreeClassifier"]
+        ):
             ensemble.internal_dtype = model.tree_.value.dtype.type
             ensemble.input_dtype = np.float32
             ensemble.trees = [SingleTree(model.tree_, normalize=True, data=data, data_missing=data_missing)]
             ensemble.objective = objective_name_map.get(model.criterion, None)
             ensemble.tree_output = "probability"
-        elif safe_isinstance(model, ["sklearn.ensemble.RandomForestClassifier", "sklearn.ensemble.forest.RandomForestClassifier", "sklearn.ensemble.ExtraTreesClassifier", "sklearn.ensemble.forest.ExtraTreesClassifier"]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.RandomForestClassifier",
+                "sklearn.ensemble.forest.RandomForestClassifier",
+                "sklearn.ensemble.ExtraTreesClassifier",
+                "sklearn.ensemble.forest.ExtraTreesClassifier",
+            ],
+        ):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             ensemble.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             ensemble.input_dtype = np.float32
@@ -2285,11 +2312,22 @@ class SklearnTreeModelLoader(BaseTreeModelLoader):
             ]
             ensemble.objective = objective_name_map.get(model.criterion, None)
             ensemble.tree_output = "probability"
-        elif safe_isinstance(model, ["sklearn.ensemble.GradientBoostingRegressor", "sklearn.ensemble.gradient_boosting.GradientBoostingRegressor"]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.GradientBoostingRegressor",
+                "sklearn.ensemble.gradient_boosting.GradientBoostingRegressor",
+            ],
+        ):
             ensemble.input_dtype = np.float32
-            if safe_isinstance(model.init_, ["sklearn.ensemble.MeanEstimator", "sklearn.ensemble.gradient_boosting.MeanEstimator"]):
+            if safe_isinstance(
+                model.init_, ["sklearn.ensemble.MeanEstimator", "sklearn.ensemble.gradient_boosting.MeanEstimator"]
+            ):
                 ensemble.base_offset = model.init_.mean
-            elif safe_isinstance(model.init_, ["sklearn.ensemble.QuantileEstimator", "sklearn.ensemble.gradient_boosting.QuantileEstimator"]):
+            elif safe_isinstance(
+                model.init_,
+                ["sklearn.ensemble.QuantileEstimator", "sklearn.ensemble.gradient_boosting.QuantileEstimator"],
+            ):
                 ensemble.base_offset = model.init_.quantile
             elif safe_isinstance(model.init_, "sklearn.dummy.DummyRegressor"):
                 ensemble.base_offset = model.init_.constant_[0]
@@ -2302,12 +2340,24 @@ class SklearnTreeModelLoader(BaseTreeModelLoader):
             ]
             ensemble.objective = objective_name_map.get(model.criterion, None)
             ensemble.tree_output = "raw_value"
-        elif safe_isinstance(model, ["sklearn.ensemble.GradientBoostingClassifier", "sklearn.ensemble._gb.GradientBoostingClassifier", "sklearn.ensemble.gradient_boosting.GradientBoostingClassifier"]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.GradientBoostingClassifier",
+                "sklearn.ensemble._gb.GradientBoostingClassifier",
+                "sklearn.ensemble.gradient_boosting.GradientBoostingClassifier",
+            ],
+        ):
             ensemble.input_dtype = np.float32
             if model.estimators_.shape[1] > 1:
-                raise InvalidModelError("GradientBoostingClassifier is only supported for binary classification right now!")
+                raise InvalidModelError(
+                    "GradientBoostingClassifier is only supported for binary classification right now!"
+                )
 
-            if safe_isinstance(model.init_, ["sklearn.ensemble.LogOddsEstimator", "sklearn.ensemble.gradient_boosting.LogOddsEstimator"]):
+            if safe_isinstance(
+                model.init_,
+                ["sklearn.ensemble.LogOddsEstimator", "sklearn.ensemble.gradient_boosting.LogOddsEstimator"],
+            ):
                 ensemble.base_offset = model.init_.prior
                 ensemble.tree_output = "log_odds"
             elif safe_isinstance(model.init_, "sklearn.dummy.DummyClassifier"):
@@ -2321,8 +2371,11 @@ class SklearnTreeModelLoader(BaseTreeModelLoader):
                 for e in model.estimators_[:, 0]
             ]
             ensemble.objective = objective_name_map.get(model.criterion, None)
-        elif safe_isinstance(model, ["sklearn.ensemble.HistGradientBoostingRegressor", "sklearn.ensemble.HistGradientBoostingClassifier"]):
+        elif safe_isinstance(
+            model, ["sklearn.ensemble.HistGradientBoostingRegressor", "sklearn.ensemble.HistGradientBoostingClassifier"]
+        ):
             import sklearn
+
             if safe_isinstance(model, "sklearn.ensemble.HistGradientBoostingRegressor"):
                 if ensemble.model_output == "predict":
                     ensemble.model_output = "raw"
@@ -2343,14 +2396,16 @@ class SklearnTreeModelLoader(BaseTreeModelLoader):
                     ensemble.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
                 ensemble.objective = objective_name_map.get(model.loss, None)
                 ensemble.tree_output = "raw_value"
-            else: # HistGradientBoostingClassifier
+            else:  # HistGradientBoostingClassifier
                 ensemble.base_offset = model._baseline_prediction
                 has_len = hasattr(ensemble.base_offset, "__len__")
                 if has_len and ensemble.base_offset.shape == (1, 1):
                     ensemble.base_offset = ensemble.base_offset[0, 0]
                     has_len = False
                 if has_len and ensemble.model_output != "raw":
-                    raise NotImplementedError("Multi-output HistGradientBoostingClassifier models are not yet supported unless model_output='raw'.")
+                    raise NotImplementedError(
+                        "Multi-output HistGradientBoostingClassifier models are not yet supported unless model_output='raw'."
+                    )
                 ensemble.input_dtype = sklearn.ensemble._hist_gradient_boosting.common.X_DTYPE
                 ensemble.num_stacked_models = len(model._predictors[0])
                 if ensemble.model_output == "predict_proba":
@@ -2374,7 +2429,7 @@ class SklearnTreeModelLoader(BaseTreeModelLoader):
                         ensemble.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
                 ensemble.objective = objective_name_map.get(model.loss, None)
                 ensemble.tree_output = "log_odds"
-        else: # RandomForestRegressor, ExtraTreesRegressor, etc.
+        else:  # RandomForestRegressor, ExtraTreesRegressor, etc.
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             ensemble.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             ensemble.input_dtype = np.float32
@@ -2438,7 +2493,7 @@ class LightGBMTreeModelLoader(BaseTreeModelLoader):
                     ensemble.objective = "squared_error"
                     ensemble.tree_output = "raw_value"
             elif safe_isinstance(model, "lightgbm.sklearn.LGBMRanker"):
-                pass # logic for ranker
+                pass  # logic for ranker
 
         tree_info = ensemble.original_model.dump_model()["tree_info"]
         try:
@@ -2510,20 +2565,33 @@ class SparkTreeModelLoader(BaseTreeModelLoader):
             normalize = False
             ensemble.tree_output = "raw_value"
 
-        if safe_isinstance(model, ["pyspark.ml.classification.RandomForestClassificationModel", "pyspark.ml.regression.RandomForestRegressionModel"]):
+        if safe_isinstance(
+            model,
+            [
+                "pyspark.ml.classification.RandomForestClassificationModel",
+                "pyspark.ml.regression.RandomForestRegressionModel",
+            ],
+        ):
             sum_weight = sum(model.treeWeights)
             ensemble.trees = [
                 SingleTree(tree, normalize=normalize, scaling=model.treeWeights[i] / sum_weight)
                 for i, tree in enumerate(model.trees)
             ]
-        elif safe_isinstance(model, ["pyspark.ml.classification.GBTClassificationModel", "pyspark.ml.regression.GBTRegressionModel"]):
+        elif safe_isinstance(
+            model, ["pyspark.ml.classification.GBTClassificationModel", "pyspark.ml.regression.GBTRegressionModel"]
+        ):
             ensemble.objective = "squared_error"
             ensemble.tree_output = "raw_value"
             ensemble.trees = [
-                SingleTree(tree, normalize=False, scaling=model.treeWeights[i])
-                for i, tree in enumerate(model.trees)
+                SingleTree(tree, normalize=False, scaling=model.treeWeights[i]) for i, tree in enumerate(model.trees)
             ]
-        elif safe_isinstance(model, ["pyspark.ml.classification.DecisionTreeClassificationModel", "pyspark.ml.regression.DecisionTreeRegressionModel"]):
+        elif safe_isinstance(
+            model,
+            [
+                "pyspark.ml.classification.DecisionTreeClassificationModel",
+                "pyspark.ml.regression.DecisionTreeRegressionModel",
+            ],
+        ):
             ensemble.trees = [SingleTree(model, normalize=normalize, scaling=1)]
         else:
             raise NotImplementedError(f"Unsupported Spark model type: {type(model)}")
@@ -2603,9 +2671,6 @@ class NGBoostTreeModelLoader(BaseTreeModelLoader):
 
 
 TreeModelLoaderRegistry.register(NGBoostTreeModelLoader)
-
-
-
 
 
 TreeModelLoaderRegistry.register(XGBTreeModelLoader)
