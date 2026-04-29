@@ -90,7 +90,7 @@ class TFDeep(Explainer):
         if version.parse(tf.__version__) < version.parse("1.4.0"):
             warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
 
-        if version.parse(tf.__version__) >= version.parse("2.4.0"):
+        if version.parse(tf.__version__) >= version.parse("2.4.0") and tf.executing_eagerly():
             warnings.warn(
                 "Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion."
             )
