@@ -109,7 +109,6 @@ class MaskedModel:
                 if not isinstance(masked_inputs, tuple):
                     masked_inputs = (masked_inputs,)
 
-
                 num_mask_samples[i] = len(masked_inputs[0])
 
                 # see which rows have been updated, so we can only evaluate the model on the rows we need to
@@ -311,13 +310,13 @@ def _build_fixed_output(
         y = np.asarray(link(x), dtype=averaged_outs_up.dtype)
         x_ndim = np.asarray(x).ndim
         if x_ndim == 0:
-            return y.item()              # scalar -> scalar
+            return y.item()  # scalar -> scalar
         if x_ndim == 1:
-            return np.atleast_1d(y)      # -> (N,)
+            return np.atleast_1d(y)  # -> (N,)
         # For 2D inputs (batch): ensure 2D output with (batch_size, num_outputs)
         if y.ndim == 1:
-            return y[:, np.newaxis]      # (N,) -> (N, 1)
-        return np.atleast_2d(y)          # preserves (N, D)
+            return y[:, np.newaxis]  # (N,) -> (N, 1)
+        return np.atleast_2d(y)  # preserves (N, D)
 
     if len(last_outs.shape) == 1:
         _build_fixed_single_output(

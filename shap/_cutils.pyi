@@ -13,7 +13,6 @@ def compute_grey_code_row_values(
     extended_delta_indexes: Annotated[NDArray[numpy.uint64], dict(shape=(None,), device="cpu")],
     noop_code: int,
 ) -> None: ...
-
 @overload
 def compute_grey_code_row_values(
     row_values: Annotated[NDArray[numpy.float64], dict(shape=(None, None), device="cpu")],
@@ -24,7 +23,6 @@ def compute_grey_code_row_values(
     extended_delta_indexes: Annotated[NDArray[numpy.uint64], dict(shape=(None,), device="cpu")],
     noop_code: int,
 ) -> None: ...
-
 def compute_exp_val(
     nsamples_run: int,
     nsamples_added: int,
