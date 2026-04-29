@@ -38,7 +38,7 @@ def group_difference(
     if rng is None:
         random = np.random.random
     else:
-        if not isinstance(rng, (np.random.Generator, np.random.RandomState)):
+        if not isinstance(rng, np.random.Generator):
             rng = np.random.default_rng(rng)
         random = rng.random
 
