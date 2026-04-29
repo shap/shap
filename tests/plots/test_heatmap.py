@@ -40,7 +40,7 @@ def test_heatmap_feature_order_opchain(explainer):
 def test_heatmap_feature_order_invalid(explainer):
     """Handle unsupported feature order condition"""
     shap_values = explainer(explainer.data)
-    print(explainer)
+
     with pytest.raises(Exception, match="Unsupported feature_order"):
         shap.plots.heatmap(shap_values, feature_order=123, show=False)
 
