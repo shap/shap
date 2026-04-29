@@ -3016,17 +3016,15 @@ def test_nullable_pandas_dtype():
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
 
+
 def test_tree_explainer_nullable_dataframe_background():
     import pandas as pd
-    import numpy as np
-    import shap
     from sklearn.ensemble import RandomForestRegressor
 
+    import shap
+
     # create dataframe with nullable dtype
-    X = pd.DataFrame({
-        "a": pd.Series([1, 2, pd.NA], dtype="Int64"),
-        "b": [0.1, 0.2, 0.3]
-    })
+    X = pd.DataFrame({"a": pd.Series([1, 2, pd.NA], dtype="Int64"), "b": [0.1, 0.2, 0.3]})
     y = [1, 2, 3]
 
     # train model
