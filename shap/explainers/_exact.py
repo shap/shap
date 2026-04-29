@@ -310,7 +310,7 @@ def partition_masks(
     inds_lists: list[list[list[int]]] = [[[], []] for i in range(M)]  # type: ignore[var-annotated]
     _partition_masks_recurse(len(partition_tree) - 1, m00, 0, 1, inds_lists, mask_matrix, partition_tree, M, all_masks)
 
-    all_masks = np.array(all_masks)  # type: ignore[assignment]
+    all_masks = np.asarray(all_masks, dtype=bool)
 
     # we resort the clustering matrix to minimize the sequential difference between the masks
     # this minimizes the number of model evaluations we need to run when the background sometimes
