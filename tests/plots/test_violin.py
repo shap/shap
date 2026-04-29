@@ -135,7 +135,8 @@ def test_violin_multi_output_values():
 )
 def test_violin_features(features, expected_feature_names):
     """Checks for conditions where features are passed"""
-    shap_values = np.random.randn(2, 2)
+    rs = np.random.RandomState(42)
+    shap_values = rs.randn(2, 2)
 
     shap.plots.violin(shap_values, features=features, show=False)
 
@@ -153,7 +154,8 @@ def test_violin_features(features, expected_feature_names):
         0.8,
     ],
 )
-def test_violin_plot_size(plot_size):
+def test_violin_plot_size_smoke_test(plot_size):
     """Checks for conditions with different plot_size types"""
-    shap_values = np.random.randn(5, 3)
+    rs = np.random.RandomState(42)
+    shap_values = rs.randn(5, 3)
     shap.plots.violin(shap_values, plot_size=plot_size, show=False)
