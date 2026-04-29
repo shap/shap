@@ -20,6 +20,7 @@ from ._scatter import scatter
 from ._text import text
 from ._violin import violin
 from ._waterfall import waterfall
+from ._group_bar import group_bar
 
 __all__ = [
     "bar",
@@ -39,4 +40,5 @@ __all__ = [
     "text",
     "violin",
     "waterfall",
+    "group_bar",
 ]
