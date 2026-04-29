@@ -249,7 +249,7 @@ class TreeExplainer(Explainer):
             )
 
         if isinstance(data, pd.DataFrame):
-            self.data = data.values
+            self.data = data.to_numpy(dtype=np.float64, na_value=np.nan)
         elif isinstance(data, DenseData):
             self.data = data.data
         else:
