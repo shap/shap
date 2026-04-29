@@ -1,4 +1,5 @@
 """tests for the group_bar plot."""
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np

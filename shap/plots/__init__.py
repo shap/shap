@@ -11,6 +11,7 @@ from ._benchmark import benchmark
 from ._decision import decision
 from ._embedding import embedding
 from ._force import force, initjs
+from ._group_bar import group_bar
 from ._group_difference import group_difference
 from ._heatmap import heatmap
 from ._image import image, image_to_text
@@ -20,7 +21,6 @@ from ._scatter import scatter
 from ._text import text
 from ._violin import violin
 from ._waterfall import waterfall
-from ._group_bar import group_bar
 
 __all__ = [
     "bar",

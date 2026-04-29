@@ -17,7 +17,7 @@ def group_bar(
     show_individual: bool = True,
     show: bool = True,
 ):
-    """bar plot for CoalitionExplainer output that respects the group hierarchy.
+    """Bar plot for CoalitionExplainer output that respects the group hierarchy.
 
     when you use CoalitionExplainer with a partition_tree, the resulting shap values
     have a natural two-level structure -- groups and individual features within those groups.
@@ -94,9 +94,7 @@ def group_bar(
     elif values.ndim == 1:
         display_values = values
     else:
-        raise ValueError(
-            f"shap_values.values must be 1d or 2d, got shape {values.shape}"
-        )
+        raise ValueError(f"shap_values.values must be 1d or 2d, got shape {values.shape}")
 
     feature_names = shap_values.feature_names
     if feature_names is None:
@@ -113,9 +111,7 @@ def group_bar(
         all_tree_features.extend(feats)
     missing = [f for f in all_tree_features if f not in name_to_idx]
     if missing:
-        raise ValueError(
-            f"these features appear in partition_tree but not in shap_values.feature_names: {missing}"
-        )
+        raise ValueError(f"these features appear in partition_tree but not in shap_values.feature_names: {missing}")
 
     group_totals: list[tuple[str, float, list[tuple[str, float]]]] = []
     for group_name, feat_list in groups:
@@ -180,16 +176,22 @@ def group_bar(
         txt = format_value(val, "%+0.02f")
         if val >= 0:
             ax.text(
-                val + offset, yp, txt,
-                ha="left", va="center",
+                val + offset,
+                yp,
+                txt,
+                ha="left",
+                va="center",
                 fontsize=11 if is_group else 9.5,
                 fontweight="bold" if is_group else "normal",
                 color=style.primary_color_positive,
             )
         else:
             ax.text(
-                val - offset, yp, txt,
-                ha="right", va="center",
+                val - offset,
+                yp,
+                txt,
+                ha="right",
+                va="center",
                 fontsize=11 if is_group else 9.5,
                 fontweight="bold" if is_group else "normal",
                 color=style.primary_color_negative,
@@ -234,7 +236,7 @@ def _parse_partition_tree(
     tree: dict[str, Any],
     _parent_prefix: str = "",
 ) -> list[tuple[str, list[str]]]:
-    """recursively flatten a nested partition_tree dict into (group_name, [leaf_features]) pairs."""
+    """Recursively flatten a nested partition_tree dict into (group_name, [leaf_features]) pairs."""
     result: list[tuple[str, list[str]]] = []
     for key, value in tree.items():
         group_name = f"{_parent_prefix} > {key}" if _parent_prefix else key
