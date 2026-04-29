@@ -310,14 +310,14 @@ def partition_masks(
     inds_lists: list[list[list[int]]] = [[[], []] for i in range(M)]  # type: ignore[var-annotated]
     _partition_masks_recurse(len(partition_tree) - 1, m00, 0, 1, inds_lists, mask_matrix, partition_tree, M, all_masks)
 
-    all_masks = np.asarray(all_masks, dtype=bool)
+    all_masks_arr = np.asarray(all_masks, dtype=bool)
 
     # we resort the clustering matrix to minimize the sequential difference between the masks
     # this minimizes the number of model evaluations we need to run when the background sometimes
     # matches the foreground. We seem to average about 1.5 feature changes per mask with this
     # approach. This is not as clean as the grey code ordering, but a perfect 1 feature change
     # ordering is not possible with a clustering tree
-    order = delta_minimization_order(all_masks)
+    order = delta_minimization_order(all_masks_arr)
     inverse_order = np.arange(len(order))[np.argsort(order)]
 
     for inds_list0, inds_list1 in inds_lists:
@@ -326,7 +326,7 @@ def partition_masks(
             inds_list1[i] = inverse_order[inds_list1[i]]
 
     # Care: inds_lists have different lengths, so partition_masks_inds is a "ragged" array. See GH #3063
-    partition_masks = all_masks[order]
+    partition_masks = all_masks_arr[order]
     partition_masks_inds = [[np.array(on), np.array(off)] for on, off in inds_lists]
     return partition_masks, partition_masks_inds
 
