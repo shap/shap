@@ -3,9 +3,20 @@ from typing import Any
 
 import numpy as np
 import scipy.sparse
-from numba import njit
 
 from .. import links
+from .._cutils import (
+    build_fixed_multi_output as _build_fixed_multi_output,
+)
+from .._cutils import (
+    build_fixed_single_output as _build_fixed_single_output,
+)
+from .._cutils import (
+    init_masks as _init_masks,
+)
+from .._cutils import (
+    rec_fill_masks as _rec_fill_masks,
+)
 
 
 class MaskedModel:
@@ -98,7 +109,7 @@ class MaskedModel:
                 if not isinstance(masked_inputs, tuple):
                     masked_inputs = (masked_inputs,)
 
-                # masked_inputs = self.masker(mask, *self.args)
+
                 num_mask_samples[i] = len(masked_inputs[0])
 
                 # see which rows have been updated, so we can only evaluate the model on the rows we need to
@@ -106,16 +117,9 @@ class MaskedModel:
                     varying_rows.append(np.ones(num_mask_samples[i], dtype=bool))
                     num_varying_rows[batch_ind + i] = num_mask_samples[i]
                 else:
-                    # a = np.any(self._variants & delta_mask, axis=1)
-                    # a = np.any(self._variants & delta_mask, axis=1)
-                    # a = np.any(self._variants & delta_mask, axis=1)
-                    # (self._variants & delta_mask).sum(1) > 0
-
                     np.bitwise_and(self._variants, delta_mask, out=delta_tmp)
-                    varying_rows.append(np.any(delta_tmp, axis=1))  # np.any(self._variants & delta_mask, axis=1))
+                    varying_rows.append(np.any(delta_tmp, axis=1))
                     num_varying_rows[batch_ind + i] = varying_rows[-1].sum()
-                    # for i in range(20):
-                    #     varying_rows[-1].sum()
                 last_mask[:] = mask
 
                 batch_positions[batch_ind + i + 1] = batch_positions[batch_ind + i] + num_varying_rows[batch_ind + i]
@@ -123,9 +127,6 @@ class MaskedModel:
                 # subset the masked input to only the rows that vary
                 if num_varying_rows[batch_ind + i] != num_mask_samples[i]:
                     if len(self.args) == 1:
-                        # _ = masked_inputs[varying_rows[-1]]
-                        # _ = masked_inputs[varying_rows[-1]]
-                        # _ = masked_inputs[varying_rows[-1]]
                         masked_inputs_subset = masked_inputs[0][varying_rows[-1]]
                     else:
                         masked_inputs_subset = [v[varying_rows[-1]] for v in zip(*masked_inputs[0])]
@@ -166,31 +167,6 @@ class MaskedModel:
 
         return averaged_outs
 
-        # return self._build_output(outputs, batch_positions, varying_rows)
-
-    # def _build_varying_delta_mask_rows(self, masks):
-    #     """ This builds the _varying_delta_mask_rows property which is a list of rows that
-    #     could change for each delta set.
-    #     """
-
-    #     self._varying_delta_mask_rows = []
-    #     i = -1
-    #     masks_pos = 0
-    #     while masks_pos < len(masks):
-    #         i += 1
-
-    #         delta_index = masks[masks_pos]
-    #         masks_pos += 1
-
-    #         # update the masked inputs
-    #         varying_rows_set = []
-    #         while delta_index < 0: # negative values mean keep going
-    #             original_index = -delta_index + 1
-    #             varying_rows_set.append(self._variants_row_inds[original_index])
-    #             delta_index = masks[masks_pos]
-    #             masks_pos += 1
-    #         self._varying_delta_mask_rows.append(np.unique(np.concatenate(varying_rows_set)))
-
     def _delta_masking_call(self, masks, zero_index=None, batch_size=None):
         # TODO: we need to do batching here
 
@@ -215,7 +191,7 @@ class MaskedModel:
 
         averaged_outs = np.zeros((varying_rows.shape[0],) + outputs.shape[1:])
         last_outs = np.zeros((varying_rows.shape[1],) + outputs.shape[1:])
-        # print("link", self.link)
+
         _build_fixed_output(
             averaged_outs,
             last_outs,
@@ -306,7 +282,10 @@ def _convert_delta_mask_to_full(masks, full_masks):
 
 
 def _upcast_array(arr: np.ndarray) -> np.ndarray:
-    """Since njit doesn't support float16, we need to upcast it to float32.
+    """Upcast float16 arrays to float32 for C++ compatibility.
+
+    The C++ extension only binds float32 and float64 overloads,
+    so float16 arrays must be promoted before crossing the boundary.
 
     Args:
         arr (np.ndarray): array to upcast
@@ -324,80 +303,35 @@ def _upcast_array(arr: np.ndarray) -> np.ndarray:
 def _build_fixed_output(
     averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights
 ):
+    averaged_outs_up = _upcast_array(averaged_outs)
+    last_outs_up = _upcast_array(last_outs)
+    outputs_up = _upcast_array(outputs)
+
+    def wrapped_link(x):
+        return np.asarray(link(x), dtype=averaged_outs_up.dtype)
+
     if len(last_outs.shape) == 1:
         _build_fixed_single_output(
-            _upcast_array(averaged_outs),
-            _upcast_array(last_outs),
-            _upcast_array(outputs),
+            averaged_outs_up,
+            last_outs_up,
+            outputs_up,
             batch_positions,
             varying_rows,
             num_varying_rows,
-            link,
+            wrapped_link,
             linearizing_weights,
         )
     else:
         _build_fixed_multi_output(
-            _upcast_array(averaged_outs),
-            _upcast_array(last_outs),
-            _upcast_array(outputs),
+            averaged_outs_up,
+            last_outs_up,
+            outputs_up,
             batch_positions,
             varying_rows,
             num_varying_rows,
-            link,
+            wrapped_link,
             linearizing_weights,
         )
-
-
-@njit  # we can't use this when using a custom link function...
-def _build_fixed_single_output(
-    averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights
-):
-    # here we can assume that the outputs will always be the same size, and we need
-    # to carry over evaluation outputs
-    sample_count = last_outs.shape[0]
-    # if linearizing_weights is not None:
-    #     averaged_outs[0] = np.mean(linearizing_weights * link(last_outs))
-    # else:
-    #     averaged_outs[0] = link(np.mean(last_outs))
-    for i in range(len(averaged_outs)):
-        if batch_positions[i] < batch_positions[i + 1]:
-            if num_varying_rows[i] == sample_count:
-                last_outs[:] = outputs[batch_positions[i] : batch_positions[i + 1]]
-            else:
-                last_outs[varying_rows[i]] = outputs[batch_positions[i] : batch_positions[i + 1]]
-            if linearizing_weights is not None:
-                averaged_outs[i] = np.mean(linearizing_weights * link(last_outs))
-            else:
-                averaged_outs[i] = link(np.mean(last_outs))
-        else:
-            averaged_outs[i] = averaged_outs[i - 1]
-
-
-@njit
-def _build_fixed_multi_output(
-    averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights
-):
-    # here we can assume that the outputs will always be the same size, and we need
-    # to carry over evaluation outputs
-
-    sample_count = last_outs.shape[0]
-    for i in range(len(averaged_outs)):
-        if batch_positions[i] < batch_positions[i + 1]:
-            if num_varying_rows[i] == sample_count:
-                last_outs[:] = outputs[batch_positions[i] : batch_positions[i + 1]]
-            else:
-                last_outs[varying_rows[i]] = outputs[batch_positions[i] : batch_positions[i + 1]]
-            # averaged_outs[i] = link(np.mean(last_outs))
-            if linearizing_weights is not None:
-                for j in range(last_outs.shape[-1]):
-                    averaged_outs[i, j] = np.mean(linearizing_weights[:, j] * link(last_outs[:, j]))
-            else:
-                for j in range(last_outs.shape[-1]):  # using -1 is important
-                    averaged_outs[i, j] = link(
-                        np.mean(last_outs[:, j])
-                    )  # we can't just do np.mean(last_outs, 0) because that fails to numba compile
-        else:
-            averaged_outs[i] = averaged_outs[i - 1]
 
 
 def make_masks(cluster_matrix):
@@ -416,41 +350,6 @@ def make_masks(cluster_matrix):
     mask_matrix = scipy.sparse.csr_matrix((np.ones(len(indices), dtype=bool), indices, indptr), shape=(2 * M - 1, M))
 
     return mask_matrix
-
-
-@njit
-def _init_masks(cluster_matrix, M, indices_row_pos, indptr):
-    pos = 0
-    for i in range(2 * M - 1):
-        if i < M:
-            pos += 1
-        else:
-            pos += int(cluster_matrix[i - M, 3])
-        indptr[i + 1] = pos
-        indices_row_pos[i] = indptr[i]
-
-
-@njit
-def _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, ind):
-    pos = indices_row_pos[ind]
-
-    if ind < M:
-        indices[pos] = ind
-        return
-
-    lind = int(cluster_matrix[ind - M, 0])
-    rind = int(cluster_matrix[ind - M, 1])
-    lind_size = int(cluster_matrix[lind - M, 3]) if lind >= M else 1
-    rind_size = int(cluster_matrix[rind - M, 3]) if rind >= M else 1
-
-    lpos = indices_row_pos[lind]
-    rpos = indices_row_pos[rind]
-
-    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, lind)
-    indices[pos : pos + lind_size] = indices[lpos : lpos + lind_size]
-
-    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, rind)
-    indices[pos + lind_size : pos + lind_size + rind_size] = indices[rpos : rpos + rind_size]
 
 
 def link_reweighting(p, link):
