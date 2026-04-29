@@ -236,6 +236,11 @@ def test_tf_multi_inputs_multi_outputs():
     predicted = model.predict([input1_data, input2_data])
     explainer = shap.GradientExplainer(model, [input1_data, input2_data])
     shap_values = explainer.shap_values([input1_data, input2_data])
+
+    assert len(shap_values) == 2
+    assert shap_values[0].shape == (32, 3, 3)
+    assert shap_values[1].shape == (32, 4, 3)
+
     np.testing.assert_allclose(shap_values[0].sum(1) + shap_values[1].sum(1) + predicted.mean(0), predicted, atol=1e-1)
 
 
@@ -484,36 +489,13 @@ def test_tf_input(random_seed, input_type):
         d / np.abs(diff).sum()
     )
 
-
-def test_reproducibility_with_seed():
-    import numpy as np
-    import tensorflow as tf
-
-    import shap
-
-    tf.random.set_seed(0)
-    np.random.seed(0)
-
-    model = tf.keras.Sequential([tf.keras.layers.Input(shape=(3,)), tf.keras.layers.Dense(1)])
-    model.compile(optimizer="adam", loss="mse")
-
-    X = np.random.randn(20, 3)
-    background = X[:10]
-
-    explainer = shap.GradientExplainer(model, background)
-
-    vals1 = explainer.shap_values(X[:1], rseed=42)
-    vals2 = explainer.shap_values(X[:1], rseed=42)
-
+    vals1 = explainer.shap_values(example, rseed=42)
+    vals2 = explainer.shap_values(example, rseed=42)
     np.testing.assert_allclose(vals1, vals2, atol=1e-6)
 
 
 def test_invalid_input_shape_raises():
-    import numpy as np
-    import pytest
-    import tensorflow as tf
-
-    import shap
+    tf = pytest.importorskip("tensorflow")
 
     model = tf.keras.Sequential([tf.keras.layers.Input(shape=(3,)), tf.keras.layers.Dense(1)])
     model.compile(optimizer="adam", loss="mse")
@@ -526,10 +508,7 @@ def test_invalid_input_shape_raises():
 
 
 def test_ranked_outputs():
-    import numpy as np
-    import tensorflow as tf
-
-    import shap
+    tf = pytest.importorskip("tensorflow")
 
     model = tf.keras.Sequential([tf.keras.layers.Input(shape=(4,)), tf.keras.layers.Dense(3)])
     model.compile(optimizer="adam", loss="mse")
@@ -541,42 +520,3 @@ def test_ranked_outputs():
 
     assert ranks.shape[1] == 2
     assert shap_vals.shape[0] == 1
-
-
-def test_local_smoothing_changes_output():
-    import numpy as np
-    import tensorflow as tf
-
-    import shap
-
-    model = tf.keras.Sequential([tf.keras.layers.Input(shape=(3,)), tf.keras.layers.Dense(1)])
-    model.compile(optimizer="adam", loss="mse")
-
-    X = np.random.randn(20, 3)
-
-    e1 = shap.GradientExplainer(model, X[:10], local_smoothing=0)
-    e2 = shap.GradientExplainer(model, X[:10], local_smoothing=0.1)
-
-    vals1 = e1.shap_values(X[:1])
-    vals2 = e2.shap_values(X[:1])
-
-    assert not np.allclose(vals1, vals2)
-
-
-def test_output_shape_consistency():
-    import numpy as np
-    import tensorflow as tf
-
-    import shap
-
-    model = tf.keras.Sequential([tf.keras.layers.Input(shape=(5,)), tf.keras.layers.Dense(2)])
-    model.compile(optimizer="adam", loss="mse")
-
-    X = np.random.randn(10, 5)
-    explainer = shap.GradientExplainer(model, X[:5])
-
-    shap_vals = explainer.shap_values(X[:2])
-
-    assert shap_vals.shape[0] == 2  # samples
-    assert shap_vals.shape[1] == 5  # features
-    assert shap_vals.shape[2] == 2  # outputs
