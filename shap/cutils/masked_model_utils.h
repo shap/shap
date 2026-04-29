@@ -109,6 +109,13 @@ inline void build_fixed_single_output(
 
         int64_t sample_count = lo.shape(0);
 
+        // Seed last_outs with the first outputs batch (the baseline mask)
+        // so that partial-varying-rows updates on later iterations read
+        // real baseline values instead of uninitialised memory.
+        if (bp(0) < bp(1)) {
+            for (int64_t j = 0; j < sample_count; j++) { lo(j) = out(bp(0) + j); }
+        }
+
         for (size_t i = 0; i < ao.shape(0); i++) {
             if (bp(i) < bp(i + 1)) {
                 if (nvr(i) == sample_count) {
@@ -132,7 +139,9 @@ inline void build_fixed_single_output(
                     nb::object result = link_fn(nb::float_(sum / sample_count));
                     ao(i) = nb::cast<float>(result);
                 }
-            } else if (i > 0) { ao(i) = ao(i - 1); }
+            } else {
+                ao(i) = (i > 0) ? ao(i - 1) : 0.0f;
+            }
         }
     } else {
         auto ao = nb::cast<nb::ndarray<double, nb::shape<-1>, nb::device::cpu>>(averaged_outs_obj).view();
@@ -143,6 +152,11 @@ inline void build_fixed_single_output(
         auto nvr = nb::cast<nb::ndarray<int64_t, nb::shape<-1>, nb::device::cpu>>(num_varying_rows_obj).view();
 
         int64_t sample_count = lo.shape(0);
+
+        // Seed last_outs with the first outputs batch (the baseline mask)
+        if (bp(0) < bp(1)) {
+            for (int64_t j = 0; j < sample_count; j++) { lo(j) = out(bp(0) + j); }
+        }
 
         for (size_t i = 0; i < ao.shape(0); i++) {
             if (bp(i) < bp(i + 1)) {
@@ -167,7 +181,9 @@ inline void build_fixed_single_output(
                     nb::object result = link_fn(nb::float_(sum / sample_count));
                     ao(i) = nb::cast<double>(result);
                 }
-            } else if (i > 0) { ao(i) = ao(i - 1); }
+            } else {
+                ao(i) = (i > 0) ? ao(i - 1) : 0.0;
+            }
         }
     }
 }
@@ -201,6 +217,13 @@ inline void build_fixed_multi_output(
         int64_t sample_count = lo.shape(0);
         int64_t num_outputs = lo.shape(1);
 
+        // Seed last_outs with the first outputs batch (the baseline mask)
+        if (bp(0) < bp(1)) {
+            for (int64_t j = 0; j < sample_count; j++) {
+                for (int64_t k = 0; k < num_outputs; k++) { lo(j, k) = out(bp(0) + j, k); }
+            }
+        }
+
         for (size_t i = 0; i < ao.shape(0); i++) {
             if (bp(i) < bp(i + 1)) {
                 if (nvr(i) == sample_count) {
@@ -233,8 +256,8 @@ inline void build_fixed_multi_output(
                         ao(i, k) = nb::cast<float>(result);
                     }
                 }
-            } else if (i > 0) {
-                for (int64_t k = 0; k < num_outputs; k++) { ao(i, k) = ao(i - 1, k); }
+            } else {
+                for (int64_t k = 0; k < num_outputs; k++) { ao(i, k) = (i > 0) ? ao(i - 1, k) : 0.0f; }
             }
         }
     } else {
@@ -247,6 +270,13 @@ inline void build_fixed_multi_output(
 
         int64_t sample_count = lo.shape(0);
         int64_t num_outputs = lo.shape(1);
+
+        // Seed last_outs with the first outputs batch (the baseline mask)
+        if (bp(0) < bp(1)) {
+            for (int64_t j = 0; j < sample_count; j++) {
+                for (int64_t k = 0; k < num_outputs; k++) { lo(j, k) = out(bp(0) + j, k); }
+            }
+        }
 
         for (size_t i = 0; i < ao.shape(0); i++) {
             if (bp(i) < bp(i + 1)) {
@@ -280,8 +310,8 @@ inline void build_fixed_multi_output(
                         ao(i, k) = nb::cast<double>(result);
                     }
                 }
-            } else if (i > 0) {
-                for (int64_t k = 0; k < num_outputs; k++) { ao(i, k) = ao(i - 1, k); }
+            } else {
+                for (int64_t k = 0; k < num_outputs; k++) { ao(i, k) = (i > 0) ? ao(i - 1, k) : 0.0; }
             }
         }
     }
