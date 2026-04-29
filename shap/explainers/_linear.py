@@ -199,16 +199,19 @@ class LinearExplainer(Explainer):
             else:
                 self.mean = np.array(np.mean(data, 0)).flatten()  # assumes it is an array
                 if self.feature_perturbation == "correlation_dependent":
-                    n_samples, n_features = data.shape
-                    if n_samples <= n_features:
-                        warnings.warn(
-                            f"The number of samples ({n_samples}) is less than or equal to "
-                            f"the number of features ({n_features}). This will produce a "
-                            "singular covariance matrix and may result in unreliable SHAP "
-                            "values when using feature_perturbation='correlation_dependent'.",
-                            UserWarning,
-                            stacklevel=2,
-                        )
+                    data_shape = np.shape(data)
+                    if len(data_shape) > 1:
+                        n_samples = data_shape[0]
+                        n_features = data_shape[1]
+                        if n_samples <= n_features:
+                            warnings.warn(
+                                f"The number of samples ({n_samples}) is less than or equal to "
+                                f"the number of features ({n_features}). This will produce a "
+                                "singular covariance matrix and may result in unreliable SHAP "
+                                "values when using feature_perturbation='correlation_dependent'.",
+                                UserWarning,
+                                stacklevel=2,
+                            )
                     self.cov = np.cov(data, rowvar=False)
         # print(self.coef, self.mean.flatten(), self.intercept)
         # Note: mean can be numpy.matrixlib.defmatrix.matrix or numpy.matrix type depending on numpy version
