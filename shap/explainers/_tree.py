@@ -1039,8 +1039,6 @@ class TreeEnsemble:
         data_missing: npt.NDArray[np.bool_] | None = None,
         model_output: str | None = None,
     ) -> None:
-        objective_name_map = self.objective_name_map
-        tree_output_name_map = self.tree_output_name_map
         self.model_type = "internal"
         self.trees = None
         self.base_offset = 0
