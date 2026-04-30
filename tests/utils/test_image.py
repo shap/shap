@@ -2,7 +2,7 @@ from shap.utils.image import check_valid_image
 
 
 def test_valid_image():
-    assert check_valid_image("test.jpg") == True
+    assert check_valid_image("test.jpg")
 
 
 def test_invalid_image():
