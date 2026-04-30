@@ -254,8 +254,7 @@ def test_california_returns_dataframe_with_expected_columns():
 
     assert isinstance(X, pd.DataFrame)
     assert isinstance(y, np.ndarray)
-    expected_cols = ["MedInc", "HouseAge", "AveRooms", "AveBedrms",
-                     "Population", "AveOccup", "Latitude", "Longitude"]
+    expected_cols = ["MedInc", "HouseAge", "AveRooms", "AveBedrms", "Population", "AveOccup", "Latitude", "Longitude"]
     assert list(X.columns) == expected_cols
 
 
@@ -297,9 +296,7 @@ def test_cache_custom_file_name(tmp_path, monkeypatch):
     # Redirect cached_data dir to tmp_path so we don't pollute the repo
     monkeypatch.setattr(
         "shap.datasets.cache",
-        lambda url, file_name=None: str(
-            tmp_path / (file_name or os.path.basename(url))
-        ),
+        lambda url, file_name=None: str(tmp_path / (file_name or os.path.basename(url))),
     )
     from shap.datasets import cache
 
