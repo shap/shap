@@ -13,8 +13,9 @@ def test_violin_with_invalid_plot_type():
 
 def test_violin_1d_shap_values_raises():
     """Check that a 1-D shap_values array raises ValueError, not AssertionError."""
+    rng = np.random.default_rng(0)
     with pytest.raises(ValueError, match="matrix of shap_values"):
-        shap.plots.violin(np.random.randn(5), show=False)
+        shap.plots.violin(rng.standard_normal(5), show=False)
 
 
 def test_violin_wrong_features_shape():
