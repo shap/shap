@@ -16,6 +16,7 @@ def _ensure_cv2_available():
     """
     try:
         import cv2  # noqa: F401
+
         return
     except ModuleNotFoundError:
         pass
