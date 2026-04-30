@@ -80,9 +80,7 @@ def test_group_difference_max_display():
     shap_values = _make_shap_values(n_features=n_features)
     group_mask = _make_group_mask()
     _, ax = plt.subplots()
-    shap.plots.group_difference(
-        shap_values, group_mask, max_display=max_display, show=False, ax=ax
-    )
+    shap.plots.group_difference(shap_values, group_mask, max_display=max_display, show=False, ax=ax)
     assert len(ax.get_yticklabels()) == max_display
 
 
@@ -93,9 +91,7 @@ def test_group_difference_sort_false_preserves_order():
     shap_values = _make_shap_values(n_features=n_features)
     group_mask = _make_group_mask()
     _, ax = plt.subplots()
-    shap.plots.group_difference(
-        shap_values, group_mask, feature_names=feature_names, sort=False, show=False, ax=ax
-    )
+    shap.plots.group_difference(shap_values, group_mask, feature_names=feature_names, sort=False, show=False, ax=ax)
     labels = [t.get_text() for t in ax.get_yticklabels()]
     # Labels are returned in the order they were assigned (feature index order)
     assert labels == feature_names
@@ -113,9 +109,7 @@ def test_group_difference_sort_true_orders_by_abs_diff():
 
     feature_names = [f"f{i}" for i in range(n_features)]
     _, ax = plt.subplots()
-    shap.plots.group_difference(
-        shap_values, group_mask, feature_names=feature_names, sort=True, show=False, ax=ax
-    )
+    shap.plots.group_difference(shap_values, group_mask, feature_names=feature_names, sort=True, show=False, ax=ax)
     labels = [t.get_text() for t in ax.get_yticklabels()]
     # Labels are returned in inds order: labels[0] = highest-ranked feature
     assert labels[0] == "f3"
@@ -126,9 +120,7 @@ def test_group_difference_custom_xlabel():
     shap_values = _make_shap_values()
     group_mask = _make_group_mask()
     _, ax = plt.subplots()
-    shap.plots.group_difference(
-        shap_values, group_mask, xlabel="My custom label", show=False, ax=ax
-    )
+    shap.plots.group_difference(shap_values, group_mask, xlabel="My custom label", show=False, ax=ax)
     assert ax.get_xlabel() == "My custom label"
 
 
@@ -146,9 +138,7 @@ def test_group_difference_xlim():
     shap_values = _make_shap_values()
     group_mask = _make_group_mask()
     _, ax = plt.subplots()
-    shap.plots.group_difference(
-        shap_values, group_mask, xmin=-5.0, xmax=5.0, show=False, ax=ax
-    )
+    shap.plots.group_difference(shap_values, group_mask, xmin=-5.0, xmax=5.0, show=False, ax=ax)
     assert ax.get_xlim() == (-5.0, 5.0)
 
 
