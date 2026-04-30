@@ -23,7 +23,7 @@ import pytest
 
 import shap
 
-matplotlib.use("Agg") 
+matplotlib.use("Agg")
 
 
 # Shared fixtures
@@ -54,6 +54,7 @@ def shap_1d(rng):
 
 # Happy-path smoke tests
 
+
 def test_basic_2d_does_not_raise(shap_2d):
 
     values, mask, feature_names = shap_2d
@@ -71,11 +72,8 @@ def test_1d_model_output_does_not_raise(shap_1d):
 def test_returns_axes_object(shap_2d):
     values, mask, feature_names = shap_2d
     ax = shap.plots.group_difference(values, mask, feature_names=feature_names, show=False)
-    assert isinstance(ax, matplotlib.axes.Axes), (
-        f"Expected matplotlib.axes.Axes, got {type(ax)}"
-    )
+    assert isinstance(ax, matplotlib.axes.Axes), f"Expected matplotlib.axes.Axes, got {type(ax)}"
     plt.close("all")
-
 
 
 # Parameter: feature_names
@@ -96,66 +94,50 @@ def test_no_feature_names_uses_fallback(shap_2d):
     plt.close("all")
 
 
-
 # Parameter: xlabel
+
 
 def test_custom_xlabel_is_set(shap_2d):
     values, mask, feature_names = shap_2d
     custom_label = "Mean SHAP difference (group A − group B)"
-    ax = shap.plots.group_difference(
-        values, mask, feature_names=feature_names, xlabel=custom_label, show=False
-    )
-    assert ax.get_xlabel() == custom_label, (
-        f"Expected xlabel '{custom_label}', got '{ax.get_xlabel()}'"
-    )
+    ax = shap.plots.group_difference(values, mask, feature_names=feature_names, xlabel=custom_label, show=False)
+    assert ax.get_xlabel() == custom_label, f"Expected xlabel '{custom_label}', got '{ax.get_xlabel()}'"
     plt.close("all")
-
 
 
 # Parameters: xmin / xmax
 
+
 def test_xmin_is_applied(shap_2d):
     values, mask, feature_names = shap_2d
-    ax = shap.plots.group_difference(
-        values, mask, feature_names=feature_names, xmin=-0.01, show=False
-    )
-    assert ax.get_xlim()[0] <= -0.01, (
-        f"xmin not applied correctly; left limit is {ax.get_xlim()[0]}"
-    )
+    ax = shap.plots.group_difference(values, mask, feature_names=feature_names, xmin=-0.01, show=False)
+    assert ax.get_xlim()[0] <= -0.01, f"xmin not applied correctly; left limit is {ax.get_xlim()[0]}"
     plt.close("all")
 
 
 def test_xmax_is_applied(shap_2d):
     values, mask, feature_names = shap_2d
-    ax = shap.plots.group_difference(
-        values, mask, feature_names=feature_names, xmax=0.01, show=False
-    )
-    assert ax.get_xlim()[1] >= 0.01, (
-        f"xmax not applied correctly; right limit is {ax.get_xlim()[1]}"
-    )
+    ax = shap.plots.group_difference(values, mask, feature_names=feature_names, xmax=0.01, show=False)
+    assert ax.get_xlim()[1] >= 0.01, f"xmax not applied correctly; right limit is {ax.get_xlim()[1]}"
     plt.close("all")
 
 
 def test_xmin_xmax_together(shap_2d):
     values, mask, feature_names = shap_2d
-    ax = shap.plots.group_difference(
-        values, mask, feature_names=feature_names, xmin=-5.0, xmax=5.0, show=False
-    )
+    ax = shap.plots.group_difference(values, mask, feature_names=feature_names, xmin=-5.0, xmax=5.0, show=False)
     lo, hi = ax.get_xlim()
     assert lo <= -5.0 and hi >= 5.0
     plt.close("all")
 
 
-
 # Parameter: max_display
+
 
 def test_max_display_limits_visible_bars(rng):
     values = rng.randn(30, 10)
     mask = np.array([True] * 15 + [False] * 15)
     feature_names = [f"f{i}" for i in range(10)]
-    ax = shap.plots.group_difference(
-        values, mask, feature_names=feature_names, max_display=3, show=False
-    )
+    ax = shap.plots.group_difference(values, mask, feature_names=feature_names, max_display=3, show=False)
     # Each bar is a Rectangle patch; so we count non-zero-height ones
     bars = [p for p in ax.patches if p.get_height() > 0 or p.get_width() != 0]
     assert len(bars) <= 3, f"Expected ≤3 bars, got {len(bars)}"
@@ -164,46 +146,37 @@ def test_max_display_limits_visible_bars(rng):
 
 def test_max_display_larger_than_features_is_safe(shap_2d):
     values, mask, feature_names = shap_2d
-    shap.plots.group_difference(
-        values, mask, feature_names=feature_names, max_display=999, show=False
-    )
+    shap.plots.group_difference(values, mask, feature_names=feature_names, max_display=999, show=False)
     plt.close("all")
-
 
 
 # Parameter: sort
 
+
 def test_sort_false_does_not_raise(shap_2d):
-   
+
     values, mask, feature_names = shap_2d
-    shap.plots.group_difference(
-        values, mask, feature_names=feature_names, sort=False, show=False
-    )
+    shap.plots.group_difference(values, mask, feature_names=feature_names, sort=False, show=False)
     plt.close("all")
 
 
 def test_sort_true_vs_false_both_render(shap_2d):
     values, mask, feature_names = shap_2d
-    ax_sorted = shap.plots.group_difference(
-        values, mask, feature_names=feature_names, sort=True, show=False
-    )
+    ax_sorted = shap.plots.group_difference(values, mask, feature_names=feature_names, sort=True, show=False)
     plt.close("all")
-    ax_unsorted = shap.plots.group_difference(
-        values, mask, feature_names=feature_names, sort=False, show=False
-    )
+    ax_unsorted = shap.plots.group_difference(values, mask, feature_names=feature_names, sort=False, show=False)
     plt.close("all")
     assert isinstance(ax_sorted, matplotlib.axes.Axes)
     assert isinstance(ax_unsorted, matplotlib.axes.Axes)
 
 
-# Parameter: ax   
+# Parameter: ax
+
 
 def test_ax_parameter_draws_into_provided_axes(shap_2d):
     values, mask, feature_names = shap_2d
     fig, ax = plt.subplots()
-    returned_ax = shap.plots.group_difference(
-        values, mask, feature_names=feature_names, ax=ax, show=False
-    )
+    returned_ax = shap.plots.group_difference(values, mask, feature_names=feature_names, ax=ax, show=False)
     assert returned_ax is ax, "Returned Axes should be the same object that was passed in."
     plt.close("all")
 
@@ -223,8 +196,8 @@ def test_multiple_group_difference_plots_in_subplots(shap_2d, rng):
     plt.close("all")
 
 
+# edge cases
 
-# edge cases 
 
 def test_all_true_group_mask(rng):
     values = rng.randn(10, 4)
@@ -262,11 +235,11 @@ def test_single_sample_per_group(rng):
     plt.close("all")
 
 
+# tests for correcteness
 
-#tests for correcteness 
 
 def test_identical_groups_produce_near_zero_differences():
-    values = np.ones((20, 4))          # every sample identical
+    values = np.ones((20, 4))  # every sample identical
     mask = np.array([True] * 10 + [False] * 10)
     feature_names = [f"f{i}" for i in range(4)]
 
@@ -274,25 +247,21 @@ def test_identical_groups_produce_near_zero_differences():
 
     # bar widths represent the group difference; all should be essentially zero
     for patch in ax.patches:
-        assert abs(patch.get_width()) < 1e-9, (
-            f"Expected bar width ≈ 0 for identical groups, got {patch.get_width()}"
-        )
+        assert abs(patch.get_width()) < 1e-9, f"Expected bar width ≈ 0 for identical groups, got {patch.get_width()}"
     plt.close("all")
 
 
 def test_known_difference_is_reflected_in_bars():
     n = 20
     values = np.zeros((n, 1))
-    values[:n // 2] = 1.0            # first group: all ones
+    values[: n // 2] = 1.0  # first group: all ones
     mask = np.array([True] * (n // 2) + [False] * (n // 2))
 
     ax = shap.plots.group_difference(values, mask, feature_names=["f0"], show=False)
 
     widths = [abs(p.get_width()) for p in ax.patches if p.get_width() != 0]
     assert len(widths) > 0, "No bars were drawn"
-    assert pytest.approx(max(widths), abs=1e-6) == 1.0, (
-        f"Expected bar width of 1.0, got {max(widths)}"
-    )
+    assert pytest.approx(max(widths), abs=1e-6) == 1.0, f"Expected bar width of 1.0, got {max(widths)}"
     plt.close("all")
 
 
@@ -312,14 +281,12 @@ def test_reproducibility(shap_2d):
 
 def test_group_difference_direction(rng):
     values = np.zeros((20, 1))
-    values[:10] = 2.0   # group A: high SHAP
-    values[10:] = 0.0   # group B: low SHAP
+    values[:10] = 2.0  # group A: high SHAP
+    values[10:] = 0.0  # group B: low SHAP
     mask = np.array([True] * 10 + [False] * 10)
 
     ax = shap.plots.group_difference(values, mask, feature_names=["f0"], show=False)
 
     positive_bars = [p for p in ax.patches if p.get_width() > 0]
-    assert len(positive_bars) > 0, (
-        "Expected at least one positive bar when group A SHAP > group B SHAP."
-    )
+    assert len(positive_bars) > 0, "Expected at least one positive bar when group A SHAP > group B SHAP."
     plt.close("all")
