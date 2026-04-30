@@ -377,36 +377,36 @@ def beeswarm(
     directionality_symbols = None
     if show_directionality and features is not None:
         from scipy.stats import spearmanr
-        
+
         directionality_symbols = []
         for i in feature_inds:
             # Get the original feature indices for this (possibly merged) feature
             orig_feature_inds = orig_inds[i]
-            
+
             # For merged features or grouped remaining, skip directionality
             if len(orig_feature_inds) > 1 or (include_grouped_remaining and i == feature_inds[-1]):
                 directionality_symbols.append("")
                 continue
-            
+
             # Get feature values and SHAP values for this feature
             feat_idx = orig_feature_inds[0]
             feat_vals = features[:, feat_idx]
             shap_vals = orig_values[:, feat_idx]
-            
+
             # Remove NaN values for correlation computation
             valid_mask = ~(np.isnan(feat_vals) | np.isnan(shap_vals))
             if np.sum(valid_mask) < 3:  # Need at least 3 points for correlation
                 directionality_symbols.append("")
                 continue
-            
+
             # Check if feature is categorical
             try:
                 feat_vals_numeric = feat_vals[valid_mask].astype(np.float64)
                 shap_vals_numeric = shap_vals[valid_mask].astype(np.float64)
-                
+
                 # Compute Spearman correlation
                 corr, p_value = spearmanr(feat_vals_numeric, shap_vals_numeric)
-                
+
                 # Only show directionality if correlation is significant and meaningful
                 # Use p < 0.05 and |corr| > 0.1 as thresholds
                 if p_value < 0.05 and abs(corr) > 0.1:
@@ -417,7 +417,7 @@ def beeswarm(
             except (ValueError, TypeError):
                 # Feature is categorical or can't be converted to numeric
                 directionality_symbols.append("")
-        
+
         # Add directionality symbols to labels
         yticklabels = [label + symbol for label, symbol in zip(yticklabels, directionality_symbols)]
 
