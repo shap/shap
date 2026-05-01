@@ -24,6 +24,10 @@ class PermutationExplainer(Explainer):
     model evaluations and the ability to efficiently avoid evaluating the model when the background values
     for a feature are the same as the current input value. We can also account for hierarchical data
     structures with partition trees, something not currently implemented for KernalExplainer or SamplingExplainer.
+
+    Examples
+    --------
+    See `Permutation explainer examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/explainers/Permutation.html>`_
     """
 
     def __init__(
@@ -283,7 +287,7 @@ class PermutationExplainer(Explainer):
             of such matrices, one for each output.
 
         """
-        explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
+        explanation = self(X, max_evals=npermutations * (2 * X.shape[1] + 1), main_effects=main_effects)
         return explanation.values  # type: ignore[union-attr]
 
     def __str__(self) -> str:
