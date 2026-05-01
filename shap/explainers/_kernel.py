@@ -293,13 +293,13 @@ class KernelExplainer(Explainer):
                 column_name = list(X.columns)
             X = X.values
 
-        x_type = str(type(X))
-        arr_type = "'numpy.ndarray'>"
         # if sparse, convert to lil for performance
         if scipy.sparse.issparse(X) and not scipy.sparse.isspmatrix_lil(X):
             X = X.tolil()  # type: ignore[union-attr]
-        if not (x_type.endswith(arr_type) or scipy.sparse.isspmatrix_lil(X)):
-            raise TypeError(f"Unknown instance type: {x_type}")
+
+        if not isinstance(X, np.ndarray) and not scipy.sparse.isspmatrix_lil(X):
+            raise TypeError(f"Unknown instance type: {type(X)}")
+        
         # single instance
         if len(X.shape) == 1:
             data = X.reshape((1, X.shape[0]))
