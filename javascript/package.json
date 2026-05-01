@@ -34,7 +34,7 @@
     "jest-environment-jsdom": "^30.0.2",
     "react-test-renderer": "^19.0.0",
     "webpack": "^5.88.2",
-    "webpack-cli": "^6.0.1",
+    "webpack-cli": "^7.0.2",
     "webpack-dev-server": "^5.0.2"
   }
 }
