@@ -385,7 +385,9 @@ def waterfall(shap_values, max_display=10, show=True, ax=None):
         return ax
 
 
-def waterfall_legacy(expected_value, shap_values=None, features=None, feature_names=None, max_display=10, show=True, ax=None):
+def waterfall_legacy(
+    expected_value, shap_values=None, features=None, feature_names=None, max_display=10, show=True, ax=None
+):
     """Plots an explanation of a single prediction as a waterfall plot.
 
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
@@ -676,9 +678,10 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
             )
 
     # draw the y-ticks twice, once in gray and then again with just the feature names in black
-    ax.set_yticks(
-        list(range(num_features)) * 2)
-    ax.set_yticklabels(yticklabels[:-1] + [label.split("=")[-1] for label in yticklabels[:-1]], fontsize=13,
+    ax.set_yticks(list(range(num_features)) * 2)
+    ax.set_yticklabels(
+        yticklabels[:-1] + [label.split("=")[-1] for label in yticklabels[:-1]],
+        fontsize=13,
     )
 
     # put horizontal lines for each feature row
