@@ -98,10 +98,11 @@ def test_explainer_xgboost():
 
 
 def test_explainer_empty_input():
-    from sklearn.tree import DecisionTreeRegressor
     import numpy as np
-    import shap
     import pytest
+    from sklearn.tree import DecisionTreeRegressor
+
+    import shap
 
     X = np.random.rand(20, 4)
     y = np.random.rand(20)

@@ -398,8 +398,9 @@ def test_serialization():
 
 
 def test_kernel_explainer_empty_input():
-    from sklearn.linear_model import LinearRegression
     import numpy as np
+    from sklearn.linear_model import LinearRegression
+
     import shap
 
     X = np.random.rand(10, 3)

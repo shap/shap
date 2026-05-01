@@ -302,7 +302,7 @@ class KernelExplainer(Explainer):
 
         if X.shape[0] == 0:
             raise ValueError("Input data must contain at least one sample.")
-        
+
         # single instance
         if len(X.shape) == 1:
             data = X.reshape((1, X.shape[0]))
