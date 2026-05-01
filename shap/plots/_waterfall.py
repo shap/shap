@@ -38,6 +38,14 @@ def waterfall(shap_values, max_display=10, show=True, ax=None):
         Setting this to ``False`` allows the plot to be customized further after it
         has been created, returning the current axis via ax.
 
+    ax : matplotlib.axes.Axes
+        Axes object to draw the plot onto, otherwise uses the current Axes.
+
+    Returns
+    -------
+    ax: matplotlib.axes.Axes
+        Returns the `Axes` object with the plot drawn onto it. Only returned if `show=False`.
+
     Examples
     --------
     See `waterfall plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/waterfall.html>`_.
@@ -409,6 +417,14 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     show : bool
         Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
         to be customized further after it has been created.
+
+    ax : matplotlib.axes.Axes
+        Axes object to draw the plot onto, otherwise uses the current Axes.
+
+    Returns
+    -------
+    ax: matplotlib.axes.Axes
+        Returns the `Axes` object with the plot drawn onto it. Only returned if `show=False`.
 
     """
     style = get_style()
