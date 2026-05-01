@@ -95,3 +95,22 @@ def test_explainer_xgboost():
     # check the properties of Explanation object
     assert explanation.values.shape == (*X.shape,)  # type: ignore[union-attr]
     assert explanation.base_values.shape == (len(X),)  # type: ignore[union-attr]
+
+
+def test_explainer_empty_input():
+    from sklearn.tree import DecisionTreeRegressor
+    import numpy as np
+    import shap
+    import pytest
+
+    X = np.random.rand(20, 4)
+    y = np.random.rand(20)
+
+    model = DecisionTreeRegressor().fit(X, y)
+
+    explainer = shap.Explainer(model, X)
+
+    empty = np.empty((0, 4))
+
+    with pytest.raises(ValueError, match="at least one sample"):
+        explainer(empty)

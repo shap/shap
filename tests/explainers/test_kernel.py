@@ -395,3 +395,20 @@ def test_explainer_non_number_dtype(dt):
 def test_serialization():
     model, data = common.basic_sklearn_scenario()
     return common.test_serialization(shap.explainers.KernelExplainer, model.predict, data, data)
+
+
+def test_kernel_explainer_empty_input():
+    from sklearn.linear_model import LinearRegression
+    import numpy as np
+    import shap
+
+    X = np.random.rand(10, 3)
+    y = np.random.rand(10)
+
+    model = LinearRegression().fit(X, y)
+    explainer = shap.KernelExplainer(model.predict, X)
+
+    empty = np.empty((0, 3))
+
+    with pytest.raises(ValueError, match="at least one sample"):
+        explainer.shap_values(empty)
