@@ -109,6 +109,11 @@ inline void build_fixed_single_output(
 
         int64_t sample_count = lo.shape(0);
 
+        // Explicitly zero-fill lo and ao so no stale/uninitialised memory
+        // can leak through partial-varying-rows updates.
+        for (int64_t j = 0; j < sample_count; j++) { lo(j) = 0.0f; }
+        for (size_t j = 0; j < ao.shape(0); j++) { ao(j) = 0.0f; }
+
         // Seed last_outs with the first outputs batch (the baseline mask)
         // so that partial-varying-rows updates on later iterations read
         // real baseline values instead of uninitialised memory.
@@ -152,6 +157,11 @@ inline void build_fixed_single_output(
         auto nvr = nb::cast<nb::ndarray<int64_t, nb::shape<-1>, nb::device::cpu>>(num_varying_rows_obj).view();
 
         int64_t sample_count = lo.shape(0);
+
+        // Explicitly zero-fill lo and ao so no stale/uninitialised memory
+        // can leak through partial-varying-rows updates.
+        for (int64_t j = 0; j < sample_count; j++) { lo(j) = 0.0; }
+        for (size_t j = 0; j < ao.shape(0); j++) { ao(j) = 0.0; }
 
         // Seed last_outs with the first outputs batch (the baseline mask)
         if (bp(0) < bp(1)) {
@@ -217,6 +227,15 @@ inline void build_fixed_multi_output(
         int64_t sample_count = lo.shape(0);
         int64_t num_outputs = lo.shape(1);
 
+        // Explicitly zero-fill lo and ao so no stale/uninitialised memory
+        // can leak through partial-varying-rows updates.
+        for (int64_t j = 0; j < sample_count; j++) {
+            for (int64_t k = 0; k < num_outputs; k++) { lo(j, k) = 0.0f; }
+        }
+        for (size_t j = 0; j < ao.shape(0); j++) {
+            for (int64_t k = 0; k < num_outputs; k++) { ao(j, k) = 0.0f; }
+        }
+
         // Seed last_outs with the first outputs batch (the baseline mask)
         if (bp(0) < bp(1)) {
             for (int64_t j = 0; j < sample_count; j++) {
@@ -270,6 +289,15 @@ inline void build_fixed_multi_output(
 
         int64_t sample_count = lo.shape(0);
         int64_t num_outputs = lo.shape(1);
+
+        // Explicitly zero-fill lo and ao so no stale/uninitialised memory
+        // can leak through partial-varying-rows updates.
+        for (int64_t j = 0; j < sample_count; j++) {
+            for (int64_t k = 0; k < num_outputs; k++) { lo(j, k) = 0.0; }
+        }
+        for (size_t j = 0; j < ao.shape(0); j++) {
+            for (int64_t k = 0; k < num_outputs; k++) { ao(j, k) = 0.0; }
+        }
 
         // Seed last_outs with the first outputs batch (the baseline mask)
         if (bp(0) < bp(1)) {
