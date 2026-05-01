@@ -347,7 +347,7 @@ class Impute(Masker):  # we should inherit from Tabular once we add support for 
             The background dataset that is used for masking.
 
         """
-        if data is dict and "mean" in data:
+        if isinstance(data, dict) and "mean" in data:
             self.mean = data.get("mean", None)
             self.cov = data.get("cov", None)
             data = np.expand_dims(data["mean"], 0)
