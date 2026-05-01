@@ -399,8 +399,9 @@ def test_serialization():
 
 def test_kernel_explainer_invalid_input_type():
     import numpy as np
-    import shap
     from sklearn.linear_model import LinearRegression
+
+    import shap
 
     X = np.random.rand(10, 3)
     y = np.random.rand(10)

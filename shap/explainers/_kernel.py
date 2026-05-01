@@ -299,7 +299,7 @@ class KernelExplainer(Explainer):
 
         if not isinstance(X, np.ndarray) and not scipy.sparse.isspmatrix_lil(X):
             raise TypeError(f"Unknown instance type: {type(X)}")
-        
+
         # single instance
         if len(X.shape) == 1:
             data = X.reshape((1, X.shape[0]))
