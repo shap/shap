@@ -152,7 +152,6 @@ def __decision_plot_matplotlib(
         cb.set_alpha(alpha)
         cb.outline.set_visible(False)  # type: ignore
 
-    
     if title:
         # TODO decide on style/size
         ax.set_title(title)
