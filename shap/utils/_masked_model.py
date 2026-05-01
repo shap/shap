@@ -304,7 +304,7 @@ def _build_fixed_output(
 ):
     averaged_outs_up = _upcast_array(averaged_outs)
     last_outs_up = _upcast_array(last_outs)
-    outputs_up = _upcast_array(outputs)
+    outputs_up = np.asarray(_upcast_array(outputs), dtype=averaged_outs_up.dtype)
 
     def wrapped_link(x):
         y = np.asarray(link(x), dtype=averaged_outs_up.dtype)

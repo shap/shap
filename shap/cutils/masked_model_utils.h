@@ -114,12 +114,8 @@ inline void build_fixed_single_output(
         for (int64_t j = 0; j < sample_count; j++) { lo(j) = 0.0f; }
         for (size_t j = 0; j < ao.shape(0); j++) { ao(j) = 0.0f; }
 
-        // Seed last_outs with the first outputs batch (the baseline mask)
-        // so that partial-varying-rows updates on later iterations read
-        // real baseline values instead of uninitialised memory.
-        if (bp(0) < bp(1)) {
-            for (int64_t j = 0; j < sample_count; j++) { lo(j) = out(bp(0) + j); }
-        }
+        // lo and ao are zero-filled above; the main loop handles the first
+        // batch correctly via partial/full varying-rows update.
 
         for (size_t i = 0; i < ao.shape(0); i++) {
             if (bp(i) < bp(i + 1)) {
@@ -163,10 +159,9 @@ inline void build_fixed_single_output(
         for (int64_t j = 0; j < sample_count; j++) { lo(j) = 0.0; }
         for (size_t j = 0; j < ao.shape(0); j++) { ao(j) = 0.0; }
 
-        // Seed last_outs with the first outputs batch (the baseline mask)
-        if (bp(0) < bp(1)) {
-            for (int64_t j = 0; j < sample_count; j++) { lo(j) = out(bp(0) + j); }
-        }
+        // lo and ao are zero-filled above; the main loop handles the first
+        // batch correctly via partial/full varying-rows update.
+
 
         for (size_t i = 0; i < ao.shape(0); i++) {
             if (bp(i) < bp(i + 1)) {
@@ -175,7 +170,12 @@ inline void build_fixed_single_output(
                 } else {
                     int64_t out_idx = bp(i);
                     for (int64_t j = 0; j < sample_count; j++) {
-                        if (vr(i, j)) { lo(j) = out(out_idx++); }
+                        if (vr(i, j)) {
+                            if (out_idx >= out.shape(0)) {
+                                printf("DEBUG ERROR: out_idx=%ld >= out.shape(0)=%zu (i=%zu, j=%ld, bp(i)=%ld, bp(i+1)=%ld)\n", (long)out_idx, out.shape(0), i, (long)j, (long)bp(i), (long)bp(i+1));
+                            }
+                            lo(j) = out(out_idx++);
+                        }
                     }
                 }
                 if (has_weights) {
@@ -236,12 +236,9 @@ inline void build_fixed_multi_output(
             for (int64_t k = 0; k < num_outputs; k++) { ao(j, k) = 0.0f; }
         }
 
-        // Seed last_outs with the first outputs batch (the baseline mask)
-        if (bp(0) < bp(1)) {
-            for (int64_t j = 0; j < sample_count; j++) {
-                for (int64_t k = 0; k < num_outputs; k++) { lo(j, k) = out(bp(0) + j, k); }
-            }
-        }
+        // lo and ao are zero-filled above; the main loop handles the first
+        // batch correctly via partial/full varying-rows update.
+
 
         for (size_t i = 0; i < ao.shape(0); i++) {
             if (bp(i) < bp(i + 1)) {
@@ -299,12 +296,9 @@ inline void build_fixed_multi_output(
             for (int64_t k = 0; k < num_outputs; k++) { ao(j, k) = 0.0; }
         }
 
-        // Seed last_outs with the first outputs batch (the baseline mask)
-        if (bp(0) < bp(1)) {
-            for (int64_t j = 0; j < sample_count; j++) {
-                for (int64_t k = 0; k < num_outputs; k++) { lo(j, k) = out(bp(0) + j, k); }
-            }
-        }
+        // lo and ao are zero-filled above; the main loop handles the first
+        // batch correctly via partial/full varying-rows update.
+
 
         for (size_t i = 0; i < ao.shape(0); i++) {
             if (bp(i) < bp(i + 1)) {
