@@ -211,7 +211,7 @@ class DecisionPlotResult:
 
 def decision(
     base_value: float | np.ndarray,
-    shap_values: np.ndarray,
+    shap_values: np.ndarray | None = None,
     features: np.ndarray | pd.Series | pd.DataFrame | list | None = None,
     feature_names=None,
     feature_order="importance",
@@ -352,6 +352,16 @@ def decision(
     See more `decision plot examples here <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/decision_plot.html>`_.
 
     """
+    # support passing an explanation object
+    if str(type(base_value)).endswith("Explanation'>"):
+        shap_exp = base_value
+        base_value = np.array(shap_exp.base_values).mean()
+        shap_values = shap_exp.values
+        if features is None:
+            features = shap_exp.data
+        if feature_names is None:
+            feature_names = shap_exp.feature_names
+
     # code taken from force_plot. auto unwrap the base_value
     if isinstance(base_value, np.ndarray) and len(base_value) == 1:
         base_value = base_value[0]
