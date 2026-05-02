@@ -4,11 +4,9 @@ Covers the identity and logit link functions and their inverses.
 """
 
 import numpy as np
-import pytest
 from numpy.testing import assert_allclose
 
 from shap.links import identity, logit
-
 
 # ---------------------------------------------------------------------------
 # identity
