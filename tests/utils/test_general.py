@@ -9,8 +9,8 @@ from numpy.testing import assert_allclose
 import shap
 from shap.utils._general import (
     OpChain,
-    assert_import,
     approximate_interactions,
+    assert_import,
     convert_name,
     encode_array_if_needed,
     import_errors,
@@ -20,7 +20,6 @@ from shap.utils._general import (
     shapley_coefficients,
     suppress_stderr,
 )
-
 
 # ---------------------------------------------------------------------------
 # sample
