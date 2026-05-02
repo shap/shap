@@ -5,9 +5,8 @@ Targets:
 - PR #4951 (Modernize tutorial notebooks)
 """
 
-import os
-import pytest
 import warnings
+
 import numpy as np
 
 # ---------------------------------------------------------------------------
@@ -29,5 +28,5 @@ def test_numpy_rng_warning_is_silenced():
         # Check if any DeprecationWarnings were captured
         # The goal is that our pytestmark filter should have handled this
         # so this test proves the environment is "clean".
-        deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning) and "RNG" in str(x.message)]
+        _ = [x for x in w if issubclass(x.category, DeprecationWarning) and "RNG" in str(x.message)]
         # In a normal run, pytest filters these, so they don't reach the 'record=True' if handled at the root.
