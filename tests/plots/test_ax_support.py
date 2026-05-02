@@ -32,7 +32,6 @@ def linear_explanation():
     np.random.seed(0)
     X = np.random.randn(50, 4)
     coef = np.array([1.0, -2.0, 0.5, 0.0])
-    y = X @ coef
 
     explainer = shap.Explainer(
         lambda x: x @ coef,
