@@ -13,10 +13,10 @@ import pytest
 
 import shap
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True)
 def _mpl_backend():
@@ -46,6 +46,7 @@ def linear_explanation():
 # waterfall – explicit ax
 # ---------------------------------------------------------------------------
 
+
 class TestWaterfallAx:
     """Verify waterfall() respects an explicitly passed Axes."""
 
@@ -74,6 +75,7 @@ class TestWaterfallAx:
 # violin – explicit ax
 # ---------------------------------------------------------------------------
 
+
 class TestViolinAx:
     """Verify violin() respects an explicitly passed Axes."""
 
@@ -91,7 +93,10 @@ class TestViolinAx:
         """use_log_scale should apply to the supplied ax, not plt.gca()."""
         fig, ax = plt.subplots()
         shap.plots.violin(
-            linear_explanation, show=False, ax=ax, use_log_scale=True,
+            linear_explanation,
+            show=False,
+            ax=ax,
+            use_log_scale=True,
         )
         assert ax.get_xscale() == "symlog"
 
@@ -99,6 +104,7 @@ class TestViolinAx:
 # ---------------------------------------------------------------------------
 # decision – explicit ax
 # ---------------------------------------------------------------------------
+
 
 class TestDecisionAx:
     """Verify decision() respects an explicitly passed Axes."""
@@ -130,6 +136,7 @@ class TestDecisionAx:
 # ---------------------------------------------------------------------------
 # Default behaviour (no ax) should still work
 # ---------------------------------------------------------------------------
+
 
 class TestDefaultAxBehavior:
     """Ensure that when ax is *not* passed, the functions still work."""
