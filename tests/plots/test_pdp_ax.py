@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
-import numpy as np
-import pytest
+
 import shap
 
 # PR #4922: Ax support in partial_dependence_plot
