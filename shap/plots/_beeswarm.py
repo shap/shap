@@ -1147,6 +1147,10 @@ def summary_legacy(
         plt.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
     else:
         plt.xlabel(labels["VALUE"], fontsize=13)
+
+    if title is not None:
+        plt.title(title)
+
     plt.tight_layout()
     if show:
         plt.show()
