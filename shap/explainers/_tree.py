@@ -267,18 +267,17 @@ class TreeExplainer(Explainer):
                     FutureWarning,
                 )
                 feature_perturbation = "tree_path_dependent"
+            elif self.data.shape[0] > 1_000:
+                wmsg = (
+                    f"Passing {self.data.shape[0]} background samples may lead to slow runtimes. Consider "
+                    "using shap.sample(data, 100) to create a smaller background data set."
+                )
+                warnings.warn(wmsg)
         elif feature_perturbation != "tree_path_dependent":
             raise InvalidFeaturePerturbationError(
                 "feature_perturbation must be 'auto', 'interventional', or 'tree_path_dependent'. "
                 f"Got {feature_perturbation} instead."
             )
-
-        elif feature_perturbation == "interventional" and self.data.shape[0] > 1_000:
-            wmsg = (
-                f"Passing {self.data.shape[0]} background samples may lead to slow runtimes. Consider "
-                "using shap.sample(data, 100) to create a smaller background data set."
-            )
-            warnings.warn(wmsg)
 
         _safe_check_tree_instance_experimental(model)
 
@@ -544,11 +543,22 @@ class TreeExplainer(Explainer):
         np.array
             Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
-            For each output, the SHAP values (summed across all features) plus the
-            expected value equals the model's output for that sample:
+            For each output, the sum of the SHAP values plus the ``expected_value``
+            equals the model's output (in the specified output space):
 
-            * Single output: ``shap_values[i, :].sum() + expected_value = model_output[i]``
-            * Multiple outputs: ``shap_values[i, :, j].sum() + expected_value[j] = model_output[i, j]``
+            * Single output: ``shap_values[i, :].sum() + expected_value = f(x)[i]``
+            * Multiple outputs: ``shap_values[i, :, j].sum() + expected_value[j] = f(x)[i, j]``
+
+            .. note::
+               The ``f(x)`` value is NOT necessarily what ``model.predict()``
+               or ``model.predict_proba()`` returns. For example, for an XGBoost Classifier with the default
+               ``model_output="raw"``, the explainer returns log-odds (margins).
+               To compare this mathematically against ``predict_proba()`` probabilities,
+               a logistic inverse-transform (e.g., ``scipy.special.expit``) must be applied
+               to the sum.
+
+               Furthermore, the additivity formula requires SHAP values and model
+               predictions to be computed on the same samples in the same order.
 
             The shape of the returned array depends on the number of model outputs:
 
@@ -894,6 +904,7 @@ class TreeExplainer(Explainer):
                     f" was {sum_val[ind]:f}, while the model output was {model_output[ind]:f}. If this"
                     " difference is acceptable you can set check_additivity=False to disable this check."
                 )
+
                 raise ExplainerError(err_msg)
 
         if isinstance(phi, list):
@@ -1595,7 +1606,7 @@ class TreeEnsemble:
 
     @property
     def num_outputs(self) -> int:
-        # Currrently, XGBoost models derive the num_outputs attribute from the input
+        # Currently, XGBoost models derive the num_outputs attribute from the input
         # models, which is set during model load.
         if self.model_type == "xgboost":
             assert hasattr(self, "_xgboost_n_outputs")
