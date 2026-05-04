@@ -9,7 +9,6 @@ import pytest
 
 from shap.utils._show_progress import ShowProgress, show_progress
 
-
 # ---------------------------------------------------------------------------
 # show_progress factory function
 # ---------------------------------------------------------------------------
