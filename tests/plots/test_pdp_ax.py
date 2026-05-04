@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+
 import shap
 
 # PR #4922: Ax support in partial_dependence_plot
@@ -12,7 +13,7 @@ def test_pdp_respects_custom_ax():
     instead of creating a new figure.
     """
     X, y = shap.datasets.adult(n_points=50)
-    
+
     # Simple model function that returns the sum of features
     # This is more stable than using internal SHAP utility classes
     model_func = lambda x: np.array(x).sum(axis=1)
