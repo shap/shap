@@ -18,9 +18,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
       - name: Install dependencies for dataset download
         run: |
-          python -m pip install --upgrade uv
           uv pip install --system '.[download_datasets]'
       - name: Pre-download datasets
         run: python tests/datasets_to_cache.py
@@ -37,42 +38,14 @@ jobs:
           path: /tmp/test_data_cache
           retention-days: 1
 
-  generate-wheels-matrix:
-    # Create a matrix of all architectures & versions to build.
-    # This enables the next step to run cibuildwheel in parallel.
-    # From https://iscinumpy.dev/post/cibuildwheel-2-10-0/#only-210
-    name: Generate wheels matrix
-    runs-on: ubuntu-latest
-    outputs:
-      include: ${{ steps.set-matrix.outputs.include }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install cibuildwheel
-      # Nb. keep cibuildwheel version pin consistent with job below
-        run: pipx install cibuildwheel==3.2.1
-      - name: Print all build identifiers
-        run: cibuildwheel --print-build-identifiers
-      - id: set-matrix
-        run: |
-          MATRIX=$(
-            {
-              cibuildwheel --print-build-identifiers --platform linux \
-              | jq -nRc '{"only": inputs, "os": "ubuntu-latest"}' \
-              && cibuildwheel --print-build-identifiers --platform macos \
-              | jq -nRc '{"only": inputs, "os": "macos-latest"}' \
-              && cibuildwheel --print-build-identifiers --platform windows \
-              | jq -nRc '{"only": inputs, "os": "windows-latest"}'
-            } | jq -sc
-          )
-          echo "include=$MATRIX" >> $GITHUB_OUTPUT
-
   build_wheels:
-    name: Build ${{ matrix.only }}
-    needs: [generate-wheels-matrix, prepare_data]
+    name: Build ${{ matrix.os }} wheels
+    needs: [prepare_data]
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.generate-wheels-matrix.outputs.include) }}
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-14, macos-15-intel, windows-latest]
+
     runs-on: ${{ matrix.os }}
     steps:
       # Ensure all git tags are present so version number is extracted.
@@ -93,17 +66,25 @@ jobs:
           name: test-data-cache
           path: ${{ runner.temp }}/test_data_cache
 
-      - name: Set up QEMU
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: all
+      - name: Install libomp (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install libomp
+          # Set DYLD_LIBRARY_PATH to avoid OpenMP conflicts, see https://github.com/unit8co/darts/pull/3050
+          _libomp_path=$(brew --prefix libomp 2>/dev/null)/lib
+          echo "DYLD_LIBRARY_PATH=$_libomp_path:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          unset _libomp_path
+
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v7
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.1
-        with:
-          only: ${{ matrix.only }}
         env:
+          CIBW_ARCHS_LINUX: ${{ contains(matrix.os, '-arm') && 'aarch64' || 'x86_64' }}
+          CIBW_ARCHS_MACOS: ${{ matrix.os == 'macos-14' && 'arm64' || 'x86_64' }}
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          CIBW_MUSLLINUX_AARCH64_IMAGE: musllinux_1_2
           # Pass the cache location to cibuildwheel tests
           CIBW_BEFORE_TEST: |
             python -c "import os, shutil; cache_path = os.environ.get('CACHE_PATH', '${{ runner.temp }}/test_data_cache'); home = os.path.expanduser('~'); sklearn_cache = os.path.join(home, 'scikit_learn_data'); os.makedirs(sklearn_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'scikit_learn_data'), sklearn_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'scikit_learn_data')) else None"
@@ -117,11 +98,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
-          name: bdist_files_${{ matrix.only }}
+          name: bdist_files_${{ matrix.os }}
 
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       # Ensure all git tags are present so version number is extracted.
       # https://github.com/actions/checkout/issues/1471
@@ -140,10 +121,13 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
       - name: Build sdist (pep517)
         run: |
-          python -m pip install build setuptools>=70.1
-          python -m build --sdist
+          uv build --sdist
+
       - name: Upload sdist
         uses: actions/upload-artifact@v4
         with:
