@@ -14,9 +14,10 @@ def test_pdp_respects_custom_ax():
     """
     X, y = shap.datasets.adult(n_points=50)
 
-    # Simple model function that returns the sum of features
-    # This is more stable than using internal SHAP utility classes
-    model_func = lambda x: np.array(x).sum(axis=1)
+    # Simple model function that returns the sum of features.
+    # Using a def instead of lambda to satisfy ruff E731.
+    def model_func(x):
+        return np.array(x).sum(axis=1)
 
     fig, ax = plt.subplots()
     initial_artists = len(ax.get_children())
