@@ -358,7 +358,10 @@ def decision(
         base_value = np.array(shap_exp.base_values).mean()
         shap_values = shap_exp.values
         if features is None:
-            features = shap_exp.data
+            # Use display_data if available for better readability in the plot
+            features = getattr(shap_exp, "display_data", None)
+            if features is None:
+                features = shap_exp.data
         if feature_names is None:
             feature_names = shap_exp.feature_names
 
@@ -579,7 +582,7 @@ def decision(
     return DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
 
 
-def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> DecisionPlotResult | None:
+def multioutput_decision(base_values, shap_values=None, row_index=None, **kwargs) -> DecisionPlotResult | None:
     """Decision plot for multioutput models.
 
     Plots all outputs for a single observation. By default, the plotted base value will be the mean of base_values
@@ -606,9 +609,38 @@ def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Decis
         Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
 
     """
+    # support passing an explanation object
+    if str(type(base_values)).endswith("Explanation'>"):
+        shap_exp = base_values
+        # Multi-output Explanation has values shape (samples, features, outputs)
+        # and base_values shape (samples, outputs).
+        # We want to plot all outputs for a single row_index.
+        base_vals = shap_exp.base_values[row_index]
+        values = shap_exp.values[row_index].T  # (outputs, features)
+        
+        # Shift base values to their mean, consistent with multioutput_decision logic
+        base_values_mean = base_vals.mean()
+        if values.shape[1] > 0:
+            for i in range(len(base_vals)):
+                values[i] += (base_vals[i] - base_values_mean) / values.shape[1]
+        
+        if ("features" not in kwargs) or (kwargs["features"] is None):
+            features = getattr(shap_exp, "display_data", None)
+            if features is None:
+                features = shap_exp.data
+            if features is not None:
+                if isinstance(features, pd.DataFrame):
+                    kwargs["features"] = features.iloc[[row_index]]
+                else:
+                    kwargs["features"] = features[[row_index]]
+        if ("feature_names" not in kwargs) or (kwargs["feature_names"] is None):
+            kwargs["feature_names"] = shap_exp.feature_names
+            
+        return decision(base_values_mean, values, **kwargs)
+
     # todo: adjust to breaking changes made in #3318
-    if not (isinstance(base_values, list) and isinstance(shap_values, list)):
-        raise ValueError("The base_values and shap_values args expect lists.")
+    if not (isinstance(base_values, (list, np.ndarray)) and isinstance(shap_values, (list, np.ndarray))):
+        raise ValueError("The base_values and shap_values args expect lists or arrays.")
 
     # convert arguments to arrays for simpler handling
     base_values = np.array(base_values)

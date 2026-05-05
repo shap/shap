@@ -80,3 +80,21 @@ def test_decision_plot_legacy_still_works():
     # Legacy call should still work without errors
     shap.plots.decision(base_value, values, feature_names=feature_names, show=False)
     plt.close("all")
+
+
+def test_multioutput_decision_explanation():
+    """
+    Verify that multioutput_decision correctly handles a multi-output
+    Explanation object.
+    """
+    X, _ = shap.datasets.adult(n_points=10)
+    n_outputs = 3
+    values = np.random.randn(10, X.shape[1], n_outputs)
+    base_values = np.zeros((10, n_outputs))
+    feature_names = X.columns.tolist()
+
+    explanation = shap.Explanation(values, base_values, X, feature_names=feature_names)
+
+    # Should handle multi-output explanation for a specific row
+    shap.multioutput_decision_plot(explanation, row_index=0, show=False)
+    plt.close("all")
