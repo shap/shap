@@ -25,3 +25,25 @@ def test_heatmap_feature_order(explainer):
     )
     plt.tight_layout()
     return fig
+
+
+def test_heatmap_all_zero_shap_values():
+    """Regression test: heatmap should not divide by zero when all SHAP values are zero."""
+    import warnings
+
+    from shap import Explanation
+
+    n_samples, n_features = 20, 5
+    exp = Explanation(
+        values=np.zeros((n_samples, n_features)),
+        base_values=np.zeros(n_samples),
+        data=np.zeros((n_samples, n_features)),
+        feature_names=[f"feature_{i}" for i in range(n_features)],
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # treat any RuntimeWarning as a test failure
+        ax = shap.plots.heatmap(exp, show=False)
+
+    assert ax is not None
+    plt.close()
