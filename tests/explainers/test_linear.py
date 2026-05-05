@@ -336,11 +336,13 @@ def test_parse_model_multiclass_single_class_fallback():
 def test_exact_enumeration_small_features():
     beta = np.array([1, 0.5, -0.3])
     mu = np.zeros(3)
-    Sigma = np.array([
-        [1.0, 0.5, 0.2],
-        [0.5, 1.0, 0.3],
-        [0.2, 0.3, 1.0],
-    ])
+    Sigma = np.array(
+        [
+            [1.0, 0.5, 0.2],
+            [0.5, 1.0, 0.3],
+            [0.2, 0.3, 1.0],
+        ]
+    )
     X = np.array([[1.0, 2.0, 3.0]])
     masker = shap.maskers.Impute({"mean": mu, "cov": Sigma})
 
@@ -357,4 +359,3 @@ def test_exact_enumeration_small_features():
 
     prediction = np.dot(beta, X[0])
     np.testing.assert_allclose(sv1.sum(), prediction - explainer1.expected_value, atol=1e-10)
-
