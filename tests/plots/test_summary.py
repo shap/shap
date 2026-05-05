@@ -311,5 +311,3 @@ def test_summary_plot_warning(explainer):
     with pytest.warns(FutureWarning, match="NumPy global RNG"):
         shap.summary_plot(shap_values, show=False)
 
-
-pytestmark = pytest.mark.filterwarnings("ignore:.*NumPy global RNG.*")

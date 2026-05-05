@@ -18,5 +18,3 @@ def test_group_difference(explainer):
     plt.tight_layout()
     return fig
 
-
-pytestmark = pytest.mark.filterwarnings("ignore:.*NumPy global RNG.*")

@@ -3016,5 +3016,3 @@ def test_nullable_pandas_dtype():
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
 
-
-pytestmark = pytest.mark.filterwarnings("ignore:.*NumPy global RNG.*")
