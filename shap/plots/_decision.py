@@ -617,13 +617,13 @@ def multioutput_decision(base_values, shap_values=None, row_index=None, **kwargs
         # We want to plot all outputs for a single row_index.
         base_vals = shap_exp.base_values[row_index]
         values = shap_exp.values[row_index].T  # (outputs, features)
-        
+
         # Shift base values to their mean, consistent with multioutput_decision logic
         base_values_mean = base_vals.mean()
         if values.shape[1] > 0:
             for i in range(len(base_vals)):
                 values[i] += (base_vals[i] - base_values_mean) / values.shape[1]
-        
+
         if ("features" not in kwargs) or (kwargs["features"] is None):
             features = getattr(shap_exp, "display_data", None)
             if features is None:
@@ -635,7 +635,7 @@ def multioutput_decision(base_values, shap_values=None, row_index=None, **kwargs
                     kwargs["features"] = features[[row_index]]
         if ("feature_names" not in kwargs) or (kwargs["feature_names"] is None):
             kwargs["feature_names"] = shap_exp.feature_names
-            
+
         return decision(base_values_mean, values, **kwargs)
 
     # todo: adjust to breaking changes made in #3318
