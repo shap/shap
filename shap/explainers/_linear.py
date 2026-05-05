@@ -1,3 +1,5 @@
+import itertools
+import math
 import warnings
 from collections.abc import Callable
 from typing import Any, Literal
@@ -256,16 +258,40 @@ class LinearExplainer(Explainer):
         that is independent of any sample we are explaining. It is the result of averaging over
         all feature permutations, but we just use a fixed number of samples to estimate the value.
 
-        TODO: Do a brute force enumeration when # feature subsets is less than nsamples. This could
-              happen through a recursive method that uses the same block matrix inversion as below.
+        When the number of features is small enough that the total number of
+        permutations (M!) is less than or equal to ``nsamples``, all permutations
+        are enumerated exactly instead of using random sampling.  This yields
+        exact transforms without any Monte-Carlo noise and is typically faster
+        for models with ~7 or fewer features.
         """
         M = len(self.coef)
 
         mean_transform = np.zeros((M, M))
         x_transform = np.zeros((M, M))
-        inds = np.arange(M, dtype=int)
-        for _ in tqdm(range(nsamples), "Estimating transforms"):
-            np.random.shuffle(inds)
+
+        n_permutations = math.factorial(M)
+
+        if n_permutations <= nsamples:
+            # Exact enumeration of all M! permutations
+            num_iterations = n_permutations
+            perm_iterator = tqdm(
+                (np.array(p, dtype=int) for p in itertools.permutations(range(M))),
+                "Enumerating permutations",
+                total=num_iterations,
+            )
+        else:
+            # Fall back to random sampling when M! > nsamples
+            num_iterations = nsamples
+            inds = np.arange(M, dtype=int)
+
+            def _random_perms():
+                for _ in range(nsamples):
+                    np.random.shuffle(inds)
+                    yield inds
+
+            perm_iterator = tqdm(_random_perms(), "Estimating transforms", total=num_iterations)
+
+        for inds in perm_iterator:
             cov_inv_SiSi = np.zeros((0, 0))
             cov_Si = np.zeros((M, 0))
             for j in range(M):
@@ -309,8 +335,8 @@ class LinearExplainer(Explainer):
                 # - coef @ R(S)
                 x_transform[i, inds[:j]] -= coef_R_S
 
-        mean_transform /= nsamples
-        x_transform /= nsamples
+        mean_transform /= num_iterations
+        x_transform /= num_iterations
         return mean_transform, x_transform
 
     @staticmethod
