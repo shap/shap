@@ -7,17 +7,17 @@ import pytest
 
 
 @pytest.mark.parametrize(
-    "notebook_name",
+    "notebook_path",
     [
-        "census_income_xgboost.ipynb",
-        "linear_regression_xgboost.ipynb",
-        "front_page_xgboost.ipynb",
-        "catboost.ipynb",
-        "lightgbm.ipynb",
-        "sentiment_analysis_lightgbm.ipynb",
+        "notebooks/api_examples/plots/heatmap.ipynb",
+        "notebooks/api_examples/plots/violin.ipynb",
+        "notebooks/tabular_examples/model_agnostic/Simple Kernel SHAP.ipynb",
+        "notebooks/tabular_examples/tree_based_models/Catboost tutorial.ipynb",
+        "notebooks/tabular_examples/tree_based_models/Census income classification with LightGBM.ipynb",
+        "notebooks/tabular_examples/tree_based_models/Census income classification with XGBoost.ipynb",
     ],
 )
-def test_modernized_notebook_execution(notebook_name):
+def test_modernized_notebook_execution(notebook_path):
     """
     Execute the modernized notebooks to ensure the new Explanation API
     usage doesn't cause runtime errors.
@@ -29,21 +29,15 @@ def test_modernized_notebook_execution(notebook_name):
         pytest.skip("nbformat or nbconvert not installed")
 
     # Path to tutorials
-    # Note: Adjusting path relative to repo root
-    nb_path = os.path.join("notebooks", "tabular_examples", "model_agnostic", notebook_name)
-    if not os.path.exists(nb_path):
-        # Fallback for different repo structures
-        nb_path = os.path.join("notebooks", notebook_name)
+    if not os.path.exists(notebook_path):
+        pytest.skip(f"Notebook not found at {notebook_path}")
 
-    if not os.path.exists(nb_path):
-        pytest.skip(f"Notebook {notebook_name} not found at {nb_path}")
-
-    with open(nb_path) as f:
+    with open(notebook_path) as f:
         nb = nbformat.read(f, as_version=4)
 
     ep = ExecutePreprocessor(timeout=600, kernel_name="python3")
 
     try:
-        ep.preprocess(nb, {"metadata": {"path": os.path.dirname(nb_path)}})
+        ep.preprocess(nb, {"metadata": {"path": os.path.dirname(notebook_path)}})
     except Exception as e:
-        pytest.fail(f"Notebook {notebook_name} failed execution: {str(e)}")
+        pytest.fail(f"Notebook {notebook_path} failed execution: {str(e)}")
