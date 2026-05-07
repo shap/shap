@@ -115,4 +115,3 @@ def test_legacy_gca_fallback(plot_func, plot_args, shared_explanation):
     returned_ax = plot_func(*args, show=False)
 
     assert returned_ax is current_ax, "Plot failed to fall back to plt.gca() when ax=None"
-
