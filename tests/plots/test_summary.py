@@ -310,3 +310,20 @@ def test_summary_plot_warning(explainer):
     shap_values = explainer(explainer.data)
     with pytest.warns(FutureWarning, match="NumPy global RNG"):
         shap.summary_plot(shap_values, show=False)
+
+
+@pytest.mark.mpl_image_compare
+def test_summary_with_ax():
+    """
+    Test that a valid summary_plot is generated
+    when passing the explicit ax argument
+    """
+    fig, ax = plt.subplots(
+        1,
+    )
+    rng = np.random.default_rng(123)
+    shap.summary_plot(
+        rng.standard_normal((20, 5)), rng.standard_normal((20, 5)), rng=rng, show=False, plot_size=None, ax=ax
+    )
+    fig.set_layout_engine("tight")
+    return fig
