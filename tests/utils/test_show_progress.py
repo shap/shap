@@ -124,7 +124,7 @@ class TestShowProgressBar:
         # Consume a few items before delay triggers
         next(sp)
         next(sp)
-        unshown = sp.unshown_count
+        _ = sp.unshown_count
         # Wait for delay to pass
         time.sleep(0.1)
         next(sp)
