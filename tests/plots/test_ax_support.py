@@ -1,4 +1,4 @@
-"""Elite Test Suite for Matplotlib 'ax' Parameter Standardization.
+"""Test suite for explicit matplotlib axis ('ax') parameter support.
 
 Validates that plotting wrappers (waterfall, violin, decision) respect user-provided
 Axes objects, maintain figure isolation, and correctly delegate rendering.
@@ -28,7 +28,8 @@ def shared_explanation():
     """Build a reusable Explanation object for plot testing."""
     X, _ = shap.datasets.adult(n_points=10)
     # Mock a simple linear model for deterministic SHAP values
-    values = np.random.randn(10, X.shape[1])
+    rng = np.random.default_rng(42)
+    values = rng.standard_normal((10, X.shape[1]))
     base_values = np.zeros(10)
     return shap.Explanation(values, base_values, X, feature_names=X.columns.tolist())
 
