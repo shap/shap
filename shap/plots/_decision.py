@@ -84,7 +84,7 @@ def __decision_plot_matplotlib(
     y_pos = np.arange(0, feature_display_count + 1)
     lines = []
     for i in range(cumsum.shape[0]):
-        o = plt.plot(
+        o = ax.plot(
             cumsum[i, :], y_pos, color=m.to_rgba(cumsum[i, -1], alpha), linewidth=linewidth[i], linestyle=linestyle[i]
         )
         lines.append(o[0])
@@ -354,6 +354,9 @@ def decision(
     See more `decision plot examples here <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/decision_plot.html>`_.
 
     """
+    if ax is None:
+        ax = plt.gca()
+
     # code taken from force_plot. auto unwrap the base_value
     if isinstance(base_value, np.ndarray) and len(base_value) == 1:
         base_value = base_value[0]
@@ -567,7 +570,7 @@ def decision(
     )
 
     if not return_objects:
-        return None
+        return ax if show is False else None
 
     return DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
 
