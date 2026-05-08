@@ -284,9 +284,7 @@ def test_getitem_2d_output_names_preserves_feature_names():
     sliced = exp[:, :, "out_x"]
 
     # feature_names must be the original strings, not the numeric data values
-    assert list(sliced.feature_names) == feature_names, (
-        f"Expected {feature_names}, got {sliced.feature_names}"
-    )
+    assert list(sliced.feature_names) == feature_names, f"Expected {feature_names}, got {sliced.feature_names}"
 
     # values must be the correct output column
     assert sliced.values.shape == (n_instances, n_features)
