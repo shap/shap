@@ -93,8 +93,9 @@ def test_summary_dot_with_data():
 
 
 @pytest.mark.skipif(platform.system() in ["Windows", "Darwin"], reason="Images not matching on MacOS and Windows.")
-@pytest.mark.mpl_image_compare
-def test_summary_compact_dot_with_data():
+@pytest.mark.mpl_image_compare(filename="test_summary_compact_dot_with_data.png")
+@pytest.mark.parametrize("axes", [True, False])
+def test_summary_compact_dot_with_data(axes):
     """Check a bar chart."""
     n_samples = 100
     n_features = 5
@@ -102,9 +103,21 @@ def test_summary_compact_dot_with_data():
     X = np.random.randn(n_samples, n_features)
     feature_names = [f"Feature {i + 1}" for i in range(n_features)]
     shap_values = np.random.randn(n_samples, n_features, n_features)
-    fig = plt.figure()
+    if not axes:
+        fig = plt.figure()
+        plot_size = "auto"
+        ax = None
+    elif axes:
+        # test that recursive call to `summary_plot` generates
+        # correct image without explicitly passing `ax` handle.
+        # default pyplot figsize is (6.4, 4.8), so if it were ignoring
+        # the `ax` handle the output figure would be the wrong size
+        fig, ax = plt.subplots(1, 1, figsize=(8, 9.5))
+        plot_size = None
 
-    shap.summary_plot(shap_values, X, feature_names=feature_names, plot_type="compact_dot", show=False)
+    shap.summary_plot(
+        shap_values, X, feature_names=feature_names, plot_type="compact_dot", show=False, ax=ax, plot_size=plot_size
+    )
     fig.set_layout_engine("tight")
     return fig
 
@@ -318,9 +331,7 @@ def test_summary_with_ax():
     Test that a valid summary_plot is generated
     when passing the explicit ax argument
     """
-    fig, ax = plt.subplots(
-        1,
-    )
+    fig, ax = plt.subplots(1, 1, figsize=(8, 6))
     rng = np.random.default_rng(123)
     shap.summary_plot(
         rng.standard_normal((20, 5)), rng.standard_normal((20, 5)), rng=rng, show=False, plot_size=None, ax=ax

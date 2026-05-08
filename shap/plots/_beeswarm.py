@@ -720,7 +720,6 @@ def summary_legacy(
                 plot_size=plot_size,
                 class_names=class_names,
                 color_bar_label="*" + color_bar_label,
-                ax=ax,
             )
 
         if max_display is None:
@@ -751,15 +750,15 @@ def summary_legacy(
             color_bar=False,
             plot_size=None,
             max_display=max_display,
-            ax=ax[0],
+            ax=ax[0],  # type: ignore[index]
         )
-        ax[0].set_xlim((slow, shigh))
-        ax[0].set_xlabel("")
+        ax[0].set_xlim((slow, shigh))  # type: ignore[index]
+        ax[0].set_xlabel("")  # type: ignore[index]
         title_length_limit = 11
-        ax[0].set_title(shorten_text(feature_names[sort_inds[0]], title_length_limit))
+        ax[0].set_title(shorten_text(feature_names[sort_inds[0]], title_length_limit))  # type: ignore[index]
         for i in range(1, min(len(sort_inds), max_display)):
             ind = sort_inds[i]
-            ax1 = ax[i]
+            ax1 = ax[i]  # type: ignore[index]
             proj_shap_values = shap_values[:, ind, sort_inds]
             proj_shap_values *= 2
             proj_shap_values[:, i] /= 2  # because only off diag effects are split in half
@@ -779,8 +778,8 @@ def summary_legacy(
             if i == min(len(sort_inds), max_display) // 2:
                 ax1.set_xlabel(labels["INTERACTION_VALUE"])
             ax1.set_title(shorten_text(feature_names[ind], title_length_limit))
-        fig.tight_layout(pad=0, w_pad=0, h_pad=0.0)
-        fig.subplots_adjust(hspace=0, wspace=0.1)
+        fig.tight_layout(pad=0, w_pad=0, h_pad=0.0)  # type: ignore[union-attr]
+        fig.subplots_adjust(hspace=0, wspace=0.1)  # type: ignore[union-attr]
         if show:
             plt.show()
             return
