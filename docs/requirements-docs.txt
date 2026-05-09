@@ -103,7 +103,7 @@ mdit-py-plugins==0.5.0
     # via myst-parser
 mdurl==0.1.2
     # via markdown-it-py
-mistune==3.2.0
+mistune==3.2.1
     # via nbconvert
 myst-parser==5.0.0
     # via shap (pyproject.toml)
