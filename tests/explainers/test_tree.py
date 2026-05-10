@@ -3039,8 +3039,9 @@ def test_tree_explainer_expected_value_xgboost_4495():
     expected_value_after = explainer.expected_value
 
     # 1. Verify consistency (no mutation)
-    assert np.isclose(expected_value_before, expected_value_after), \
+    assert np.isclose(expected_value_before, expected_value_after), (
         f"expected_value mutated from {expected_value_before} to {expected_value_after}"
+    )
 
     # 2. Verify correctness (matches raw margin mean)
     dmatrix = xgb.DMatrix(X_test)
