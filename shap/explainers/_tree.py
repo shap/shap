@@ -1978,6 +1978,7 @@ class SingleTree:
 
             # BFS traversal through the tree structure
             from collections import deque
+
             visited = set()
             queue = deque([start])
             while queue:
