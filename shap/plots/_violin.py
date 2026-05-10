@@ -122,7 +122,6 @@ def violin(
             warnings.warn(msg, FutureWarning, stacklevel=2)
         rng = np.random.default_rng()
 
-
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
