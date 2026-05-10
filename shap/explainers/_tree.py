@@ -1977,9 +1977,11 @@ class SingleTree:
             self.node_sample_weight = np.empty(num_nodes, dtype=np.float64)
 
             # BFS traversal through the tree structure
-            visited, queue = [], [start]
+            from collections import deque
+            visited = set()
+            queue = deque([start])
             while queue:
-                vertex = queue.pop(0)  # TODO(perf): benchmark this against deque.popleft()
+                vertex = queue.popleft()
                 is_branch_node = "split_index" in vertex
                 if is_branch_node:
                     vsplit_idx: int = vertex["split_index"]
@@ -2018,7 +2020,7 @@ class SingleTree:
                         raise TypeError(f"Threshold type {type(vertex['threshold'])} not supported")
                     self.values[vsplit_idx] = [vertex["internal_value"]]
                     self.node_sample_weight[vsplit_idx] = vertex["internal_count"]
-                    visited.append(vsplit_idx)
+                    visited.add(vsplit_idx)
                     queue.append(left_child)
                     queue.append(right_child)
                 else:
