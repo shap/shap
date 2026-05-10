@@ -20,7 +20,6 @@ else:
     ORIENTATION_KWARG = dict(vert=False)  # type: ignore[dict-item]
 
 
-# TODO: remove unused title argument / use title argument
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
 def violin(
     shap_values,
@@ -45,6 +44,7 @@ def violin(
     color_bar_tick_size=11,
     axhline_lw=0.5,
     use_log_scale=False,
+    rng=None,
 ):
     """Create a SHAP violin plot, colored by feature values when they are provided.
 
@@ -66,8 +66,8 @@ def violin(
         Color or colormap to use for the plot. If None, a default is chosen.
     axis_color : str, optional
         Color for the plot axes.
-    title : str or None, optional
-        Plot title (currently unused).
+    title : str, optional
+        Title of the plot.
     alpha : float, optional
         Opacity of the plot elements.
     show : bool, optional
@@ -97,14 +97,32 @@ def violin(
         Line width for horizontal lines in the plot.
     use_log_scale : bool, optional
         Whether to use a symmetric log scale for the x-axis.
+    rng : `numpy.random.Generator`, optional
+        Pseudorandom number generator state. When `rng` is None,
+        the legacy behavior of using global NumPy random state will be
+        used. Types other than `numpy.random.Generator` are
+        passed to `numpy.random.default_rng` to instantiate a ``Generator``.
 
     Examples
     --------
     See `violin plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/violin.html>`_.
 
     """
-    if title is not None:
-        warnings.warn("The `title` argument is unused and will be removed in a future release.", DeprecationWarning)
+    # handle randomization machinery in conformance with SPEC 7
+    if rng is not None:
+        rng = np.random.default_rng(rng)
+    else:
+        global_seed_set = np.random.mtrand._rand._bit_generator._seed_seq is None  # type: ignore
+        if global_seed_set:
+            msg = (
+                "The NumPy global RNG was seeded by calling `np.random.seed`. "
+                "In a future version this function will no longer use the global RNG. "
+                "Pass `rng` explicitly to opt-in to the new behaviour and silence this warning."
+            )
+            warnings.warn(msg, FutureWarning, stacklevel=2)
+        rng = np.random.default_rng()
+
+
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
@@ -196,10 +214,12 @@ def violin(
             for pos, i in enumerate(feature_order):
                 shaps = shap_values[:, i]
                 shap_min, shap_max = np.min(shaps), np.max(shaps)
-                rng = shap_max - shap_min
-                xs = np.linspace(np.min(shaps) - rng * 0.2, np.max(shaps) + rng * 0.2, 100)
+                shap_range = shap_max - shap_min
+                xs = np.linspace(np.min(shaps) - shap_range * 0.2, np.max(shaps) + shap_range * 0.2, 100)
                 if np.std(shaps) < (global_high - global_low) / 100:
-                    ds = gaussian_kde(shaps + np.random.randn(len(shaps)) * (global_high - global_low) / 100)(xs)
+                    random_noise = rng.standard_normal(len(shaps))
+
+                    ds = gaussian_kde(shaps + random_noise * (global_high - global_low) / 100)(xs)
                 else:
                     ds = gaussian_kde(shaps)(xs)
                 ds /= np.max(ds) * 3
@@ -329,7 +349,9 @@ def violin(
                         ys[i, :] = ys[i - 1, :]
                     continue
                 # save kde of them: note that we add a tiny bit of gaussian noise to avoid singular matrix errors
-                ys[i, :] = gaussian_kde(shaps + np.random.normal(loc=0, scale=0.001, size=shaps.shape[0]))(x_points)
+                random_noise = rng.normal(loc=0, scale=0.001, size=shaps.shape[0])
+
+                ys[i, :] = gaussian_kde(shaps + random_noise)(x_points)
                 # scale it up so that the 'size' of each y represents the size of the bin. For continuous data this will
                 # do nothing, but when we've gone with the unique option, this will matter - e.g. if 99% are male and 1%
                 # female, we want the 1% to appear a lot smaller.
@@ -383,6 +405,8 @@ def violin(
     plt.gca().tick_params("x", labelsize=11)
     plt.ylim(-1, len(feature_order))
     plt.xlabel(labels["VALUE"], fontsize=13)
+    if title is not None:
+        plt.title(title)
 
     if show:
         plt.show()
