@@ -213,6 +213,7 @@ tasks = [
     rf_multiclass_classifier(),
 ]
 
+
 # pretty print tasks
 def idfn(task):
     if isinstance(task, str):
