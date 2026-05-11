@@ -6,21 +6,8 @@ import numpy as np
 import pytest
 
 
-def _ensure_cv2_available():
-    """Provide a minimal cv2 stub if opencv-python isn't installed.
-
-    The `shap.utils.image` module imports `cv2` unconditionally, but many test
-    environments (including our pinned CI requirements) don't include OpenCV.
-    This stub lets us test the higher-level logic in `shap.utils.image` without
-    requiring the full OpenCV dependency.
-    """
-    try:
-        import cv2  # noqa: F401
-
-        return
-    except ModuleNotFoundError:
-        pass
-
+def _make_cv2_stub():
+    """Minimal cv2 stand-in when opencv-python is missing or unloadable."""
     from PIL import Image
 
     fake_cv2 = types.ModuleType("cv2")
@@ -44,13 +31,32 @@ def _ensure_cv2_available():
     fake_cv2.imread = imread
     fake_cv2.cvtColor = cvtColor
     fake_cv2.resize = resize
+    return fake_cv2
 
-    sys.modules["cv2"] = fake_cv2
+
+def _import_image_utils():
+    """Import `shap.utils.image` without leaving a fake `cv2` in `sys.modules`.
+
+    The library imports `cv2` at module level. Many CI environments omit OpenCV;
+    we stub it only for that import so other tests still see a failed `import cv2`
+    when OpenCV is absent. `ImportError` covers `ModuleNotFoundError` and broken
+    native-library installs that raise `ImportError`.
+    """
+    used_stub = False
+    try:
+        import cv2  # noqa: F401
+    except ImportError:
+        sys.modules["cv2"] = _make_cv2_stub()
+        used_stub = True
+    try:
+        import shap.utils.image as mod  # noqa: E402
+        return mod
+    finally:
+        if used_stub:
+            sys.modules.pop("cv2", None)
 
 
-_ensure_cv2_available()
-
-import shap.utils.image as image_utils  # noqa: E402
+image_utils = _import_image_utils()
 
 
 def test_is_empty_missing_path(capsys, tmp_path):
