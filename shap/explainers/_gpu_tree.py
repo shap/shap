@@ -105,6 +105,27 @@ class GPUTreeExplainer(TreeExplainer):
 
         return out
 
+    def _get_shap_output(self, phi, flat_output):
+        """Pull off the last column of ``phi`` and keep it as our expected_value."""
+        if self.model.num_outputs == 1:
+            if self.model.model_output != "log_loss":
+                self.expected_value = phi[0, -1, 0]
+            if flat_output:
+                out = phi[0, :-1, 0]
+            else:
+                out = phi[:, :-1, 0]
+        else:
+            if self.model.model_output != "log_loss":
+                self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
+            if flat_output:
+                out = [phi[0, :-1, i] for i in range(self.model.num_outputs)]
+            else:
+                out = [phi[:, :-1, i] for i in range(self.model.num_outputs)]
+
+        if self.model.model_output == "probability_doubled":
+            out = [-out, out]
+        return out
+
     def shap_interaction_values(self, X, y=None, tree_limit=None):
         """Estimate the SHAP interaction values for a set of samples.
 
