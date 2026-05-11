@@ -213,6 +213,8 @@ tasks = [
     rf_multiclass_classifier(),
 ]
 
+missing_value_tasks = tasks[:8]
+
 
 # pretty print tasks
 def idfn(task):
@@ -222,12 +224,13 @@ def idfn(task):
     return type(model).__module__ + "." + type(model).__qualname__
 
 
-@pytest.mark.parametrize("task", tasks, ids=idfn)
-@pytest.mark.parametrize("feature_perturbation", ["interventional", "tree_path_dependent"])
-def test_gpu_tree_explainer_shap(task, feature_perturbation):
-    model, X, _ = task
-    gpu_ex = shap.GPUTreeExplainer(model, X, feature_perturbation=feature_perturbation)
-    ex = shap.TreeExplainer(model, X, feature_perturbation=feature_perturbation)
+def assert_gpu_matches_cpu(task, feature_perturbation, X=None):
+    model, background, _ = task
+    if X is None:
+        X = background
+
+    gpu_ex = shap.GPUTreeExplainer(model, background, feature_perturbation=feature_perturbation)
+    ex = shap.TreeExplainer(model, background, feature_perturbation=feature_perturbation)
     host_shap = ex.shap_values(X, check_additivity=True)
     gpu_shap = gpu_ex.shap_values(X, check_additivity=True)
 
@@ -241,30 +244,20 @@ def test_gpu_tree_explainer_shap(task, feature_perturbation):
     assert np.allclose(host_shap, gpu_shap, 1e-3, 1e-3)
 
 
-def test_gpu_tree_matches_cpu_with_missing_values_and_updates_expected_value():
-    xgboost = pytest.importorskip("xgboost")
+@pytest.mark.parametrize("task", tasks, ids=idfn)
+@pytest.mark.parametrize("feature_perturbation", ["interventional", "tree_path_dependent"])
+def test_gpu_tree_explainer_shap(task, feature_perturbation):
+    assert_gpu_matches_cpu(task, feature_perturbation)
 
-    X, y = shap.datasets.diabetes()
-    model = xgboost.XGBRegressor(n_estimators=20, max_depth=3, random_state=0)
-    model.fit(X, y)
 
-    X_nan = X.copy()
-    X_nan.loc[X_nan.sample(frac=0.1, random_state=0).index, "bmi"] = np.nan
+@pytest.mark.parametrize("task", missing_value_tasks, ids=idfn)
+@pytest.mark.parametrize("feature_perturbation", ["interventional", "tree_path_dependent"])
+def test_gpu_tree_explainer_shap_with_missing_values(task, feature_perturbation):
+    X = task[1].copy()
+    rows = np.arange(0, X.shape[0], 10)
+    X[rows, 0] = np.nan
 
-    cpu_ex = shap.TreeExplainer(model)
-    gpu_ex = shap.GPUTreeExplainer(model)
-
-    cpu_shap = cpu_ex.shap_values(X, check_additivity=True)
-    gpu_shap = gpu_ex.shap_values(X, check_additivity=True)
-
-    assert np.allclose(cpu_ex.expected_value, gpu_ex.expected_value, 1e-3, 1e-3)
-    assert np.allclose(cpu_shap, gpu_shap, 1e-3, 1e-3)
-
-    cpu_shap_nan = cpu_ex.shap_values(X_nan, check_additivity=True)
-    gpu_shap_nan = gpu_ex.shap_values(X_nan, check_additivity=True)
-
-    assert np.allclose(cpu_ex.expected_value, gpu_ex.expected_value, 1e-3, 1e-3)
-    assert np.allclose(cpu_shap_nan, gpu_shap_nan, 1e-3, 1e-3)
+    assert_gpu_matches_cpu(task, feature_perturbation, X)
 
 
 @pytest.mark.parametrize("task", tasks, ids=idfn)
