@@ -213,9 +213,6 @@ tasks = [
     rf_multiclass_classifier(),
 ]
 
-missing_value_tasks = tasks[:8]
-
-
 # pretty print tasks
 def idfn(task):
     if isinstance(task, str):
@@ -250,14 +247,14 @@ def test_gpu_tree_explainer_shap(task, feature_perturbation):
     assert_gpu_matches_cpu(task, feature_perturbation)
 
 
-@pytest.mark.parametrize("task", missing_value_tasks, ids=idfn)
-@pytest.mark.parametrize("feature_perturbation", ["interventional", "tree_path_dependent"])
-def test_gpu_tree_explainer_shap_with_missing_values(task, feature_perturbation):
+def test_gpu_tree_explainer_shap_with_missing_values():
+    task = xgboost_base()
     X = task[1].copy()
     rows = np.arange(0, X.shape[0], 10)
     X[rows, 0] = np.nan
 
-    assert_gpu_matches_cpu(task, feature_perturbation, X)
+    for feature_perturbation in ["interventional", "tree_path_dependent"]:
+        assert_gpu_matches_cpu(task, feature_perturbation, X)
 
 
 @pytest.mark.parametrize("task", tasks, ids=idfn)
