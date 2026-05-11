@@ -2279,8 +2279,11 @@ class XGBTreeModelLoader:
                 emsg = f"Expected the base_score to contain a list or float, received {base_score}"
                 raise ValueError(emsg) from e
         if isinstance(base_score, (list, tuple, np.ndarray)):
-            base_score = base_score[0]
-        base_score = float(base_score)
+            base_score = np.asarray(base_score, dtype=float)
+            if base_score.size == 1:
+                base_score = float(base_score[0])
+        else:
+            base_score = float(base_score)
         self.base_score = base_score
         if self.name_obj in ("binary:logistic", "reg:logistic"):
             self.base_score = scipy.special.logit(base_score)
