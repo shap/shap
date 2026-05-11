@@ -540,7 +540,9 @@ def __score_method(
                 else:
                     scores = []
                     for f in fcounts:
-                        scores.append(score_function(f, X_train, X_test, y_train, y_test, cached_attr_function, model, i))
+                        scores.append(
+                            score_function(f, X_train, X_test, y_train, y_test, cached_attr_function, model, i)
+                        )
                     return np.array(scores)
 
             # evaluate the method (only building the attribution function if we need to)
