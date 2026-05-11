@@ -50,6 +50,7 @@ def _import_image_utils():
         used_stub = True
     try:
         import shap.utils.image as mod  # noqa: E402
+
         return mod
     finally:
         if used_stub:
