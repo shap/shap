@@ -24,33 +24,35 @@ def runtime(X, y, model_generator, method_name):
     transform = "negate_log"
     sort_order = 2
     """
-    old_seed = np.random.seed()
-    np.random.seed(3293)
+    rng_state = np.random.get_state()
+    try:
+        np.random.seed(3293)
 
-    # average the method scores over several train/test splits
-    method_reps = []
-    for i in range(3):
-        X_train, X_test, y_train, _ = train_test_split(__toarray(X), y, test_size=100, random_state=i)
+        # average the method scores over several train/test splits
+        method_reps = []
+        for i in range(3):
+            X_train, X_test, y_train, _ = train_test_split(__toarray(X), y, test_size=100, random_state=i)
 
-        # define the model we are going to explain
-        model = model_generator()
-        model.fit(X_train, y_train)
+            # define the model we are going to explain
+            model = model_generator()
+            model.fit(X_train, y_train)
 
-        # evaluate each method
-        start = time.time()
-        explainer = getattr(methods, method_name)(model, X_train)
-        build_time = time.time() - start
+            # evaluate each method
+            start = time.time()
+            explainer = getattr(methods, method_name)(model, X_train)
+            build_time = time.time() - start
 
-        start = time.time()
-        explainer(X_test)
-        explain_time = time.time() - start
+            start = time.time()
+            explainer(X_test)
+            explain_time = time.time() - start
 
-        # we always normalize the explain time as though we were explaining 1000 samples
-        # even if to reduce the runtime of the benchmark we do less (like just 100)
-        method_reps.append(build_time + explain_time * 1000.0 / X_test.shape[0])
-    np.random.seed(old_seed)
+            # we always normalize the explain time as though we were explaining 1000 samples
+            # even if to reduce the runtime of the benchmark we do less (like just 100)
+            method_reps.append(build_time + explain_time * 1000.0 / X_test.shape[0])
 
-    return None, np.mean(method_reps)
+        return None, np.mean(method_reps)
+    finally:
+        np.random.set_state(rng_state)
 
 
 def local_accuracy(X, y, model_generator, method_name):
@@ -502,52 +504,54 @@ def __score_method(
     except NameError:
         raise ImportError("The 'dill' package could not be loaded and is needed for the benchmark!")
 
-    old_seed = np.random.seed()
-    np.random.seed(3293)
+    rng_state = np.random.get_state()
+    try:
+        np.random.seed(3293)
 
-    # average the method scores over several train/test splits
-    method_reps = []
+        # average the method scores over several train/test splits
+        method_reps = []
 
-    data_hash = hashlib.sha256(__toarray(X).flatten()).hexdigest() + hashlib.sha256(__toarray(y)).hexdigest()
-    for i in range(nreps):
-        X_train, X_test, y_train, y_test = train_test_split(__toarray(X), y, test_size=test_size, random_state=i)
+        data_hash = hashlib.sha256(__toarray(X).flatten()).hexdigest() + hashlib.sha256(__toarray(y)).hexdigest()
+        for i in range(nreps):
+            X_train, X_test, y_train, y_test = train_test_split(__toarray(X), y, test_size=test_size, random_state=i)
 
-        # define the model we are going to explain, caching so we onlu build it once
-        model_id = "model_cache__v" + "__".join([__version__, data_hash, model_generator.__name__]) + ".pickle"
-        cache_file = os.path.join(cache_dir, model_id + ".pickle")
-        if os.path.isfile(cache_file):
-            with open(cache_file, "rb") as f:
-                model = pickle.load(f)
-        else:
-            model = model_generator()
-            model.fit(X_train, y_train)
-            with open(cache_file, "wb") as f:
-                pickle.dump(model, f)
-
-        attr_key = "_".join([model_generator.__name__, method_name, str(test_size), str(nreps), str(i), data_hash])
-
-        def score(attr_function):
-            def cached_attr_function(X_inner):
-                if attr_key not in _attribution_cache:
-                    _attribution_cache[attr_key] = attr_function(X_inner)
-                return _attribution_cache[attr_key]
-
-            if fcounts is None:
-                return score_function(X_train, X_test, y_train, y_test, cached_attr_function, model, i)
+            # define the model we are going to explain, caching so we onlu build it once
+            model_id = "model_cache__v" + "__".join([__version__, data_hash, model_generator.__name__]) + ".pickle"
+            cache_file = os.path.join(cache_dir, model_id + ".pickle")
+            if os.path.isfile(cache_file):
+                with open(cache_file, "rb") as f:
+                    model = pickle.load(f)
             else:
-                scores = []
-                for f in fcounts:
-                    scores.append(score_function(f, X_train, X_test, y_train, y_test, cached_attr_function, model, i))
-                return np.array(scores)
+                model = model_generator()
+                model.fit(X_train, y_train)
+                with open(cache_file, "wb") as f:
+                    pickle.dump(model, f)
 
-        # evaluate the method (only building the attribution function if we need to)
-        if attr_key not in _attribution_cache:
-            method_reps.append(score(getattr(methods, method_name)(model, X_train)))
-        else:
-            method_reps.append(score(None))
+            attr_key = "_".join([model_generator.__name__, method_name, str(test_size), str(nreps), str(i), data_hash])
 
-    np.random.seed(old_seed)
-    return np.array(method_reps).mean(0)
+            def score(attr_function):
+                def cached_attr_function(X_inner):
+                    if attr_key not in _attribution_cache:
+                        _attribution_cache[attr_key] = attr_function(X_inner)
+                    return _attribution_cache[attr_key]
+
+                if fcounts is None:
+                    return score_function(X_train, X_test, y_train, y_test, cached_attr_function, model, i)
+                else:
+                    scores = []
+                    for f in fcounts:
+                        scores.append(score_function(f, X_train, X_test, y_train, y_test, cached_attr_function, model, i))
+                    return np.array(scores)
+
+            # evaluate the method (only building the attribution function if we need to)
+            if attr_key not in _attribution_cache:
+                method_reps.append(score(getattr(methods, method_name)(model, X_train)))
+            else:
+                method_reps.append(score(None))
+
+        return np.array(method_reps).mean(0)
+    finally:
+        np.random.set_state(rng_state)
 
 
 def __intlogspace(start, end, count):
