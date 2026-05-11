@@ -224,41 +224,140 @@ dense_tree_independent_gpu(const TreeEnsemble &trees,
   DeviceExplanationDataset device_data(data);
   DeviceExplanationDataset::DenseDatasetWrapper X =
       device_data.GetDeviceAccessor();
-  DeviceExplanationDataset background_device_data(data, true);
-  DeviceExplanationDataset::DenseDatasetWrapper R =
-      background_device_data.GetDeviceAccessor();
 
-  thrust::device_vector<float> phis((X.NumCols() + 1) * X.NumRows() *
-                                    trees.num_outputs);
-  gpu_treeshap::GPUTreeShapInterventional(X, R, paths.begin(), paths.end(),
-                                          trees.num_outputs, phis.begin(),
-                                          phis.end());
-  // Add the base offset term to bias
-  thrust::device_vector<double> base_offset(
-      trees.base_offset, trees.base_offset + trees.num_outputs);
-  auto counting = thrust::make_counting_iterator(size_t(0));
-  auto d_phis = phis.data().get();
-  auto d_base_offset = base_offset.data().get();
+  size_t M = X.NumCols();
+  size_t num_X = X.NumRows();
   size_t num_groups = trees.num_outputs;
-  thrust::for_each(counting, counting + X.NumRows() * trees.num_outputs,
-                   [=] __device__(size_t idx) {
-                     size_t row_idx = idx / num_groups;
-                     size_t group = idx % num_groups;
-                     auto phi_idx = gpu_treeshap::IndexPhi(
-                         row_idx, num_groups, group, X.NumCols(), X.NumCols());
-                     d_phis[phi_idx] += d_base_offset[group];
-                   });
+  size_t phi_count = (M + 1) * num_X * num_groups;
+  auto counting = thrust::make_counting_iterator(size_t(0));
+  thrust::device_vector<float> phis(phi_count);
+
+  if (transform != NULL) {
+    // Exact per-reference transform rescaling, matching the CPU algorithm in
+    // dense_independent() (tree_shap.h). We call the GPU library once per
+    // reference sample to get per-reference raw SHAP values, then apply the
+    // chain-rule rescaling individually before averaging.
+    std::vector<tfloat> accum(phi_count, 0.0);
+    std::vector<float> h_phis(phi_count);
+
+    // Upload all reference data to GPU once
+    thrust::device_vector<tfloat> all_r_data(
+        data.R, data.R + data.num_R * data.M);
+    thrust::device_vector<bool> all_r_missing(
+        data.R_missing, data.R_missing + data.num_R * data.M);
+
+    // Precompute margins for all X samples
+    std::vector<std::vector<tfloat>> margins_x(num_groups);
+    for (unsigned oind = 0; oind < num_groups; ++oind) {
+      margins_x[oind].resize(num_X);
+      for (unsigned i = 0; i < num_X; ++i) {
+        const tfloat *x = data.X + i * data.M;
+        const bool *x_missing = data.X_missing + i * data.M;
+        margins_x[oind][i] = trees.base_offset[oind];
+        for (unsigned k = 0; k < trees.tree_limit; ++k) {
+          margins_x[oind][i] += tree_predict(k, trees, x, x_missing)[oind];
+        }
+      }
+    }
+
+    for (unsigned j = 0; j < data.num_R; ++j) {
+      // Create a 1-row background view into the already-uploaded R data
+      DeviceExplanationDataset::DenseDatasetWrapper R_j(
+          all_r_data.data().get() + j * data.M,
+          all_r_missing.data().get() + j * data.M, 1, data.M);
+
+      // Compute raw SHAP values for all X against this single reference
+      thrust::fill(phis.begin(), phis.end(), 0.0f);
+      gpu_treeshap::GPUTreeShapInterventional(
+          X, R_j, paths.begin(), paths.end(), trees.num_outputs, phis.begin(),
+          phis.end());
+
+      // Copy to host
+      thrust::copy(phis.begin(), phis.end(), h_phis.begin());
+
+      // Compute margin for this reference
+      const tfloat *r = data.R + j * data.M;
+      const bool *r_missing = data.R_missing + j * data.M;
+      std::vector<tfloat> margin_r(num_groups);
+      for (unsigned oind = 0; oind < num_groups; ++oind) {
+        margin_r[oind] = trees.base_offset[oind];
+        for (unsigned k = 0; k < trees.tree_limit; ++k) {
+          margin_r[oind] += tree_predict(k, trees, r, r_missing)[oind];
+        }
+      }
+
+      // Apply per-reference rescaling and accumulate
+      for (unsigned i = 0; i < num_X; ++i) {
+        const tfloat y_i = data.y == NULL ? 0 : data.y[i];
+
+        for (unsigned oind = 0; oind < num_groups; ++oind) {
+          // Chain-rule rescale factor for this (x_i, r_j) pair
+          tfloat rescale;
+          if (margins_x[oind][i] != margin_r[oind]) {
+            rescale = (transform(margins_x[oind][i], y_i) -
+                       transform(margin_r[oind], y_i)) /
+                      (margins_x[oind][i] - margin_r[oind]);
+          } else {
+            rescale = 1.0;
+          }
+
+          // Accumulate rescaled feature contributions
+          for (unsigned k = 0; k < M; ++k) {
+            auto phi_idx =
+                gpu_treeshap::IndexPhi(i, num_groups, oind, M, k);
+            accum[phi_idx] += h_phis[phi_idx] * rescale;
+          }
+
+          // Accumulate transformed bias (y=0 for bias, matching CPU)
+          auto bias_idx =
+              gpu_treeshap::IndexPhi(i, num_groups, oind, M, M);
+          accum[bias_idx] +=
+              transform(trees.base_offset[oind] + h_phis[bias_idx], 0);
+        }
+      }
+    }
+
+    // Average over references
+    for (auto &v : accum) v /= data.num_R;
+
+    // Copy result back to device for transpose
+    std::vector<float> accum_f(accum.begin(), accum.end());
+    thrust::copy(accum_f.begin(), accum_f.end(), phis.begin());
+  } else {
+    // No transform: single call with full background dataset
+    DeviceExplanationDataset background_device_data(data, true);
+    DeviceExplanationDataset::DenseDatasetWrapper R =
+        background_device_data.GetDeviceAccessor();
+    gpu_treeshap::GPUTreeShapInterventional(X, R, paths.begin(), paths.end(),
+                                            trees.num_outputs, phis.begin(),
+                                            phis.end());
+
+    // Add base offset on device
+    auto d_phis = phis.data().get();
+    thrust::device_vector<double> base_offset(
+        trees.base_offset, trees.base_offset + num_groups);
+    auto d_base_offset = base_offset.data().get();
+    thrust::for_each(counting, counting + num_X * num_groups,
+                     [=] __device__(size_t idx) {
+                       size_t row_idx = idx / num_groups;
+                       size_t group = idx % num_groups;
+                       auto phi_idx = gpu_treeshap::IndexPhi(
+                           row_idx, num_groups, group, M, M);
+                       d_phis[phi_idx] += d_base_offset[group];
+                     });
+  }
 
   // Shap uses a slightly different layout for multiclass
+  auto d_phis = phis.data().get();
   thrust::device_vector<float> transposed_phis(phis.size());
   auto d_transposed_phis = transposed_phis.data();
   thrust::for_each(
       counting, counting + phis.size(), [=] __device__(size_t idx) {
-        size_t old_shape[] = {X.NumRows(), num_groups, (X.NumCols() + 1)};
+        size_t old_shape[] = {num_X, num_groups, (M + 1)};
         size_t old_idx[array_size(old_shape)];
         gpu_treeshap::FlatIdxToTensorIdx(idx, old_shape, old_idx);
         // Define new tensor format, switch num_groups axis to end
-        size_t new_shape[] = {X.NumRows(), (X.NumCols() + 1), num_groups};
+        size_t new_shape[] = {num_X, (M + 1), num_groups};
         size_t new_idx[] = {old_idx[0], old_idx[2], old_idx[1]};
         size_t transposed_idx =
             gpu_treeshap::TensorIdxToFlatIdx(new_shape, new_idx);
