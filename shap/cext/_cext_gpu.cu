@@ -76,19 +76,20 @@ void RecurseTree(
 
   // Add left split to the path
   unsigned left_child = tree.children_left[pos];
+  bool is_left_default = tree.children_default[pos] == left_child;
   double left_zero_fraction =
       tree.node_sample_weights[left_child] / tree.node_sample_weights[pos];
   // Encode the range of feature values that flow down this path
   tmp_path->emplace_back(0, tree.features[pos], 0,
-                         ShapSplitCondition{-inf, tree.thresholds[pos], false},
+                         ShapSplitCondition{-inf, tree.thresholds[pos], is_left_default},
                          left_zero_fraction, 0.0f);
 
   RecurseTree(left_child, tree, tmp_path, paths, path_idx, num_outputs);
 
-  // Add left split to the path
+  // Add right split to the path
   tmp_path->back() = gpu_treeshap::PathElement<ShapSplitCondition>(
       0, tree.features[pos], 0,
-      ShapSplitCondition{tree.thresholds[pos], inf, false},
+      ShapSplitCondition{tree.thresholds[pos], inf, !is_left_default},
       1.0 - left_zero_fraction, 0.0f);
 
   RecurseTree(tree.children_right[pos], tree, tmp_path, paths, path_idx,
