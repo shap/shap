@@ -331,3 +331,31 @@ def test_parse_model_multiclass_single_class_fallback():
     # Assert the parser correctly flattened the coef and grabbed the first element of the intercept
     assert np.array_equal(explainer.coef, np.array([0.5, 0.5]))
     assert explainer.intercept == 0.1
+
+
+def test_exact_enumeration_small_features():
+    beta = np.array([1, 0.5, -0.3])
+    mu = np.zeros(3)
+    Sigma = np.array(
+        [
+            [1.0, 0.5, 0.2],
+            [0.5, 1.0, 0.3],
+            [0.2, 0.3, 1.0],
+        ]
+    )
+    X = np.array([[1.0, 2.0, 3.0]])
+    masker = shap.maskers.Impute({"mean": mu, "cov": Sigma})
+
+    # 3 features, 3! = 6 permutations, well under the default nsamples=1000
+    # so the exact enumeration path should be used.
+    explainer1 = shap.LinearExplainer((beta, 0), masker)
+    sv1 = explainer1.shap_values(X)
+
+    explainer2 = shap.LinearExplainer((beta, 0), masker)
+    sv2 = explainer2.shap_values(X)
+
+    # Results must be perfectly identical (no random noise)
+    np.testing.assert_array_equal(sv1, sv2)
+
+    prediction = np.dot(beta, X[0])
+    np.testing.assert_allclose(sv1.sum(), prediction - explainer1.expected_value, atol=1e-10)
