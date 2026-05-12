@@ -166,7 +166,17 @@ def remove_resample(
 
 
 def batch_remove_retrain(
-    nmask_train, nmask_test, X_train, y_train, X_test, y_test, attr_train, attr_test, model_generator, metric, random_state=None
+    nmask_train,
+    nmask_test,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    attr_train,
+    attr_test,
+    model_generator,
+    metric,
+    random_state=None,
 ):
     """An approximation of holdout that only retraines the model once.
 
@@ -364,7 +374,17 @@ def keep_resample(
 
 
 def batch_keep_retrain(
-    nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, attr_train, attr_test, model_generator, metric, random_state=None
+    nkeep_train,
+    nkeep_test,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    attr_train,
+    attr_test,
+    model_generator,
+    metric,
+    random_state=None,
 ):
     """An approximation of keep that only retraines the model once.
 

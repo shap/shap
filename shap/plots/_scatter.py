@@ -335,7 +335,6 @@ def scatter(
             jitter_amount = x_jitter * smallest_diff
             xv += (rng.random(size=len(xv)) * jitter_amount) - (jitter_amount / 2)
 
-
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     xv_nan = np.isnan(xv)
     xv_notnan = np.invert(xv_nan)
@@ -791,7 +790,6 @@ def dependence_legacy(
             smallest_diff = np.min(np.diff(xvals))
             jitter_amount = x_jitter * smallest_diff
             xv += (rng.random(size=len(xv)) * jitter_amount) - (jitter_amount / 2)
-
 
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     xv_nan = np.isnan(xv)
