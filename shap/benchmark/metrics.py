@@ -24,7 +24,6 @@ def runtime(X, y, model_generator, method_name):
     transform = "negate_log"
     sort_order = 2
     """
-
     # average the method scores over several train/test splits
     method_reps = []
     for i in range(3):
@@ -482,13 +481,26 @@ def __run_batch_abs_metric(metric, X, y, model_generator, method_name, loss, num
         A_test = np.abs(__strip_list(attr_function(X_test)))
         nkeep_test = (np.ones(len(y_test)) * fcount).astype(int)
         # nkeep_test = np.minimum(nkeep_test, np.array(A_test >= 0).sum(1)).astype(int)
-        return metric(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, A_train, A_test, model_generator, loss, random_state)
+        return metric(
+            nkeep_train,
+            nkeep_test,
+            X_train,
+            y_train,
+            X_test,
+            y_test,
+            A_train,
+            A_test,
+            model_generator,
+            loss,
+            random_state,
+        )
 
     fcounts = __intlogspace(0, X.shape[1], num_fcounts)
     return fcounts, __score_method(X, y, fcounts, model_generator, score_function, method_name)
 
 
 _attribution_cache = {}
+
 
 def __score_method(
     X, y, fcounts, model_generator, score_function, method_name, nreps=10, test_size=100, cache_dir="/tmp"

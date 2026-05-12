@@ -16,7 +16,9 @@ if TYPE_CHECKING:  # pragma: no cover
 github_data_url: Final[str] = "https://github.com/shap/shap/raw/master/data/"
 
 
-def imagenet50(resolution: int = 224, n_points: int | None = None, random_state: int | np.random.Generator | None = 0) -> tuple[np.ndarray, np.ndarray]:
+def imagenet50(
+    resolution: int = 224, n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[np.ndarray, np.ndarray]:
     """Return a set of 50 images representative of ImageNet images.
 
     Parameters
@@ -65,7 +67,9 @@ def imagenet50(resolution: int = 224, n_points: int | None = None, random_state:
     return X, y
 
 
-def california(n_points: int | None = None, random_state: int | np.random.Generator | None = 0) -> tuple[pd.DataFrame, np.ndarray]:
+def california(
+    n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Return the California housing data in a tabular format.
 
     Used in predictive regression tasks.
@@ -123,7 +127,9 @@ def california(n_points: int | None = None, random_state: int | np.random.Genera
     return df, target
 
 
-def linnerud(n_points: int | None = None, random_state: int | np.random.Generator | None = 0) -> tuple[pd.DataFrame, pd.DataFrame]:
+def linnerud(
+    n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Return the Linnerud dataset in a convenient package for multi-target regression.
 
     Parameters
@@ -173,7 +179,9 @@ def linnerud(n_points: int | None = None, random_state: int | np.random.Generato
     return X, y
 
 
-def imdb(n_points: int | None = None, random_state: int | np.random.Generator | None = 0) -> tuple[list[str], np.ndarray]:
+def imdb(
+    n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[list[str], np.ndarray]:
     """Return the classic IMDB sentiment analysis training data in a nice package.
 
     Used in binary text classification tasks.
@@ -220,7 +228,9 @@ def imdb(n_points: int | None = None, random_state: int | np.random.Generator | 
     return data, y
 
 
-def communitiesandcrime(n_points: int | None = None, random_state: int | np.random.Generator | None = 0) -> tuple[pd.DataFrame, np.ndarray]:
+def communitiesandcrime(
+    n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Predict the total number of violent crimes per 100K population.
 
     This dataset is from the classic UCI Machine Learning repository:
@@ -269,7 +279,9 @@ def communitiesandcrime(n_points: int | None = None, random_state: int | np.rand
     return X, y
 
 
-def diabetes(n_points: int | None = None, random_state: int | np.random.Generator | None = 0) -> tuple[pd.DataFrame, np.ndarray]:
+def diabetes(
+    n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Return the diabetes data in a nice package.
 
     Used in predictive regression tasks.
@@ -331,12 +343,18 @@ def diabetes(n_points: int | None = None, random_state: int | np.random.Generato
 
 
 @overload
-def iris(display: Literal[False] = ..., n_points: int | None = ..., random_state: int | np.random.Generator | None = ...) -> tuple[pd.DataFrame, np.ndarray]: ...
+def iris(
+    display: Literal[False] = ..., n_points: int | None = ..., random_state: int | np.random.Generator | None = ...
+) -> tuple[pd.DataFrame, np.ndarray]: ...
 @overload
-def iris(display: Literal[True] = ..., n_points: int | None = ..., random_state: int | np.random.Generator | None = ...) -> tuple[pd.DataFrame, list[str]]: ...
+def iris(
+    display: Literal[True] = ..., n_points: int | None = ..., random_state: int | np.random.Generator | None = ...
+) -> tuple[pd.DataFrame, list[str]]: ...
 
 
-def iris(display: bool = False, n_points: int | None = None, random_state: int | np.random.Generator | None = 0) -> tuple[pd.DataFrame, np.ndarray | list[str]]:
+def iris(
+    display: bool = False, n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray | list[str]]:
     """Return the classic Iris dataset in a convenient package.
 
     Parameters
@@ -389,7 +407,9 @@ def iris(display: bool = False, n_points: int | None = None, random_state: int |
     return df, target
 
 
-def adult(display: bool = False, n_points: int | None = None, random_state: int | np.random.Generator | None = 0) -> tuple[pd.DataFrame, np.ndarray]:
+def adult(
+    display: bool = False, n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Return the Adult census data in a structured format.
 
     Used in binary classification tasks.
@@ -488,7 +508,9 @@ def adult(display: bool = False, n_points: int | None = None, random_state: int 
     return data.drop(["Target", "fnlwgt"], axis=1), data["Target"].values
 
 
-def nhanesi(display: bool = False, n_points: int | None = None, random_state: int | np.random.Generator | None = 0) -> tuple[pd.DataFrame, np.ndarray]:
+def nhanesi(
+    display: bool = False, n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Return a nicely packaged version of NHANES I data with survival times as labels.
 
     Used in survival analysis tasks.
@@ -533,7 +555,9 @@ def nhanesi(display: bool = False, n_points: int | None = None, random_state: in
     return X, np.array(y)
 
 
-def corrgroups60(n_points: int = 1_000, random_state: int | np.random.Generator | None = 0) -> tuple[pd.DataFrame, np.ndarray]:
+def corrgroups60(
+    n_points: int = 1_000, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Correlated Groups (60 features)
 
     A synthetic dataset consisting of 60 features with tight correlations among distinct groups of features.
@@ -568,7 +592,6 @@ def corrgroups60(n_points: int = 1_000, random_state: int | np.random.Generator 
     """
     # set a constant seed
     rng = np.random.default_rng(random_state)
-
 
     # generate dataset with known correlation
     N, M = n_points, 60
@@ -605,7 +628,9 @@ def corrgroups60(n_points: int = 1_000, random_state: int | np.random.Generator 
     return pd.DataFrame(X), y
 
 
-def independentlinear60(n_points: int = 1_000, random_state: int | np.random.Generator | None = 0) -> tuple[pd.DataFrame, np.ndarray]:
+def independentlinear60(
+    n_points: int = 1_000, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Independent Linear (60 features)
 
     A synthetic dataset consisting of 60 features.
@@ -658,7 +683,9 @@ def independentlinear60(n_points: int = 1_000, random_state: int | np.random.Gen
     return pd.DataFrame(X), y
 
 
-def a1a(n_points: int | None = None, random_state: int | np.random.Generator | None = 0) -> tuple[ssp.csr_matrix, np.ndarray]:
+def a1a(
+    n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[ssp.csr_matrix, np.ndarray]:
     """
     Return a sparse dataset in scipy csr matrix format.
 
