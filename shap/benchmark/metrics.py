@@ -24,8 +24,6 @@ def runtime(X, y, model_generator, method_name):
     transform = "negate_log"
     sort_order = 2
     """
-    old_seed = np.random.seed()
-    np.random.seed(3293)
 
     # average the method scores over several train/test splits
     method_reps = []
@@ -48,7 +46,7 @@ def runtime(X, y, model_generator, method_name):
         # we always normalize the explain time as though we were explaining 1000 samples
         # even if to reduce the runtime of the benchmark we do less (like just 100)
         method_reps.append(build_time + explain_time * 1000.0 / X_test.shape[0])
-    np.random.seed(old_seed)
+    # method_reps.append(build_time + explain_time * 1000.0 / X_test.shape[0])
 
     return None, np.mean(method_reps)
 
@@ -477,21 +475,20 @@ def batch_keep_absolute_retrain__roc_auc(X, y, model_generator, method_name, num
 
 
 def __run_batch_abs_metric(metric, X, y, model_generator, method_name, loss, num_fcounts):
-    def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model):
+    def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model, random_state):
         A_train = np.abs(__strip_list(attr_function(X_train)))
         nkeep_train = (np.ones(len(y_train)) * fcount).astype(int)
         # nkeep_train = np.minimum(nkeep_train, np.array(A_train > 0).sum(1)).astype(int)
         A_test = np.abs(__strip_list(attr_function(X_test)))
         nkeep_test = (np.ones(len(y_test)) * fcount).astype(int)
         # nkeep_test = np.minimum(nkeep_test, np.array(A_test >= 0).sum(1)).astype(int)
-        return metric(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, A_train, A_test, model_generator, loss)
+        return metric(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, A_train, A_test, model_generator, loss, random_state)
 
     fcounts = __intlogspace(0, X.shape[1], num_fcounts)
     return fcounts, __score_method(X, y, fcounts, model_generator, score_function, method_name)
 
 
 _attribution_cache = {}
-
 
 def __score_method(
     X, y, fcounts, model_generator, score_function, method_name, nreps=10, test_size=100, cache_dir="/tmp"
@@ -501,9 +498,6 @@ def __score_method(
         pickle
     except NameError:
         raise ImportError("The 'dill' package could not be loaded and is needed for the benchmark!")
-
-    old_seed = np.random.seed()
-    np.random.seed(3293)
 
     # average the method scores over several train/test splits
     method_reps = []
@@ -546,8 +540,6 @@ def __score_method(
             method_reps.append(score(getattr(methods, method_name)(model, X_train)))
         else:
             method_reps.append(score(None))
-
-    np.random.seed(old_seed)
     return np.array(method_reps).mean(0)
 
 
