@@ -253,7 +253,7 @@ typing-extensions==4.15.0
     # via
     #   beautifulsoup4
     #   referencing
-urllib3==2.6.3
+urllib3==2.7.0
     # via requests
 wcwidth==0.6.0
     # via prompt-toolkit
