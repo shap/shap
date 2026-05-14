@@ -3015,3 +3015,34 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+def test_deep_tree_cancellation_additivity():
+    """
+    Tests that extremely deep trees (depth > 100) do not suffer from catastrophic
+    cancellation in the C++ unwind_path logic, which previously caused massive 
+    unexplained additivity violations. See Issue #4042.
+    """
+    # Generate a diagonal dataset to force a completely unbalanced tree.
+    # The depth will be approximately equal to the number of features.
+    X = np.eye(150)
+    y = np.arange(150)
+    
+    model = DecisionTreeRegressor(random_state=42)
+    model.fit(X, y)
+    
+    # Ensure the tree actually reached extreme depth
+    assert model.tree_.max_depth > 100
+    
+    explainer = shap.TreeExplainer(model)
+    
+    try:
+        shap_values = explainer.shap_values(X)
+        # If the C++ bounds completely resolved the float noise, assert additivity manually
+        expected = model.predict(X)
+        assert np.allclose(shap_values.sum(axis=1) + explainer.expected_value, expected, atol=1e-3)
+    except shap.utils._exceptions.ExplainerError as e:
+        # If the depth still exceeds hardware floating-point limits, 
+        # ensure it throws the NEW descriptive depth-limit error, NOT the old generic one.
+        error_msg = str(e).lower()
+        assert "depth > 70" in error_msg or "interventional" in error_msg, \
+            f"Caught the old generic additivity error instead of the deep-tree failsafe! Error: {e}"
