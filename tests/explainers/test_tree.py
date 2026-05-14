@@ -3013,10 +3013,6 @@ def test_tree_explainer_mixed_castable_data():
     Addresses Issue #1844.
     """
     xgboost = pytest.importorskip("xgboost")
-    import pandas as pd
-
-    import shap
-
     # Train a dummy model on clean data
     X_train = pd.DataFrame({"age": [58.0, 59.0, 26.0], "sex": [0.0, 0.0, 0.0]})
     y_train = [0, 1, 0]
@@ -3041,10 +3037,6 @@ def test_tree_explainer_uncastable_data():
     un-castable types (like non-numeric strings), rather than failing silently in C++.
     """
     xgboost = pytest.importorskip("xgboost")
-    import pandas as pd
-
-    import shap
-
     X_train = pd.DataFrame({"age": [58.0, 59.0], "sex": [0.0, 0.0]})
     y_train = [0, 1]
     model = xgboost.XGBClassifier(n_estimators=2).fit(X_train, y_train)
