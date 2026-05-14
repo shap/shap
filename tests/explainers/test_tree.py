@@ -3045,5 +3045,6 @@ def test_deep_tree_cancellation_additivity():
         # If the depth still exceeds hardware floating-point limits,
         # ensure it throws the NEW descriptive depth-limit error, NOT the old generic one.
         error_msg = str(e).lower()
-        assert "depth > 70" in error_msg, \
+        assert "depth > 70" in error_msg, (
             f"Caught the old generic additivity error instead of the deep-tree failsafe! Error: {e}"
+        )
