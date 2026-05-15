@@ -376,13 +376,13 @@ class TreeExplainer(Explainer):
         Returns
         -------
         Explanation
-            A `shap.Explanation` object containing the computed SHAP values, base values, 
-            and the original data. For multi-output models (like scikit-learn classifiers), 
+            A `shap.Explanation` object containing the computed SHAP values, base values,
+            and the original data. For multi-output models (like scikit-learn classifiers),
             the Explanation values will be 3-dimensional.
 
         Examples
         --------
-        Explaining a scikit-learn Random Forest classifier and plotting a waterfall 
+        Explaining a scikit-learn Random Forest classifier and plotting a waterfall
         plot for the positive class:
 
         >>> import shap
@@ -392,7 +392,7 @@ class TreeExplainer(Explainer):
         >>> model = sklearn.ensemble.RandomForestClassifier(random_state=0).fit(X, y)
         >>> explainer = shap.TreeExplainer(model)
         >>> shap_values = explainer(X)
-        >>> # scikit-learn classifiers output probabilities for both classes. 
+        >>> # scikit-learn classifiers output probabilities for both classes.
         >>> # Slice the explanation to plot sample 0, all features, and the positive class (1):
         >>> shap.plots.waterfall(shap_values[0, :, 1])
         """

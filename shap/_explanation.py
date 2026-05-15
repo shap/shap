@@ -107,12 +107,12 @@ class Explanation(metaclass=MetaExplanation):
     Attributes
     ----------
     values : numpy.ndarray
-        The SHAP values. For regression or single-output models, this is a 2D array 
-        of shape `(n_samples, n_features)`. For multi-output models (such as 
-        scikit-learn classifiers), this is a 3D array of shape 
+        The SHAP values. For regression or single-output models, this is a 2D array
+        of shape `(n_samples, n_features)`. For multi-output models (such as
+        scikit-learn classifiers), this is a 3D array of shape
         `(n_samples, n_features, n_classes)`.
     base_values : numpy.ndarray
-        The expected value of the model output (the average prediction over the 
+        The expected value of the model output (the average prediction over the
         background dataset).
     data : numpy.ndarray
         The original input features used to compute the SHAP values.
