@@ -103,6 +103,19 @@ class Explanation(metaclass=MetaExplanation):
 
     The *class* methods such as `Explanation.max` return OpChain objects that represent
     a set of dot chained operations without actually running them.
+
+    Attributes
+    ----------
+    values : numpy.ndarray
+        The SHAP values. For regression or single-output models, this is a 2D array 
+        of shape `(n_samples, n_features)`. For multi-output models (such as 
+        scikit-learn classifiers), this is a 3D array of shape 
+        `(n_samples, n_features, n_classes)`.
+    base_values : numpy.ndarray
+        The expected value of the model output (the average prediction over the 
+        background dataset).
+    data : numpy.ndarray
+        The original input features used to compute the SHAP values.
     """
 
     def __init__(
