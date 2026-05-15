@@ -8,12 +8,11 @@ build:
   jobs:
     # cf. https://docs.readthedocs.io/en/stable/build-customization.html#install-dependencies-with-uv
     pre_create_environment:
-      - asdf plugin add uv
+      - asdf plugin add uv || true
       - asdf install uv latest
       - asdf global uv latest
     create_environment:
       - uv venv
-      - uv sync
     install:
       - uv pip install -r docs/requirements-docs.txt
     build:

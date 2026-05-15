@@ -284,8 +284,13 @@ class TreeExplainer(Explainer):
         self.data_missing = None if self.data is None else pd.isna(self.data)
         self.feature_perturbation = feature_perturbation
         self.expected_value = None
-        self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
-        self.model_output = model_output
+        if isinstance(model, TreeEnsemble):
+            self.model = model
+            if model_output is not None:
+                self.model.model_output = model_output
+        else:
+            self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
+        self.model_output = self.model.model_output
         # self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
 
         # check for unsupported combinations of feature_perturbation and model_outputs
@@ -922,6 +927,9 @@ class TreeExplainer(Explainer):
         if not isinstance(masker, (maskers.Independent)) and masker is not None:
             return False
 
+        if isinstance(model, TreeEnsemble):
+            return True
+
         try:
             TreeEnsemble(model)
         except Exception:
@@ -962,6 +970,57 @@ class TreeEnsemble:
     max_depth: int
     _xgboost_n_outputs: int
     _xgb_dmatrix_props: dict[str, Any]
+
+    @classmethod
+    def from_trees(
+        cls,
+        trees: list[Any],
+        *,
+        base_offset: Any = 0,
+        model_output: str | None = "raw",
+        objective: str | None = None,
+        tree_output: str | None = None,
+        internal_dtype: type[np.floating[Any]] | None = None,
+        input_dtype: type[np.floating[Any]] | None = None,
+        data: npt.NDArray[Any] | None = None,
+        data_missing: npt.NDArray[np.bool_] | None = None,
+        fully_defined_weighting: bool = True,
+        tree_limit: int | None = None,
+        num_stacked_models: int = 1,
+        cat_feature_indices: npt.NDArray[Any] | None = None,
+        model_type: str = "internal",
+    ) -> TreeEnsemble:
+        """Build a TreeEnsemble from pre-extracted trees.
+
+        The trees may be provided either as native sklearn tree objects or as
+        already normalized SingleTree instances.
+        """
+        if len(trees) == 0:
+            raise ValueError("TreeEnsemble.from_trees requires at least one tree.")
+
+        ensemble = cls.__new__(cls)
+        ensemble.model_type = model_type
+        ensemble.trees = [
+            tree if isinstance(tree, SingleTree) else SingleTree(tree, data=data, data_missing=data_missing)
+            for tree in trees
+        ]
+        ensemble.base_offset = base_offset
+        ensemble.model_output = model_output
+        ensemble.objective = objective
+        ensemble.tree_output = tree_output
+        ensemble.internal_dtype = internal_dtype or ensemble.trees[0].values.dtype.type
+        ensemble.input_dtype = input_dtype or np.float32
+        ensemble.data = data
+        ensemble.data_missing = data_missing
+        ensemble.fully_defined_weighting = fully_defined_weighting
+        ensemble.tree_limit = tree_limit
+        ensemble.num_stacked_models = num_stacked_models
+        ensemble.cat_feature_indices = cat_feature_indices
+        ensemble.original_model = None
+        ensemble._xgboost_n_outputs = 1
+        ensemble._xgb_dmatrix_props = {}
+        ensemble._finalize_tree_ensemble()
+        return ensemble
 
     def __init__(
         self,
@@ -1044,6 +1103,15 @@ class TreeEnsemble:
                 "causalml.inference.tree.CausalRandomForestRegressor",
             ],
         ):
+            if not safe_isinstance(
+                model, ["sklearn.ensemble.RandomForestRegressor", "sklearn.ensemble.forest.RandomForestRegressor"]
+            ):
+                warnings.warn(
+                    "Support for econml and causalml tree models is deprecated and will be removed in a future release. "
+                    "Please export the trees and use TreeEnsemble.from_trees instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -1084,6 +1152,15 @@ class TreeEnsemble:
                 "skopt.learning.forest.ExtraTreesRegressor",
             ],
         ):
+            if safe_isinstance(
+                model, ["skopt.learning.forest.RandomForestRegressor", "skopt.learning.forest.ExtraTreesRegressor"]
+            ):
+                warnings.warn(
+                    "Support for scikit-optimize tree models is deprecated and will be removed in a future release. "
+                    "Please export the trees and use TreeEnsemble.from_trees instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -1102,6 +1179,15 @@ class TreeEnsemble:
                 "causalml.inference.tree.causal.causaltree.CausalTreeRegressor",
             ],
         ):
+            if not safe_isinstance(
+                model, ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor"]
+            ):
+                warnings.warn(
+                    "Support for econml and causalml tree models is deprecated and will be removed in a future release. "
+                    "Please export the trees and use TreeEnsemble.from_trees instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
             self.internal_dtype = model.tree_.value.dtype.type
             self.input_dtype = np.float32
             self.trees = [SingleTree(model.tree_, data=data, data_missing=data_missing)]
@@ -1384,6 +1470,12 @@ class TreeEnsemble:
 
         elif safe_isinstance(model, "gpboost.basic.Booster"):
             assert_import("gpboost")
+            warnings.warn(
+                "Support for gpboost tree models is deprecated and will be removed in a future release. "
+                "Please export the trees and use TreeEnsemble.from_trees instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             self.model_type = "gpboost"
             self.original_model = model
             tree_info = self.original_model.dump_model()["tree_info"]
@@ -1465,6 +1557,12 @@ class TreeEnsemble:
             self.original_model = model
             self.cat_feature_indices = model.get_cat_feature_indices()
         elif safe_isinstance(model, "imblearn.ensemble._forest.BalancedRandomForestClassifier"):
+            warnings.warn(
+                "Support for imbalanced-learn tree models is deprecated and will be removed in a future release. "
+                "Please export the trees and use TreeEnsemble.from_trees instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             self.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_)  # output is average of trees
             self.trees = [
@@ -1481,6 +1579,12 @@ class TreeEnsemble:
                 "ngboost.api.NGBClassifier",
             ],
         ):
+            warnings.warn(
+                "Support for ngboost tree models is deprecated and will be removed in a future release. "
+                "Please export the trees and use TreeEnsemble.from_trees instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             assert model.base_models, "The NGBoost model has empty `base_models`! Have you called `model.fit`?"
             if self.model_output == "raw":
                 param_idx = 0  # default to the first parameter of the output distribution
@@ -1525,59 +1629,66 @@ class TreeEnsemble:
         else:
             raise InvalidModelError("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
-        # build a dense numpy version of all the tree objects
-        if self.trees is not None and self.trees:
-            max_nodes = np.max([len(t.values) for t in self.trees])
-            assert len(np.unique([t.values.shape[1] for t in self.trees])) == 1, (
-                "All trees in the ensemble must have the same output dimension!"
-            )
-            num_trees = len(self.trees)
-            # important to be -1 in unused sections!! This way we can tell which entries are valid.
-            self.children_left = -np.ones((num_trees, max_nodes), dtype=np.int32)
-            self.children_right = -np.ones((num_trees, max_nodes), dtype=np.int32)
-            self.children_default = -np.ones((num_trees, max_nodes), dtype=np.int32)
-            self.features = -np.ones((num_trees, max_nodes), dtype=np.int32)
+        self._finalize_tree_ensemble()
 
-            self.thresholds = np.zeros((num_trees, max_nodes), dtype=self.internal_dtype)
-            self.threshold_types = np.zeros((num_trees, max_nodes), dtype=np.int32)
-            self.values = np.zeros((num_trees, max_nodes, self.num_outputs), dtype=self.internal_dtype)
-            self.node_sample_weight = np.zeros((num_trees, max_nodes), dtype=self.internal_dtype)
+    def _finalize_tree_ensemble(self) -> None:
+        if self.trees is None:
+            return
+        if len(self.trees) == 0:
+            raise ValueError("TreeEnsemble requires at least one tree.")
 
-            for i in range(num_trees):
-                self.children_left[i, : len(self.trees[i].children_left)] = self.trees[i].children_left
-                self.children_right[i, : len(self.trees[i].children_right)] = self.trees[i].children_right
-                self.children_default[i, : len(self.trees[i].children_default)] = self.trees[i].children_default
-                self.features[i, : len(self.trees[i].features)] = self.trees[i].features
-                self.thresholds[i, : len(self.trees[i].thresholds)] = self.trees[i].thresholds
-                self.threshold_types[i, : len(self.trees[i].threshold_types)] = self.trees[i].threshold_types
+        max_nodes = np.max([len(t.values) for t in self.trees])
+        if len(np.unique([t.values.shape[1] for t in self.trees])) != 1:
+            raise ValueError("All trees in the ensemble must have the same output dimension!")
 
-                # XGBoost supports boosting forest, which is not compatible with the
-                # current assumption here that the number of stacked models represents
-                # the number of outputs.
-                if self.model_type == "xgboost":
-                    n_stacks = self.num_outputs
-                else:
-                    n_stacks = self.num_stacked_models
+        num_trees = len(self.trees)
+        # important to be -1 in unused sections!! This way we can tell which entries are valid.
+        self.children_left = -np.ones((num_trees, max_nodes), dtype=np.int32)
+        self.children_right = -np.ones((num_trees, max_nodes), dtype=np.int32)
+        self.children_default = -np.ones((num_trees, max_nodes), dtype=np.int32)
+        self.features = -np.ones((num_trees, max_nodes), dtype=np.int32)
 
-                if n_stacks > 1:
-                    stack_pos = i % n_stacks
-                    self.values[i, : len(self.trees[i].values[:, 0]), stack_pos] = self.trees[i].values[:, 0]
-                else:
-                    self.values[i, : len(self.trees[i].values)] = self.trees[i].values
-                self.node_sample_weight[i, : len(self.trees[i].node_sample_weight)] = self.trees[i].node_sample_weight
+        self.thresholds = np.zeros((num_trees, max_nodes), dtype=self.internal_dtype)
+        self.threshold_types = np.zeros((num_trees, max_nodes), dtype=np.int32)
+        self.values = np.zeros((num_trees, max_nodes, self.num_outputs), dtype=self.internal_dtype)
+        self.node_sample_weight = np.zeros((num_trees, max_nodes), dtype=self.internal_dtype)
 
-                # ensure that the passed background dataset lands in every leaf
-                if np.min(self.trees[i].node_sample_weight) <= 0:
-                    self.fully_defined_weighting = False
+        for i in range(num_trees):
+            self.children_left[i, : len(self.trees[i].children_left)] = self.trees[i].children_left
+            self.children_right[i, : len(self.trees[i].children_right)] = self.trees[i].children_right
+            self.children_default[i, : len(self.trees[i].children_default)] = self.trees[i].children_default
+            self.features[i, : len(self.trees[i].features)] = self.trees[i].features
+            self.thresholds[i, : len(self.trees[i].thresholds)] = self.trees[i].thresholds
+            self.threshold_types[i, : len(self.trees[i].threshold_types)] = self.trees[i].threshold_types
 
-            self.num_nodes = np.array([len(t.values) for t in self.trees], dtype=np.int32)
-            self.max_depth = np.max([t.max_depth for t in self.trees])
+            # XGBoost supports boosting forest, which is not compatible with the
+            # current assumption here that the number of stacked models represents
+            # the number of outputs.
+            if self.model_type == "xgboost":
+                n_stacks = self.num_outputs
+            else:
+                n_stacks = self.num_stacked_models
 
-            # make sure the base offset is a 1D array
-            if not hasattr(self.base_offset, "__len__") or len(self.base_offset) == 0:
-                self.base_offset = (np.ones(self.num_outputs) * self.base_offset).astype(self.internal_dtype)
-            self.base_offset = self.base_offset.flatten()
-            assert len(self.base_offset) == self.num_outputs
+            if n_stacks > 1:
+                stack_pos = i % n_stacks
+                self.values[i, : len(self.trees[i].values[:, 0]), stack_pos] = self.trees[i].values[:, 0]
+            else:
+                self.values[i, : len(self.trees[i].values)] = self.trees[i].values
+            self.node_sample_weight[i, : len(self.trees[i].node_sample_weight)] = self.trees[i].node_sample_weight
+
+            # ensure that the passed background dataset lands in every leaf
+            if np.min(self.trees[i].node_sample_weight) <= 0:
+                self.fully_defined_weighting = False
+
+        self.num_nodes = np.array([len(t.values) for t in self.trees], dtype=np.int32)
+        self.max_depth = np.max([t.max_depth for t in self.trees])
+
+        # make sure the base offset is a 1D array
+        if not hasattr(self.base_offset, "__len__") or len(self.base_offset) == 0:
+            self.base_offset = (np.ones(self.num_outputs) * self.base_offset).astype(self.internal_dtype)
+        self.base_offset = np.asarray(self.base_offset, dtype=self.internal_dtype).flatten()
+        if len(self.base_offset) != self.num_outputs:
+            raise ValueError("base_offset must have one value per model output.")
 
     def _set_xgboost_model_attributes(
         self,
