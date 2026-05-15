@@ -17,4 +17,3 @@ def test_group_difference(explainer):
     shap.plots.group_difference(shap_values, group_mask, feature_names, show=False, ax=ax)
     plt.tight_layout()
     return fig
-

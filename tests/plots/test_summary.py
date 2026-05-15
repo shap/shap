@@ -310,4 +310,3 @@ def test_summary_plot_warning(explainer):
     shap_values = explainer(explainer.data)
     with pytest.warns(FutureWarning, match="NumPy global RNG"):
         shap.summary_plot(shap_values, show=False)
-
