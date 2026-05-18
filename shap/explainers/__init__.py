@@ -1,29 +1,32 @@
-from ._additive import AdditiveExplainer
-from ._coalition import CoalitionExplainer
-from ._deep import DeepExplainer
-from ._exact import ExactExplainer
-from ._gpu_tree import GPUTreeExplainer
-from ._gradient import GradientExplainer
-from ._kernel import KernelExplainer
-from ._linear import LinearExplainer
-from ._partition import PartitionExplainer
-from ._permutation import PermutationExplainer
-from ._sampling import SamplingExplainer
-from ._tree import TreeExplainer
+import lazy_loader as lazy
 
-# Alternative legacy "short-form" aliases, which are kept here for backwards-compatibility
-Additive = AdditiveExplainer
-Deep = DeepExplainer
-Exact = ExactExplainer
-GPUTree = GPUTreeExplainer
-Gradient = GradientExplainer
-Kernel = KernelExplainer
-Linear = LinearExplainer
-Partition = PartitionExplainer
-Coalition = CoalitionExplainer
-Permutation = PermutationExplainer
-Sampling = SamplingExplainer
-Tree = TreeExplainer
+_lazy_getattr, _, _ = lazy.attach_stub(__name__, __file__)
+_EXTRA_NAMES = {
+    "other",
+    "Additive",
+    "Deep",
+    "Exact",
+    "GPUTree",
+    "Gradient",
+    "Kernel",
+    "Linear",
+    "Partition",
+    "Coalition",
+    "Permutation",
+    "Sampling",
+    "Tree",
+}
+
+
+def __getattr__(name: str):
+    value = _lazy_getattr(name)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted(set(__all__) | _EXTRA_NAMES)
+
 
 __all__ = [
     "AdditiveExplainer",
