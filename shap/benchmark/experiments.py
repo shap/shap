@@ -268,7 +268,7 @@ def __thread_worker(q, host):
     hostname, python_binary = host.split(":")
     while True:
         # make sure we are not sending too many ssh connections to the host
-        # (if we send too many connections ssh thottling will lock us out)
+        # (if we send too many connections ssh throttling will lock us out)
         while True:
             all_clear = False
 
