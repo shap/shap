@@ -91,6 +91,47 @@ def _safe_check_tree_instance_experimental(tree_instance: Any) -> None:
         )
 
 
+class BaseTreeModelLoader:
+    """Base class for tree model loaders."""
+
+    def __init__(self, model: Any):
+        self.model = model
+
+    @staticmethod
+    def supports_model(model: Any) -> bool:
+        """Check if this loader supports the given model."""
+        return False
+
+    def load(
+        self,
+        ensemble: Any,
+        data: npt.NDArray[Any] | None,
+        data_missing: npt.NDArray[np.bool_] | None,
+        model_output: str | None,
+    ) -> None:
+        """Load the model into the ensemble."""
+        raise NotImplementedError("Subclasses must implement the load method")
+
+
+class TreeModelLoaderRegistry:
+    """Registry for tree model loaders."""
+
+    _loaders: list[type[BaseTreeModelLoader]] = []
+
+    @classmethod
+    def register(cls, loader_class: type[BaseTreeModelLoader]) -> None:
+        """Register a new loader class."""
+        cls._loaders.append(loader_class)
+
+    @classmethod
+    def get_loader(cls, model: Any) -> BaseTreeModelLoader | None:
+        """Get the appropriate loader for the given model."""
+        for loader_class in cls._loaders:
+            if loader_class.supports_model(model):
+                return loader_class(model)
+        return None
+
+
 def _check_xgboost_version(v: str) -> None:
     if version.parse(v) < version.parse("1.6"):  # pragma: no cover
         raise RuntimeError(f"SHAP requires XGBoost >= v1.6 , but found version {v}. Please upgrade XGBoost.")
@@ -935,6 +976,34 @@ class TreeEnsemble:
     This object provides a common interface to many different types of models.
     """
 
+    objective_name_map = {
+        "mse": "squared_error",
+        "variance": "squared_error",
+        "friedman_mse": "squared_error",
+        "reg:linear": "squared_error",
+        "reg:squarederror": "squared_error",
+        "regression": "squared_error",
+        "regression_l2": "squared_error",
+        "mae": "absolute_error",
+        "gini": "binary_crossentropy",
+        "entropy": "binary_crossentropy",
+        "reg:logistic": "binary_crossentropy",
+        "binary:logistic": "binary_crossentropy",
+        "binary_logloss": "binary_crossentropy",
+        "binary": "binary_crossentropy",
+    }
+
+    tree_output_name_map = {
+        "regression": "raw_value",
+        "regression_l2": "squared_error",
+        "reg:linear": "raw_value",
+        "reg:squarederror": "raw_value",
+        "reg:logistic": "log_odds",
+        "binary:logistic": "log_odds",
+        "binary_logloss": "log_odds",
+        "binary": "log_odds",
+    }
+
     model_type: str
     trees: list[SingleTree] | None
     base_offset: Any
@@ -989,36 +1058,11 @@ class TreeEnsemble:
         self.num_stacked_models = 1  # If this is greater than 1 it means we have multiple stacked models with the same number of trees in each model (XGBoost multi-output style)
         self.cat_feature_indices = None  # If this is set it tells us which features are treated categorically
 
-        # we use names like keras
-        objective_name_map = {
-            "mse": "squared_error",
-            "variance": "squared_error",
-            "friedman_mse": "squared_error",
-            "reg:linear": "squared_error",
-            "reg:squarederror": "squared_error",
-            "regression": "squared_error",
-            "regression_l2": "squared_error",
-            "mae": "absolute_error",
-            "gini": "binary_crossentropy",
-            "entropy": "binary_crossentropy",
-            "reg:logistic": "binary_crossentropy",
-            "binary:logistic": "binary_crossentropy",
-            "binary_logloss": "binary_crossentropy",
-            "binary": "binary_crossentropy",
-        }
-
-        tree_output_name_map = {
-            "regression": "raw_value",
-            "regression_l2": "squared_error",
-            "reg:linear": "raw_value",
-            "reg:squarederror": "raw_value",
-            "reg:logistic": "log_odds",
-            "binary:logistic": "log_odds",
-            "binary_logloss": "log_odds",
-            "binary": "log_odds",
-        }
-
-        if isinstance(model, dict) and "trees" in model:
+        # Check the registry for a loader
+        loader = TreeModelLoaderRegistry.get_loader(model)
+        if loader is not None:
+            loader.load(self, data, data_missing, model_output)
+        elif isinstance(model, dict) and "trees" in model:
             # This allows a dictionary to be passed that represents the model.
             # this dictionary has several numerical parameters and also a list of trees
             # where each tree is a dictionary describing that tree
@@ -1035,493 +1079,6 @@ class TreeEnsemble:
             self.trees = [SingleTree(t, data=data, data_missing=data_missing) for t in model["trees"]]
         elif isinstance(model, list) and isinstance(model[0], SingleTree):  # old-style direct-load format
             self.trees = model
-        elif safe_isinstance(
-            model,
-            [
-                "sklearn.ensemble.RandomForestRegressor",
-                "sklearn.ensemble.forest.RandomForestRegressor",
-                "econml.grf._base_grf.BaseGRF",
-                "causalml.inference.tree.CausalRandomForestRegressor",
-            ],
-        ):
-            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
-            self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
-            self.input_dtype = np.float32
-            scaling = 1.0 / len(model.estimators_)  # output is average of trees
-            self.trees = [
-                SingleTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_
-            ]
-            self.objective = objective_name_map.get(model.criterion, None)
-            self.tree_output = "raw_value"
-        elif safe_isinstance(
-            model,
-            [
-                "sklearn.ensemble.IsolationForest",
-                "sklearn.ensemble._iforest.IsolationForest",
-            ],
-        ):
-            self.dtype = np.float32
-            scaling = 1.0 / len(model.estimators_)  # output is average of trees
-            self.trees = [
-                IsoTree(e.tree_, f, scaling=scaling, data=data, data_missing=data_missing)
-                for e, f in zip(model.estimators_, model.estimators_features_)
-            ]
-            self.tree_output = "raw_value"
-        elif safe_isinstance(model, ["pyod.models.iforest.IForest"]):
-            self.dtype = np.float32
-            scaling = 1.0 / len(model.estimators_)  # output is average of trees
-            self.trees = [
-                IsoTree(e.tree_, f, scaling=scaling, data=data, data_missing=data_missing)
-                for e, f in zip(model.detector_.estimators_, model.detector_.estimators_features_)
-            ]
-            self.tree_output = "raw_value"
-        elif safe_isinstance(
-            model,
-            [
-                "sklearn.ensemble.ExtraTreesRegressor",
-                "sklearn.ensemble.forest.ExtraTreesRegressor",
-                "skopt.learning.forest.RandomForestRegressor",
-                "skopt.learning.forest.ExtraTreesRegressor",
-            ],
-        ):
-            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
-            self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
-            self.input_dtype = np.float32
-            scaling = 1.0 / len(model.estimators_)  # output is average of trees
-            self.trees = [
-                SingleTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_
-            ]
-            self.objective = objective_name_map.get(model.criterion, None)
-            self.tree_output = "raw_value"
-        elif safe_isinstance(
-            model,
-            [
-                "sklearn.tree.DecisionTreeRegressor",
-                "sklearn.tree.tree.DecisionTreeRegressor",
-                "econml.grf._base_grftree.GRFTree",
-                "causalml.inference.tree.causal.causaltree.CausalTreeRegressor",
-            ],
-        ):
-            self.internal_dtype = model.tree_.value.dtype.type
-            self.input_dtype = np.float32
-            self.trees = [SingleTree(model.tree_, data=data, data_missing=data_missing)]
-            self.objective = objective_name_map.get(model.criterion, None)
-            self.tree_output = "raw_value"
-        elif safe_isinstance(
-            model,
-            [
-                "sklearn.tree.DecisionTreeClassifier",
-                "sklearn.tree.tree.DecisionTreeClassifier",
-            ],
-        ):
-            self.internal_dtype = model.tree_.value.dtype.type
-            self.input_dtype = np.float32
-            self.trees = [SingleTree(model.tree_, normalize=True, data=data, data_missing=data_missing)]
-            self.objective = objective_name_map.get(model.criterion, None)
-            self.tree_output = "probability"
-        elif safe_isinstance(
-            model,
-            [
-                "sklearn.ensemble.ExtraTreesClassifier",
-                "sklearn.ensemble.forest.ExtraTreesClassifier",
-                "sklearn.ensemble.RandomForestClassifier",
-                "sklearn.ensemble.forest.RandomForestClassifier",
-            ],
-        ):
-            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
-            self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
-            self.input_dtype = np.float32
-            scaling = 1.0 / len(model.estimators_)  # output is average of trees
-            self.trees = [
-                SingleTree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing)
-                for e in model.estimators_
-            ]
-            self.objective = objective_name_map.get(model.criterion, None)
-            self.tree_output = "probability"
-        elif safe_isinstance(
-            model,
-            [
-                "sklearn.ensemble.GradientBoostingRegressor",
-                "sklearn.ensemble.gradient_boosting.GradientBoostingRegressor",
-            ],
-        ):
-            self.input_dtype = np.float32
-
-            # currently we only support the mean and quantile estimators
-            if safe_isinstance(
-                model.init_,
-                [
-                    "sklearn.ensemble.MeanEstimator",
-                    "sklearn.ensemble.gradient_boosting.MeanEstimator",
-                ],
-            ):
-                self.base_offset = model.init_.mean
-            elif safe_isinstance(
-                model.init_,
-                [
-                    "sklearn.ensemble.QuantileEstimator",
-                    "sklearn.ensemble.gradient_boosting.QuantileEstimator",
-                ],
-            ):
-                self.base_offset = model.init_.quantile
-            elif safe_isinstance(model.init_, "sklearn.dummy.DummyRegressor"):
-                self.base_offset = model.init_.constant_[0]
-            else:
-                emsg = f"Unsupported init model type: {type(model.init_)}"
-                raise InvalidModelError(emsg)
-
-            self.trees = [
-                SingleTree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing)
-                for e in model.estimators_[:, 0]
-            ]
-            self.objective = objective_name_map.get(model.criterion, None)
-            self.tree_output = "raw_value"
-        elif safe_isinstance(model, ["sklearn.ensemble.HistGradientBoostingRegressor"]):
-            # cf. GH #1028 for implementation notes
-            import sklearn
-
-            if self.model_output == "predict":
-                self.model_output = "raw"
-            self.input_dtype = sklearn.ensemble._hist_gradient_boosting.common.X_DTYPE
-            self.base_offset = model._baseline_prediction
-            self.trees = []
-            for p in model._predictors:
-                nodes = p[0].nodes
-                # each node has values: ('value', 'count', 'feature_idx', 'threshold', 'missing_go_to_left', 'left', 'right', 'gain', 'depth', 'is_leaf', 'bin_threshold')
-                tree = {
-                    "children_left": np.array([-1 if n[9] else n[5] for n in nodes]),
-                    "children_right": np.array([-1 if n[9] else n[6] for n in nodes]),
-                    "children_default": np.array([-1 if n[9] else (n[5] if n[4] else n[6]) for n in nodes]),
-                    "features": np.array([-2 if n[9] else n[2] for n in nodes]),
-                    "thresholds": np.array([n[3] for n in nodes], dtype=np.float64),
-                    "values": np.array([[n[0]] for n in nodes], dtype=np.float64),
-                    "node_sample_weight": np.array([n[1] for n in nodes], dtype=np.float64),
-                }
-                self.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
-            self.objective = objective_name_map.get(model.loss, None)
-            self.tree_output = "raw_value"
-        elif safe_isinstance(model, ["sklearn.ensemble.HistGradientBoostingClassifier"]):
-            # cf. GH #1028 for implementation notes
-            import sklearn
-
-            self.base_offset = model._baseline_prediction
-            has_len = hasattr(self.base_offset, "__len__")
-            # Note for newer sklearn versions, the base_offset is an array even for binary classification
-            if has_len and self.base_offset.shape == (1, 1):
-                self.base_offset = self.base_offset[0, 0]
-                has_len = False
-            if has_len and self.model_output != "raw":
-                emsg = (
-                    "Multi-output HistGradientBoostingClassifier models are not yet supported unless "
-                    'model_output="raw". See GitHub issue #1028.'
-                )
-                raise NotImplementedError(emsg)
-            self.input_dtype = sklearn.ensemble._hist_gradient_boosting.common.X_DTYPE
-            self.num_stacked_models = len(model._predictors[0])
-            if self.model_output == "predict_proba":
-                if self.num_stacked_models == 1:
-                    self.model_output = (
-                        "probability_doubled"  # with predict_proba we need to double the outputs to match
-                    )
-                else:
-                    self.model_output = "probability"
-            self.trees = []
-            for p in model._predictors:
-                for i in range(self.num_stacked_models):
-                    nodes = p[i].nodes
-                    # each node has values: ('value', 'count', 'feature_idx', 'threshold', 'missing_go_to_left', 'left', 'right', 'gain', 'depth', 'is_leaf', 'bin_threshold')
-                    tree = {
-                        "children_left": np.array([-1 if n[9] else n[5] for n in nodes]),
-                        "children_right": np.array([-1 if n[9] else n[6] for n in nodes]),
-                        "children_default": np.array([-1 if n[9] else (n[5] if n[4] else n[6]) for n in nodes]),
-                        "features": np.array([-2 if n[9] else n[2] for n in nodes]),
-                        "thresholds": np.array([n[3] for n in nodes], dtype=np.float64),
-                        "values": np.array([[n[0]] for n in nodes], dtype=np.float64),
-                        "node_sample_weight": np.array([n[1] for n in nodes], dtype=np.float64),
-                    }
-                    self.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
-            self.objective = objective_name_map.get(model.loss, None)
-            self.tree_output = "log_odds"
-        elif safe_isinstance(
-            model,
-            [
-                "sklearn.ensemble.GradientBoostingClassifier",
-                "sklearn.ensemble._gb.GradientBoostingClassifier",
-                "sklearn.ensemble.gradient_boosting.GradientBoostingClassifier",
-            ],
-        ):
-            self.input_dtype = np.float32
-
-            # TODO: deal with estimators for each class
-            if model.estimators_.shape[1] > 1:
-                emsg = "GradientBoostingClassifier is only supported for binary classification right now!"
-                raise InvalidModelError(emsg)
-
-            # currently we only support the logs odds estimator
-            if safe_isinstance(
-                model.init_,
-                [
-                    "sklearn.ensemble.LogOddsEstimator",
-                    "sklearn.ensemble.gradient_boosting.LogOddsEstimator",
-                ],
-            ):
-                self.base_offset = model.init_.prior
-                self.tree_output = "log_odds"
-            elif safe_isinstance(model.init_, "sklearn.dummy.DummyClassifier"):
-                self.base_offset = scipy.special.logit(
-                    model.init_.class_prior_[1]
-                )  # with two classes the trees only model the second class.
-                self.tree_output = "log_odds"
-            else:
-                emsg = f"Unsupported init model type: {type(model.init_)}"
-                raise InvalidModelError(emsg)
-
-            self.trees = [
-                SingleTree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing)
-                for e in model.estimators_[:, 0]
-            ]
-            self.objective = objective_name_map.get(model.criterion, None)
-        elif "pyspark.ml" in str(type(model)):
-            assert_import("pyspark")
-            self.model_type = "pyspark"
-            # model._java_obj.getImpurity() can be gini, entropy or variance.
-            self.objective = objective_name_map.get(model._java_obj.getImpurity(), None)
-            if "Classification" in str(type(model)):
-                normalize = True
-                self.tree_output = "probability"
-            else:
-                normalize = False
-                self.tree_output = "raw_value"
-            # Spark Random forest, create 1 weighted (avg) tree per sub-model
-            if safe_isinstance(
-                model,
-                [
-                    "pyspark.ml.classification.RandomForestClassificationModel",
-                    "pyspark.ml.regression.RandomForestRegressionModel",
-                ],
-            ):
-                sum_weight = sum(model.treeWeights)  # output is average of trees
-                self.trees = [
-                    SingleTree(tree, normalize=normalize, scaling=model.treeWeights[i] / sum_weight)
-                    for i, tree in enumerate(model.trees)
-                ]
-            # Spark GBT, create 1 weighted (learning rate) tree per sub-model
-            elif safe_isinstance(
-                model,
-                [
-                    "pyspark.ml.classification.GBTClassificationModel",
-                    "pyspark.ml.regression.GBTRegressionModel",
-                ],
-            ):
-                self.objective = "squared_error"  # GBT subtree use the variance
-                self.tree_output = "raw_value"
-                self.trees = [
-                    SingleTree(tree, normalize=False, scaling=model.treeWeights[i])
-                    for i, tree in enumerate(model.trees)
-                ]
-            # Spark Basic model (single tree)
-            elif safe_isinstance(
-                model,
-                [
-                    "pyspark.ml.classification.DecisionTreeClassificationModel",
-                    "pyspark.ml.regression.DecisionTreeRegressionModel",
-                ],
-            ):
-                self.trees = [SingleTree(model, normalize=normalize, scaling=1)]
-            else:
-                emsg = f"Unsupported Spark model type: {type(model)}"
-                raise NotImplementedError(emsg)
-        elif safe_isinstance(model, "xgboost.core.Booster"):
-            self.original_model = model
-            self._set_xgboost_model_attributes(
-                data,
-                data_missing,
-                objective_name_map,
-                tree_output_name_map,
-            )
-        elif safe_isinstance(model, "xgboost.sklearn.XGBClassifier"):
-            self.input_dtype = np.float32
-            self.original_model = model.get_booster()
-            self._set_xgboost_model_attributes(
-                data,
-                data_missing,
-                objective_name_map,
-                tree_output_name_map,
-            )
-
-            if self.model_output == "predict_proba":
-                if self.num_stacked_models == 1:
-                    # with predict_proba we need to double the outputs to match
-                    self.model_output = "probability_doubled"
-                else:
-                    self.model_output = "probability"
-            # Some properties of the sklearn API are passed to a DMatrix object in
-            # xgboost We need to make sure we do the same here - GH #3313
-            self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
-        elif safe_isinstance(model, ["xgboost.sklearn.XGBRegressor", "xgboost.sklearn.XGBRanker"]):
-            self.original_model = model.get_booster()
-            self._set_xgboost_model_attributes(
-                data,
-                data_missing,
-                objective_name_map,
-                tree_output_name_map,
-            )
-            # Some properties of the sklearn API are passed to a DMatrix object in
-            # xgboost We need to make sure we do the same here - GH #3313
-            self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
-        elif safe_isinstance(model, "lightgbm.basic.Booster"):
-            assert_import("lightgbm")
-            self.model_type = "lightgbm"
-            self.original_model = model
-            tree_info = self.original_model.dump_model()["tree_info"]
-            try:
-                self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
-            except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
-
-            self.objective = objective_name_map.get(model.params.get("objective", "regression"), None)
-            self.tree_output = tree_output_name_map.get(model.params.get("objective", "regression"), None)
-
-        elif safe_isinstance(model, "gpboost.basic.Booster"):
-            assert_import("gpboost")
-            self.model_type = "gpboost"
-            self.original_model = model
-            tree_info = self.original_model.dump_model()["tree_info"]
-            try:
-                self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
-            except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
-
-            self.objective = objective_name_map.get(model.params.get("objective", "regression"), None)
-            self.tree_output = tree_output_name_map.get(model.params.get("objective", "regression"), None)
-
-        elif safe_isinstance(model, "lightgbm.sklearn.LGBMRegressor"):
-            assert_import("lightgbm")
-            self.model_type = "lightgbm"
-            self.original_model = model.booster_
-            tree_info = self.original_model.dump_model()["tree_info"]
-            try:
-                self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
-            except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
-            self.objective = objective_name_map.get(model.objective, None)
-            self.tree_output = tree_output_name_map.get(model.objective, None)
-            if model.objective is None:
-                self.objective = "squared_error"
-                self.tree_output = "raw_value"
-        elif safe_isinstance(model, "lightgbm.sklearn.LGBMRanker"):
-            assert_import("lightgbm")
-            self.model_type = "lightgbm"
-            self.original_model = model.booster_
-            tree_info = self.original_model.dump_model()["tree_info"]
-            try:
-                self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
-            except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
-            # Note: for ranker, leaving tree_output and objective as None as they
-            # are not implemented in native code yet
-        elif safe_isinstance(model, "lightgbm.sklearn.LGBMClassifier"):
-            assert_import("lightgbm")
-            self.model_type = "lightgbm"
-            if model.n_classes_ > 2:
-                self.num_stacked_models = model.n_classes_
-            self.original_model = model.booster_
-            tree_info = self.original_model.dump_model()["tree_info"]
-            try:
-                self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
-            except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
-            self.objective = objective_name_map.get(model.objective, None)
-            self.tree_output = tree_output_name_map.get(model.objective, None)
-            if model.objective is None:
-                self.objective = "binary_crossentropy"
-                self.tree_output = "log_odds"
-        elif safe_isinstance(model, "catboost.core.CatBoostRegressor"):
-            assert_import("catboost")
-            self.model_type = "catboost"
-            self.original_model = model
-            self.cat_feature_indices = model.get_cat_feature_indices()
-            try:
-                cb_loader = CatBoostTreeModelLoader(model)
-                self.trees = cb_loader.get_trees(data=data, data_missing=data_missing)
-            except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
-        elif safe_isinstance(model, "catboost.core.CatBoostClassifier"):
-            assert_import("catboost")
-            self.model_type = "catboost"
-            self.original_model = model
-            self.input_dtype = np.float32
-            try:
-                cb_loader = CatBoostTreeModelLoader(model)
-                self.trees = cb_loader.get_trees(data=data, data_missing=data_missing)
-            except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
-            self.tree_output = "log_odds"
-            self.objective = "binary_crossentropy"
-            self.cat_feature_indices = model.get_cat_feature_indices()
-        elif safe_isinstance(model, "catboost.core.CatBoost"):
-            assert_import("catboost")
-            self.model_type = "catboost"
-            self.original_model = model
-            self.cat_feature_indices = model.get_cat_feature_indices()
-        elif safe_isinstance(model, "imblearn.ensemble._forest.BalancedRandomForestClassifier"):
-            self.input_dtype = np.float32
-            scaling = 1.0 / len(model.estimators_)  # output is average of trees
-            self.trees = [
-                SingleTree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing)
-                for e in model.estimators_
-            ]
-            self.objective = objective_name_map.get(model.criterion, None)
-            self.tree_output = "probability"
-        elif safe_isinstance(
-            model,
-            [
-                "ngboost.ngboost.NGBoost",
-                "ngboost.api.NGBRegressor",
-                "ngboost.api.NGBClassifier",
-            ],
-        ):
-            assert model.base_models, "The NGBoost model has empty `base_models`! Have you called `model.fit`?"
-            if self.model_output == "raw":
-                param_idx = 0  # default to the first parameter of the output distribution
-                warnings.warn(
-                    'Translating model_output="raw" to model_output=0 for the 0-th parameter in the distribution. Use model_output=0 directly to avoid this warning.'
-                )
-            elif isinstance(self.model_output, int):
-                param_idx = self.model_output
-                self.model_output = "raw"  # note that after loading we have a new model_output type
-            assert safe_isinstance(
-                model.base_models[0][param_idx],
-                ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor"],
-            ), "You must use default_tree_learner!"
-            shap_trees = [trees[param_idx] for trees in model.base_models]
-            self.internal_dtype = shap_trees[0].tree_.value.dtype.type
-            self.input_dtype = np.float32
-            scaling = -model.learning_rate * np.array(model.scalings)  # output is weighted average of trees
-            # ngboost reorders the features, so we need to map them back to the original order
-            missing_col_idxs = [[i for i in range(model.n_features) if i not in col_idx] for col_idx in model.col_idxs]
-            feature_mapping = [
-                {i: col_idx for i, col_idx in enumerate(list(col_idxs) + missing_col_idx)}
-                for col_idxs, missing_col_idx in zip(model.col_idxs, missing_col_idxs)
-            ]
-            self.trees = []
-            for idx, shap_tree in enumerate(shap_trees):
-                tree_ = shap_tree.tree_
-                values = tree_.value.reshape(tree_.value.shape[0], tree_.value.shape[1] * tree_.value.shape[2])
-                values = values * scaling[idx]  # type: ignore[index]
-                tree = {
-                    "children_left": tree_.children_left.astype(np.int32),
-                    "children_right": tree_.children_right.astype(np.int32),
-                    "children_default": tree_.children_left,
-                    "features": np.array([feature_mapping[idx].get(i, i) for i in tree_.feature]),
-                    "thresholds": tree_.threshold.astype(np.float64),
-                    "values": values,
-                    "node_sample_weight": tree_.weighted_n_node_samples.astype(np.float64),
-                }
-                self.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
-            self.objective = objective_name_map.get(shap_trees[0].criterion, None)
-            self.tree_output = "raw_value"
-            self.base_offset = model.init_params[param_idx]
         else:
             raise InvalidModelError("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
@@ -1578,31 +1135,6 @@ class TreeEnsemble:
                 self.base_offset = (np.ones(self.num_outputs) * self.base_offset).astype(self.internal_dtype)
             self.base_offset = self.base_offset.flatten()
             assert len(self.base_offset) == self.num_outputs
-
-    def _set_xgboost_model_attributes(
-        self,
-        data: npt.NDArray[Any] | None,
-        data_missing: npt.NDArray[np.bool_] | None,
-        objective_name_map: dict[str, str],
-        tree_output_name_map: dict[str, str],
-    ) -> None:
-        self.model_type = "xgboost"
-        loader = XGBTreeModelLoader(self.original_model)
-
-        self.trees = loader.get_trees(data=data, data_missing=data_missing)
-        self.base_offset = loader.base_score
-        self.objective = objective_name_map.get(loader.name_obj, None)
-        self.tree_output = tree_output_name_map.get(loader.name_obj, None)
-
-        self.num_stacked_models = loader.n_trees_per_iter
-        self.cat_feature_indices = loader.cat_feature_indices
-        best_iteration = getattr(
-            self.original_model,
-            "best_iteration",
-            self.original_model.num_boosted_rounds() - 1,
-        )
-        self.tree_limit = (best_iteration + 1) * self.num_stacked_models
-        self._xgboost_n_outputs = loader.n_targets
 
     @property
     def num_outputs(self) -> int:
@@ -2196,7 +1728,7 @@ def get_xgboost_dmatrix_properties(model: Any) -> dict[str, Any]:
     return dmatrix_attributes
 
 
-class XGBTreeModelLoader:
+class XGBTreeModelLoader(BaseTreeModelLoader):
     """This loads an XGBoost model directly from a raw memory dump."""
 
     n_trees_per_iter: int
@@ -2221,13 +1753,29 @@ class XGBTreeModelLoader:
     categories: list[list[list[int]]]
     cat_feature_indices: npt.NDArray[Any] | None
 
+    @staticmethod
+    def supports_model(model: Any) -> bool:
+        return safe_isinstance(
+            model,
+            [
+                "xgboost.core.Booster",
+                "xgboost.sklearn.XGBClassifier",
+                "xgboost.sklearn.XGBRegressor",
+                "xgboost.sklearn.XGBRanker",
+            ],
+        )
+
     def __init__(self, xgb_model: Any) -> None:
+        super().__init__(xgb_model)
         import xgboost as xgb
 
         _check_xgboost_version(xgb.__version__)
-        model: xgb.Booster = xgb_model
+        if hasattr(xgb_model, "get_booster"):
+            model = xgb_model.get_booster()
+        else:
+            model = xgb_model
 
-        raw = xgb_model.save_raw(raw_format="ubj")
+        raw = model.save_raw(raw_format="ubj")
         with io.BytesIO(raw) as fd:
             jmodel = decode_ubjson_buffer(fd)
 
@@ -2456,13 +2004,71 @@ class XGBTreeModelLoader:
         print("--- gbtree specific parameters ---")
         print("num_feature =", self.num_feature)
 
+    def load(
+        self,
+        ensemble: Any,
+        data: npt.NDArray[Any] | None,
+        data_missing: npt.NDArray[np.bool_] | None,
+        model_output: str | None,
+    ) -> None:
+        ensemble.model_type = "xgboost"
+        # Store original model for get_booster cases
+        if safe_isinstance(
+            self.model, ["xgboost.sklearn.XGBClassifier", "xgboost.sklearn.XGBRegressor", "xgboost.sklearn.XGBRanker"]
+        ):
+            ensemble.original_model = self.model.get_booster()
+            ensemble.input_dtype = np.float32
+        else:
+            ensemble.original_model = self.model
 
-class CatBoostTreeModelLoader:
+        ensemble.trees = self.get_trees(data=data, data_missing=data_missing)
+        ensemble.base_offset = self.base_score
+        ensemble.objective = ensemble.objective_name_map.get(self.name_obj, None)
+        ensemble.tree_output = ensemble.tree_output_name_map.get(self.name_obj, None)
+
+        ensemble.num_stacked_models = self.n_trees_per_iter
+        ensemble.cat_feature_indices = self.cat_feature_indices
+        best_iteration = getattr(
+            ensemble.original_model,
+            "best_iteration",
+            ensemble.original_model.num_boosted_rounds() - 1,
+        )
+        ensemble.tree_limit = (best_iteration + 1) * ensemble.num_stacked_models
+        ensemble._xgboost_n_outputs = self.n_targets
+
+        if safe_isinstance(
+            self.model, ["xgboost.sklearn.XGBClassifier", "xgboost.sklearn.XGBRegressor", "xgboost.sklearn.XGBRanker"]
+        ):
+            if safe_isinstance(self.model, "xgboost.sklearn.XGBClassifier"):
+                if ensemble.model_output == "predict_proba":
+                    if ensemble.num_stacked_models == 1:
+                        # with predict_proba we need to double the outputs to match
+                        ensemble.model_output = "probability_doubled"
+                    else:
+                        ensemble.model_output = "probability"
+            # Some properties of the sklearn API are passed to a DMatrix object in
+            # xgboost We need to make sure we do the same here - GH #3313
+            ensemble._xgb_dmatrix_props = get_xgboost_dmatrix_properties(self.model)
+
+
+class CatBoostTreeModelLoader(BaseTreeModelLoader):
     loaded_cb_model: dict[str, Any]
     num_trees: int
     max_depth: int
 
+    @staticmethod
+    def supports_model(model: Any) -> bool:
+        return safe_isinstance(
+            model,
+            [
+                "catboost.core.CatBoostRegressor",
+                "catboost.core.CatBoostClassifier",
+                "catboost.core.CatBoost",
+            ],
+        )
+
     def __init__(self, cb_model: Any) -> None:
+        super().__init__(cb_model)
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -2555,3 +2161,514 @@ class CatBoostTreeModelLoader:
             )
 
         return trees
+
+    def load(
+        self,
+        ensemble: Any,
+        data: npt.NDArray[Any] | None,
+        data_missing: npt.NDArray[np.bool_] | None,
+        model_output: str | None,
+    ) -> None:
+        ensemble.model_type = "catboost"
+        ensemble.original_model = self.model
+        ensemble.cat_feature_indices = self.model.get_cat_feature_indices()
+
+        if safe_isinstance(self.model, "catboost.core.CatBoostClassifier"):
+            ensemble.input_dtype = np.float32
+            ensemble.tree_output = "log_odds"
+            ensemble.objective = "binary_crossentropy"
+
+        try:
+            ensemble.trees = self.get_trees(data=data, data_missing=data_missing)
+        except Exception:
+            ensemble.trees = None
+
+
+TreeModelLoaderRegistry.register(CatBoostTreeModelLoader)
+
+
+class SklearnTreeModelLoader(BaseTreeModelLoader):
+    """Loads various scikit-learn and scikit-learn-like models."""
+
+    @staticmethod
+    def supports_model(model: Any) -> bool:
+        return safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.RandomForestRegressor",
+                "sklearn.ensemble.forest.RandomForestRegressor",
+                "sklearn.ensemble.ExtraTreesRegressor",
+                "sklearn.ensemble.forest.ExtraTreesRegressor",
+                "sklearn.ensemble.RandomForestClassifier",
+                "sklearn.ensemble.forest.RandomForestClassifier",
+                "sklearn.ensemble.ExtraTreesClassifier",
+                "sklearn.ensemble.forest.ExtraTreesClassifier",
+                "sklearn.tree.DecisionTreeRegressor",
+                "sklearn.tree.tree.DecisionTreeRegressor",
+                "sklearn.tree.DecisionTreeClassifier",
+                "sklearn.tree.tree.DecisionTreeClassifier",
+                "sklearn.ensemble.IsolationForest",
+                "sklearn.ensemble._iforest.IsolationForest",
+                "sklearn.ensemble.GradientBoostingRegressor",
+                "sklearn.ensemble.gradient_boosting.GradientBoostingRegressor",
+                "sklearn.ensemble.GradientBoostingClassifier",
+                "sklearn.ensemble._gb.GradientBoostingClassifier",
+                "sklearn.ensemble.gradient_boosting.GradientBoostingClassifier",
+                "sklearn.ensemble.HistGradientBoostingRegressor",
+                "sklearn.ensemble.HistGradientBoostingClassifier",
+                "econml.grf._base_grf.BaseGRF",
+                "econml.grf._base_grftree.GRFTree",
+                "causalml.inference.tree.CausalRandomForestRegressor",
+                "causalml.inference.tree.causal.causaltree.CausalTreeRegressor",
+                "skopt.learning.forest.RandomForestRegressor",
+                "skopt.learning.forest.ExtraTreesRegressor",
+                "pyod.models.iforest.IForest",
+                "imblearn.ensemble._forest.BalancedRandomForestClassifier",
+                "imblearn.ensemble.BalancedRandomForestClassifier",
+            ],
+        )
+
+    def load(
+        self,
+        ensemble: Any,
+        data: npt.NDArray[Any] | None,
+        data_missing: npt.NDArray[np.bool_] | None,
+        model_output: str | None,
+    ) -> None:
+        model = self.model
+        objective_name_map = ensemble.objective_name_map
+
+        if safe_isinstance(
+            model,
+            [
+                "imblearn.ensemble._forest.BalancedRandomForestClassifier",
+                "imblearn.ensemble.BalancedRandomForestClassifier",
+            ],
+        ):
+            ensemble.input_dtype = np.float32
+            scaling = 1.0 / len(model.estimators_)
+            ensemble.trees = [
+                SingleTree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing)
+                for e in model.estimators_
+            ]
+            ensemble.objective = objective_name_map.get(model.criterion, None)
+            ensemble.tree_output = "probability"
+        elif safe_isinstance(model, ["sklearn.ensemble.IsolationForest", "sklearn.ensemble._iforest.IsolationForest"]):
+            ensemble.dtype = np.float32
+            scaling = 1.0 / len(model.estimators_)
+            ensemble.trees = [
+                IsoTree(e.tree_, f, scaling=scaling, data=data, data_missing=data_missing)
+                for e, f in zip(model.estimators_, model.estimators_features_)
+            ]
+            ensemble.tree_output = "raw_value"
+        elif safe_isinstance(model, ["pyod.models.iforest.IForest"]):
+            ensemble.dtype = np.float32
+            scaling = 1.0 / len(model.estimators_)
+            ensemble.trees = [
+                IsoTree(e.tree_, f, scaling=scaling, data=data, data_missing=data_missing)
+                for e, f in zip(model.detector_.estimators_, model.detector_.estimators_features_)
+            ]
+            ensemble.tree_output = "raw_value"
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.tree.DecisionTreeRegressor",
+                "sklearn.tree.tree.DecisionTreeRegressor",
+                "econml.grf._base_grftree.GRFTree",
+                "causalml.inference.tree.causal.causaltree.CausalTreeRegressor",
+            ],
+        ):
+            ensemble.internal_dtype = model.tree_.value.dtype.type
+            ensemble.input_dtype = np.float32
+            ensemble.trees = [SingleTree(model.tree_, data=data, data_missing=data_missing)]
+            ensemble.objective = objective_name_map.get(model.criterion, None)
+            ensemble.tree_output = "raw_value"
+        elif safe_isinstance(
+            model, ["sklearn.tree.DecisionTreeClassifier", "sklearn.tree.tree.DecisionTreeClassifier"]
+        ):
+            ensemble.internal_dtype = model.tree_.value.dtype.type
+            ensemble.input_dtype = np.float32
+            ensemble.trees = [SingleTree(model.tree_, normalize=True, data=data, data_missing=data_missing)]
+            ensemble.objective = objective_name_map.get(model.criterion, None)
+            ensemble.tree_output = "probability"
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.RandomForestClassifier",
+                "sklearn.ensemble.forest.RandomForestClassifier",
+                "sklearn.ensemble.ExtraTreesClassifier",
+                "sklearn.ensemble.forest.ExtraTreesClassifier",
+            ],
+        ):
+            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
+            ensemble.internal_dtype = model.estimators_[0].tree_.value.dtype.type
+            ensemble.input_dtype = np.float32
+            scaling = 1.0 / len(model.estimators_)
+            ensemble.trees = [
+                SingleTree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing)
+                for e in model.estimators_
+            ]
+            ensemble.objective = objective_name_map.get(model.criterion, None)
+            ensemble.tree_output = "probability"
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.GradientBoostingRegressor",
+                "sklearn.ensemble.gradient_boosting.GradientBoostingRegressor",
+            ],
+        ):
+            ensemble.input_dtype = np.float32
+            if safe_isinstance(
+                model.init_, ["sklearn.ensemble.MeanEstimator", "sklearn.ensemble.gradient_boosting.MeanEstimator"]
+            ):
+                ensemble.base_offset = model.init_.mean
+            elif safe_isinstance(
+                model.init_,
+                ["sklearn.ensemble.QuantileEstimator", "sklearn.ensemble.gradient_boosting.QuantileEstimator"],
+            ):
+                ensemble.base_offset = model.init_.quantile
+            elif safe_isinstance(model.init_, "sklearn.dummy.DummyRegressor"):
+                ensemble.base_offset = model.init_.constant_[0]
+            else:
+                raise InvalidModelError(f"Unsupported init model type: {type(model.init_)}")
+
+            ensemble.trees = [
+                SingleTree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing)
+                for e in model.estimators_[:, 0]
+            ]
+            ensemble.objective = objective_name_map.get(model.criterion, None)
+            ensemble.tree_output = "raw_value"
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.GradientBoostingClassifier",
+                "sklearn.ensemble._gb.GradientBoostingClassifier",
+                "sklearn.ensemble.gradient_boosting.GradientBoostingClassifier",
+            ],
+        ):
+            ensemble.input_dtype = np.float32
+            if model.estimators_.shape[1] > 1:
+                raise InvalidModelError(
+                    "GradientBoostingClassifier is only supported for binary classification right now!"
+                )
+
+            if safe_isinstance(
+                model.init_,
+                ["sklearn.ensemble.LogOddsEstimator", "sklearn.ensemble.gradient_boosting.LogOddsEstimator"],
+            ):
+                ensemble.base_offset = model.init_.prior
+                ensemble.tree_output = "log_odds"
+            elif safe_isinstance(model.init_, "sklearn.dummy.DummyClassifier"):
+                ensemble.base_offset = scipy.special.logit(model.init_.class_prior_[1])
+                ensemble.tree_output = "log_odds"
+            else:
+                raise InvalidModelError(f"Unsupported init model type: {type(model.init_)}")
+
+            ensemble.trees = [
+                SingleTree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing)
+                for e in model.estimators_[:, 0]
+            ]
+            ensemble.objective = objective_name_map.get(model.criterion, None)
+        elif safe_isinstance(
+            model, ["sklearn.ensemble.HistGradientBoostingRegressor", "sklearn.ensemble.HistGradientBoostingClassifier"]
+        ):
+            import sklearn
+
+            if safe_isinstance(model, "sklearn.ensemble.HistGradientBoostingRegressor"):
+                if ensemble.model_output == "predict":
+                    ensemble.model_output = "raw"
+                ensemble.input_dtype = sklearn.ensemble._hist_gradient_boosting.common.X_DTYPE
+                ensemble.base_offset = model._baseline_prediction
+                ensemble.trees = []
+                for p in model._predictors:
+                    nodes = p[0].nodes
+                    tree = {
+                        "children_left": np.array([-1 if n[9] else n[5] for n in nodes]),
+                        "children_right": np.array([-1 if n[9] else n[6] for n in nodes]),
+                        "children_default": np.array([-1 if n[9] else (n[5] if n[4] else n[6]) for n in nodes]),
+                        "features": np.array([-2 if n[9] else n[2] for n in nodes]),
+                        "thresholds": np.array([n[3] for n in nodes], dtype=np.float64),
+                        "values": np.array([[n[0]] for n in nodes], dtype=np.float64),
+                        "node_sample_weight": np.array([n[1] for n in nodes], dtype=np.float64),
+                    }
+                    ensemble.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
+                ensemble.objective = objective_name_map.get(model.loss, None)
+                ensemble.tree_output = "raw_value"
+            else:  # HistGradientBoostingClassifier
+                ensemble.base_offset = model._baseline_prediction
+                has_len = hasattr(ensemble.base_offset, "__len__")
+                if has_len and ensemble.base_offset.shape == (1, 1):
+                    ensemble.base_offset = ensemble.base_offset[0, 0]
+                    has_len = False
+                if has_len and ensemble.model_output != "raw":
+                    raise NotImplementedError(
+                        "Multi-output HistGradientBoostingClassifier models are not yet supported unless model_output='raw'."
+                    )
+                ensemble.input_dtype = sklearn.ensemble._hist_gradient_boosting.common.X_DTYPE
+                ensemble.num_stacked_models = len(model._predictors[0])
+                if ensemble.model_output == "predict_proba":
+                    if ensemble.num_stacked_models == 1:
+                        ensemble.model_output = "probability_doubled"
+                    else:
+                        ensemble.model_output = "probability"
+                ensemble.trees = []
+                for p in model._predictors:
+                    for i in range(ensemble.num_stacked_models):
+                        nodes = p[i].nodes
+                        tree = {
+                            "children_left": np.array([-1 if n[9] else n[5] for n in nodes]),
+                            "children_right": np.array([-1 if n[9] else n[6] for n in nodes]),
+                            "children_default": np.array([-1 if n[9] else (n[5] if n[4] else n[6]) for n in nodes]),
+                            "features": np.array([-2 if n[9] else n[2] for n in nodes]),
+                            "thresholds": np.array([n[3] for n in nodes], dtype=np.float64),
+                            "values": np.array([[n[0]] for n in nodes], dtype=np.float64),
+                            "node_sample_weight": np.array([n[1] for n in nodes], dtype=np.float64),
+                        }
+                        ensemble.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
+                ensemble.objective = objective_name_map.get(model.loss, None)
+                ensemble.tree_output = "log_odds"
+        else:  # RandomForestRegressor, ExtraTreesRegressor, etc.
+            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
+            ensemble.internal_dtype = model.estimators_[0].tree_.value.dtype.type
+            ensemble.input_dtype = np.float32
+            scaling = 1.0 / len(model.estimators_)
+            ensemble.trees = [
+                SingleTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_
+            ]
+            ensemble.objective = objective_name_map.get(model.criterion, None)
+            ensemble.tree_output = "raw_value"
+
+
+TreeModelLoaderRegistry.register(SklearnTreeModelLoader)
+
+
+class LightGBMTreeModelLoader(BaseTreeModelLoader):
+    """Loads LightGBM models."""
+
+    @staticmethod
+    def supports_model(model: Any) -> bool:
+        return safe_isinstance(
+            model,
+            [
+                "lightgbm.basic.Booster",
+                "lightgbm.sklearn.LGBMRegressor",
+                "lightgbm.sklearn.LGBMRanker",
+                "lightgbm.sklearn.LGBMClassifier",
+            ],
+        )
+
+    def load(
+        self,
+        ensemble: Any,
+        data: npt.NDArray[Any] | None,
+        data_missing: npt.NDArray[np.bool_] | None,
+        model_output: str | None,
+    ) -> None:
+        model = self.model
+        objective_name_map = ensemble.objective_name_map
+        tree_output_name_map = ensemble.tree_output_name_map
+
+        ensemble.model_type = "lightgbm"
+        if safe_isinstance(model, "lightgbm.basic.Booster"):
+            ensemble.original_model = model
+            objective = model.params.get("objective", "regression")
+            ensemble.objective = objective_name_map.get(objective, None)
+            ensemble.tree_output = tree_output_name_map.get(objective, None)
+        else:
+            ensemble.original_model = model.booster_
+            if safe_isinstance(model, "lightgbm.sklearn.LGBMClassifier"):
+                if model.n_classes_ > 2:
+                    ensemble.num_stacked_models = model.n_classes_
+                ensemble.objective = objective_name_map.get(model.objective, None)
+                ensemble.tree_output = tree_output_name_map.get(model.objective, None)
+                if model.objective is None:
+                    ensemble.objective = "binary_crossentropy"
+                    ensemble.tree_output = "log_odds"
+            elif safe_isinstance(model, "lightgbm.sklearn.LGBMRegressor"):
+                ensemble.objective = objective_name_map.get(model.objective, None)
+                ensemble.tree_output = tree_output_name_map.get(model.objective, None)
+                if model.objective is None:
+                    ensemble.objective = "squared_error"
+                    ensemble.tree_output = "raw_value"
+            elif safe_isinstance(model, "lightgbm.sklearn.LGBMRanker"):
+                pass  # logic for ranker
+
+        tree_info = ensemble.original_model.dump_model()["tree_info"]
+        try:
+            ensemble.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
+        except Exception:
+            ensemble.trees = None
+
+
+TreeModelLoaderRegistry.register(LightGBMTreeModelLoader)
+
+
+class GPBoostTreeModelLoader(BaseTreeModelLoader):
+    """Loads GPBoost models."""
+
+    @staticmethod
+    def supports_model(model: Any) -> bool:
+        return safe_isinstance(model, "gpboost.basic.Booster")
+
+    def load(
+        self,
+        ensemble: Any,
+        data: npt.NDArray[Any] | None,
+        data_missing: npt.NDArray[np.bool_] | None,
+        model_output: str | None,
+    ) -> None:
+        model = self.model
+        objective_name_map = ensemble.objective_name_map
+        tree_output_name_map = ensemble.tree_output_name_map
+
+        ensemble.model_type = "gpboost"
+        ensemble.original_model = model
+        tree_info = ensemble.original_model.dump_model()["tree_info"]
+        try:
+            ensemble.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
+        except Exception:
+            ensemble.trees = None
+
+        objective = model.params.get("objective", "regression")
+        ensemble.objective = objective_name_map.get(objective, None)
+        ensemble.tree_output = tree_output_name_map.get(objective, None)
+
+
+TreeModelLoaderRegistry.register(GPBoostTreeModelLoader)
+
+
+class SparkTreeModelLoader(BaseTreeModelLoader):
+    """Loads Spark models."""
+
+    @staticmethod
+    def supports_model(model: Any) -> bool:
+        return "pyspark.ml" in str(type(model))
+
+    def load(
+        self,
+        ensemble: Any,
+        data: npt.NDArray[Any] | None,
+        data_missing: npt.NDArray[np.bool_] | None,
+        model_output: str | None,
+    ) -> None:
+        model = self.model
+        objective_name_map = ensemble.objective_name_map
+
+        ensemble.model_type = "pyspark"
+        ensemble.objective = objective_name_map.get(model._java_obj.getImpurity(), None)
+        if "Classification" in str(type(model)):
+            normalize = True
+            ensemble.tree_output = "probability"
+        else:
+            normalize = False
+            ensemble.tree_output = "raw_value"
+
+        if safe_isinstance(
+            model,
+            [
+                "pyspark.ml.classification.RandomForestClassificationModel",
+                "pyspark.ml.regression.RandomForestRegressionModel",
+            ],
+        ):
+            sum_weight = sum(model.treeWeights)
+            ensemble.trees = [
+                SingleTree(tree, normalize=normalize, scaling=model.treeWeights[i] / sum_weight)
+                for i, tree in enumerate(model.trees)
+            ]
+        elif safe_isinstance(
+            model, ["pyspark.ml.classification.GBTClassificationModel", "pyspark.ml.regression.GBTRegressionModel"]
+        ):
+            ensemble.objective = "squared_error"
+            ensemble.tree_output = "raw_value"
+            ensemble.trees = [
+                SingleTree(tree, normalize=False, scaling=model.treeWeights[i]) for i, tree in enumerate(model.trees)
+            ]
+        elif safe_isinstance(
+            model,
+            [
+                "pyspark.ml.classification.DecisionTreeClassificationModel",
+                "pyspark.ml.regression.DecisionTreeRegressionModel",
+            ],
+        ):
+            ensemble.trees = [SingleTree(model, normalize=normalize, scaling=1)]
+        else:
+            raise NotImplementedError(f"Unsupported Spark model type: {type(model)}")
+
+
+TreeModelLoaderRegistry.register(SparkTreeModelLoader)
+
+
+class NGBoostTreeModelLoader(BaseTreeModelLoader):
+    """Loads NGBoost models."""
+
+    @staticmethod
+    def supports_model(model: Any) -> bool:
+        return safe_isinstance(
+            model,
+            [
+                "ngboost.ngboost.NGBoost",
+                "ngboost.api.NGBRegressor",
+                "ngboost.api.NGBClassifier",
+            ],
+        )
+
+    def load(
+        self,
+        ensemble: Any,
+        data: npt.NDArray[Any] | None,
+        data_missing: npt.NDArray[np.bool_] | None,
+        model_output: str | None,
+    ) -> None:
+        model = self.model
+        objective_name_map = ensemble.objective_name_map
+
+        assert model.base_models, "The NGBoost model has empty `base_models`! Have you called `model.fit`?"
+        if ensemble.model_output == "raw":
+            param_idx = 0  # default to the first parameter of the output distribution
+            warnings.warn(
+                'Translating model_output="raw" to model_output=0 for the 0-th parameter in the distribution. Use model_output=0 directly to avoid this warning.'
+            )
+        elif isinstance(ensemble.model_output, int):
+            param_idx = ensemble.model_output
+            ensemble.model_output = "raw"  # note that after loading we have a new model_output type
+        else:
+            param_idx = 0
+
+        assert safe_isinstance(
+            model.base_models[0][param_idx],
+            ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor"],
+        ), "You must use default_tree_learner!"
+        shap_trees = [trees[param_idx] for trees in model.base_models]
+        ensemble.internal_dtype = shap_trees[0].tree_.value.dtype.type
+        ensemble.input_dtype = np.float32
+        scaling = -model.learning_rate * np.array(model.scalings)  # output is weighted average of trees
+        # ngboost reorders the features, so we need to map them back to the original order
+        missing_col_idxs = [[i for i in range(model.n_features) if i not in col_idx] for col_idx in model.col_idxs]
+        feature_mapping = [
+            {i: col_idx for i, col_idx in enumerate(list(col_idxs) + missing_col_idx)}
+            for col_idxs, missing_col_idx in zip(model.col_idxs, missing_col_idxs)
+        ]
+        ensemble.trees = []
+        for idx, shap_tree in enumerate(shap_trees):
+            tree_ = shap_tree.tree_
+            values = tree_.value.reshape(tree_.value.shape[0], tree_.value.shape[1] * tree_.value.shape[2])
+            values = values * scaling[idx]  # type: ignore[index]
+            tree = {
+                "children_left": tree_.children_left.astype(np.int32),
+                "children_right": tree_.children_right.astype(np.int32),
+                "children_default": tree_.children_left,
+                "features": np.array([feature_mapping[idx].get(i, i) for i in tree_.feature]),
+                "thresholds": tree_.threshold.astype(np.float64),
+                "values": values,
+                "node_sample_weight": tree_.weighted_n_node_samples.astype(np.float64),
+            }
+            ensemble.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
+        ensemble.objective = objective_name_map.get(shap_trees[0].criterion, None)
+        ensemble.tree_output = "raw_value"
+        ensemble.base_offset = model.init_params[param_idx]
+
+
+TreeModelLoaderRegistry.register(NGBoostTreeModelLoader)
+
+
+TreeModelLoaderRegistry.register(XGBTreeModelLoader)
