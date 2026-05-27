@@ -1,42 +1,19 @@
+import os
+
+import lazy_loader as lazy
+
 try:
     import matplotlib  # noqa: F401
-except ImportError:
+except ImportError as exc:
     raise ImportError(
         "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` to fix this."
-    )
+    ) from exc
 
-from ._bar import bar
-from ._beeswarm import beeswarm
-from ._benchmark import benchmark
-from ._decision import decision
-from ._embedding import embedding
-from ._force import force, initjs
-from ._group_difference import group_difference
-from ._heatmap import heatmap
-from ._image import image, image_to_text
-from ._monitoring import monitoring
-from ._partial_dependence import partial_dependence
-from ._scatter import scatter
-from ._text import text
-from ._violin import violin
-from ._waterfall import waterfall
+__getattr__, __dir__, __all__ = lazy.attach_stub(__name__, __file__)
 
-__all__ = [
-    "bar",
-    "beeswarm",
-    "benchmark",
-    "decision",
-    "embedding",
-    "force",
-    "initjs",
-    "group_difference",
-    "heatmap",
-    "image",
-    "image_to_text",
-    "monitoring",
-    "partial_dependence",
-    "scatter",
-    "text",
-    "violin",
-    "waterfall",
-]
+if os.getenv("EAGER_IMPORT") == "1":
+    for _name in __all__:
+        try:
+            __getattr__(_name)
+        except Exception:
+            pass

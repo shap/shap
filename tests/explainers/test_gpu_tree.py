@@ -6,12 +6,12 @@ import pytest
 import sklearn
 
 import shap
-from shap.utils import assert_import
 
-try:
-    assert_import("cext_gpu")
-except ImportError:
-    pytestmark = pytest.mark.skip("cuda module not built")
+pytest.importorskip(
+    "shap._cext_gpu",
+    reason="cuda extension was not built during install!",
+    exc_type=ModuleNotFoundError,
+)
 
 
 def test_front_page_xgboost():
