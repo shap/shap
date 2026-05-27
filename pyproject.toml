@@ -91,7 +91,7 @@ test = [
   "transformers < 4.54.0",  # TODO: fix once tests pass for 4.54.0
   "tf-keras",
   "protobuf",  # See GH #3046
-  'torch; python_version < "3.14"',  # TODO: pending 3.14 support
+  'torch<=2.11.0; python_version < "3.14"',  # TODO: pending 3.14 support, see GH #5016
   'torchvision; python_version < "3.14"',  # TODO: pending 3.14 support
   'tensorflow; python_version < "3.14"',  # TODO: pending 3.14 support
   "sentencepiece",
