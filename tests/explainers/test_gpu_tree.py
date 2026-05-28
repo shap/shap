@@ -222,12 +222,13 @@ def idfn(task):
     return type(model).__module__ + "." + type(model).__qualname__
 
 
-@pytest.mark.parametrize("task", tasks, ids=idfn)
-@pytest.mark.parametrize("feature_perturbation", ["interventional", "tree_path_dependent"])
-def test_gpu_tree_explainer_shap(task, feature_perturbation):
-    model, X, _ = task
-    gpu_ex = shap.GPUTreeExplainer(model, X, feature_perturbation=feature_perturbation)
-    ex = shap.TreeExplainer(model, X, feature_perturbation=feature_perturbation)
+def assert_gpu_matches_cpu(task, feature_perturbation, X=None):
+    model, background, _ = task
+    if X is None:
+        X = background
+
+    gpu_ex = shap.GPUTreeExplainer(model, background, feature_perturbation=feature_perturbation)
+    ex = shap.TreeExplainer(model, background, feature_perturbation=feature_perturbation)
     host_shap = ex.shap_values(X, check_additivity=True)
     gpu_shap = gpu_ex.shap_values(X, check_additivity=True)
 
@@ -239,6 +240,22 @@ def test_gpu_tree_explainer_shap(task, feature_perturbation):
     # Check outputs roughly the same as CPU algorithm
     assert np.allclose(ex.expected_value, gpu_ex.expected_value, 1e-3, 1e-3)
     assert np.allclose(host_shap, gpu_shap, 1e-3, 1e-3)
+
+
+@pytest.mark.parametrize("task", tasks, ids=idfn)
+@pytest.mark.parametrize("feature_perturbation", ["interventional", "tree_path_dependent"])
+def test_gpu_tree_explainer_shap(task, feature_perturbation):
+    assert_gpu_matches_cpu(task, feature_perturbation)
+
+
+def test_gpu_tree_explainer_shap_with_missing_values():
+    task = xgboost_base()
+    X = task[1].copy()
+    rows = np.arange(0, X.shape[0], 10)
+    X[rows, 0] = np.nan
+
+    for feature_perturbation in ["interventional", "tree_path_dependent"]:
+        assert_gpu_matches_cpu(task, feature_perturbation, X)
 
 
 @pytest.mark.parametrize("task", tasks, ids=idfn)
