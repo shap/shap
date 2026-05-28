@@ -268,7 +268,6 @@ def test_gpu_tree_explainer_shap_interactions(task, feature_perturbation):
     assert np.allclose(np.sum(shap_values, axis=(1, 2)) + ex.expected_value, margin, atol=1e-4)
 
 
-@pytest.mark.xfail(reason="Categorical features not correctly implemented for GPU TreeSHAP")
 @pytest.mark.parametrize("use_interactions", [False, True])
 def test_lightgbm_categorical_split(use_interactions):
     # GH 480
@@ -291,17 +290,10 @@ def test_lightgbm_categorical_split(use_interactions):
 
     explainer = shap.GPUTreeExplainer(model)
 
-    # Check that the warning is issued
-    with pytest.warns(
-        UserWarning,
-        match="Categorical features detected. GPU TreeSHAP currently only supports numerical features. Results may be incorrect.",
-    ):
-        if use_interactions:
-            # Check SHAP interaction values sum to model output
-            shap_interaction_values = explainer.shap_interaction_values(X.iloc[:10, :])
-            assert np.allclose(
-                shap_interaction_values.sum(axis=(1, 2)) + explainer.expected_value, preds[:10], atol=1e-4
-            )
-        else:
-            shap_values = explainer.shap_values(X.iloc[:10, :])
-            assert np.allclose(shap_values.sum(axis=1) + explainer.expected_value, preds[:10], atol=1e-4)
+    if use_interactions:
+        # Check SHAP interaction values sum to model output
+        shap_interaction_values = explainer.shap_interaction_values(X.iloc[:10, :])
+        assert np.allclose(shap_interaction_values.sum(axis=(1, 2)) + explainer.expected_value, preds[:10], atol=1e-4)
+    else:
+        shap_values = explainer.shap_values(X.iloc[:10, :])
+        assert np.allclose(shap_values.sum(axis=1) + explainer.expected_value, preds[:10], atol=1e-4)
