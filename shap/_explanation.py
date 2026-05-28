@@ -691,6 +691,93 @@ class Explanation(metaclass=MetaExplanation):
         )
         return new_exp
 
+    def vstack(self, other: Explanation) -> Explanation:
+        """Stack two explanations row-wise (vertically).
+
+        Parameters
+        ----------
+        other : shap.Explanation
+            The other Explanation object to stack with.
+
+        Returns
+        -------
+        exp : shap.Explanation
+            A new Explanation object representing the stacked explanations.
+        """
+        if not isinstance(other, Explanation):
+            raise TypeError(f"Cannot vstack Explanation with object of type {type(other)}")
+
+        # 1. Use .values.shape to safely handle 1D explanations
+        if self.values.shape[1:] != other.values.shape[1:]:
+            raise ValueError(
+                f"Can't vstack explanations with different feature dimensions! "
+                f"Got {self.values.shape[1:]} and {other.values.shape[1:]}."
+            )
+
+        # 2. Safely compare feature_names using list() to bypass Alias/Obj wrappers
+        if getattr(self, "feature_names", None) is not None and getattr(other, "feature_names", None) is not None:
+            if list(self.feature_names) != list(other.feature_names):
+                raise ValueError("Can't vstack explanations with different feature names!")
+
+        def _safe_concat(a, b, num_rows_a, num_rows_b):
+            """Helper to safely concatenate arrays, lists, or broadcast scalars."""
+            # Strict metadata consistency check
+            if (a is None) != (b is None):
+                raise ValueError(
+                    "Cannot vstack explanations with inconsistent metadata (one has it, the other does not)."
+                )
+            if a is None and b is None:
+                return None
+
+            if isinstance(a, list) and isinstance(b, list):
+                return a + b
+
+            # 3. Always broadcast scalars to arrays to enforce strict row alignment
+            if np.isscalar(a) and np.isscalar(b):
+                return np.concatenate([np.full(num_rows_a, a), np.full(num_rows_b, b)], axis=0)
+
+            # Use atleast_1d to prevent numpy errors when stacking 0D arrays
+            return np.concatenate([np.atleast_1d(a), np.atleast_1d(b)], axis=0)
+
+        num_rows_self = self.values.shape[0]
+        num_rows_other = other.values.shape[0]
+
+        new_exp = Explanation(
+            values=_safe_concat(self.values, other.values, num_rows_self, num_rows_other),
+            base_values=_safe_concat(self.base_values, other.base_values, num_rows_self, num_rows_other),
+            data=_safe_concat(self.data, other.data, num_rows_self, num_rows_other),
+            display_data=_safe_concat(self.display_data, other.display_data, num_rows_self, num_rows_other),
+            instance_names=_safe_concat(self.instance_names, other.instance_names, num_rows_self, num_rows_other),
+            feature_names=copy.deepcopy(self.feature_names),
+            output_names=copy.deepcopy(self.output_names),
+            output_indexes=copy.deepcopy(self.output_indexes),
+            lower_bounds=_safe_concat(self.lower_bounds, other.lower_bounds, num_rows_self, num_rows_other),
+            upper_bounds=_safe_concat(self.upper_bounds, other.upper_bounds, num_rows_self, num_rows_other),
+            error_std=_safe_concat(self.error_std, other.error_std, num_rows_self, num_rows_other),
+            main_effects=_safe_concat(self.main_effects, other.main_effects, num_rows_self, num_rows_other),
+            hierarchical_values=_safe_concat(
+                self.hierarchical_values, other.hierarchical_values, num_rows_self, num_rows_other
+            ),
+            clustering=None,  # TODO: evaluate whether clustering should be preserved or recomputed during vstack
+            compute_time=(
+                None
+                if getattr(self, "compute_time", None) is None or getattr(other, "compute_time", None) is None
+                else self.compute_time + other.compute_time
+            ),
+        )
+
+        # 4. Append to op_history
+        new_exp.op_history = copy.copy(self.op_history)
+        new_exp.op_history.append(
+            OpHistoryItem(
+                name="vstack",
+                args=(other,),
+                prev_shape=self.shape,
+            )
+        )
+
+        return new_exp
+
     def cohorts(self, cohorts: int | list[int] | tuple[int] | np.ndarray) -> Cohorts:
         """Split this explanation into several cohorts.
 
