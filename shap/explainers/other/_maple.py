@@ -199,10 +199,7 @@ class MAPLE:
                     max_depth=None,
                 )
             else:
-                print("Unknown FE type ", fe)
-                import sys
-
-                sys.exit(0)
+                raise ValueError(f"Unknown FE type: {fe_type}. Expected 'rf' or 'gbrt'.")
             fe.fit(X_train, MR_train)
         else:
             self.n_estimators = n_estimators = len(fe.estimators_)
