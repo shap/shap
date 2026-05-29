@@ -91,7 +91,7 @@ test = [
   "transformers < 4.54.0",  # TODO: fix once tests pass for 4.54.0
   "tf-keras",
   "protobuf",  # See GH #3046
-  'torch; python_version < "3.14"',  # TODO: pending 3.14 support
+  'torch<=2.11.0; python_version < "3.14"',  # TODO: pending 3.14 support, see GH #5016
   'torchvision; python_version < "3.14"',  # TODO: pending 3.14 support
   'tensorflow; python_version < "3.14"',  # TODO: pending 3.14 support
   "sentencepiece",
@@ -258,7 +258,7 @@ wheel.packages = [
 
 metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
 sdist.include = ["shap/_version.py"]
-sdist.exclude = ["docs/", "notebooks/"]
+sdist.exclude = ["docs/", "notebooks/", ".claude/", "appveyor/"]
 
 # Protect the configuration against future changes in scikit-build-core
 minimum-version = "build-system.requires"
