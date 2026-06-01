@@ -105,7 +105,9 @@ def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
 
 
 def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
-    if model.model_type == "xgboost" and model.cat_feature_indices is not None:
+    if model.model_type == "xgboost" and (
+        model.cat_feature_indices is not None or getattr(model, "_xgb_enable_categorical", False)
+    ):
         raise NotImplementedError(
             "Categorical split is not yet supported. You can still use"
             " TreeExplainer with `feature_perturbation=tree_path_dependent`."
@@ -284,7 +286,14 @@ class TreeExplainer(Explainer):
         self.data_missing = None if self.data is None else pd.isna(self.data)
         self.feature_perturbation = feature_perturbation
         self.expected_value = None
-        self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
+        if isinstance(model, TreeEnsemble):
+            # Allow passing a pre-built TreeEnsemble directly. This makes it possible
+            # to construct trees by hand (e.g. with categorical splits, which the
+            # third-party model parsers are needed for otherwise) and explain them
+            # without round-tripping through an external model object.
+            self.model = model
+        else:
+            self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
         self.model_output = model_output
         # self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
 
@@ -988,6 +997,7 @@ class TreeEnsemble:
         self.tree_limit = None  # used for limiting the number of trees we use by default (like from early stopping)
         self.num_stacked_models = 1  # If this is greater than 1 it means we have multiple stacked models with the same number of trees in each model (XGBoost multi-output style)
         self.cat_feature_indices = None  # If this is set it tells us which features are treated categorically
+        self._xgb_enable_categorical = False
 
         # we use names like keras
         objective_name_map = {
@@ -1358,6 +1368,7 @@ class TreeEnsemble:
             # Some properties of the sklearn API are passed to a DMatrix object in
             # xgboost We need to make sure we do the same here - GH #3313
             self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
+            self._xgb_enable_categorical = bool(self._xgb_dmatrix_props.get("enable_categorical", False))
         elif safe_isinstance(model, ["xgboost.sklearn.XGBRegressor", "xgboost.sklearn.XGBRanker"]):
             self.original_model = model.get_booster()
             self._set_xgboost_model_attributes(
@@ -1369,6 +1380,7 @@ class TreeEnsemble:
             # Some properties of the sklearn API are passed to a DMatrix object in
             # xgboost We need to make sure we do the same here - GH #3313
             self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
+            self._xgb_enable_categorical = bool(self._xgb_dmatrix_props.get("enable_categorical", False))
         elif safe_isinstance(model, "lightgbm.basic.Booster"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
@@ -2274,8 +2286,11 @@ class XGBTreeModelLoader:
                 emsg = f"Expected the base_score to contain a list or float, received {base_score}"
                 raise ValueError(emsg) from e
         if isinstance(base_score, (list, tuple, np.ndarray)):
-            base_score = base_score[0]
-        base_score = float(base_score)
+            base_score = np.asarray(base_score, dtype=float)
+            if base_score.size == 1:
+                base_score = float(base_score[0])
+        else:
+            base_score = float(base_score)
         self.base_score = base_score
         if self.name_obj in ("binary:logistic", "reg:logistic"):
             self.base_score = scipy.special.logit(base_score)
