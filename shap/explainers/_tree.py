@@ -286,7 +286,14 @@ class TreeExplainer(Explainer):
         self.data_missing = None if self.data is None else pd.isna(self.data)
         self.feature_perturbation = feature_perturbation
         self.expected_value = None
-        self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
+        if isinstance(model, TreeEnsemble):
+            # Allow passing a pre-built TreeEnsemble directly. This makes it possible
+            # to construct trees by hand (e.g. with categorical splits, which the
+            # third-party model parsers are needed for otherwise) and explain them
+            # without round-tripping through an external model object.
+            self.model = model
+        else:
+            self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
         self.model_output = model_output
         # self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
 
