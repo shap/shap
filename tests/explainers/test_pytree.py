@@ -25,8 +25,7 @@ def test_pytree_decision_tree_regressor():
 
     # Check additivity: sum(shap_values) == prediction
     preds = model.predict(X_test)
-    for i in range(5):
-        assert np.abs(np.sum(shap_values[i]) - preds[i]) < 1e-10
+    np.testing.assert_allclose(np.sum(shap_values, axis=1), preds, atol=1e-10)
 
 
 def test_pytree_vs_main_tree_explainer():
@@ -36,12 +35,12 @@ def test_pytree_vs_main_tree_explainer():
     model.fit(X, y)
 
     # Standard optimized TreeExplainer
-    explainer_std = shap.TreeExplainer(model)
-    shap_values_std = explainer_std.shap_values(X.values[:5])
-    expected_value_std = (
-        explainer_std.expected_value[0]
-        if isinstance(explainer_std.expected_value, np.ndarray)
-        else explainer_std.expected_value
+    explainer_ref = shap.TreeExplainer(model)
+    shap_values_ref = explainer_ref.shap_values(X.values[:5])
+    expected_value_ref = (
+        explainer_ref.expected_value[0]
+        if isinstance(explainer_ref.expected_value, np.ndarray)
+        else explainer_ref.expected_value
     )
 
     # Pure python pytree
@@ -53,17 +52,11 @@ def test_pytree_vs_main_tree_explainer():
     expected_value_py = shap_values_py_with_base[0, -1]
 
     # Compare base values
-    assert np.abs(expected_value_std - expected_value_py) < 1e-10
+    assert np.abs(expected_value_ref - expected_value_py) < 1e-10
 
     # Compare SHAP values
     # Note: main TreeExplainer returns (instances, features)
     # pytree returns (instances, features + 1) or a list depending on outputs.
     # For RandomForestRegressor (1 output), both should align.
-    np.testing.assert_array_almost_equal(shap_values_std, shap_values_py, decimal=10)
+    np.testing.assert_array_almost_equal(shap_values_ref, shap_values_py, decimal=10)
 
-
-if __name__ == "__main__":
-    # If run directly, just run the tests
-    test_pytree_decision_tree_regressor()
-    test_pytree_vs_main_tree_explainer()
-    print("All pytree tests passed!")
