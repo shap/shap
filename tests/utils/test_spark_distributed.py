@@ -1,7 +1,8 @@
 import sys
-import numpy as np
+
 import pandas as pd
 import pytest
+
 
 @pytest.fixture
 def configure_pyspark_python(monkeypatch):
@@ -15,17 +16,14 @@ def test_shap_values_distributed_tree(configure_pyspark_python):
     pytest.importorskip("pyspark.ml")
     pytest.importorskip("sklearn")
 
-    import shap
     from pyspark.ml.classification import RandomForestClassifier
     from pyspark.ml.feature import VectorAssembler
     from sklearn.datasets import load_iris
 
+    import shap
+
     try:
-        spark = (
-            pyspark.sql.SparkSession.builder
-            .config("spark.master", "local[2]")
-            .getOrCreate()
-        )
+        spark = pyspark.sql.SparkSession.builder.config("spark.master", "local[2]").getOrCreate()
     except Exception:
         pytest.skip("Could not start local Spark session")
 
@@ -34,18 +32,12 @@ def test_shap_values_distributed_tree(configure_pyspark_python):
     pdf["label"] = iris.target.astype(float)
 
     sdf = spark.createDataFrame(pdf)
-    sdf = VectorAssembler(
-        inputCols=list(iris.feature_names), outputCol="features"
-    ).transform(sdf)
+    sdf = VectorAssembler(inputCols=list(iris.feature_names), outputCol="features").transform(sdf)
 
-    model = RandomForestClassifier(
-        labelCol="label", featuresCol="features", numTrees=10
-    ).fit(sdf)
+    model = RandomForestClassifier(labelCol="label", featuresCol="features", numTrees=10).fit(sdf)
 
     explainer = shap.TreeExplainer(model)
-    result = shap.utils.shap_values_distributed(
-        explainer, sdf, features_col="features", spark=spark
-    )
+    result = shap.utils.shap_values_distributed(explainer, sdf, features_col="features", spark=spark)
 
     assert "shap_values" in result.columns
 
