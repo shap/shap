@@ -249,10 +249,6 @@ def test_cohorts_generation_with_one_feature():
 
 def test_explanation_rtruediv():
     """Checks that __rtruediv__ correctly computes other / self, not self / other."""
-    import numpy as np
-
-    import shap
-
     exp = shap.Explanation(values=np.array([1.0, 2.0, 4.0]))
 
     # Test 1: float / explanation gives correct inverted values
