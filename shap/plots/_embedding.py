@@ -16,7 +16,7 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
         If this is a string it is either the name of the feature, or it can have the
         form "rank(int)" to specify the feature with that rank (ordered by mean absolute
         SHAP value over all the samples), or "sum()" to mean the sum of all the SHAP values,
-        which is the model's output (minus it's expected value).
+        which is the model's output (minus its expected value).
 
     shap_values : numpy.array
         Matrix of SHAP values (# samples x # features).
@@ -30,8 +30,8 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
         (# samples x 2) and represent the embedding of that values.
 
     alpha : float
-        The transparency of the data points (between 0 and 1). This can be useful to the
-        show density of the data points when using a large dataset.
+        The transparency of the data points (between 0 and 1). This can be useful to
+        show the density of the data points when using a large dataset.
 
     """
     if feature_names is None:
