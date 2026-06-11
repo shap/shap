@@ -114,7 +114,7 @@ class Explainer(Serializable):
                 self.masker = maskers.Text(masker, mask_token="...", collapse_mask_token=True)
             else:
                 self.masker = maskers.Text(masker)
-        elif (isinstance(masker, (list, tuple))) and masker[0] is not str:
+        elif (masker is list or masker is tuple) and masker[0] is not str:
             self.masker = maskers.Composite(*masker)
         elif isinstance(masker, dict) and ("mean" in masker):
             self.masker = maskers.Independent(masker)
