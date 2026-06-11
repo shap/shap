@@ -205,6 +205,6 @@ jobs:
         uses: astral-sh/setup-uv@v7
       - name: Install dependencies
         run: |
-          uv sync --group test-core
+          uv pip install --system . --group test-core
       - name: Run mypy
-        run: uv run mypy shap tests
+        run: mypy shap tests
