@@ -89,7 +89,7 @@ test = [
   "transformers < 4.54.0",  # TODO: fix once tests pass for 4.54.0
   "tf-keras",
   "protobuf",  # See GH #3046
-  'torch; python_version < "3.14"',  # TODO: pending 3.14 support
+  'torch<=2.11.0; python_version < "3.14"',  # TODO: pending 3.14 support, see GH #5016
   'torchvision; python_version < "3.14"',  # TODO: pending 3.14 support
   'tensorflow; python_version < "3.14"',  # TODO: pending 3.14 support
   "sentencepiece",
@@ -156,7 +156,7 @@ module = [
   # "shap.explainers._sampling",       # NOW TYPE CHECKED - type hints added
   # "shap.explainers._tree",           # NOW TYPE CHECKED - type hints added
   # "shap.explainers._coalition",      # NOW TYPE CHECKED - type hints added
-  "shap.explainers.other._random",
+  # "shap.explainers.other._random",  # NOW TYPE CHECKED - type hints added
   "shap.explainers.pytree",
   "shap.explainers.tf_utils",
   # "shap.maskers._composite",  # NOW TYPE CHECKED - type hints added
@@ -224,7 +224,7 @@ wheel.packages = [
 
 metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
 sdist.include = ["shap/_version.py"]
-sdist.exclude = ["docs/", "notebooks/"]
+sdist.exclude = ["docs/", "notebooks/", ".claude/", "appveyor/"]
 
 # Protect the configuration against future changes in scikit-build-core
 minimum-version = "build-system.requires"

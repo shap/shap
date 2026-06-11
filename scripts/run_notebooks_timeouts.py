@@ -54,7 +54,6 @@ allow_to_timeout = [
     Path("tabular_examples/linear_models/Explaining a model that uses standardized features.ipynb"),
     Path("tabular_examples/model_agnostic/Census income classification with scikit-learn.ipynb"),
     Path("tabular_examples/tree_based_models/Census income classification with XGBoost.ipynb"),
-    Path("tabular_examples/tree_based_models/Fitting a Linear Simulation with XGBoost.ipynb"),
     Path("tabular_examples/tree_based_models/NHANES I Survival Model.ipynb"),
     Path("text_examples/language_modelling/Language Modeling Explanation Demo.ipynb"),
     Path("text_examples/question_answering/Explaining a Question Answering Transformers Model.ipynb"),

@@ -40,7 +40,7 @@ def make_dir(path):
         if os.listdir(path):
             # if exists, empty directory
             for file in os.listdir(path):
-                os.remove(path + file)
+                os.remove(os.path.join(path, file))
 
 
 def add_sample_images(path):
