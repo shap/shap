@@ -70,6 +70,6 @@ def test_group_difference_deprecates_on_invalid_input_type(explainer):
     """Check that a DeprecationWarning is raised when shap_values is not an Explanation."""
     shap_values = explainer(explainer.data)
     group_mask = np.random.randint(2, size=shap_values.shape[0]).astype(bool)
-    
+
     with pytest.warns(DeprecationWarning, match="Passing a numpy array to the group_difference plot is deprecated"):
         shap.plots.group_difference(np.asarray(shap_values.values), group_mask, show=False)

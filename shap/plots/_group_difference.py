@@ -102,7 +102,7 @@ def group_difference(
     if feature_names is None:
         feature_names = shap_values.feature_names or [f"Feature {i}" for i in range(shap_values_arr.shape[1])]
 
-    feature_names_list = list(feature_names) # type: ignore
+    feature_names_list = list(feature_names)  # type: ignore
 
     # Compute confidence bounds for the group difference value
     vs: list[np.ndarray] = []
