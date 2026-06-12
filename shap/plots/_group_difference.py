@@ -102,7 +102,7 @@ def group_difference(
     if feature_names is None:
         feature_names = shap_values.feature_names or [f"Feature {i}" for i in range(shap_values_arr.shape[1])]
 
-    feature_names_list = list(feature_names)  # type: ignore
+    feature_names_list = list(feature_names) # type: ignore
 
     # Compute confidence bounds for the group difference value
     vs: list[np.ndarray] = []
@@ -152,44 +152,3 @@ def group_difference(
         plt.show()
         return
     return ax
-
-
-def group_difference_legacy(
-    shap_values,
-    group_mask,
-    feature_names: Sequence[str] | None = None,
-    xlabel: str | None = None,
-    xmin: float | None = None,
-    xmax: float | None = None,
-    max_display: int | None = None,
-    sort: bool = True,
-    show: bool = True,
-    ax: plt.Axes | None = None,
-):
-    """Legacy numpy-based group_difference plot.
-
-    This function will be removed in a future version. Use :func:`shap.plots.group_difference`.
-    """
-    warnings.warn(
-        "The behaviour of this function will change in a future version to the new plotting API."
-        "\nUse `shap.plots.group_difference` to opt-in to the new behaviour and silence this warning."
-        "\nFor more information on using the new API, see:\n"
-        "https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/migrating-to-new-api.html",
-        DeprecationWarning,
-    )
-    # Preserve legacy behaviour: if an ax is provided, avoid calling plt.show() implicitly.
-    if ax is not None:
-        show = False
-
-    return group_difference(
-        shap_values,
-        group_mask,
-        feature_names=feature_names,
-        xlabel=xlabel,
-        xmin=xmin,
-        xmax=xmax,
-        max_display=max_display,
-        sort=sort,
-        show=show,
-        ax=ax,
-    )

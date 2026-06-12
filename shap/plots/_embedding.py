@@ -75,6 +75,7 @@ def embedding(
             stacklevel=2,
         )
         shap_values = Explanation(values=np.asarray(shap_values), feature_names=feature_names)
+        
     if len(shap_values.shape) != 2:
         raise ValueError(
             "The embedding plot expects a 2D Explanation of SHAP values with shape (# samples, # features)."
@@ -83,11 +84,9 @@ def embedding(
     shap_values_arr = np.asarray(shap_values.values)
 
     if feature_names is None:
-        feature_names = shap_values.feature_names or [
-            labels["FEATURE"] % str(i) for i in range(shap_values_arr.shape[1])
-        ]
+        feature_names = shap_values.feature_names or [labels["FEATURE"] % str(i) for i in range(shap_values_arr.shape[1])]
 
-    feature_names_list = list(feature_names)  # type: ignore
+    feature_names_list = list(feature_names) # type: ignore
     ind_converted = convert_name(ind, shap_values_arr, feature_names_list)
     if ind_converted == "sum()":
         cvals = shap_values_arr.sum(1)
@@ -140,26 +139,3 @@ def embedding(
         plt.show()
         return
     return ax
-
-
-def embedding_legacy(
-    ind: int | str,
-    shap_values,
-    feature_names: Sequence[str] | None = None,
-    method: Literal["pca"] | np.ndarray | Any = "pca",
-    alpha: float = 1.0,
-    show: bool = True,
-):
-    """Legacy numpy-based embedding plot.
-
-    This function will be removed in a future version. Use :func:`shap.plots.embedding`.
-    """
-    warnings.warn(
-        "The behaviour of this function will change in a future version to the new plotting API."
-        "\nUse `shap.plots.embedding` to opt-in to the new behaviour and silence this warning."
-        "\nFor more information on using the new API, see:\n"
-        "https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/migrating-to-new-api.html",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return embedding(ind, shap_values, feature_names=feature_names, method=method, alpha=alpha, show=show)
