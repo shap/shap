@@ -68,7 +68,13 @@ def embedding(
 
     """
     if not isinstance(shap_values, Explanation):
-        raise TypeError("The shap_values parameter must be a shap.Explanation object!")
+        warnings.warn(
+            "Passing a numpy array to the embedding plot is deprecated and will be removed in a future version. "
+            "Please pass a shap.Explanation object instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        shap_values = Explanation(values=np.asarray(shap_values), feature_names=feature_names)
     if len(shap_values.shape) != 2:
         raise ValueError(
             "The embedding plot expects a 2D Explanation of SHAP values with shape (# samples, # features)."
@@ -77,19 +83,17 @@ def embedding(
     shap_values_arr = np.asarray(shap_values.values)
 
     if feature_names is None:
-        if shap_values.feature_names is not None:
-            feature_names = list(shap_values.feature_names)  # type: ignore[arg-type]
-        else:
-            feature_names = [labels["FEATURE"] % str(i) for i in range(shap_values_arr.shape[1])]
+        feature_names = shap_values.feature_names or [labels["FEATURE"] % str(i) for i in range(shap_values_arr.shape[1])]
 
-    ind_converted = convert_name(ind, shap_values_arr, list(feature_names))
+    feature_names_list = list(feature_names) # type: ignore
+    ind_converted = convert_name(ind, shap_values_arr, feature_names_list)
     if ind_converted == "sum()":
         cvals = shap_values_arr.sum(1)
         fname = "sum(SHAP values)"
     else:
         assert isinstance(ind_converted, int)
         cvals = shap_values_arr[:, ind_converted]
-        fname = list(feature_names)[ind_converted]
+        fname = feature_names_list[ind_converted]
 
     # compute the embedding
     if isinstance(method, str) and method == "pca":
@@ -154,9 +158,6 @@ def embedding_legacy(
         "\nFor more information on using the new API, see:\n"
         "https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/migrating-to-new-api.html",
         DeprecationWarning,
+        stacklevel=2,
     )
-    exp = Explanation(
-        values=np.asarray(shap_values), feature_names=None if feature_names is None else list(feature_names)
-    )
-    _ = embedding(ind, exp, feature_names=feature_names, method=method, alpha=alpha, show=show)
-    return
+    return embedding(ind, shap_values, feature_names=feature_names, method=method, alpha=alpha, show=show)

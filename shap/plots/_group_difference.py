@@ -61,7 +61,13 @@ def group_difference(
 
     """
     if not isinstance(shap_values, Explanation):
-        raise TypeError("The shap_values parameter must be a shap.Explanation object!")
+        warnings.warn(
+            "Passing a numpy array to the group_difference plot is deprecated and will be removed in a future version. "
+            "Please pass a shap.Explanation object instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        shap_values = Explanation(values=np.asarray(shap_values), feature_names=feature_names)
 
     group_mask_arr = np.asarray(group_mask)
     if group_mask_arr.ndim != 1:
@@ -94,12 +100,9 @@ def group_difference(
 
     # Fill in any missing feature names
     if feature_names is None:
-        if shap_values.feature_names is not None and len(shap_values.shape) == 2:
-            feature_names = list(shap_values.feature_names)  # type: ignore[arg-type]
-        else:
-            feature_names = [f"Feature {i}" for i in range(shap_values_arr.shape[1])]
+        feature_names = shap_values.feature_names or [f"Feature {i}" for i in range(shap_values_arr.shape[1])]
 
-    feature_names_list = list(feature_names)
+    feature_names_list = list(feature_names) # type: ignore
 
     # Compute confidence bounds for the group difference value
     vs: list[np.ndarray] = []
@@ -178,11 +181,8 @@ def group_difference_legacy(
     if ax is not None:
         show = False
 
-    exp = Explanation(
-        values=np.asarray(shap_values), feature_names=None if feature_names is None else list(feature_names)
-    )
-    _ = group_difference(
-        exp,
+    return group_difference(
+        shap_values,
         group_mask,
         feature_names=feature_names,
         xlabel=xlabel,
@@ -193,4 +193,3 @@ def group_difference_legacy(
         show=show,
         ax=ax,
     )
-    return

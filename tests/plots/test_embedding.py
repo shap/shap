@@ -33,10 +33,10 @@ def test_embedding_returns_ax(explainer):
     assert ax_out is ax
 
 
-def test_embedding_raises_on_invalid_input_type():
-    """Check that a TypeError is raised when shap_values is not an Explanation."""
-    with pytest.raises(TypeError, match="shap_values parameter must be a shap\\.Explanation"):
-        shap.plots.embedding(0, np.zeros((5, 3)))
+def test_embedding_deprecates_on_invalid_input_type():
+    """Check that a DeprecationWarning is raised when shap_values is not an Explanation."""
+    with pytest.warns(DeprecationWarning, match="Passing a numpy array to the embedding plot is deprecated"):
+        shap.plots.embedding(0, np.zeros((5, 3)), method=np.zeros((5, 2)), show=False)
 
 
 def test_embedding_raises_on_invalid_method_shape(explainer):
