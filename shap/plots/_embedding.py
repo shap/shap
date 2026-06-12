@@ -75,7 +75,7 @@ def embedding(
             stacklevel=2,
         )
         shap_values = Explanation(values=np.asarray(shap_values), feature_names=feature_names)
-        
+
     if len(shap_values.shape) != 2:
         raise ValueError(
             "The embedding plot expects a 2D Explanation of SHAP values with shape (# samples, # features)."
@@ -84,9 +84,11 @@ def embedding(
     shap_values_arr = np.asarray(shap_values.values)
 
     if feature_names is None:
-        feature_names = shap_values.feature_names or [labels["FEATURE"] % str(i) for i in range(shap_values_arr.shape[1])]
+        feature_names = shap_values.feature_names or [
+            labels["FEATURE"] % str(i) for i in range(shap_values_arr.shape[1])
+        ]
 
-    feature_names_list = list(feature_names) # type: ignore
+    feature_names_list = list(feature_names)  # type: ignore
     ind_converted = convert_name(ind, shap_values_arr, feature_names_list)
     if ind_converted == "sum()":
         cvals = shap_values_arr.sum(1)
