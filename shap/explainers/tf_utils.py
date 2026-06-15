@@ -12,6 +12,7 @@ def _import_tf():
 
 def _get_session(session):
     """Common utility to get the session for the tensorflow-based explainer.
+
     Parameters
     ----------
     explainer : Explainer
