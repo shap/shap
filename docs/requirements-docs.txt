@@ -234,7 +234,7 @@ threadpoolctl==3.6.0
     # via scikit-learn
 tinycss2==1.4.0
     # via bleach
-tornado==6.5.6
+tornado==6.5.7
     # via jupyter-client
 tqdm==4.67.3
     # via shap (pyproject.toml)
