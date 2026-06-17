@@ -7,6 +7,7 @@ from sklearn.datasets import make_multilabel_classification
 from sklearn.linear_model import LogisticRegression, Ridge
 
 import shap
+import shap.maskers
 from shap import maskers
 from shap.utils._exceptions import InvalidFeaturePerturbationError
 
@@ -95,8 +96,8 @@ def test_sklearn_linear_new():
     # explain the model's predictions using SHAP values
     explainer = shap.explainers.LinearExplainer(model, X)
     shap_values = explainer(X)
-    assert np.abs(shap_values.values.sum(1) + shap_values.base_values - model.predict(X)).max() < 1e-6
-    assert np.abs(shap_values.base_values[0] - model.predict(X).mean()) < 1e-6
+    assert np.abs(shap_values.values.sum(1) + shap_values.base_values - model.predict(X)).max() < 1e-6  # type: ignore[union-attr, union-attr]
+    assert np.abs(shap_values.base_values[0] - model.predict(X).mean()) < 1e-6  # type: ignore[union-attr]
 
 
 def test_sklearn_multiclass_no_intercept():
@@ -213,7 +214,9 @@ def test_sparse_multi_class():
     explainer = shap.LinearExplainer(model, X)
     shap_values = explainer(X)
     np.testing.assert_allclose(
-        scipy.special.expit(shap_values.values.sum(1) + shap_values.base_values), pred, atol=1e-6
+        scipy.special.expit(shap_values.values.sum(1) + shap_values.base_values),  # type: ignore[union-attr]
+        pred,
+        atol=1e-6,
     )
 
 
@@ -224,7 +227,7 @@ def test_invalid_feature_perturbation_raises():
     model = Ridge(0.1).fit(X, y)
 
     with pytest.raises(InvalidFeaturePerturbationError, match="feature_perturbation must be one of "):
-        shap.LinearExplainer(model, X, feature_perturbation="nonsense")
+        shap.LinearExplainer(model, X, feature_perturbation="nonsense")  # type: ignore[arg-type]
 
 
 @pytest.mark.filterwarnings("ignore:The feature_perturbation option is now deprecated")
@@ -260,3 +263,31 @@ def test_interventional_multi_regression():
     explainer = shap.explainers.LinearExplainer(model, maskers.Independent(X))
     shap_values = explainer.shap_values(X)
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, outputs, atol=1e-6)
+
+
+def test_linear_explainer_warns_singular_covariance():
+    """LinearExplainer should warn when n_samples <= n_features."""
+    import warnings
+
+    from sklearn.linear_model import LinearRegression
+
+    rng = np.random.default_rng(42)
+    n_features = 10
+    X_train = rng.normal(size=(8, n_features))
+    y_train = X_train @ np.arange(1, n_features + 1, dtype=float)
+    model = LinearRegression().fit(X_train, y_train)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        shap.LinearExplainer(
+            model,
+            X_train,
+            feature_perturbation="correlation_dependent",
+        )
+        user_warnings = [
+            x for x in w if issubclass(x.category, UserWarning) and "singular covariance" in str(x.message).lower()
+        ]
+
+    assert len(user_warnings) == 1, (
+        f"Expected a UserWarning about singular covariance matrix but got: {[str(x.message) for x in w]}"
+    )

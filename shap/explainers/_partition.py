@@ -1,8 +1,11 @@
 import queue
 import time
+from collections.abc import Callable
+from typing import Any, Literal
 
 import numpy as np
-from numba import njit
+import numpy.typing as npt
+from numba import njit  # type: ignore[attr-defined]
 from tqdm.auto import tqdm
 
 from .. import Explanation, links
@@ -33,17 +36,27 @@ class PartitionExplainer(Explainer):
     non-hierarchical Shapley values.
     """
 
+    input_shape: tuple[int, ...] | None
+    expected_value: Any
+    _curr_base_value: npt.NDArray[Any] | None
+    _clustering: npt.NDArray[Any]
+    _mask_matrix: npt.NDArray[np.bool_]
+    _reshaped_model: Callable[..., Any]
+    values: npt.NDArray[Any]
+    dvalues: npt.NDArray[Any]
+    last_eval_count: int
+
     def __init__(
         self,
-        model,
-        masker,
+        model: Any,
+        masker: Any,
         *,
-        output_names=None,
-        link=links.identity,
-        linearize_link=True,
-        feature_names=None,
-        **call_args,
-    ):
+        output_names: list[str] | None = None,
+        link: Callable[..., Any] = links.identity,
+        linearize_link: bool = True,
+        feature_names: list[str] | None = None,
+        **call_args: Any,
+    ) -> None:
         """Build a PartitionExplainer for the given model with the given masker.
 
         Parameters
@@ -128,19 +141,20 @@ class PartitionExplainer(Explainer):
         # has a call function with those new default arguments
         if len(call_args) > 0:
 
-            class PartitionExplainer(self.__class__):
+            class PartitionExplainer(self.__class__):  # type: ignore[name-defined]
                 # this signature should match the __call__ signature of the class defined below
                 def __call__(
                     self,
-                    *args,
-                    max_evals=500,
-                    fixed_context=None,
-                    main_effects=False,
-                    error_bounds=False,
-                    batch_size="auto",
-                    outputs=None,
-                    silent=False,
-                ):
+                    *args: Any,
+                    max_evals: int | Literal["auto"] = 500,
+                    fixed_context: Literal[0, 1] | None = None,
+                    main_effects: bool = False,
+                    error_bounds: bool = False,
+                    batch_size: int | Literal["auto"] = "auto",
+                    outputs: Any = None,
+                    silent: bool = False,
+                    **kwargs: Any,
+                ) -> Explanation | list[Explanation]:
                     return super().__call__(
                         *args,
                         max_evals=max_evals,
@@ -150,25 +164,27 @@ class PartitionExplainer(Explainer):
                         batch_size=batch_size,
                         outputs=outputs,
                         silent=silent,
+                        **kwargs,
                     )
 
             PartitionExplainer.__call__.__doc__ = self.__class__.__call__.__doc__
             self.__class__ = PartitionExplainer
             for k, v in call_args.items():
-                self.__call__.__kwdefaults__[k] = v
+                self.__call__.__kwdefaults__[k] = v  # type: ignore[index]
 
     # note that changes to this function signature should be copied to the default call argument wrapper above
     def __call__(
         self,
-        *args,
-        max_evals=500,
-        fixed_context=None,
-        main_effects=False,
-        error_bounds=False,
-        batch_size="auto",
-        outputs=None,
-        silent=False,
-    ):
+        *args: Any,
+        max_evals: int | Literal["auto"] = 500,
+        fixed_context: Literal[0, 1] | None = None,
+        main_effects: bool = False,
+        error_bounds: bool = False,
+        batch_size: int | Literal["auto"] = "auto",
+        outputs: Any = None,
+        silent: bool = False,
+        **kwargs: Any,
+    ) -> Explanation | list[Explanation]:
         """Explain the output of the model on the given arguments."""
         return super().__call__(
             *args,
@@ -179,11 +195,21 @@ class PartitionExplainer(Explainer):
             batch_size=batch_size,
             outputs=outputs,
             silent=silent,
+            **kwargs,
         )
 
     def explain_row(
-        self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, fixed_context="auto"
-    ):
+        self,
+        *row_args: Any,
+        max_evals: int | Literal["auto"],
+        main_effects: bool,
+        error_bounds: bool,
+        outputs: Any,
+        silent: bool,
+        batch_size: int | Literal["auto"] = "auto",
+        fixed_context: Literal[0, 1, "auto"] | None = "auto",
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         if fixed_context == "auto":
             # if isinstance(self.masker, maskers.Text):
@@ -210,13 +236,13 @@ class PartitionExplainer(Explainer):
             self._clustering = self.masker.clustering(*row_args)
             self._mask_matrix = make_masks(self._clustering)
 
-        if hasattr(self._curr_base_value, "shape") and len(self._curr_base_value.shape) > 0:
+        if hasattr(self._curr_base_value, "shape") and len(self._curr_base_value.shape) > 0:  # type: ignore[union-attr]
             if outputs is None:
-                outputs = np.arange(len(self._curr_base_value))
+                outputs = np.arange(len(self._curr_base_value))  # type: ignore[arg-type]
             elif isinstance(outputs, OpChain):
                 outputs = outputs.apply(Explanation(f11)).values
 
-            out_shape = (2 * self._clustering.shape[0] + 1, len(outputs))
+            out_shape: tuple[int, ...] = (2 * self._clustering.shape[0] + 1, len(outputs))  # type: ignore[assignment]
         else:
             out_shape = (2 * self._clustering.shape[0] + 1,)
 
@@ -226,7 +252,7 @@ class PartitionExplainer(Explainer):
         self.values = np.zeros(out_shape)
         self.dvalues = np.zeros(out_shape)
 
-        self.owen(fm, self._curr_base_value, f11, max_evals - 2, outputs, fixed_context, batch_size, silent)
+        self.owen(fm, self._curr_base_value, f11, max_evals - 2, outputs, fixed_context, batch_size, silent)  # type: ignore[arg-type]
 
         # if False:
         #     if self.multi_output:
@@ -241,7 +267,7 @@ class PartitionExplainer(Explainer):
 
         return {
             "values": self.values[:M].copy(),
-            "expected_values": self._curr_base_value if outputs is None else self._curr_base_value[outputs],
+            "expected_values": self._curr_base_value if outputs is None else self._curr_base_value[outputs],  # type: ignore[index]
             "mask_shapes": [s + out_shape[1:] for s in fm.mask_shapes],
             "main_effects": None,
             "hierarchical_values": self.dvalues.copy(),
@@ -250,10 +276,20 @@ class PartitionExplainer(Explainer):
             "output_names": getattr(self.model, "output_names", None),
         }
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "shap.explainers.PartitionExplainer()"
 
-    def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
+    def owen(
+        self,
+        fm: MaskedModel,
+        f00: npt.NDArray[Any],
+        f11: npt.NDArray[Any],
+        max_evals: int,
+        output_indexes: Any,
+        fixed_context: Literal[0, 1] | None,
+        batch_size: int | Literal["auto"],
+        silent: bool,
+    ) -> tuple[Any, npt.NDArray[Any]]:
         """Compute a nested set of recursive Owen values based on an ordering recursion."""
         # f = self._reshaped_model
         # r = self.masker
@@ -281,7 +317,7 @@ class PartitionExplainer(Explainer):
             f00 = f00[output_indexes]
             f11 = f11[output_indexes]
 
-        q = queue.PriorityQueue()
+        q: Any = queue.PriorityQueue()  # type: ignore[var-annotated]
         q.put((0, 0, (m00, f00, f11, ind, 1.0)))
         eval_count = 0
         total_evals = min(
@@ -299,8 +335,8 @@ class PartitionExplainer(Explainer):
 
             # create a batch of work to do
             batch_args = []
-            batch_masks = []
-            while not q.empty() and len(batch_masks) < batch_size and eval_count + len(batch_masks) < max_evals:
+            batch_masks: list[Any] = []  # type: ignore[var-annotated]
+            while not q.empty() and len(batch_masks) < batch_size and eval_count + len(batch_masks) < max_evals:  # type: ignore[operator]
                 # get our next set of arguments
                 m00, f00, f11, ind, weight = q.get()[2]
 
@@ -332,7 +368,7 @@ class PartitionExplainer(Explainer):
                 batch_masks.append(m10)
                 batch_masks.append(m01)
 
-            batch_masks = np.array(batch_masks)
+            batch_masks = np.array(batch_masks)  # type: ignore[assignment]
 
             # run the batch
             if len(batch_args) > 0:
@@ -393,7 +429,17 @@ class PartitionExplainer(Explainer):
 
         return output_indexes, base_value
 
-    def owen3(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
+    def owen3(
+        self,
+        fm: MaskedModel,
+        f00: npt.NDArray[Any],
+        f11: npt.NDArray[Any],
+        max_evals: int,
+        output_indexes: Any,
+        fixed_context: Literal[0, 1] | None,
+        batch_size: int | Literal["auto"],
+        silent: bool,
+    ) -> tuple[Any, npt.NDArray[Any]]:
         """Compute a nested set of recursive Owen values based on an ordering recursion."""
         # f = self._reshaped_model
         # r = self.masker
@@ -424,7 +470,7 @@ class PartitionExplainer(Explainer):
         # our starting plan is to evaluate all the nodes with a fixed_context
         evals_planned = M
 
-        q = queue.PriorityQueue()
+        q: Any = queue.PriorityQueue()  # type: ignore[var-annotated]
         q.put((0, 0, (m00, f00, f11, ind, 1.0, fixed_context)))  # (m00, f00, f11, tree_index, weight)
         eval_count = 0
         total_evals = min(
@@ -442,8 +488,8 @@ class PartitionExplainer(Explainer):
 
             # create a batch of work to do
             batch_args = []
-            batch_masks = []
-            while not q.empty() and len(batch_masks) < batch_size and eval_count < max_evals:
+            batch_masks: list[Any] = []  # type: ignore[var-annotated]
+            while not q.empty() and len(batch_masks) < batch_size and eval_count < max_evals:  # type: ignore[operator]
                 # get our next set of arguments
                 m00, f00, f11, ind, weight, context = q.get()[2]
 
@@ -472,7 +518,7 @@ class PartitionExplainer(Explainer):
                 batch_masks.append(m10)
                 batch_masks.append(m01)
 
-            batch_masks = np.array(batch_masks)
+            batch_masks = np.array(batch_masks)  # type: ignore[assignment]
 
             # run the batch
             if len(batch_args) > 0:
@@ -705,19 +751,27 @@ class PartitionExplainer(Explainer):
     #     return output_indexes, base_value
 
 
-def output_indexes_len(output_indexes):
-    if output_indexes.startswith("max("):
-        return int(output_indexes[4:-1])
-    elif output_indexes.startswith("min("):
-        return int(output_indexes[4:-1])
-    elif output_indexes.startswith("max(abs("):
-        return int(output_indexes[8:-2])
-    elif not isinstance(output_indexes, str):
+def output_indexes_len(output_indexes: str | npt.NDArray[Any]) -> int | None:
+    if isinstance(output_indexes, str):
+        if output_indexes.startswith("max("):
+            return int(output_indexes[4:-1])
+        elif output_indexes.startswith("min("):
+            return int(output_indexes[4:-1])
+        elif output_indexes.startswith("max(abs("):
+            return int(output_indexes[8:-2])
+    else:
         return len(output_indexes)
+    return None
 
 
 @njit
-def lower_credit(i, value, M, values, clustering):
+def lower_credit(
+    i: int,
+    value: float,
+    M: int,
+    values: npt.NDArray[Any],
+    clustering: npt.NDArray[Any],
+) -> None:
     if i < M:
         values[i] += value
         return

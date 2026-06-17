@@ -1,10 +1,15 @@
+import sys
+
 import numpy as np
 import pandas as pd
 import pytest
 import scipy.sparse
 import sklearn
+from conftest import compare_numpy_outputs_against_baseline
 
 import shap
+
+from . import common
 
 
 def sigm(x):
@@ -43,7 +48,7 @@ def test_front_page_model_agnostic():
 
     # plot the SHAP values for the Setosa output of the first instance
     # this is a multi output model so we index to get the zero-th output (Setosa)
-    shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")
+    shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")  # type: ignore[index]
 
 
 def test_front_page_model_agnostic_rank():
@@ -63,7 +68,7 @@ def test_front_page_model_agnostic_rank():
     shap_values = explainer.shap_values(X_test)
 
     # plot the SHAP values for the Setosa output of the first instance
-    shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")
+    shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")  # type: ignore[index]
 
 
 def test_kernel_shap_with_call_method():
@@ -89,7 +94,7 @@ def test_kernel_shap_with_call_method():
     # Call sigm since we use logit link
     np.testing.assert_allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), outputs)
 
-    shap_values = explainer.shap_values(X_test)
+    shap_values = explainer.shap_values(X_test)  # type: ignore[assignment]
     np.testing.assert_allclose(sigm(shap_values.sum(1) + explainer.expected_value), outputs)
 
 
@@ -175,6 +180,17 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
 
 def test_kernel_shap_with_high_dim_sparse():
     """Verifies we can run on very sparse data produced from feature hashing."""
+    # Skip test for Python versions below 3.9.17 and 3.10.12
+    python_version = sys.version_info
+    if python_version.major == 3 and python_version.minor == 9 and (python_version.micro < 17):
+        pytest.skip(
+            "Skipping test for Python 3.9 versions below 3.9.17. Loading the dataset will run into a tarfile error otherwise due to the missing filter keyword. See https://docs.python.org/3.9/library/tarfile.html#tarfile.TarFile.extractall"
+        )
+    elif python_version.major == 3 and python_version.minor == 10 and (python_version.micro < 12):
+        pytest.skip(
+            "Skipping test for Python 3.10 versions below 3.10.12. Loading the dataset will run into a tarfile error otherwise due to missing filter keyword. See https://docs.python.org/3.10/library/tarfile.html#tarfile.TarFile.extractall"
+        )
+
     remove = ("headers", "footers", "quotes")
     categories = [
         "alt.atheism",
@@ -364,7 +380,7 @@ def test_kernel_logits_zeros_ones_probs(nsamples):
     np.testing.assert_allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), pred, atol=1e-04)
 
 
-@pytest.mark.parametrize("dt", [np.bool_, np.object_])
+@pytest.mark.parametrize("dt", [bool, object])
 def test_explainer_non_number_dtype(dt):
     seed = 45479
     rng = np.random.default_rng(seed)
@@ -375,3 +391,9 @@ def test_explainer_non_number_dtype(dt):
     explainer = shap.KernelExplainer(model=rf.predict_proba, data=X, random_state=seed)
     shap_values = explainer(X)
     np.testing.assert_allclose(shap_values.values.max(), 0.26548, rtol=1e-2)
+
+
+@compare_numpy_outputs_against_baseline(func_file=__file__)
+def test_serialization():
+    model, data = common.basic_sklearn_scenario()
+    return common.test_serialization(shap.explainers.KernelExplainer, model.predict, data, data)

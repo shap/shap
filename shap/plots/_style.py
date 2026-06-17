@@ -7,26 +7,27 @@ from __future__ import annotations
 
 import dataclasses
 from contextlib import contextmanager
-from typing import TypedDict, Union
+from typing import TypedDict, Unpack
 
 import numpy as np
-from typing_extensions import Unpack
 
 from ..utils._exceptions import InvalidStyleOptionError
 from . import colors
 
 # Type hints, adapted from matplotlib.typing
-RGBColorType = Union[tuple[float, float, float], str]
-RGBAColorType = Union[
-    str,  # "none" or "#RRGGBBAA"/"#RGBA" hex strings
-    tuple[float, float, float, float],
+RGBColorType = tuple[float, float, float] | str
+type RGBAColorType = (
+    str  # "none" or "#RRGGBBAA"/"#RGBA" hex strings
+    | tuple[float, float, float, float]
+    |
     # 2 tuple (color, alpha) representations, not infinitely recursive
     # RGBColorType includes the (str, float) tuple, even for RGBA strings
-    tuple[RGBColorType, float],
+    tuple[RGBColorType, float]
+    |
     # (4-tuple, float) is odd, but accepted as the outer float overriding A of 4-tuple
-    tuple[tuple[float, float, float, float], float],
-]
-ColorType = Union[RGBColorType, RGBAColorType, np.ndarray]
+    tuple[tuple[float, float, float, float], float]
+)
+type ColorType = RGBColorType | RGBAColorType | np.ndarray
 
 
 # TODO: Use dataclass(kw_only=True) when we drop Python 3.9
@@ -98,7 +99,7 @@ def set_style(_style: StyleConfig | None = None, /, **options: Unpack[StyleOptio
     Pass keyword arguments to set individual options, or pass a StyleConfig dataclass to replace all options.
     """
     if _style is not None:
-        # Unpack the dataclass; any keyword arguments take precendence.
+        # Unpack the dataclass; any keyword arguments take precedence.
         options = _style.asdict() | options
     global _STYLE
     _STYLE = _apply_options(_STYLE, options)

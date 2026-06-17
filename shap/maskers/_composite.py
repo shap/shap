@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import types
+from typing import Any
 
 from ..utils._exceptions import InvalidMaskerError
 from ._masker import Masker
@@ -10,13 +13,13 @@ class Composite(Masker):
     This is not yet implemented.
     """
 
-    def __init__(self, *maskers):
-        self.maskers = maskers
+    def __init__(self, *maskers: Masker) -> None:
+        self.maskers: tuple[Masker, ...] = maskers
 
-        self.arg_counts = []
-        self.total_args = 0
-        self.text_data = False
-        self.image_data = False
+        self.arg_counts: list[int] = []
+        self.total_args: int = 0
+        self.text_data: bool = False
+        self.image_data: bool = False
         all_have_clustering = True
         for masker in self.maskers:
             all_args = masker.__call__.__code__.co_argcount
@@ -38,7 +41,7 @@ class Composite(Masker):
         if all_have_clustering:
             self.clustering = types.MethodType(joint_clustering, self)
 
-    def shape(self, *args):
+    def shape(self, *args: Any) -> tuple[int | None, int]:
         """Compute the shape of this masker as the sum of all the sub masker shapes."""
         assert len(args) == self.total_args, "The number of passed args is incorrect!"
 
@@ -60,15 +63,15 @@ class Composite(Masker):
             pos += self.arg_counts[i]
         return rows, cols
 
-    def mask_shapes(self, *args):
+    def mask_shapes(self, *args: Any) -> list[Any]:
         """The shape of the masks we expect."""
         out = []
         pos = 0
         for i, masker in enumerate(self.maskers):
-            out.extend(masker.mask_shapes(*args[pos : pos + self.arg_counts[i]]))
+            out.extend(masker.mask_shapes(*args[pos : pos + self.arg_counts[i]]))  # type: ignore[attr-defined]
         return out
 
-    def data_transform(self, *args):
+    def data_transform(self, *args: Any) -> list[Any]:
         """Transform the argument"""
         arg_pos = 0
         out = []
@@ -82,7 +85,7 @@ class Composite(Masker):
 
         return out
 
-    def __call__(self, mask, *args):
+    def __call__(self, mask: Any, *args: Any) -> tuple[Any, ...]:  # type: ignore[override]
         mask = self._standardize_mask(mask, *args)
         assert len(args) == self.total_args, "The number of passed args is incorrect!"
 
@@ -113,8 +116,10 @@ class Composite(Masker):
         mask_pos = 0
         masked = []
         for i, masker in enumerate(self.maskers):
-            masker_args = args[arg_pos : arg_pos + self.arg_counts[i]]
+            masker_args = args[arg_pos : arg_pos + self.arg_counts[i]]  # type: ignore[no-redef]
             masked_out = masker(mask[mask_pos : mask_pos + shapes[i][1]], *masker_args)
+            # num_rows is guaranteed to be an int at this point (not None) by the logic above
+            assert num_rows is not None
             if num_rows > 1 and (shapes[i][0] == 1 or shapes[i][0] is None):
                 masked_out = tuple([m[0] for _ in range(num_rows)] for m in masked_out)
             masked.extend(masked_out)
@@ -125,9 +130,9 @@ class Composite(Masker):
         return tuple(masked)
 
 
-def joint_clustering(self, *args):
+def joint_clustering(self: Composite, *args: Any) -> Any:
     """Return a joint clustering that merges the clusterings of all the submaskers."""
-    single_clustering = []
+    single_clustering = []  # type: ignore[var-annotated]
     arg_pos = 0
     for i, masker in enumerate(self.maskers):
         masker_args = args[arg_pos : arg_pos + self.arg_counts[i]]

@@ -17,6 +17,7 @@ __pycache__
 .vscode
 .python-version
 *.pyc
+*.so
 **/.coverage*
 /build
 /data/*
@@ -38,3 +39,5 @@ shap/explainers/_kernel_lib.c
 catboost_info
 node_modules
 mpl-results
+# intermediate AI skill files
+.claude/disclosures/

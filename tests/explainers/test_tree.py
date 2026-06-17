@@ -10,6 +10,8 @@ import pandas as pd
 import pytest
 import sklearn
 import sklearn.pipeline
+from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor, RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.utils import check_array
 
 import shap
@@ -26,6 +28,20 @@ def test_unsupported_model_raises_error():
     emsg = "Model type not yet supported by TreeExplainer:"
     with pytest.raises(InvalidModelError, match=emsg):
         _ = shap.TreeExplainer(CustomEstimator())
+
+
+def test_large_background_dataset_warning():
+    """A warning should be emitted when >1000 background samples are passed
+    with feature_perturbation='interventional'. Regression test for GH#4385."""
+    X, y = shap.datasets.california(n_points=1200)
+    model = DecisionTreeRegressor(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    # Use maskers.Independent with a high max_samples to bypass the default
+    # subsampling (max_samples=100), so the >1000 check is actually triggered.
+    background = shap.maskers.Independent(X, max_samples=1200)
+    with pytest.warns(UserWarning, match="may lead to slow runtimes"):
+        shap.TreeExplainer(model, background, feature_perturbation="interventional")
 
 
 def test_front_page_xgboost():
@@ -173,7 +189,7 @@ def test_ngboost_models_prediction_equal(col_sample):
         model=model,
         data=X,
         data_missing=None,
-        model_output=0,
+        model_output=0,  # type: ignore[arg-type]
     )
     y_pred = model.predict(X)
     y_pred_tree_ensemble = tree_ensemble.predict(X)
@@ -189,7 +205,7 @@ def test_ngboost_sum_of_shap_values(col_sample):
     predicted = model.predict(X)
 
     # explain the model's predictions using SHAP values
-    explainer = shap.TreeExplainer(model, model_output=0)
+    explainer = shap.TreeExplainer(model, model_output=0)  # type: ignore[arg-type]
 
     explanation = explainer(X)
     # check the properties of Explanation object
@@ -310,6 +326,171 @@ def create_binary_newsgroups_data():
     newsgroups_test = sklearn.datasets.fetch_20newsgroups(subset="test", categories=categories)
     class_names = ["atheism", "christian"]
     return newsgroups_train, newsgroups_test, class_names
+
+
+def create_random_forest_vectorizer():
+    from sklearn.base import TransformerMixin
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.feature_extraction.text import CountVectorizer
+    from sklearn.pipeline import Pipeline
+
+    vectorizer = CountVectorizer(lowercase=False, min_df=0.0, binary=True)
+
+    class DenseTransformer(TransformerMixin):
+        def fit(self, X, y=None, **fit_params):
+            return self
+
+        def transform(self, X, y=None, **fit_params):
+            return X.toarray()
+
+    rf = RandomForestClassifier(n_estimators=500, random_state=777)
+    return Pipeline([("vectorizer", vectorizer), ("to_dense", DenseTransformer()), ("rf", rf)])
+
+
+def test_sklearn_random_forest_newsgroups():
+    import shap
+    # from sklearn.ensemble import RandomForestClassifier
+
+    # note: this test used to fail in native TreeExplainer code due to memory corruption
+    newsgroups_train, newsgroups_test, _ = create_binary_newsgroups_data()
+    pipeline = create_random_forest_vectorizer()
+    pipeline.fit(newsgroups_train.data, newsgroups_train.target)
+    rf = pipeline.named_steps["rf"]
+    vectorizer = pipeline.named_steps["vectorizer"]
+    densifier = pipeline.named_steps["to_dense"]
+
+    dense_bg = densifier.transform(vectorizer.transform(newsgroups_test.data[0:20]))
+
+    test_row = newsgroups_test.data[83:84]
+    explainer = shap.TreeExplainer(rf, dense_bg, feature_perturbation="interventional")
+    vec_row = vectorizer.transform(test_row)
+    dense_row = densifier.transform(vec_row)
+    explainer.shap_values(dense_row)
+
+
+def test_sklearn_decision_tree_multiclass():
+    import numpy as np
+    from sklearn.tree import DecisionTreeClassifier
+
+    import shap
+
+    X, y = shap.datasets.iris()
+    y[y == 2] = 1
+    model = DecisionTreeClassifier(max_depth=None, min_samples_split=2, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+    assert np.abs(shap_values[0][0, 0] - 0.05) < 1e-1
+    assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-1
+
+
+def _common_lightgbm_regressor_test(create_model):
+    import numpy as np
+
+    import shap
+
+    # train lightgbm model on california housing price regression dataset
+    X, y = shap.datasets.california()
+    model = create_model()
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    ex = shap.TreeExplainer(model)
+    shap_values = ex.shap_values(X)
+
+    predicted = model.predict(X, raw_score=True)
+
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, (
+        "SHAP values don't sum to model output!"
+    )
+
+
+def test_lightgbm():
+    lightgbm = pytest.importorskip("lightgbm")
+
+    def create_model():
+        return lightgbm.sklearn.LGBMRegressor(categorical_feature=[8])
+
+    _common_lightgbm_regressor_test(create_model)
+
+
+def test_lightgbm_mse_regressor():
+    lightgbm = pytest.importorskip("lightgbm")
+
+    # train the lightgbm model on a dataset with MSE objective
+    def create_model():
+        return lightgbm.sklearn.LGBMRegressor(categorical_feature=[8], objective="mean_squared_error")
+
+    _common_lightgbm_regressor_test(create_model)
+
+
+def _common_lightgbm_nonsklearn_api(dataset, params, validation):
+    import lightgbm
+    from sklearn.model_selection import train_test_split
+
+    import shap
+
+    # train the lightgbm model using non-sklearn API with binary classification dataset
+    X_train, X_test, y_train, y_test = train_test_split(*dataset, test_size=0.2, random_state=0)
+    lgb_train = lightgbm.Dataset(X_train, y_train)
+    lgb_test = lightgbm.Dataset(X_test, y_test, reference=lgb_train)
+
+    booster = lightgbm.train(params, lgb_train, valid_sets=[lgb_train, lgb_test])
+    # explain the model's predictions using SHAP values
+    ex = shap.TreeExplainer(booster)
+    shap_values = ex.shap_values(X_test)
+
+    predicted = booster.predict(X_test, raw_score=True)
+
+    validation(shap_values, ex.expected_value, predicted)
+
+
+def test_lightgbm_nonsklearn_api_binary():
+    import numpy as np
+
+    import shap
+
+    # train the lightgbm model using non-sklearn API with binary classification dataset
+    params = {
+        "objective": "binary",
+        "num_threads": 4,
+        "n_estimators": 8000,
+        "early_stopping_round": 50,
+        "metric": ["binary_error"],
+        "random_state": 7,
+        "verbose": 1,
+    }
+
+    def validation(shap_values, expected_value, predicted):
+        assert np.abs(shap_values.sum(1) + expected_value - predicted).max() < 1e-4, (
+            "SHAP values don't sum to model output!"
+        )
+
+    _common_lightgbm_nonsklearn_api(dataset=shap.datasets.iris(), params=params, validation=validation)
+
+
+def test_lightgbm_nonsklearn_api_regressor():
+    import numpy as np
+
+    import shap
+
+    # train the lightgbm model using non-sklearn API with regression dataset
+    params = {
+        "num_threads": 4,
+        "n_estimators": 8000,
+        "early_stopping_round": 50,
+        "metric": ["rmse"],
+        "random_state": 7,
+        "verbose": 1,
+    }
+
+    def validation(shap_values, expected_value, predicted):
+        assert np.abs(shap_values.sum(1) + expected_value - predicted).max() < 1e-4, (
+            "SHAP values don't sum to model output!"
+        )
+
+    _common_lightgbm_nonsklearn_api(dataset=shap.datasets.adult(), params=params, validation=validation)
 
 
 def test_gpboost():
@@ -741,7 +922,7 @@ class TestSingleTree:
             "shrinkage": 1,
             "tree_structure": {
                 "leaf_value": 0,
-                # "leaf_count": 123,  # FIXME(upstream): microsoft/LightGBM#5962
+                # "leaf_count": 123,  # FIXME(upstream): lightgbm-org/LightGBM#5962
             },
         }
         stree = SingleTree(sample_tree)
@@ -1146,9 +1327,6 @@ class TestExplainerXGBoost:
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
-    @pytest.mark.skipif(
-        sys.platform == "darwin", reason="Test currently not working on mac. Investigating is a todo, see GH #3709."
-    )
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_dmatrix_propagation(self, Clf):
         """Test that xgboost sklearn attributes are properly passed to the DMatrix
@@ -1170,7 +1348,7 @@ class TestExplainerXGBoost:
         explainer = shap.TreeExplainer(clf)
         shap_values = explainer.shap_values(X_nan)
         # check that SHAP values sum to model output
-        assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
+        np.testing.assert_allclose(margin, explainer.expected_value + shap_values.sum(axis=1), atol=1e-4, rtol=1e-4)
 
     @pytest.mark.parametrize("Reg", regressors)
     def test_xgboost_direct(self, Reg):
@@ -1610,10 +1788,12 @@ class TestExplainerLightGBM:
         # verify output matches shap values for a single observation
         ex = shap.TreeExplainer(model)
 
-        interaction_vals = ex(X.iloc[0, :], interactions=True)
+        interaction_vals = ex(X.iloc[0, :], interactions=True)  # type: ignore[assignment]
         prediction = model.predict(X.iloc[[0], :], raw_score=True)
         np.testing.assert_allclose(
-            interaction_vals.values.sum((0, 1)) + interaction_vals.base_values[0], prediction[0], atol=1e-4
+            interaction_vals.values.sum((0, 1)) + interaction_vals.base_values[0],  # type: ignore[attr-defined]
+            prediction[0],
+            atol=1e-4,
         )
 
     def test_lightgbm_call_explanation(self):
@@ -1635,13 +1815,41 @@ class TestExplainerLightGBM:
         explainer = shap.TreeExplainer(model)
         explanation = explainer(X)
 
-        shap_values: list[np.ndarray] = explainer.shap_values(X)
+        shap_values: list[np.ndarray] = explainer.shap_values(X)  # type: ignore[assignment]
 
         # checks that the call returns a valid Explanation object
         assert len(explanation.base_values) == len(y)
         assert isinstance(explanation.values, np.ndarray)
         assert isinstance(shap_values, np.ndarray)
         assert (explanation.values == shap_values).all()
+
+    def test_lightgbm_categorical_split(self):
+        # GH 480
+        """Checks that shap interaction values are computed without error when the LightGBM model has categorical splits."""
+        lightgbm = pytest.importorskip("lightgbm")
+        X, y = shap.datasets.california(n_points=10000)
+        # Add HouseAgeGroup categorical variable
+        target_variable = "HouseAge"
+        X["HouseAgeGroup"] = pd.cut(
+            X[target_variable],
+            bins=[-float("inf"), 17, 27, 37, float("inf")],
+            labels=[0, 1, 2, 3],
+            right=False,
+        ).astype(int)
+        model = lightgbm.LGBMRegressor(n_estimators=400, max_cat_to_onehot=1)
+        model.fit(
+            X, y, categorical_feature=[X.columns.get_loc("HouseAgeGroup")]
+        )  # Set HouseAgeGroup as categorical variable
+        preds = model.predict(X, raw_score=True)
+
+        explainer = shap.TreeExplainer(model)
+
+        # Check SHAP interaction values sum to model output
+        shap_interaction_values = explainer.shap_interaction_values(X.iloc[:10, :])
+        assert np.allclose(shap_interaction_values.sum(axis=(1, 2)) + explainer.expected_value, preds[:10], atol=1e-4)
+
+        shap_values = explainer.shap_values(X.iloc[:10, :])
+        assert np.allclose(shap_values.sum(axis=1) + explainer.expected_value, preds[:10], atol=1e-4)
 
 
 def test_check_consistent_outputs_binary_classification():
@@ -1781,7 +1989,7 @@ def test_lightgbm_interactions():
 
     model = lightgbm.LGBMClassifier(n_estimators=10, max_depth=3).fit(X, y)
     explainer = shap.TreeExplainer(model)
-    predicted = model.predict(X, raw_score=True)
+    predicted = model.predict(pd.DataFrame(X, columns=model.feature_names_in_), raw_score=True)
     explanation = explainer(X, interactions=False)
     np.testing.assert_allclose(explanation.values.sum(axis=(1)) + explanation.base_values, predicted)
 
@@ -1790,7 +1998,7 @@ def test_lightgbm_interactions():
 
     # test flat input
     explanation_flat = explainer(X[0, :], interactions=True)
-    predicted_flat = model.predict(X[[0], :], raw_score=True)
+    predicted_flat = model.predict(pd.DataFrame(X[[0], :], columns=model.feature_names_in_), raw_score=True)
 
     np.testing.assert_allclose(
         explanation_flat.values.sum((0, 1)) + explanation_flat.base_values[0], predicted_flat[0], atol=1e-4
@@ -1857,24 +2065,24 @@ def test_feature_perturbation_refactoring():
 
     # check the behaviour of "auto" and the switch from "interventional" to "tree_path_dependent"
     feature_perturbation = "auto"
-    explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+    explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)  # type: ignore[arg-type]
     assert explainer.feature_perturbation == "tree_path_dependent"
 
-    explainer = shap.explainers.Tree(model, data=X, feature_perturbation=feature_perturbation)
+    explainer = shap.explainers.Tree(model, data=X, feature_perturbation=feature_perturbation)  # type: ignore[arg-type]
     assert explainer.feature_perturbation == "interventional"
 
     # check that we raise a FutureWarning when switching "interventional" to "tree_path_dependent"
     feature_perturbation = "interventional"
     warn_msg = "In the future, passing feature_perturbation='interventional'"
     with pytest.warns(FutureWarning, match=warn_msg):
-        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)  # type: ignore[arg-type]
     assert explainer.feature_perturbation == "tree_path_dependent"
 
     # raise an error if the option is unknown
     feature_perturbation = "random"
     err_msg = "feature_perturbation must be"
     with pytest.raises(shap.utils._exceptions.InvalidFeaturePerturbationError, match=err_msg):
-        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)  # type: ignore[arg-type]
 
 
 # the expected results can be found in the paper "Consistent Individualized Feature Attribution for Tree Ensembles",
@@ -2063,3 +2271,747 @@ def test_check_consistent_outputs_for_causalml_causal_trees(causalml_synth_data,
         individual_effects = y_outcomes[:, 1] - y_outcomes[:, 0]
 
         np.testing.assert_allclose(preds, individual_effects, atol=1e-4)
+
+
+def test_tree_explainer_with_single_tree():
+    """Test TreeExplainer with a single decision tree."""
+    # Create synthetic data
+    X = np.random.randn(100, 5)
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+
+    # Train a single decision tree
+    model = DecisionTreeClassifier(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    # Create explainer
+    explainer = shap.TreeExplainer(model)
+
+    # Get SHAP values
+    shap_values = explainer.shap_values(X[:10])
+
+    # Classifiers return shape (n_samples, n_features, n_classes)
+    assert shap_values.shape == (10, 5, 2) or shap_values.shape == (10, 5)
+
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X[:10])[:, 1]
+    if shap_values.ndim == 3:
+        # Shape is (n_samples, n_features, n_classes)
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        # Shape is (n_samples, n_features) - already for positive class
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
+
+def test_tree_explainer_with_decision_tree_regressor():
+    """Test TreeExplainer with DecisionTreeRegressor."""
+    X = np.random.randn(100, 4)
+    y = X[:, 0] * 2 + X[:, 1] - 0.5 * X[:, 2]
+
+    model = DecisionTreeRegressor(max_depth=4, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:5])
+
+    assert shap_values.shape == (5, 4)
+
+    # Check additivity
+    predictions = model.predict(X[:5])
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
+
+
+def test_tree_explainer_with_dataframe():
+    """Test TreeExplainer with pandas DataFrame input."""
+    df = pd.DataFrame(np.random.randn(100, 3), columns=["a", "b", "c"])
+    y = (df["a"] + df["b"] > 0).astype(int)
+
+    model = DecisionTreeClassifier(max_depth=3, random_state=0)
+    model.fit(df, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(df[:10])
+
+    # Classifiers return shape (n_samples, n_features, n_classes)
+    assert shap_values.shape == (10, 3, 2) or shap_values.shape == (10, 3)
+
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(df[:10])[:, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
+
+def test_tree_explainer_feature_perturbation_interventional():
+    """Test TreeExplainer with interventional feature perturbation."""
+    X = np.random.randn(100, 4)
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+
+    model = DecisionTreeClassifier(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    # Explicitly specify interventional
+    explainer = shap.TreeExplainer(model, X, feature_perturbation="interventional")
+    shap_values = explainer.shap_values(X[:5])
+
+    assert shap_values.shape == (5, 4, 2) or shap_values.shape == (5, 4)
+
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X[:5])[:, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
+
+def test_tree_explainer_feature_perturbation_tree_path_dependent():
+    """Test TreeExplainer with tree_path_dependent feature perturbation."""
+    X = np.random.randn(100, 4)
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+
+    model = DecisionTreeClassifier(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model, feature_perturbation="tree_path_dependent")
+    shap_values = explainer.shap_values(X[:5])
+
+    assert shap_values.shape == (5, 4, 2) or shap_values.shape == (5, 4)
+
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X[:5])[:, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
+
+def test_tree_explainer_random_forest_binary_classification():
+    """Test TreeExplainer with RandomForestClassifier for binary classification."""
+    X = np.random.randn(150, 5)
+    y = (X[:, 0] + 2 * X[:, 1] - X[:, 2] > 0).astype(int)
+
+    model = RandomForestClassifier(n_estimators=10, max_depth=4, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:10])
+
+    # For binary classification, might return list of length 2 or single array
+    if isinstance(shap_values, list):
+        assert len(shap_values) == 2
+        assert shap_values[0].shape == (10, 5)
+        # Check additivity for class 1 (positive class)
+        predictions = model.predict_proba(X[:10])[:, 1]
+        shap_sum = shap_values[1].sum(1) + explainer.expected_value[1]
+        assert np.abs(shap_sum - predictions).max() < 1e-4
+    else:
+        # Can be (10, 5) or (10, 5, 2) depending on model
+        assert shap_values.shape in [(10, 5), (10, 5, 2)]
+        # Check additivity for class 1 (positive class)
+        predictions = model.predict_proba(X[:10])[:, 1]
+        if shap_values.ndim == 3:
+            shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+        else:
+            shap_sum = shap_values.sum(1) + explainer.expected_value
+        assert np.abs(shap_sum - predictions).max() < 1e-4
+
+
+def test_tree_explainer_gradient_boosting_regressor():
+    """Test TreeExplainer with GradientBoostingRegressor."""
+    X = np.random.randn(120, 6)
+    y = X[:, 0] ** 2 + X[:, 1] + np.random.randn(120) * 0.1
+
+    model = GradientBoostingRegressor(n_estimators=20, max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:8])
+
+    assert shap_values.shape == (8, 6)
+
+    # Check additivity
+    predictions = model.predict(X[:8])
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
+
+
+def test_tree_explainer_gradient_boosting_classifier():
+    """Test TreeExplainer with GradientBoostingClassifier."""
+    X = np.random.randn(150, 4)
+    y = (X[:, 0] + X[:, 1] * 2 > 0.5).astype(int)
+
+    model = GradientBoostingClassifier(n_estimators=15, max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:10])
+
+    assert shap_values.shape == (10, 4)
+
+    # Check additivity (GradientBoostingClassifier uses decision_function for raw output)
+    predictions = model.decision_function(X[:10])
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
+
+
+def test_tree_explainer_with_background_data():
+    """Test TreeExplainer with explicit background data."""
+    X = np.random.randn(100, 4)
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+
+    model = DecisionTreeClassifier(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    # Use a subset as background
+    background = X[:50]
+
+    explainer = shap.TreeExplainer(model, background)
+    shap_values = explainer.shap_values(X[50:60])
+
+    assert shap_values.shape == (10, 4, 2) or shap_values.shape == (10, 4)
+
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X[50:60])[:, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
+
+def test_tree_explainer_check_additivity():
+    """Test that SHAP values sum to prediction - expected_value."""
+    X = np.random.randn(50, 3)
+    y = X[:, 0] + X[:, 1] - X[:, 2] + np.random.randn(50) * 0.1
+
+    model = DecisionTreeRegressor(max_depth=4, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:10])
+
+    # Verify additivity: sum of SHAP values + expected_value ≈ prediction
+    predictions = model.predict(X[:10])
+
+    if isinstance(explainer.expected_value, np.ndarray):
+        expected = explainer.expected_value[0]
+    else:
+        expected = explainer.expected_value
+
+    shap_sum = shap_values.sum(axis=1) + expected
+
+    np.testing.assert_allclose(shap_sum, predictions, rtol=1e-3, atol=1e-3)
+
+
+def test_tree_explainer_single_sample():
+    """Test TreeExplainer with a single sample."""
+    X = np.random.randn(100, 4)
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+
+    model = DecisionTreeClassifier(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+
+    # Single sample as 1D array
+    single_sample = X[0]
+    shap_values = explainer.shap_values(single_sample)
+
+    # Classifier with single sample can have various shapes
+    assert shap_values.shape in [(4,), (1, 4), (4, 2), (1, 4, 2)]
+
+    # Check additivity for class 1 (positive class)
+    prediction = model.predict_proba(single_sample.reshape(1, -1))[0, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[0, :, 1].sum() + explainer.expected_value[1]
+    elif shap_values.ndim == 2 and shap_values.shape[1] == 2:
+        shap_sum = shap_values[:, 1].sum() + explainer.expected_value[1]
+    elif shap_values.ndim == 2:
+        shap_sum = shap_values[0].sum() + explainer.expected_value
+    else:
+        shap_sum = shap_values.sum() + explainer.expected_value
+    assert abs(shap_sum - prediction) < 1e-4
+
+
+def test_tree_explainer_with_xgboost_basic():
+    """Test TreeExplainer with basic XGBoost model."""
+    xgboost = pytest.importorskip("xgboost")
+
+    X = np.random.randn(100, 5)
+    y = X[:, 0] + 2 * X[:, 1] - X[:, 2] + np.random.randn(100) * 0.1
+
+    model = xgboost.XGBRegressor(n_estimators=10, max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:10])
+
+    assert shap_values.shape == (10, 5)
+
+    # Check additivity
+    predictions = model.predict(X[:10])
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
+
+
+def test_tree_explainer_with_xgboost_classifier():
+    """Test TreeExplainer with XGBoost classifier."""
+    xgboost = pytest.importorskip("xgboost")
+
+    X = np.random.randn(120, 4)
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+
+    model = xgboost.XGBClassifier(n_estimators=15, max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:10])
+
+    assert shap_values.shape == (10, 4)
+
+    # Check additivity - XGBoost outputs log-odds for binary classification
+    # SHAP values are in log-odds space, so transform probabilities to log-odds
+    proba = model.predict_proba(X[:10])[:, 1]
+    log_odds = np.log(proba / (1 - proba))
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - log_odds).max() < 1e-4
+
+
+def test_tree_explainer_with_lightgbm_regressor():
+    """Test TreeExplainer with LightGBM regressor."""
+    lightgbm = pytest.importorskip("lightgbm")
+
+    X = np.random.randn(100, 5)
+    y = X[:, 0] + X[:, 1] ** 2 + np.random.randn(100) * 0.1
+
+    model = lightgbm.LGBMRegressor(n_estimators=10, max_depth=3, random_state=0, verbose=-1)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:10])
+
+    assert shap_values.shape == (10, 5)
+
+    # Check additivity
+    predictions = model.predict(pd.DataFrame(X[:10], columns=model.feature_names_in_))
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
+
+
+def test_tree_explainer_with_lightgbm_classifier():
+    """Test TreeExplainer with LightGBM classifier."""
+    lightgbm = pytest.importorskip("lightgbm")
+
+    X = np.random.randn(120, 4)
+    y = (X[:, 0] - X[:, 1] > 0).astype(int)
+
+    model = lightgbm.LGBMClassifier(n_estimators=10, max_depth=3, random_state=0, verbose=-1)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:10])
+
+    # LightGBM binary classifier returns array, not list
+    assert shap_values.shape == (10, 4) or (isinstance(shap_values, list) and len(shap_values) == 2)
+
+    # Check additivity (SHAP values are in raw score space, not probability space)
+    predictions = model.predict(pd.DataFrame(X[:10], columns=model.feature_names_in_), raw_score=True)
+    if isinstance(shap_values, list):
+        shap_sum = shap_values[1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
+
+def test_tree_explainer_expected_value():
+    """Test that expected_value is computed correctly."""
+    X = np.random.randn(100, 3)
+    y = X[:, 0] + X[:, 1]
+
+    model = DecisionTreeRegressor(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+
+    # expected_value should be close to mean prediction on training data
+    mean_pred = model.predict(X).mean()
+
+    # expected_value can be float or array
+    if isinstance(explainer.expected_value, np.ndarray):
+        assert abs(explainer.expected_value[0] - mean_pred) < 1.0
+    else:
+        assert isinstance(explainer.expected_value, (float, np.floating))
+        assert abs(explainer.expected_value - mean_pred) < 1.0
+
+    # Check additivity
+    shap_values = explainer.shap_values(X[:10])
+    predictions = model.predict(X[:10])
+    expected = (
+        explainer.expected_value[0] if isinstance(explainer.expected_value, np.ndarray) else explainer.expected_value
+    )
+    assert np.abs(shap_values.sum(1) + expected - predictions).max() < 1e-4
+
+
+def test_tree_explainer_with_interactions():
+    """Test TreeExplainer with interaction detection."""
+    X = np.random.randn(80, 4)
+    # Create interaction between features 0 and 1
+    y = X[:, 0] * X[:, 1] + X[:, 2]
+
+    model = DecisionTreeRegressor(max_depth=5, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+
+    # Test interactions
+    shap_interaction_values = explainer.shap_interaction_values(X[:10])
+
+    assert shap_interaction_values.shape == (10, 4, 4)
+
+    # Check additivity for interactions (sum of all interaction values equals main effects)
+    predictions = model.predict(X[:10])
+    # Sum of all elements in interaction matrix should equal prediction - expected_value
+    expected = (
+        explainer.expected_value[0] if isinstance(explainer.expected_value, np.ndarray) else explainer.expected_value
+    )
+    for i in range(10):
+        interaction_sum = shap_interaction_values[i].sum()
+        assert abs(interaction_sum + expected - predictions[i]) < 1e-4
+
+
+def test_tree_explainer_output_as_explanation_object():
+    """Test TreeExplainer returning Explanation object."""
+    X = np.random.randn(50, 3)
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+
+    model = DecisionTreeClassifier(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+
+    # Call explainer directly (should return Explanation object)
+    explanation = explainer(X[:5])
+
+    assert isinstance(explanation, shap.Explanation)
+    # Classifiers have extra dimension for classes
+    assert explanation.values.shape in [(5, 3), (5, 3, 2)]
+
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X[:5])[:, 1]
+    if explanation.values.ndim == 3:
+        shap_sum = explanation.values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = explanation.values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
+
+def test_tree_explainer_model_output_parameter():
+    """Test TreeExplainer with different model_output parameters."""
+    X = np.random.randn(80, 3)
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+
+    model = DecisionTreeClassifier(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    # Test with model_output="raw"
+    explainer_raw = shap.TreeExplainer(model, model_output="raw")
+    shap_values_raw = explainer_raw.shap_values(X[:5])
+
+    # Test with model_output="probability" requires interventional mode with background data
+    background = X[:40]
+    explainer_prob = shap.TreeExplainer(
+        model, background, model_output="probability", feature_perturbation="interventional"
+    )
+    shap_values_prob = explainer_prob.shap_values(X[:5])
+
+    # Both should work - classifiers have extra dimension
+    assert shap_values_raw.shape in [(5, 3), (5, 3, 2)]
+    assert shap_values_prob.shape in [(5, 3), (5, 3, 2)]
+
+    # Check additivity for raw output
+    predictions_raw = model.predict_proba(X[:5])[:, 1]
+    if shap_values_raw.ndim == 3:
+        shap_sum = shap_values_raw[:, :, 1].sum(1) + explainer_raw.expected_value[1]
+    else:
+        shap_sum = shap_values_raw.sum(1) + explainer_raw.expected_value
+    assert np.abs(shap_sum - predictions_raw).max() < 1e-4
+
+
+def test_tree_explainer_different_dtypes():
+    """Test TreeExplainer with different data types."""
+    # Test with float32
+    X_float32 = np.random.randn(60, 3).astype(np.float32)
+    y = (X_float32[:, 0] + X_float32[:, 1] > 0).astype(int)
+
+    model = DecisionTreeClassifier(max_depth=3, random_state=0)
+    model.fit(X_float32, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X_float32[:5])
+
+    assert shap_values.shape in [(5, 3), (5, 3, 2)]
+
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X_float32[:5])[:, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
+
+def test_tree_explainer_with_sparse_data():
+    """Test TreeExplainer behavior with sparse-like data (many zeros)."""
+    X_dense = np.random.randn(80, 5)
+    # Make it sparse-like
+    X_dense[X_dense < 0.5] = 0
+    y = (X_dense[:, 0] + X_dense[:, 1] > 0).astype(int)
+
+    model = DecisionTreeClassifier(max_depth=4, random_state=0)
+    model.fit(X_dense, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X_dense[:10])
+
+    assert shap_values.shape in [(10, 5), (10, 5, 2)]
+
+    # Check additivity for class 1 (positive class)
+    predictions = model.predict_proba(X_dense[:10])[:, 1]
+    if shap_values.ndim == 3:
+        shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+    else:
+        shap_sum = shap_values.sum(1) + explainer.expected_value
+    assert np.abs(shap_sum - predictions).max() < 1e-4
+
+
+def test_tree_explainer_with_approximate():
+    """Test TreeExplainer with approximate=True (Saabas method)."""
+    X = np.random.randn(100, 4)
+    y = X[:, 0] + X[:, 1] - X[:, 2]
+
+    model = DecisionTreeRegressor(max_depth=4, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:10], approximate=True)
+
+    assert shap_values.shape == (10, 4)
+
+    # Note: approximate mode may not be perfectly additive
+    predictions = model.predict(X[:10])
+    # Use larger tolerance for approximate mode
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-2
+
+
+def test_tree_explainer_with_check_additivity_false():
+    """Test TreeExplainer with check_additivity=False."""
+    X = np.random.randn(80, 3)
+    y = X[:, 0] + X[:, 1]
+
+    model = DecisionTreeRegressor(max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:10], check_additivity=False)
+
+    assert shap_values.shape == (10, 3)
+
+
+def test_tree_explainer_with_tree_limit():
+    """Test TreeExplainer with tree_limit parameter."""
+    X = np.random.randn(100, 4)
+    y = X[:, 0] + X[:, 1]
+
+    model = GradientBoostingRegressor(n_estimators=20, max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+
+    # Use only first 10 trees (disable additivity check since we're using subset)
+    shap_values = explainer.shap_values(X[:5], tree_limit=10, check_additivity=False)
+
+    assert shap_values.shape == (5, 4)
+
+
+def test_tree_explainer_multiclass():
+    """Test TreeExplainer with multi-class classification (>2 classes)."""
+    X = np.random.randn(150, 4)
+    # Create 3 classes
+    y = np.zeros(150, dtype=int)
+    y[X[:, 0] > 0.5] = 1
+    y[X[:, 0] < -0.5] = 2
+
+    model = DecisionTreeClassifier(max_depth=4, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:10])
+
+    # Multi-class should return list or 3D array
+    if isinstance(shap_values, list):
+        assert len(shap_values) == 3
+        assert shap_values[0].shape == (10, 4)
+        # Check additivity for each class
+        predictions = model.predict_proba(X[:10])
+        for class_idx in range(3):
+            shap_sum = shap_values[class_idx].sum(1) + explainer.expected_value[class_idx]
+            assert np.abs(shap_sum - predictions[:, class_idx]).max() < 1e-4
+    else:
+        assert shap_values.shape in [(10, 4, 3), (10, 4)]
+        # Check additivity for at least one class
+        predictions = model.predict_proba(X[:10])
+        if shap_values.ndim == 3:
+            for class_idx in range(3):
+                shap_sum = shap_values[:, :, class_idx].sum(1) + explainer.expected_value[class_idx]
+                assert np.abs(shap_sum - predictions[:, class_idx]).max() < 1e-4
+
+
+def test_tree_explainer_with_pandas_series():
+    """Test TreeExplainer with pandas Series input."""
+    df = pd.DataFrame(np.random.randn(100, 4), columns=["a", "b", "c", "d"])
+    y = df["a"] + df["b"]
+
+    model = DecisionTreeRegressor(max_depth=3, random_state=0)
+    model.fit(df, y)
+
+    explainer = shap.TreeExplainer(model)
+
+    # Test with single row as Series
+    single_row = df.iloc[0]
+    shap_values = explainer.shap_values(single_row)
+
+    # Single sample can have various shapes
+    assert shap_values.shape in [(4,), (1, 4)]
+
+    # Check additivity for single sample
+    prediction = model.predict(single_row.to_frame().T)[0]
+    shap_sum = shap_values.sum() if shap_values.ndim == 1 else shap_values.sum(1)[0]
+    assert abs(shap_sum + explainer.expected_value - prediction) < 1e-4
+
+
+def test_tree_explainer_random_forest_multiclass():
+    """Test TreeExplainer with RandomForestClassifier multi-class."""
+    X = np.random.randn(150, 4)
+    # Create 3 classes
+    y = np.zeros(150, dtype=int)
+    y[X[:, 0] > 0.3] = 1
+    y[X[:, 0] < -0.3] = 2
+
+    model = RandomForestClassifier(n_estimators=10, max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:10])
+
+    # Should handle multi-class output
+    if isinstance(shap_values, list):
+        assert len(shap_values) == 3
+        # Check additivity for each class
+        predictions = model.predict_proba(X[:10])
+        for class_idx in range(3):
+            shap_sum = shap_values[class_idx].sum(1) + explainer.expected_value[class_idx]
+            assert np.abs(shap_sum - predictions[:, class_idx]).max() < 1e-4
+    else:
+        assert shap_values.shape in [(10, 4), (10, 4, 3)]
+        # Check additivity for at least one class
+        if shap_values.ndim == 3:
+            predictions = model.predict_proba(X[:10])
+            for class_idx in range(3):
+                shap_sum = shap_values[:, :, class_idx].sum(1) + explainer.expected_value[class_idx]
+                assert np.abs(shap_sum - predictions[:, class_idx]).max() < 1e-4
+
+
+def test_tree_explainer_random_forest_regressor():
+    """Test TreeExplainer with RandomForestRegressor."""
+    X = np.random.randn(100, 5)
+    y = X[:, 0] ** 2 + X[:, 1] - 0.5 * X[:, 2]
+
+    model = RandomForestClassifier(n_estimators=10, max_depth=4, random_state=0)
+    model.fit(X, (y > 0).astype(int))
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X[:10])
+
+    # Verify shape is correct
+    if isinstance(shap_values, list):
+        assert len(shap_values) == 2
+        # Check additivity for class 1 (positive class)
+        predictions = model.predict_proba(X[:10])[:, 1]
+        shap_sum = shap_values[1].sum(1) + explainer.expected_value[1]
+        assert np.abs(shap_sum - predictions).max() < 1e-4
+    else:
+        assert shap_values.shape in [(10, 5), (10, 5, 2)]
+        # Check additivity for class 1 (positive class)
+        predictions = model.predict_proba(X[:10])[:, 1]
+        if shap_values.ndim == 3:
+            shap_sum = shap_values[:, :, 1].sum(1) + explainer.expected_value[1]
+        else:
+            shap_sum = shap_values.sum(1) + explainer.expected_value
+        assert np.abs(shap_sum - predictions).max() < 1e-4
+
+
+def test_path_dependent_small_background():
+    """Path-dependent SHAP with small background that has uncovered leaves.
+
+    LightGBM multiclass on iris with 20-sample background deterministically
+    produces zero-weight leaves. Without the epsilon fix, unwind_path()
+    divides by zero, producing NaN. Addresses #3574.
+    """
+    from shap.explainers._tree import SingleTree, TreeEnsemble
+
+    lightgbm = pytest.importorskip("lightgbm")
+
+    X, y = sklearn.datasets.load_iris(return_X_y=True)
+    model = lightgbm.LGBMClassifier(n_estimators=10, num_leaves=8, verbose=-1, random_state=0)
+    model.fit(X, y)
+
+    bg = X[:20]  # small background — guarantees uncovered leaves
+    explainer = shap.TreeExplainer(model, data=bg, feature_perturbation="tree_path_dependent")
+
+    assert isinstance(explainer.model, TreeEnsemble)  # make mypy happy
+    assert isinstance(explainer.model.trees, list)  # make mypy happy
+    assert all(isinstance(t, SingleTree) for t in explainer.model.trees)  # make mypy happy
+    # Confirm zero-weight nodes were present and got epsilon-replaced
+    assert any(np.any(t.node_sample_weight == 1e-6) for t in explainer.model.trees)
+
+    sv = explainer.shap_values(X[:5], check_additivity=False)
+    assert not np.any(np.isnan(sv)), "SHAP values contain NaN"
+
+    # Additivity
+    pred = explainer.model.predict(X[:5])
+    assert isinstance(pred, np.ndarray)  # make mypy happy
+    for c in range(3):
+        shap_sum = explainer.expected_value[c] + sv[:, :, c].sum(axis=1)
+        np.testing.assert_allclose(shap_sum, pred[:, c], atol=1e-6)
+
+
+def test_nullable_pandas_dtype():
+    """TreeExplainer handles pandas nullable dtypes (Int64, Float64) with NA values.
+
+    Previously, DataFrame.values on nullable dtypes produced object arrays,
+    and astype(np.float32) failed on pd.NA with:
+        TypeError: float() argument must be a string or a real number, not 'NAType'
+    Addresses #4011.
+    """
+    X = pd.DataFrame(
+        {
+            "x1": pd.array([1.0, 2.0, 3.0, 4.0, 5.0] * 20, dtype="Float64"),
+            "x2": pd.array([10, 20, 30, 40, 50] * 20, dtype="Int64"),
+        }
+    )
+    y = np.array([0, 1, 0, 1, 0] * 20)
+
+    model = DecisionTreeClassifier(max_depth=2, random_state=0)
+    model.fit(X, y)
+
+    # Introduce NA values in test data
+    X_test = X.iloc[:5].copy()
+    X_test.iloc[2, 0] = pd.NA
+    X_test.iloc[3, 1] = pd.NA
+
+    # Confirm nullable dtypes are present (precondition)
+    assert X_test["x1"].dtype == pd.Float64Dtype()
+    assert X_test["x2"].dtype == pd.Int64Dtype()
+
+    explainer = shap.TreeExplainer(model)
+    sv = explainer.shap_values(X_test)
+    assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))

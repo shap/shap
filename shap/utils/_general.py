@@ -4,15 +4,19 @@ import copy
 import os
 import re
 import sys
+from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import scipy.special
 import sklearn
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from ._types import _ArrayT
 
 import_errors: dict[str, tuple[str, Exception]] = {}
@@ -31,19 +35,27 @@ def record_import_error(package_name: str, msg: str, e: ImportError) -> None:
     import_errors[package_name] = (msg, e)
 
 
-def shapley_coefficients(n: int) -> np.ndarray:
+def shapley_coefficients(n: int) -> npt.NDArray[Any]:
     out = np.zeros(n)
     for i in range(n):
         out[i] = 1 / (n * scipy.special.comb(n - 1, i))
     return out
 
 
-def convert_name(ind, shap_values, input_names):
+def convert_name(
+    ind: str | int | None,
+    shap_values: npt.NDArray[Any] | None,
+    input_names: list[str] | npt.NDArray[Any],
+) -> int | str | None:
+    if ind is None:
+        return None
     if isinstance(ind, str):
         nzinds = np.where(np.array(input_names) == ind)[0]
         if len(nzinds) == 0:
             # we allow rank based indexing using the format "rank(int)"
             if ind.startswith("rank("):
+                if shap_values is None:
+                    raise ValueError("shap_values must be provided for rank-based indexing")
                 return np.argsort(-np.abs(shap_values).mean(0))[int(ind[5:-1])]
 
             # we allow the sum of all the SHAP values to be specified with "sum()"
@@ -58,7 +70,7 @@ def convert_name(ind, shap_values, input_names):
         return ind
 
 
-def potential_interactions(shap_values_column, shap_values_matrix):
+def potential_interactions(shap_values_column: Any, shap_values_matrix: Any) -> npt.NDArray[Any]:
     """Order other features by how much interaction they seem to have with the feature at the given index.
 
     This just bins the SHAP values for a feature along that feature's value. For true Shapley interaction
@@ -106,7 +118,12 @@ def potential_interactions(shap_values_column, shap_values_matrix):
     return np.argsort(-np.abs(interactions))
 
 
-def approximate_interactions(index, shap_values, X, feature_names=None):
+def approximate_interactions(
+    index: str | int,
+    shap_values: npt.NDArray[Any],
+    X: npt.NDArray[Any] | pd.DataFrame,
+    feature_names: list[str] | npt.NDArray[Any] | pd.Index | None = None,
+) -> npt.NDArray[Any]:
     """Order other features by how much interaction they seem to have with the feature at the given index.
 
     This just bins the SHAP values for a feature along that feature's value. For true Shapley interaction
@@ -118,7 +135,7 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
             feature_names = X.columns
         X = X.values
 
-    index = convert_name(index, shap_values, feature_names)
+    index = convert_name(index, shap_values, feature_names)  # type: ignore[arg-type, assignment]
 
     if X.shape[0] > 10000:
         a = np.arange(X.shape[0])
@@ -127,9 +144,9 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
     else:
         inds = np.arange(X.shape[0])
 
-    x = X[inds, index]
+    x = X[inds, index]  # type: ignore[index]
     srt = np.argsort(x)
-    shap_ref = shap_values[inds, index]
+    shap_ref = shap_values[inds, index]  # type: ignore[index]
     shap_ref = shap_ref[srt]
     inc = max(min(int(len(x) / 10.0), 50), 1)
     interactions = []
@@ -157,7 +174,7 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
     return np.argsort(-np.abs(interactions))
 
 
-def encode_array_if_needed(arr, dtype=np.float64):
+def encode_array_if_needed(arr: npt.NDArray[Any], dtype: type[Any] = np.float64) -> npt.NDArray[Any]:
     try:
         return arr.astype(dtype)
     except ValueError:
@@ -261,18 +278,18 @@ def safe_isinstance(obj: Any, class_path_str: str | list[str]) -> bool:
     return False
 
 
-def format_value(s, format_str):
+def format_value(s: Any, format_str: str) -> str:
     """Strips trailing zeros and uses a unicode minus sign."""
     if not issubclass(type(s), str):
         s = format_str % s
     s = re.sub(r"\.?0+$", "", s)
-    if s[0] == "-":
+    if len(s) > 0 and s[0] == "-":
         s = "\u2212" + s[1:]
     return s
 
 
 # From: https://groups.google.com/forum/m/#!topic/openrefine/G7_PSdUeno0
-def ordinal_str(n):
+def ordinal_str(n: int) -> str:
     """Converts a number to and ordinal string."""
     return str(n) + {1: "st", 2: "nd", 3: "rd"}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
 
@@ -280,11 +297,14 @@ def ordinal_str(n):
 class OpChain:
     """A way to represent a set of dot chained operations on an object without actually running them."""
 
+    _ops: list[list[Any]]
+    _root_name: str
+
     def __init__(self, root_name: str = "") -> None:
-        self._ops: list[list[Any]] = []
+        self._ops = []
         self._root_name = root_name
 
-    def apply(self, obj):
+    def apply(self, obj: Any) -> Any:
         """Applies all our ops to the given object, usually an :class:`.Explanation` instance."""
         for o in self._ops:
             op, args, kwargs = o
@@ -294,7 +314,7 @@ class OpChain:
                 obj = getattr(obj, op)
         return obj
 
-    def __call__(self, *args, **kwargs) -> OpChain:
+    def __call__(self, *args: Any, **kwargs: Any) -> OpChain:
         """Update the args for the previous operation."""
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
@@ -302,7 +322,7 @@ class OpChain:
         new_self._ops[-1][2] = kwargs
         return new_self
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Any) -> OpChain:
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
         new_self._ops.append(["__getitem__", [item], {}])
@@ -317,7 +337,7 @@ class OpChain:
         new_self._ops.append([name, None, None])
         return new_self
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         out = self._root_name
         for op in self._ops:
             op_name, args, kwargs = op
@@ -334,7 +354,7 @@ class OpChain:
 
 # https://thesmithfam.org/blog/2012/10/25/temporarily-suppress-console-output-in-python/
 @contextmanager
-def suppress_stderr():
+def suppress_stderr() -> Iterator[None]:
     with open(os.devnull, "w") as devnull:
         old_stderr = sys.stderr
         sys.stderr = devnull

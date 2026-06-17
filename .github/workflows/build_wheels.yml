@@ -8,42 +8,44 @@ on:
   workflow_dispatch:
 
 jobs:
-  generate-wheels-matrix:
-    # Create a matrix of all architectures & versions to build.
-    # This enables the next step to run cibuildwheel in parallel.
-    # From https://iscinumpy.dev/post/cibuildwheel-2-10-0/#only-210
-    name: Generate wheels matrix
+  # we need this test since we run into 403 errors on MacOS, see GH #4179
+  prepare_data:
     runs-on: ubuntu-latest
-    outputs:
-      include: ${{ steps.set-matrix.outputs.include }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Install cibuildwheel
-      # Nb. keep cibuildwheel version pin consistent with job below
-        run: pipx install cibuildwheel==2.16.5
-      - name: Print all build identifiers
-        run: cibuildwheel --print-build-identifiers
-      - id: set-matrix
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Install dependencies for dataset download
         run: |
-          MATRIX=$(
-            {
-              cibuildwheel --print-build-identifiers --platform linux \
-              | jq -nRc '{"only": inputs, "os": "ubuntu-latest"}' \
-              && cibuildwheel --print-build-identifiers --platform macos \
-              | jq -nRc '{"only": inputs, "os": "macos-latest"}' \
-              && cibuildwheel --print-build-identifiers --platform windows \
-              | jq -nRc '{"only": inputs, "os": "windows-latest"}'
-            } | jq -sc
-          )
-          echo "include=$MATRIX" >> $GITHUB_OUTPUT
+          uv pip install --system '.[download_datasets]'
+      - name: Pre-download datasets
+        run: python tests/datasets_to_cache.py
+      - name: Create unified cache directory
+        run: |
+          mkdir -p /tmp/test_data_cache
+          cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
+          cp -r shap/cached_data /tmp/test_data_cache/ || true
+          ls -la /tmp/test_data_cache/
+      - name: Upload cached datasets
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-data-cache
+          path: /tmp/test_data_cache
+          retention-days: 1
 
   build_wheels:
-    name: Build ${{ matrix.only }}
-    needs: generate-wheels-matrix
+    name: Build ${{ matrix.os }} wheels
+    needs: [prepare_data]
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.generate-wheels-matrix.outputs.include) }}
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-14, macos-15-intel, windows-latest]
+
     runs-on: ${{ matrix.os }}
     steps:
       # Ensure all git tags are present so version number is extracted.
@@ -58,25 +60,49 @@ jobs:
       - name: Fetch all tags
         run: git fetch --tags
 
-      - name: Set up QEMU
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
+      - name: Download pre-cached datasets
+        uses: actions/download-artifact@v4
         with:
-          platforms: all
+          name: test-data-cache
+          path: ${{ runner.temp }}/test_data_cache
+
+      - name: Install libomp (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install libomp
+          # Set DYLD_LIBRARY_PATH to avoid OpenMP conflicts, see https://github.com/unit8co/darts/pull/3050
+          _libomp_path=$(brew --prefix libomp 2>/dev/null)/lib
+          echo "DYLD_LIBRARY_PATH=$_libomp_path:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          unset _libomp_path
+
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v7
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.19.1
-        with:
-          only: ${{ matrix.only }}
+        uses: pypa/cibuildwheel@v3.2.1
+        env:
+          CIBW_ARCHS_LINUX: ${{ contains(matrix.os, '-arm') && 'aarch64' || 'x86_64' }}
+          CIBW_ARCHS_MACOS: ${{ matrix.os == 'macos-14' && 'arm64' || 'x86_64' }}
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          CIBW_MUSLLINUX_AARCH64_IMAGE: musllinux_1_2
+          # Pass the cache location to cibuildwheel tests
+          CIBW_BEFORE_TEST: |
+            python -c "import os, shutil; cache_path = os.environ.get('CACHE_PATH', '${{ runner.temp }}/test_data_cache'); home = os.path.expanduser('~'); sklearn_cache = os.path.join(home, 'scikit_learn_data'); os.makedirs(sklearn_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'scikit_learn_data'), sklearn_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'scikit_learn_data')) else None"
+          CIBW_TEST_COMMAND_MACOS: |
+            python -c "import shap, os, shutil; cache_path = '${{ runner.temp }}/test_data_cache'; shap_cache = os.path.join(os.path.dirname(shap.__file__), 'cached_data'); os.makedirs(shap_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'cached_data'), shap_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'cached_data')) else None" && pytest -v {project}/tests --import-mode=append
+          CIBW_TEST_COMMAND_LINUX: |
+            python -c "import shap, os, shutil; cache_path = '${{ runner.temp }}/test_data_cache'; shap_cache = os.path.join(os.path.dirname(shap.__file__), 'cached_data'); os.makedirs(shap_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'cached_data'), shap_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'cached_data')) else None" && pytest -v {project}/tests --import-mode=append
+          CIBW_TEST_COMMAND_WINDOWS: |
+            python -c "import shap, os, shutil; cache_path = r'${{ runner.temp }}\test_data_cache'; shap_cache = os.path.join(os.path.dirname(shap.__file__), 'cached_data'); os.makedirs(shap_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'cached_data'), shap_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'cached_data')) else None" && pytest -v {project}/tests --import-mode=append
 
       - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
-          name: bdist_files_${{ matrix.only }}
+          name: bdist_files_${{ matrix.os }}
 
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       # Ensure all git tags are present so version number is extracted.
       # https://github.com/actions/checkout/issues/1471
@@ -90,15 +116,18 @@ jobs:
       - name: Fetch all tags
         run: git fetch --tags
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
 
       - name: Build sdist (pep517)
         run: |
-          python -m pip install build
-          python -m build --sdist
+          uv build --sdist
+
       - name: Upload sdist
         uses: actions/upload-artifact@v4
         with:

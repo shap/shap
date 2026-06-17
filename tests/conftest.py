@@ -1,3 +1,12 @@
+import functools
+import sys
+from pathlib import Path
+
+# Remove the current working directory from sys.path to ensure tests import the
+# installed shap package (with compiled C extensions) rather than the source tree.
+# If this line is commented out, run pytest via `python -P -m pytest tests` instead.
+sys.path[:] = [p for p in sys.path if p not in ("", ".")]
+
 try:
     # On MacOS, the newer libomp versions that comes with Homebrew (version >= 12)
     # cause segfaults to occur when pytorch + lightgbm are imported (in that order).
@@ -8,9 +17,9 @@ try:
 except ImportError:
     pass
 
-import matplotlib.pyplot as plt
-import numpy as np
-import pytest
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+import pytest  # noqa: E402
 
 
 def pytest_addoption(parser):
@@ -73,3 +82,33 @@ def mpl_test_cleanup():
     with plt.rc_context():
         yield
     plt.close("all")
+
+
+def compare_numpy_outputs_against_baseline(*, func_file, baseline_dir=None, rtol=1e-4, atol=1e-6):
+    if baseline_dir is None:
+        baseline_dir = Path(__file__).parent / "shap_values_baselines"
+    elif isinstance(baseline_dir, str):
+        baseline_dir = Path(baseline_dir)
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            output = func(*args, **kwargs)
+            base_func_name = f"{Path(func_file).stem}_{func.__name__}"
+            baseline_file = baseline_dir / f"{base_func_name}_baseline.npz"
+            if hasattr(output, "values"):
+                arrays = {"values": output.values, "base_values": np.asarray(output.base_values)}
+            else:
+                arrays = {"values": output}
+            if baseline_file.exists():
+                baseline = np.load(baseline_file, allow_pickle=False)
+                for key in arrays:
+                    np.testing.assert_allclose(arrays[key], baseline[key], rtol=rtol, atol=atol)
+            else:
+                baseline_dir.mkdir(parents=True, exist_ok=True)
+                np.savez(baseline_file, **arrays)
+            return output
+
+        return wrapper
+
+    return decorator

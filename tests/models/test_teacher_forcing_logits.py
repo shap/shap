@@ -1,18 +1,13 @@
 """This file contains tests for the TeacherForcingLogits class."""
 
-import platform  # Add platform import
-
 import numpy as np
 import pytest
 
 import shap
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 def test_falcon():
+    pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
     requests = pytest.importorskip("requests")
     name = "fxmarty/really-tiny-falcon-testing"
@@ -40,15 +35,12 @@ def test_falcon():
 
     explainer = shap.Explainer(shap_model, tokenizer)
     shap_values = explainer(s)
-    assert not np.isnan(np.sum(shap_values.values))
+    assert not np.isnan(np.sum(shap_values.values))  # type: ignore[union-attr]
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     """Tests if get_teacher_forced_logits() works for encoder-decoder models."""
+    pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
     requests = pytest.importorskip("requests")
 
@@ -72,12 +64,9 @@ def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     assert not np.isnan(np.sum(logits))
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin",
-    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
-)
 def test_method_get_teacher_forced_logits_for_decoder_model():
     """Tests if get_teacher_forced_logits() works for decoder only models."""
+    pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
     requests = pytest.importorskip("requests")
 

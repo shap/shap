@@ -19,6 +19,7 @@ class TransformersPipeline(Model):
 
         # self.tokenizer = self.inner_model.model.tokenizer
         self.label2id = self.inner_model.model.config.label2id
+        self.label2id = {k: int(v) for k, v in self.label2id.items()}
         self.id2label = self.inner_model.model.config.id2label
         self.output_shape = (max(self.label2id.values()) + 1,)
         if len(self.output_shape) == 1:

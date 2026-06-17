@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import itertools as it
 import warnings
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import scipy.cluster
 import scipy.spatial
@@ -18,13 +19,17 @@ if TYPE_CHECKING:
     from ._types import _ArrayLike
 
 
-def partition_tree(X, metric="correlation"):
+def partition_tree(X: pd.DataFrame, metric: str = "correlation") -> npt.NDArray[Any]:
     X_full_rank = X + np.random.randn(*X.shape) * 1e-8
     D = scipy.spatial.distance.pdist(X_full_rank.fillna(X_full_rank.mean()).T, metric=metric)
     return scipy.cluster.hierarchy.complete(D)
 
 
-def partition_tree_shuffle(indexes, index_mask, partition_tree):
+def partition_tree_shuffle(
+    indexes: npt.NDArray[Any],
+    index_mask: npt.NDArray[np.bool_],
+    partition_tree: npt.NDArray[Any],
+) -> None:
     """Randomly shuffle the indexes in a way that is consistent with the given partition tree.
 
     Parameters
@@ -43,7 +48,14 @@ def partition_tree_shuffle(indexes, index_mask, partition_tree):
 
 
 @njit
-def _pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos):
+def _pt_shuffle_rec(
+    i: int,
+    indexes: npt.NDArray[Any],
+    index_mask: npt.NDArray[np.bool_],
+    partition_tree: npt.NDArray[Any],
+    M: int,
+    pos: int,
+) -> int:  # type: ignore[misc]
     if i < 0:
         # see if we should include this index in the ordering
         if index_mask[i + M]:
@@ -63,7 +75,11 @@ def _pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos):
 
 
 @njit
-def delta_minimization_order(all_masks, max_swap_size=100, num_passes=2):
+def delta_minimization_order(
+    all_masks: npt.NDArray[Any],
+    max_swap_size: int = 100,
+    num_passes: int = 2,
+) -> npt.NDArray[Any]:  # type: ignore[misc]
     order = np.arange(len(all_masks))
     for _ in range(num_passes):
         for length in list(range(2, max_swap_size)):
@@ -74,7 +90,7 @@ def delta_minimization_order(all_masks, max_swap_size=100, num_passes=2):
 
 
 @njit
-def _reverse_window(order, start, length):
+def _reverse_window(order: npt.NDArray[Any], start: int, length: int) -> None:  # type: ignore[misc]
     for i in range(length // 2):
         tmp = order[start + i]
         order[start + i] = order[start + length - i - 1]
@@ -82,7 +98,12 @@ def _reverse_window(order, start, length):
 
 
 @njit
-def _reverse_window_score_gain(masks, order, start, length):
+def _reverse_window_score_gain(
+    masks: npt.NDArray[Any],
+    order: npt.NDArray[Any],
+    start: int,
+    length: int,
+) -> int:  # type: ignore[misc]
     forward_score = _mask_delta_score(masks[order[start - 1]], masks[order[start]]) + _mask_delta_score(
         masks[order[start + length - 1]], masks[order[start + length]]
     )
@@ -94,11 +115,15 @@ def _reverse_window_score_gain(masks, order, start, length):
 
 
 @njit
-def _mask_delta_score(m1, m2):
+def _mask_delta_score(m1: npt.NDArray[Any], m2: npt.NDArray[Any]) -> int:  # type: ignore[misc]
     return (m1 ^ m2).sum()
 
 
-def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
+def hclust_ordering(
+    X: npt.NDArray[Any],
+    metric: str = "sqeuclidean",
+    anchor_first: bool = False,
+) -> npt.NDArray[Any]:
     """A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar."""
     # compute a hierarchical clustering and return the optimal leaf ordering
     D = scipy.spatial.distance.pdist(X, metric)
@@ -107,14 +132,14 @@ def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
 
 
 def xgboost_distances_r2(
-    X,
-    y,
+    X: npt.NDArray[Any],
+    y: npt.NDArray[Any],
     learning_rate: float = 0.6,
     early_stopping_rounds: int | None = 2,
     subsample: float | None = 1.0,
     max_estimators: int | None = 10_000,
     random_state: int | np.random.RandomState = 0,
-) -> np.ndarray:
+) -> npt.NDArray[Any]:
     """Compute redundancy distances scaled from 0-1 among all the features in X relative to the label y.
 
     Distances are measured by training univariate XGBoost models of y for all the features, and then
@@ -139,8 +164,8 @@ def xgboost_distances_r2(
 
     # fit an XGBoost model on each of the features
     num_features = X.shape[1]
-    train_preds_list = []
-    test_preds_list = []
+    train_preds_list: list[npt.NDArray[Any]] = []
+    test_preds_list: list[npt.NDArray[Any]] = []
     for i in range(num_features):
         model = xgboost.XGBRegressor(
             subsample=subsample,
@@ -152,11 +177,11 @@ def xgboost_distances_r2(
         model.fit(X_train[:, i : i + 1], y_train, eval_set=[(X_test[:, i : i + 1], y_test)], verbose=False)
         train_preds_list.append(model.predict(X_train[:, i : i + 1]))
         test_preds_list.append(model.predict(X_test[:, i : i + 1]))
-    train_preds = np.vstack(train_preds_list).T
-    test_preds = np.vstack(test_preds_list).T
+    train_preds: npt.NDArray[Any] = np.vstack(train_preds_list).T
+    test_preds: npt.NDArray[Any] = np.vstack(test_preds_list).T
 
     # fit XGBoost models to predict the outputs of other XGBoost models to see how redundant features are
-    dist = np.zeros((num_features, num_features))
+    dist: npt.NDArray[Any] = np.zeros((num_features, num_features))
     for i, j in show_progress(
         it.product(range(num_features), range(num_features)),
         total=num_features * num_features,
@@ -172,7 +197,7 @@ def xgboost_distances_r2(
                 "near-constant features)! Cluster distances can't be computed for it (so setting "
                 "all redundancy distances to 1)."
             )
-            r2 = 0
+            r2: float = 0
 
         # fit the model
         else:
@@ -201,7 +226,7 @@ def hclust(
     linkage: Literal["single", "complete", "average"] = "single",
     metric: str = "auto",
     random_state: int | np.random.RandomState = 0,
-) -> np.ndarray:
+) -> npt.NDArray[Any]:
     """Fit a hierarchical clustering model for features X relative to target variable y.
 
     For more information on clustering methods, see :external+scipy:func:`scipy.cluster.hierarchy.linkage`.
@@ -237,13 +262,13 @@ def hclust(
 
     """
     if isinstance(X, pd.DataFrame):
-        X_arr = X.values
+        X_arr: npt.NDArray[Any] = X.values
     else:
         X_arr = np.array(X)
     if len(X_arr.shape) != 2:
         raise DimensionError("X needs to be a 2-dimensional array-like object")
 
-    known_linkages = ("single", "complete", "average")
+    known_linkages: tuple[str, str, str] = ("single", "complete", "average")
     if linkage not in known_linkages:
         raise ValueError(f"Unknown linkage type: {linkage}")
 
@@ -255,7 +280,7 @@ def hclust(
 
     # build the distance matrix
     if metric == "xgboost_distances_r2":
-        dist_full: np.ndarray = xgboost_distances_r2(X_arr, y, random_state=random_state)
+        dist_full: npt.NDArray[Any] = xgboost_distances_r2(X_arr, y, random_state=random_state)  # type: ignore[arg-type]
 
         # build a condensed upper triangular version by taking the max distance from either direction
         dist_list: list[float] = []
@@ -266,7 +291,7 @@ def hclust(
                 dist_list.append(max(dist_full[i, j], dist_full[j, i]))
             elif linkage == "average":
                 dist_list.append((dist_full[i, j] + dist_full[j, i]) / 2)
-        dist = np.array(dist_list)
+        dist: npt.NDArray[Any] = np.array(dist_list)
 
     else:
         if y is not None:
@@ -274,7 +299,7 @@ def hclust(
                 "Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is "
                 "not based on label fitting!"
             )
-        bg_no_nan: np.ndarray = X_arr.copy()
+        bg_no_nan: npt.NDArray[Any] = X_arr.copy()
         for i in range(bg_no_nan.shape[1]):
             np.nan_to_num(bg_no_nan[:, i], nan=np.nanmean(bg_no_nan[:, i]), copy=False)
         dist = scipy.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape) * 1e-8, metric=metric)

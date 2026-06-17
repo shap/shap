@@ -18,4 +18,4 @@ def test_raw_function():
     explainer = shap.Explainer(test, custom_masker)
     shap_values = explainer(X[:100])
 
-    assert np.var(shap_values.values - shap_values.data) < 1e-6
+    assert np.var(shap_values.values - shap_values.data) < 1e-6  # type: ignore[union-attr, union-attr]

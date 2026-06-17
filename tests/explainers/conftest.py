@@ -21,6 +21,7 @@ def load_tokenizer_model(name: str, retries: int) -> tuple:
 @pytest.fixture(scope="session")
 def basic_translation_scenario():
     """Create a basic transformers translation model and tokenizer."""
+    pytest.importorskip("torch")
     # Use a *tiny* tokenizer model, to keep tests running as fast as possible.
     # Nb. At time of writing, this pretrained model requires "protobuf==3.20.3".
     # name = "mesolitica/finetune-translation-t5-super-super-tiny-standard-bahasa-cased"

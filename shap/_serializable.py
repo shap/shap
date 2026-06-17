@@ -79,12 +79,16 @@ class Serializer:
             pickle.dump("custom_encoder", self.out_stream)
             encoder(value, self.out_stream)
         elif encoder == ".save" or (isinstance(value, Serializable) and encoder == "auto"):
-            log.debug("encoder_name = %s", "serializable.save")
-            pickle.dump("serializable.save", self.out_stream)
-            if len(inspect.getfullargspec(value.save)[0]) == 3:  # backward compat for MLflow, can remove 4/1/2021
-                value.save(self.out_stream, value)
-            else:
+            if hasattr(value, "save"):
+                # If it can save, use the original serializable.save logic
+                log.debug("encoder_name = %s", "serializable.save")
+                pickle.dump("serializable.save", self.out_stream)
                 value.save(self.out_stream)
+            else:
+                # If it can't, use the cloudpickle fallback logic directly
+                log.debug("encoder_name = %s", "cloudpickle.dump (fallback)")
+                pickle.dump("cloudpickle.dump", self.out_stream)
+                cloudpickle.dump(value, self.out_stream)
         elif encoder == "auto":
             if isinstance(value, (int, float, str)):
                 log.debug("encoder_name = %s", "pickle.dump")
@@ -159,14 +163,14 @@ class Deserializer:
             if end_token == "END_BLOCK___":
                 return
             self._load_data_value()
-        raise ValueError(f"The data block end token wsa not found for the block {self.block_name}.")
+        raise ValueError(f"The data block end token was not found for the block {self.block_name}.")
 
     def load(self, name, decoder=None):
         """Load a data item from the current input stream."""
         # confirm the block name
         loaded_name = pickle.load(self.in_stream)
         log.debug("loaded_name = %s", loaded_name)
-        print("loaded_name", loaded_name)
+
         if loaded_name != name:
             raise ValueError(
                 f"The next data item in the file being loaded was supposed to be {name}, "

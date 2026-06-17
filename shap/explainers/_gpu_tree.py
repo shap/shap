@@ -22,7 +22,7 @@ class GPUTreeExplainer(TreeExplainer):
 
     Examples
     --------
-    See `GPUTree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/GPUTreeExplainer.html>`_
+    See `GPUTree explainer examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/explainers/GPUTree.html>`_
 
     """
 
@@ -82,6 +82,7 @@ class GPUTreeExplainer(TreeExplainer):
             self.model.children_default,
             self.model.features,
             self.model.thresholds,
+            self.model.threshold_types,
             self.model.values,
             self.model.node_sample_weight,
             self.model.max_depth,
@@ -100,7 +101,7 @@ class GPUTreeExplainer(TreeExplainer):
 
         out = self._get_shap_output(phi, flat_output)
         if check_additivity and self.model.model_output == "raw":
-            self.assert_additivity(out, self.model.predict(X))
+            self.assert_additivity(out, self.model.predict(X))  # type: ignore[arg-type]
 
         return out
 
@@ -159,6 +160,7 @@ class GPUTreeExplainer(TreeExplainer):
             self.model.children_default,
             self.model.features,
             self.model.thresholds,
+            self.model.threshold_types,
             self.model.values,
             self.model.node_sample_weight,
             self.model.max_depth,
