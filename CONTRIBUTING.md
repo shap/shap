@@ -96,7 +96,7 @@ green `<> Code` button on your projects home page.
 Create a new isolated environment for the project, e.g. with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv sync
+uv venv
 ```
 
 ### Installing from source
@@ -112,11 +112,13 @@ To build from source, you need a compiler to build the C extension.
 - Or on Windows, one way of getting a compiler is to [install
   mingw64](https://www.mingw-w64.org/downloads/).
 
-Pip-install the project with the `--editable` flag, which ensures that any
+Pip-install the project with the `-e` flag, which ensures that any
 changes you make to the source code are immediately reflected in your
 environment.
 
 ```bash
+pip install -e . --group test-core --group plots
+# or using uv (-e is implied)
 uv sync --group test-core --group plots
 ```
 
@@ -131,6 +133,8 @@ The various dependency groups are defined in [pyproject.toml](pyproject.toml):
 To use the CUDA extension for ``GPUTreeExplainer``, set the ``SHAP_ENABLE_CUDA`` environment variable to `1` when installing:
 
 ```bash
+SHAP_ENABLE_CUDA=1 pip install -e . --group test-core --group plots
+# or using uv
 SHAP_ENABLE_CUDA=1 uv sync --group test-core --group plots
 ```
 
@@ -140,12 +144,16 @@ We use [pre-commit hooks](https://pre-commit.com/#install) to run code checks.
 Enable `pre-commit` in your local environment with:
 
 ```bash
+pre-commit install
+# or using uv
 uv run pre-commit install
 ```
 
 To run the checks on all files, use:
 
 ```bash
+pre-commit run --all-files
+# or using uv
 uv run pre-commit run --all-files
 ```
 
@@ -153,6 +161,8 @@ uv run pre-commit run --all-files
 pre-commit hook. You can also run `ruff` locally with:
 
 ```bash
+ruff check .
+# or using uv
 uv run ruff check .
 ```
 
@@ -161,6 +171,8 @@ uv run ruff check .
 The unit test suite can be run locally with:
 
 ```bash
+pytest
+# or using uv
 uv run pytest
 ```
 
