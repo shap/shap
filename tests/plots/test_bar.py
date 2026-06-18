@@ -128,3 +128,14 @@ def test_bar_coalition_run(explainer):
     assert len(ax.patches) == 10
 
     plt.close(ax.figure)
+
+
+@pytest.mark.mpl_image_compare
+def test_bar_plot_with_coalitions(explainer):
+    """Bar plot with Owen coalition"""
+    shap_values = explainer(explainer.data)
+    clustering = shap.utils.hclust(explainer.data, metric="correlation")
+    fig = plt.figure()
+    shap.plots.bar(shap_values, clustering=clustering, clustering_cutoff=0.75, coalition=True, show=False)
+    plt.tight_layout()
+    return fig
