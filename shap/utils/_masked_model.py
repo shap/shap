@@ -6,7 +6,7 @@ import scipy.sparse
 from numba import njit
 
 from .. import links
-from .._cutils import init_masks
+from .._cutils import init_masks, rec_fill_masks
 
 
 class MaskedModel:
@@ -414,33 +414,10 @@ def make_masks(cluster_matrix):
     # build an array of index lists in CSR format
     cluster_matrix = cluster_matrix.astype(np.double)
     init_masks(cluster_matrix, M, indices_row_pos, indptr)
-    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, cluster_matrix.shape[0] - 1 + M)
+    rec_fill_masks(cluster_matrix, indices_row_pos, indices, M, cluster_matrix.shape[0] - 1 + M)
     mask_matrix = scipy.sparse.csr_matrix((np.ones(len(indices), dtype=bool), indices, indptr), shape=(2 * M - 1, M))
 
     return mask_matrix
-
-
-@njit
-def _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, ind):
-    pos = indices_row_pos[ind]
-
-    if ind < M:
-        indices[pos] = ind
-        return
-
-    lind = int(cluster_matrix[ind - M, 0])
-    rind = int(cluster_matrix[ind - M, 1])
-    lind_size = int(cluster_matrix[lind - M, 3]) if lind >= M else 1
-    rind_size = int(cluster_matrix[rind - M, 3]) if rind >= M else 1
-
-    lpos = indices_row_pos[lind]
-    rpos = indices_row_pos[rind]
-
-    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, lind)
-    indices[pos : pos + lind_size] = indices[lpos : lpos + lind_size]
-
-    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, rind)
-    indices[pos + lind_size : pos + lind_size + rind_size] = indices[rpos : rpos + rind_size]
 
 
 def link_reweighting(p, link):
