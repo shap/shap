@@ -3015,3 +3015,51 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+def test_tree_explainer_mixed_castable_data():
+    """
+    Test that TreeExplainer safely casts mixed-type Pandas DataFrames (e.g., strings containing
+    numbers, booleans) to float64 without triggering a C++ NULL pointer crash.
+    Addresses Issue #1844.
+    """
+    xgboost = pytest.importorskip("xgboost")
+    # Train a dummy model on clean data
+    X_train = pd.DataFrame({"age": [58.0, 59.0, 26.0], "sex": [0.0, 0.0, 0.0]})
+    y_train = [0, 1, 0]
+    model = xgboost.XGBClassifier(n_estimators=2).fit(X_train, y_train)
+
+    # Mimic the user's issue: mixed types that can be safely cast by numpy
+    X_mixed = pd.DataFrame(
+        {
+            "age": [58, "59", 26],  # Contains a string
+            "sex": [False, False, False],  # Contains booleans
+        }
+    )
+
+    # This should initialize smoothly without a C++ array_dealloc SystemError
+    explainer = shap.TreeExplainer(model, data=X_mixed, feature_perturbation="interventional")
+    assert explainer is not None
+
+
+def test_tree_explainer_uncastable_data():
+    """
+    Test that TreeExplainer raises a clear ValueError when background data contains
+    un-castable types (like non-numeric strings), rather than failing silently in C++.
+    """
+    xgboost = pytest.importorskip("xgboost")
+    X_train = pd.DataFrame({"age": [58.0, 59.0], "sex": [0.0, 0.0]})
+    y_train = [0, 1]
+    model = xgboost.XGBClassifier(n_estimators=2).fit(X_train, y_train)
+
+    # Mimic completely un-castable data
+    X_bad = pd.DataFrame(
+        {
+            "age": [58, "Cat"],  # "Cat" cannot be cast to float64
+            "sex": [False, False],
+        }
+    )
+
+    # Verify that our specific Python ValueError is raised
+    with pytest.raises(ValueError, match="Background data must be purely numeric"):
+        shap.TreeExplainer(model, data=X_bad, feature_perturbation="interventional")
