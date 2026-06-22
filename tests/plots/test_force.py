@@ -1,4 +1,6 @@
 from contextlib import nullcontext as does_not_raise
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -83,6 +85,73 @@ def test_random_force_plot_mpl_text_rotation_with_data(data_explainer_shap_value
         explainer.expected_value, shap_values[0, :], X.iloc[0, :], matplotlib=True, text_rotation=30, show=False
     )
     plt.close("all")
+
+
+def test_force_plot_multiple_samples_returns_array_visualizer(data_explainer_shap_values):
+    """Multiple rows should produce an AdditiveForceArrayVisualizer in JS mode."""
+    X, explainer, shap_values = data_explainer_shap_values
+
+    vis = shap.force_plot(
+        explainer.expected_value,
+        shap_values[:5, :],
+        X.iloc[:5, :],
+        matplotlib=False,
+    )
+
+    assert "AdditiveForceArrayVisualizer" in vis.html()
+
+
+def test_force_plot_multiple_samples_mpl_not_supported(data_explainer_shap_values):
+    """Matplotlib mode is not implemented for stacked force plots."""
+    X, explainer, shap_values = data_explainer_shap_values
+
+    with pytest.raises(NotImplementedError, match="not yet supported"):
+        shap.force_plot(
+            explainer.expected_value,
+            shap_values[:5, :],
+            X.iloc[:5, :],
+            matplotlib=True,
+            show=False,
+        )
+
+
+def test_force_plot_rejects_list_shap_values():
+    """Legacy list-shaped multi-output input should raise a helpful error."""
+    with pytest.raises(TypeError, match="looks multi output"):
+        shap.force_plot(0.0, [np.array([1.0, -1.0])])
+
+
+def test_force_plot_base_value_shape_validation():
+    """Inconsistent base_value/shap_values shapes should raise an error."""
+    with pytest.raises(TypeError, match="force plot now requires the base value"):
+        shap.force_plot(np.array([0.0, 1.0]), np.array([0.3]))
+
+
+def test_force_save_html_roundtrip(data_explainer_shap_values):
+    """save_html should serialize a visualizer into a complete HTML document."""
+    X, explainer, shap_values = data_explainer_shap_values
+    vis = shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :], matplotlib=False)
+
+    with TemporaryDirectory() as tmpdir:
+        out_file = Path(tmpdir) / "force_plot.html"
+        shap.save_html(str(out_file), vis, full_html=True)
+        html = out_file.read_text(encoding="utf-8")
+
+    assert "<html>" in html
+    assert "AdditiveForceVisualizer" in html
+
+
+def test_force_save_html_requires_visualizer():
+    """save_html should reject inputs that are not force visualizers."""
+    with pytest.raises(TypeError, match="requires a Visualizer"):
+        shap.save_html("dummy.html", object())
+
+
+def test_force_initjs_requires_ipython(monkeypatch):
+    """initjs should raise when IPython support is unavailable."""
+    monkeypatch.setitem(shap.initjs.__globals__, "have_ipython", False)
+    with pytest.raises(AssertionError, match="IPython must be installed"):
+        shap.initjs()
 
 
 @pytest.mark.mpl_image_compare(tolerance=3)

@@ -8,6 +8,7 @@ import re
 import string
 import warnings
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -26,6 +27,9 @@ from ..utils._exceptions import DimensionError
 from ..utils._legacy import Data, DenseData, Instance, Link, Model, convert_to_link
 from ._labels import labels
 
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+
 
 def force(
     base_value,
@@ -42,6 +46,7 @@ def force(
     ordering_keys_time_format=None,
     text_rotation=0,
     contribution_threshold=0.05,
+    ax: "Axes | None" = None,
 ):
     """Visualize the given SHAP values with an additive force layout.
 
@@ -86,13 +91,22 @@ def force(
         to be customized further after it has been created.
         Only applicable when ``matplotlib`` is set to True.
 
-    figsize :
-        Figure size of the matplotlib output.
+    figsize : tuple[float, float]
+        Figure size of the matplotlib output. Only applicable when ``matplotlib`` is set to True.
 
     contribution_threshold : float
         Controls the feature names/values that are displayed on force plot.
         Only features that the magnitude of their shap value is larger than min_perc * (sum of all abs shap values)
         will be displayed.
+
+    ax : matplotlib Axes
+        Axes object to draw the plot onto. If not provided, a new Figure and Axes are created.
+        Only applicable when ``matplotlib`` is set to True.
+
+    Returns
+    -------
+    If ``matplotlib`` is ``False``, returns a Javascript visualizer object.
+    If ``matplotlib`` is ``True`` and ``show=False``, returns the :external+mpl:class:`~matplotlib.figure.Figure`.
 
     """
     # support passing an explanation object
@@ -201,6 +215,7 @@ def force(
             show=show,
             text_rotation=text_rotation,
             min_perc=contribution_threshold,
+            ax=ax,
         )
 
     else:
@@ -391,6 +406,7 @@ def visualize(
     ordering_keys_time_format=None,
     text_rotation=0,
     min_perc=0.05,
+    ax: "Axes | None" = None,
 ):
     """Main interface for switching between matplotlib / javascript force plots.
 
@@ -409,6 +425,7 @@ def visualize(
                 show=show,
                 text_rotation=text_rotation,
                 min_perc=min_perc,
+                ax=ax,
             )
         else:
             return AdditiveForceVisualizer(e, plot_cmap=plot_cmap)
@@ -515,10 +532,22 @@ class AdditiveForceVisualizer(BaseVisualizer):
   );
 </script>"""
 
-    def matplotlib(self, figsize, show, text_rotation, min_perc=0.05):
-        fig = draw_additive_plot(self.data, figsize=figsize, show=show, text_rotation=text_rotation, min_perc=min_perc)
-
-        return fig
+    def matplotlib(
+        self,
+        figsize,
+        show,
+        text_rotation,
+        min_perc=0.05,
+        ax: "Axes | None" = None,
+    ):
+        return draw_additive_plot(
+            self.data,
+            figsize=figsize,
+            show=show,
+            text_rotation=text_rotation,
+            min_perc=min_perc,
+            ax=ax,
+        )
 
     def _repr_html_(self):
         return self.html()
