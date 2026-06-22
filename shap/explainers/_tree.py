@@ -1534,6 +1534,17 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(shap_trees[0].criterion, None)
             self.tree_output = "raw_value"
             self.base_offset = model.init_params[param_idx]
+        elif safe_isinstance(model, ["treelite.Model", "treelite.core.Model"]):  # ✅ 8 spaces
+            assert_import("treelite")
+            self.original_model = model
+            loader = TreeliteModelLoader(model)
+            self.trees = loader.get_trees(data=data, data_missing=data_missing)
+            self.base_offset = loader.base_score
+            self.objective = loader.objective
+            self.tree_output = loader.tree_output
+            self.input_dtype = np.float64
+            if loader.num_stacked_models > 1:
+                self.num_stacked_models = loader.num_stacked_models
         else:
             raise InvalidModelError("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
@@ -2570,3 +2581,107 @@ class CatBoostTreeModelLoader:
             )
 
         return trees
+
+
+class TreeliteModelLoader:
+    """Load a TreeLite model into SHAP's tree format.
+
+    Requires treelite >= 4.0 (regression, binary clf, multi-class clf).
+    Uses the field accessor API for header fields and JSON dump for tree structure.
+    """
+
+    def __init__(self, treelite_model: Any) -> None:
+        import json as _json
+
+        self.num_feature: int = treelite_model.num_feature
+        self.num_tree: int = treelite_model.num_tree
+
+        ha = treelite_model.get_header_accessor()
+        task_type_list = ["kBinaryClf", "kRegressor", "kMultiClf", "kLearningToRank", "kIsolationForest"]
+        task_type: str = task_type_list[int(ha.get_field("task_type")[0])]
+        self.average_tree_output: bool = bool(ha.get_field("average_tree_output")[0])
+        self.num_class: int = int(ha.get_field("num_class")[0])
+        self.base_score: float = float(ha.get_field("base_scores")[0])
+
+        self.num_stacked_models: int = self.num_class if (task_type == "kMultiClf" and self.num_class > 1) else 1
+
+        _task_map: dict[str, tuple[str | None, str]] = {
+            "kRegressor": ("squared_error", "raw_value"),
+            "kBinaryClf": ("binary_crossentropy", "log_odds"),
+            "kMultiClf": (None, "raw_value"),
+            "kLearningToRank": (None, "raw_value"),
+        }
+        self.objective, self.tree_output = _task_map.get(task_type, (None, "raw_value"))
+
+        # Tree/node structure still parsed from JSON dump
+        trees_list = _json.loads(treelite_model.dump_as_json(pretty_print=False)).get("trees", [])
+        self._trees_data: list[dict] = [self._parse_tree(t) for t in trees_list]
+
+    def _parse_tree(self, tree_json: dict) -> dict:
+        """Convert one treelite JSON tree into SHAP's dict format."""
+        nodes_list = tree_json.get("nodes", [])
+        num_nodes: int = tree_json.get("num_nodes", len(nodes_list))
+
+        children_left = np.full(num_nodes, -1, dtype=np.int32)
+        children_right = np.full(num_nodes, -1, dtype=np.int32)
+        children_default = np.full(num_nodes, -1, dtype=np.int32)
+        features = np.full(num_nodes, -2, dtype=np.int32)
+        thresholds = np.zeros(num_nodes, dtype=np.float64)
+        values = np.zeros((num_nodes, 1), dtype=np.float64)
+        node_sample_weight = np.zeros(num_nodes, dtype=np.float64)
+
+        for node in nodes_list:
+            nid: int = node["node_id"]
+
+            node_sample_weight[nid] = float(node.get("data_count") or node.get("sum_hess") or 0.0)
+
+            # treelite 4.x: leaf nodes have "leaf_value" key and no "left_child"
+            # treelite 3.x: leaf nodes have left_child == -1
+            is_leaf = "leaf_value" in node or "left_child" not in node
+
+            if is_leaf:
+                children_left[nid] = -1
+                children_right[nid] = -1
+                children_default[nid] = -1
+                features[nid] = -2
+                thresholds[nid] = -2.0
+                leaf_val = node.get("leaf_value")
+                values[nid, 0] = float(leaf_val) if leaf_val is not None else 0.0
+            else:
+                left = int(node["left_child"])
+                right = int(node["right_child"])
+                children_left[nid] = left
+                children_right[nid] = right
+
+                default_left: bool = bool(node.get("default_left", False))
+                children_default[nid] = left if default_left else right
+
+                # treelite 4.x uses "split_feature_id"; 3.x used "split_feature"
+                features[nid] = int(node.get("split_feature_id", node.get("split_feature", -2)))
+
+                thresh: float = float(node.get("threshold", 0.0))
+                cmp_op: str = node.get("comparison_op", "<=")
+                if cmp_op == "<":
+                    thresh = float(np.nextafter(np.float64(thresh), -np.inf))
+                thresholds[nid] = thresh
+                values[nid, 0] = 0.0
+
+        if self.average_tree_output and self.num_tree > 0:
+            values /= self.num_tree
+
+        return {
+            "children_left": children_left,
+            "children_right": children_right,
+            "children_default": children_default,
+            "features": features,
+            "thresholds": thresholds,
+            "values": values,
+            "node_sample_weight": node_sample_weight,
+        }
+
+    def get_trees(
+        self,
+        data: npt.NDArray[Any] | None = None,
+        data_missing: npt.NDArray[np.bool_] | None = None,
+    ) -> list[SingleTree]:
+        return [SingleTree(td, data=data, data_missing=data_missing) for td in self._trees_data]

@@ -54,6 +54,7 @@ dynamic = ["version"]
 [project.optional-dependencies]
 plots = ["matplotlib", "ipython"]
 others = ["lime"]
+treelite = ["treelite>=4.0"]
 download_datasets = [
   # Dependencies needed to download datasets for testing
   # scikit-learn is already in core dependencies, but listed here for clarity
@@ -127,6 +128,7 @@ test = [
   "pytest-cov",
   "xgboost",
   "lightgbm",
+  "treelite>=3.0",
   'catboost; python_version < "3.14"',         # TODO: pending 3.14 support
   'gpboost==1.6.3.1; python_version < "3.14"', # TODO: pending 3.14 support, see GH #4210
   "ngboost",
@@ -229,6 +231,7 @@ module = [
   "torch.*",
   "tqdm.*",
   "xgboost.*",
+  "treelite.*",
   "causalml.*",
 ]
 ignore_missing_imports = true
