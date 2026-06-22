@@ -1,0 +1,27 @@
+# Dummy release workflow to reserve the "shap-gpu" name on PyPI.
+# Builds an sdist (no CUDA/C compilation) with the name overridden to
+# "shap-gpu" and a placeholder version, then publishes via trusted publishing.
+name: release
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write   # for PyPI trusted publishing
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # setuptools_scm needs full history/tags
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Override package name to shap-gpu
+        run: sed -i 's/^name = "shap"/name = "shap-gpu"/' pyproject.toml
+      - name: Build sdist
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.1.dev0"
+        run: uv build --sdist
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
