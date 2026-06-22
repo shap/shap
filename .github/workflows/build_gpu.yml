@@ -8,6 +8,8 @@ on:
 jobs:
   publish-pypi:
     runs-on: ubuntu-latest
+    # Only publish tagged releases to PyPI
+    if: startsWith(github.ref, 'refs/tags')
     environment: pypi
     permissions:
       id-token: write   # for PyPI trusted publishing
