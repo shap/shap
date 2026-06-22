@@ -88,7 +88,7 @@ test = [
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers < 4.54.0",  # TODO: fix once tests pass for 4.54.0
+  "transformers",
   "tf-keras",
   "protobuf",  # See GH #3046
   'torch<=2.11.0; python_version < "3.14"',  # TODO: pending 3.14 support, see GH #5016
