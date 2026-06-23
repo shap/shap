@@ -1591,6 +1591,112 @@ class TreeEnsemble:
             self.base_offset = self.base_offset.flatten()
             assert len(self.base_offset) == self.num_outputs
 
+    @classmethod
+    def from_trees(
+        cls,
+        trees: list,
+        normalize: bool = False,
+        scaling: float | None = None,
+        base_offset: float = 0.0,
+        model_output: str = "raw_value",
+        tree_output: str = "raw_value",
+        objective: str | None = None,
+        data: npt.NDArray[Any] | None = None,
+        data_missing: npt.NDArray[np.bool_] | None = None,
+    ) -> TreeEnsemble:
+        """Create a TreeEnsemble directly from a list of scikit-learn tree objects.
+
+        This classmethod provides a standardized interface for constructing a
+        TreeEnsemble without relying on model-type dispatch in ``__init__``.
+        It targets scikit-learn's internal tree structure, as documented here:
+        https://scikit-learn.org/stable/auto_examples/tree/plot_unveil_tree_structure.html
+
+        Parameters
+        ----------
+        trees : list
+            A list of fitted scikit-learn estimator objects (e.g. from
+            ``RandomForestClassifier.estimators_``) or a list of raw
+            ``sklearn.tree._classes.DecisionTree`` internal tree objects.
+        normalize : bool
+            If True, normalizes leaf values to probabilities (use for classifiers).
+        scaling : float or None
+            Scaling factor applied to each tree's leaf values. If None, defaults
+            to ``1.0 / len(trees)`` (average of trees).
+        base_offset : float
+            The base score or intercept of the model.
+        model_output : str
+            The output type of the model (e.g. "raw_value", "probability").
+        tree_output : str
+            The unit of values in the leaves of the trees.
+        objective : str or None
+            The training objective of the model (e.g. "squared_error").
+        data : np.ndarray or None
+            Background dataset for computing node sample weights.
+        data_missing : np.ndarray or None
+            Boolean mask indicating missing values in data.
+
+        Returns
+        -------
+        TreeEnsemble
+            A TreeEnsemble object ready for use with TreeExplainer.
+
+        Examples
+        --------
+        >>> from sklearn.ensemble import RandomForestClassifier
+        >>> from sklearn.datasets import load_iris
+        >>> import shap
+        >>> X, y = load_iris(return_X_y=True)
+        >>> model = RandomForestClassifier(n_estimators=10, random_state=42).fit(X, y)
+        >>> ensemble = TreeEnsemble.from_trees(
+        ...     model.estimators_,
+        ...     normalize=True,
+        ... )
+        >>> explainer = shap.TreeExplainer(ensemble)
+        """
+        if len(trees) == 0:
+            raise ValueError("The `trees` list must not be empty.")
+
+        _scaling = scaling if scaling is not None else 1.0 / len(trees)
+
+        # Support both raw estimator objects (with .tree_) and raw tree objects
+        parsed_trees = []
+        for t in trees:
+            raw_tree = t.tree_ if hasattr(t, "tree_") else t
+            parsed_trees.append(
+                SingleTree(
+                    raw_tree,
+                    normalize=normalize,
+                    scaling=_scaling,
+                    data=data,
+                    data_missing=data_missing,
+                )
+            )
+
+        obj = cls.__new__(cls)
+        obj.model_type = "internal"
+        obj.trees = parsed_trees
+        obj.base_offset = base_offset
+        obj.model_output = model_output
+        obj.objective = objective
+        obj.tree_output = tree_output
+        obj.internal_dtype = parsed_trees[0].values.dtype.type
+        obj.input_dtype = np.float32
+        obj.data = data
+        obj.data_missing = data_missing
+        obj.fully_defined_weighting = True
+        obj.tree_limit = None
+        obj.num_stacked_models = 1
+        obj.cat_feature_indices = None
+        obj.original_model = None
+
+        # Check if all leaves have background sample weight
+        for t in parsed_trees:
+            if np.min(t.node_sample_weight) <= 0:
+                obj.fully_defined_weighting = False
+                break
+
+        return obj
+
     def _set_xgboost_model_attributes(
         self,
         data: npt.NDArray[Any] | None,
