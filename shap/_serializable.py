@@ -177,15 +177,15 @@ class Deserializer:
                 f"but the next block found was {loaded_name}."
             )  # We should eventually add support for skipping over unused data items in old formats...
 
-        value = self._load_data_value(decoder)
+        value = self._load_data_value(decoder, name=name)
         log.debug("value = %s", str(value))
         return value
 
-    def _load_data_value(self, decoder=None):
+    def _load_data_value(self, decoder=None, name="unknown"):
         encoder_name = pickle.load(self.in_stream)
         log.debug("encoder_name = %s", encoder_name)
         if encoder_name == "custom_encoder" or callable(decoder):
-            assert callable(decoder), "You must provide a callable custom decoder for the data item {name}!"
+            assert callable(decoder), f"You must provide a callable custom decoder for the data item {name}!"
             return decoder(self.in_stream)
         if encoder_name == "no_encoder":
             return None
