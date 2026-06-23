@@ -1043,8 +1043,13 @@ class TreeEnsemble:
             if "base_offset" in model:
                 self.base_offset = model["base_offset"]
             self.trees = [SingleTree(t, data=data, data_missing=data_missing) for t in model["trees"]]
-        elif isinstance(model, list) and isinstance(model[0], SingleTree):  # old-style direct-load format
-            self.trees = model
+        elif isinstance(model, list):  # old-style direct-load format
+            if len(model) == 0:
+                raise InvalidModelError("Model type not yet supported by TreeExplainer: <class 'list'>")
+            if isinstance(model[0], SingleTree):
+                self.trees = model
+            else:
+                raise InvalidModelError("Model type not yet supported by TreeExplainer: <class 'list'>")
         elif safe_isinstance(
             model,
             [
