@@ -11,12 +11,12 @@ def _check_additivity(explainer, model_output_values, output_phis):
     for t in range(len(explainer.expected_value)):
         if not explainer.multi_input:
             diffs = (
-                model_output_values[:, t]
-                - explainer.expected_value[t]
+                model_output_values[:, t].numpy()
+                - np.asarray(explainer.expected_value[t])
                 - output_phis[t].sum(axis=tuple(range(1, output_phis[t].ndim)))
             )
         else:
-            diffs = model_output_values[:, t] - explainer.expected_value[t]
+            diffs = model_output_values[:, t].numpy() - np.asarray(explainer.expected_value[t])
 
             for i in range(len(output_phis[t])):
                 diffs -= output_phis[t][i].sum(axis=tuple(range(1, output_phis[t][i].ndim)))
