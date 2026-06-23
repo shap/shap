@@ -1,13 +1,30 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 from matplotlib import lines
 from matplotlib.font_manager import FontProperties
-from matplotlib.patches import PathPatch
+from matplotlib.patches import PathPatch, Polygon
 from matplotlib.path import Path
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
-def draw_bars(out_value, features, feature_type, width_separators, width_bar):
+    from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
+
+
+def draw_bars(
+    out_value: float,
+    features: npt.NDArray[Any],
+    feature_type: str,
+    width_separators: float,
+    width_bar: float,
+) -> tuple[list[Polygon], list[Polygon]]:
     """Draw the bars and separators."""
     rectangle_list = []
     separator_list = []
@@ -70,15 +87,23 @@ def draw_bars(out_value, features, feature_type, width_separators, width_bar):
             [separator_pos, width_bar],
         ]
 
-        line = plt.Polygon(points_separator, closed=None, fill=None, edgecolor=colors[1], lw=3)
+        line = plt.Polygon(points_separator, closed=False, fill=None, edgecolor=colors[1], lw=3)
         separator_list += [line]
 
     return rectangle_list, separator_list
 
 
 def draw_labels(
-    fig, ax, out_value, features, feature_type, offset_text, total_effect=0, min_perc=0.05, text_rotation=0
-):
+    fig: Figure,
+    ax: Axes,
+    out_value: float,
+    features: npt.NDArray[Any],
+    feature_type: str,
+    offset_text: float,
+    total_effect: float = 0,
+    min_perc: float = 0.05,
+    text_rotation: float = 0,
+) -> tuple[Figure, Axes]:
     start_text = out_value
     pre_val = out_value
 
@@ -137,7 +162,9 @@ def draw_labels(
         # We need to draw the plot to be able to get the size of the
         # text box
         fig.canvas.draw()
-        box_size = text_out_val.get_bbox_patch().get_extents().transformed(ax.transData.inverted())
+        bbox_patch = text_out_val.get_bbox_patch()
+        assert bbox_patch is not None
+        box_size = bbox_patch.get_extents().transformed(ax.transData.inverted())
         if feature_type == "positive":
             box_end_ = box_size.get_points()[0][0]
         else:
@@ -164,10 +191,9 @@ def draw_labels(
         pre_val = float(feature[0])
 
     # Create line for labels
-    extent_shading = [out_value, box_end, 0, -0.31]
-    path = [[out_value, 0], [pre_val, 0], [box_end, -0.08], [box_end, -0.2], [out_value, -0.2], [out_value, 0]]
-
-    path = Path(path)
+    extent_shading = (out_value, box_end, 0.0, -0.31)
+    path_points = [[out_value, 0], [pre_val, 0], [box_end, -0.08], [box_end, -0.2], [out_value, -0.2], [out_value, 0]]
+    path = Path(path_points)
     patch = PathPatch(path, facecolor="none", edgecolor="none")
     ax.add_patch(patch)
 
@@ -181,11 +207,11 @@ def draw_labels(
 
     # Create shading
     if feature_type == "positive":
-        colors = np.array([(255, 13, 87), (255, 255, 255)]) / 255.0
+        shading_colors = np.array([(255, 13, 87), (255, 255, 255)]) / 255.0
     else:
-        colors = np.array([(30, 136, 229), (255, 255, 255)]) / 255.0
+        shading_colors = np.array([(30, 136, 229), (255, 255, 255)]) / 255.0
 
-    cm = matplotlib.colors.LinearSegmentedColormap.from_list("cm", colors)
+    cm = matplotlib.colors.LinearSegmentedColormap.from_list("cm", shading_colors)
 
     _, Z2 = np.meshgrid(np.linspace(0, 10), np.linspace(-10, 10))
     im = plt.imshow(
@@ -205,7 +231,9 @@ def draw_labels(
     return fig, ax
 
 
-def format_data(data):
+def format_data(
+    data: dict[str, Any],
+) -> tuple[npt.NDArray[Any], int | np.floating[Any], npt.NDArray[Any], int | np.floating[Any]]:
     """Format data."""
     # Format negative features
     neg_features = np.array(
@@ -229,13 +257,14 @@ def format_data(data):
     pos_features = np.array(sorted(pos_features, key=lambda x: float(x[0]), reverse=True))
 
     # Define link function
+    convert_func: Callable[[float], float]
     if data["link"] == "identity":
 
-        def convert_func(x):
+        def convert_func(x: float) -> float:
             return x
     elif data["link"] == "logit":
 
-        def convert_func(x):
+        def convert_func(x: float) -> float:
             return 1 / (1 + np.exp(-x))
     else:
         emsg = f"ERROR: Unrecognized link function: {data['link']}"
@@ -271,7 +300,7 @@ def format_data(data):
     return neg_features, total_neg, pos_features, total_pos
 
 
-def draw_output_element(out_name, out_value, ax):
+def draw_output_element(out_name: str, out_value: float, ax: Axes) -> None:
     # Add output value
     x, y = np.array([[out_value, out_value], [0, 0.24]])
     line = lines.Line2D(x, y, lw=2.0, color="#F2F2F2")
@@ -290,7 +319,7 @@ def draw_output_element(out_name, out_value, ax):
     text_out_val.set_bbox(dict(facecolor="white", edgecolor="white"))
 
 
-def draw_base_element(base_value, ax):
+def draw_base_element(base_value: float, ax: Axes) -> None:
     x, y = np.array([[base_value, base_value], [0.13, 0.25]])
     line = lines.Line2D(x, y, lw=2.0, color="#F2F2F2")
     line.set_clip_on(False)
@@ -300,7 +329,7 @@ def draw_base_element(base_value, ax):
     text_out_val.set_bbox(dict(facecolor="white", edgecolor="white"))
 
 
-def draw_higher_lower_element(out_value, offset_text):
+def draw_higher_lower_element(out_value: float, offset_text: float) -> None:
     plt.text(out_value - offset_text, 0.405, "higher", fontsize=13, color="#FF0D57", horizontalalignment="right")
 
     plt.text(out_value + offset_text, 0.405, "lower", fontsize=13, color="#1E88E5", horizontalalignment="left")
@@ -310,7 +339,15 @@ def draw_higher_lower_element(out_value, offset_text):
     plt.text(out_value, 0.425, r"$\rightarrow$", fontsize=13, color="#FF0D57", horizontalalignment="center")
 
 
-def update_axis_limits(ax, total_pos, pos_features, total_neg, neg_features, base_value, out_value):
+def update_axis_limits(
+    ax: Axes,
+    total_pos: int | np.floating[Any],
+    pos_features: npt.NDArray[Any],
+    total_neg: int | np.floating[Any],
+    neg_features: npt.NDArray[Any],
+    base_value: float,
+    out_value: float,
+) -> None:
     ax.set_ylim(-0.5, 0.15)
     padding = np.max([np.abs(total_pos) * 0.2, np.abs(total_neg) * 0.2])
 
@@ -332,7 +369,13 @@ def update_axis_limits(ax, total_pos, pos_features, total_neg, neg_features, bas
             spine.set_visible(False)
 
 
-def draw_additive_plot(data, figsize, show, text_rotation=0, min_perc=0.05):
+def draw_additive_plot(
+    data: dict[str, Any],
+    figsize: tuple[float, float],
+    show: bool,
+    text_rotation: float = 0,
+    min_perc: float = 0.05,
+) -> Figure | None:
     """Draw additive plot."""
     # Turn off interactive plot
     if show is False:
@@ -416,5 +459,6 @@ def draw_additive_plot(data, figsize, show, text_rotation=0, min_perc=0.05):
 
     if show:
         plt.show()
+        return None
     else:
         return plt.gcf()
