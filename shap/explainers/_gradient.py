@@ -96,26 +96,23 @@ class GradientExplainer(Explainer):
         elif framework == "pytorch":
             self.explainer = _PyTorchGradient(model, data, batch_size, local_smoothing)
 
-    def __call__(self, X: Any, nsamples: int = 200) -> Explanation:  # type: ignore[override]
-        """Return an explanation object for the model applied to X.
-
-        Parameters
-        ----------
-        X : list,
-            if framework == 'tensorflow': np.array, or pandas.DataFrame
-            if framework == 'pytorch': torch.tensor
-            A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
-            explain the model's output.
-        nsamples : int
-            number of background samples
-
-        Returns
-        -------
-        shap.Explanation:
-
-        """
-        shap_values = self.shap_values(X, nsamples)
-        return Explanation(values=shap_values, data=X, feature_names=self.features)  # type: ignore[arg-type]
+    def __call__(  # type: ignore[override]
+        self,
+        X: Any,
+        nsamples: int = 200,
+        ranked_outputs: int | list[int] | None = None,
+        output_rank_order: Literal["max", "min", "max_abs", "custom"] = "max",
+        rseed: int | None = None,
+        return_variances: bool = False,
+    ) -> Explanation:
+        """Return an explanation object for the model applied to X."""
+        sv = self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order, rseed, return_variances)  # type: ignore[arg-type]
+        if ranked_outputs is not None:
+            sv, output_indices = sv
+            exp = Explanation(values=sv, data=X, feature_names=self.features)  # type: ignore[arg-type]
+            exp.output_indices = output_indices
+            return exp
+        return Explanation(values=sv, data=X, feature_names=self.features)  # type: ignore[arg-type]
 
     def shap_values(
         self,
@@ -175,6 +172,12 @@ class GradientExplainer(Explainer):
                 from list to np.ndarray.
 
         """
+        warnings.warn(
+            "shap_values() is deprecated and will be removed in a future release. "
+            "Use the explainer directly as a callable instead: explainer(X).",
+            FutureWarning,
+            stacklevel=2,
+        )
         return self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order, rseed, return_variances)  # type: ignore[arg-type]
 
 

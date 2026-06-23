@@ -395,7 +395,7 @@ class TreeExplainer(Explainer):
             feature_names = getattr(self, "data_feature_names", None)
 
         if not interactions:
-            v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity, approximate=approximate)
+            v = self._compute_shap_values(X, y=y, check_additivity=check_additivity, approximate=approximate)
             if isinstance(v, list):
                 v = np.stack(v, axis=-1)  # put outputs at the end
         else:
@@ -519,7 +519,6 @@ class TreeExplainer(Explainer):
         tree_limit: int | None = None,
         approximate: bool = False,
         check_additivity: bool = True,
-        from_call: bool = False,
     ) -> npt.NDArray[Any]:
         """Estimate the SHAP values for a set of samples.
 
@@ -591,10 +590,29 @@ class TreeExplainer(Explainer):
                 a single value (raw margin/log-odds), resulting in SHAP values of shape
                 ``(#num_samples, #num_features)`` and ``expected_value`` as a scalar.
 
-            .. versionchanged:: 0.45.0
+           .. versionchanged:: 0.45.0
                 Return type for models with multiple outputs changed from list to np.ndarray.
 
         """
+        warnings.warn(
+            "shap_values() is deprecated and will be removed in a future release. "
+            "Use the explainer directly as a callable instead: explainer(X).",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return self._compute_shap_values(
+            X, y=y, tree_limit=tree_limit, approximate=approximate, check_additivity=check_additivity
+        )
+
+    def _compute_shap_values(
+        self,
+        X: Any,
+        y: npt.NDArray[Any] | pd.Series | None = None,
+        tree_limit: int | None = None,
+        approximate: bool = False,
+        check_additivity: bool = True,
+    ) -> npt.NDArray[Any]:
+        """Internal implementation shared by ``__call__`` and the deprecated ``shap_values``."""
         # see if we have a default tree_limit in place.
         if tree_limit is None:
             tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
@@ -635,10 +653,7 @@ class TreeExplainer(Explainer):
                     "objective" in self.model.original_model.params
                     and self.model.original_model.params["objective"] == "binary"
                 ):
-                    if not from_call:
-                        warnings.warn(
-                            "LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray"
-                        )
+                    pass  # LightGBM binary output format migration complete; warning removed in 0.46.0
                 if phi.shape[1] != X.shape[1] + 1:
                     try:
                         phi = phi.reshape(X.shape[0], phi.shape[1] // (X.shape[1] + 1), X.shape[1] + 1)
