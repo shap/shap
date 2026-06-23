@@ -243,13 +243,19 @@ def hclust(
         Defines the method to calculate the distance between clusters. Must be
         one of "single", "complete" or "average".
     metric: str
-        Scipy distance metric or "xgboost_distances_r2".
+        Scipy distance metric, ``"abs_correlation"``, or ``"xgboost_distances_r2"``.
 
         * If ``xgboost_distances_r2``, estimate redundancy distances between
           features X with respect to target variable y using
           :func:`shap.utils.xgboost_distances_r2`.
+        * If ``abs_correlation``, use absolute-correlation distance
+          ``1 - |corr(u, v)|``, which clusters perfectly anti-correlated
+          features together. The standard ``"correlation"`` metric treats
+          perfectly anti-correlated features as maximally distant, which is
+          usually not what you want when the goal is to group redundant
+          features.
         * Otherwise, calculate distances between features using the given
-          distance metric.
+          scipy distance metric.
         * If ``auto`` (default), use ``xgboost_distances_r2`` if target variable
           is provided, or else ``cosine`` distance metric.
     random_state: int or np.random.RandomState
@@ -302,7 +308,15 @@ def hclust(
         bg_no_nan: npt.NDArray[Any] = X_arr.copy()
         for i in range(bg_no_nan.shape[1]):
             np.nan_to_num(bg_no_nan[:, i], nan=np.nanmean(bg_no_nan[:, i]), copy=False)
-        dist = scipy.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape) * 1e-8, metric=metric)
+        X_jittered: npt.NDArray[Any] = bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape) * 1e-8
+        if metric == "abs_correlation":
+            # pdist's "correlation" returns 1 - corr, so corr = 1 - d_corr and
+            # 1 - |corr| = 1 - |1 - d_corr|. Folding this way keeps perfectly
+            # anti-correlated features at distance 0.
+            corr_dist: npt.NDArray[Any] = scipy.spatial.distance.pdist(X_jittered, metric="correlation")
+            dist = 1 - np.abs(1 - corr_dist)
+        else:
+            dist = scipy.spatial.distance.pdist(X_jittered, metric=metric)
 
     # build linkage
     if linkage == "single":
