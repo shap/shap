@@ -18,7 +18,28 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
 
-from .._cutils import compute_exp_val
+try:
+    from .._cutils import compute_exp_val
+except ModuleNotFoundError:
+
+    def compute_exp_val(
+        nsamples_run: int,
+        nsamples_added: int,
+        D: int,
+        N: int,
+        weights: npt.NDArray[np.float64],
+        y: npt.NDArray[np.float64],
+        ey: npt.NDArray[np.float64],
+    ) -> int:
+        for i in range(nsamples_run, nsamples_added):
+            ey_val = np.zeros(D)
+            for j in range(N):
+                ey_val += y[i * N + j, :] * weights[j]
+            ey[i, : ey.shape[1]] = ey_val[: ey.shape[1]]
+            nsamples_run += 1
+        return nsamples_run
+
+
 from .._explanation import Explanation
 from ..utils import safe_isinstance
 from ..utils._exceptions import DimensionError

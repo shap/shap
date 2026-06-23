@@ -32,6 +32,7 @@ dependencies = [
   'llvmlite<0.46; sys_platform == "darwin" and platform_machine == "x86_64"',  # llvmlite 0.46+ dropped macOS x86_64 wheels, see numba/numba#10187
   'llvmlite; sys_platform != "darwin" or platform_machine != "x86_64"',
   'cloudpickle',
+  'lazy-loader>=0.4',
 ]
 classifiers = [
   "Operating System :: Microsoft :: Windows",
@@ -272,6 +273,8 @@ wheel.exclude = ["**/*.cc", "**/*.cpp", "**/*.h", "**/*.cu"]
 # Build stable ABI wheels for CPython 3.12+
 wheel.py-api = "cp312"
 
+[tool.setuptools.package-data]
+shap = ["*.pyi"]
 
 [tool.pytest.ini_options]
 addopts = "--mpl -m 'not xslow'"
