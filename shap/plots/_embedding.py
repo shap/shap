@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import sklearn
 
 from ..utils import convert_name
@@ -33,6 +34,11 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
         The transparency of the data points (between 0 and 1). This can be useful to
         show the density of the data points when using a large dataset.
 
+    show : bool
+        Whether to call ``plt.show()`` after drawing. Set to ``False`` if you want to
+        further customise the figure before displaying it, for example when saving to
+        a file or composing subplots.
+
     """
     if feature_names is None:
         feature_names = [labels["FEATURE"] % str(i) for i in range(shap_values.shape[1])]
@@ -46,13 +52,34 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
         fname = feature_names[ind]
 
     # see if we need to compute the embedding
+    # see if we need to compute the embedding
     if isinstance(method, str) and method == "pca":
         pca = sklearn.decomposition.PCA(2)
         embedding_values = pca.fit_transform(shap_values)
-    elif hasattr(method, "shape") and method.shape[1] == 2:
-        embedding_values = method
     else:
-        print("Unsupported embedding method:", method)
+        # Validate that method is a 2D array-like with shape (n_samples, 2)
+        try:
+            method = np.asarray(method)
+        except Exception as e:
+            raise ValueError(
+                "The 'method' parameter must be either \"pca\" or a numpy array "
+                "of shape (n_samples, 2). Could not convert the given value to "
+                f"a numpy array: {e}"
+            ) from e
+
+        if method.ndim != 2 or method.shape[1] != 2:
+            raise ValueError(
+                f"When passing a numpy array as 'method', it must have shape (n_samples, 2). Got shape: {method.shape}."
+            )
+
+        if method.shape[0] != shap_values.shape[0]:
+            raise ValueError(
+                "The embedding array passed as 'method' must have one row per "
+                f"sample. Got {method.shape[0]} rows but shap_values has "
+                f"{shap_values.shape[0]} samples."
+            )
+
+        embedding_values = method
 
     plt.scatter(embedding_values[:, 0], embedding_values[:, 1], c=cvals, cmap=colors.red_blue, alpha=alpha, linewidth=0)
     plt.axis("off")
