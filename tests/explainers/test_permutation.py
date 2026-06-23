@@ -3,14 +3,18 @@
 import pickle
 
 import numpy as np
+import pytest
 
 import shap
 
 from . import common
 
 
+def simple_sum_model(x):
+    return np.sum(x, axis=1)
+
+
 def test_exact_second_order():
-    """This tests that the Perumtation explain gives exact answers for second order functions."""
     rs = np.random.RandomState(42)
     data = rs.randint(0, 2, size=(100, 5))
 
@@ -24,6 +28,7 @@ def test_exact_second_order():
     right_answer[:, 2] += data[:, 2]
     right_answer[:, 2] += (data[:, 2] * data[:, 3]) / 2
     right_answer[:, 3] += (data[:, 2] * data[:, 3]) / 2
+
     shap_values = shap.explainers.PermutationExplainer(model, np.zeros((1, 5)))(data)
 
     assert np.allclose(right_answer, shap_values.values)  # type: ignore[union-attr]
@@ -31,37 +36,30 @@ def test_exact_second_order():
 
 # TODO: add baseline comparison once PermutationExplainer supports passing a numpy.random.Generator
 # for reproducible results (currently uses global np.random state)
-def test_tabular_single_output_auto_masker():
+
+
+@pytest.mark.parametrize(
+    "predict_fn, masker",
+    [
+        ("predict", None),
+        ("predict_proba", None),
+        ("predict", shap.maskers.Partition),
+        ("predict_proba", shap.maskers.Partition),
+        ("predict", shap.maskers.Independent),
+        ("predict_proba", shap.maskers.Independent),
+    ],
+)
+def test_tabular_additivity(predict_fn, masker):
     model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.PermutationExplainer, model.predict, data, data)
+    fn = getattr(model, predict_fn)
 
+    masker_instance = data if masker is None else masker(data)
 
-def test_tabular_multi_output_auto_masker():
-    model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.PermutationExplainer, model.predict_proba, data, data)
-
-
-def test_tabular_single_output_partition_masker():
-    model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.PermutationExplainer, model.predict, shap.maskers.Partition(data), data)
-
-
-def test_tabular_multi_output_partition_masker():
-    model, data = common.basic_xgboost_scenario(100)
     common.test_additivity(
-        shap.explainers.PermutationExplainer, model.predict_proba, shap.maskers.Partition(data), data
-    )
-
-
-def test_tabular_single_output_independent_masker():
-    model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.PermutationExplainer, model.predict, shap.maskers.Independent(data), data)
-
-
-def test_tabular_multi_output_independent_masker():
-    model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(
-        shap.explainers.PermutationExplainer, model.predict_proba, shap.maskers.Independent(data), data
+        shap.explainers.PermutationExplainer,
+        fn,
+        masker_instance,
+        data,
     )
 
 
@@ -102,3 +100,58 @@ def test_serialization_custom_model_save():
         atol=0.05,
         max_evals=100000,
     )
+
+
+def test_max_evals_too_low():
+    rs = np.random.RandomState(42)
+    data = rs.rand(10, 3)
+
+    explainer = shap.explainers.PermutationExplainer(simple_sum_model, data)
+
+    with pytest.raises(ValueError):
+        explainer(data, max_evals=1)
+
+
+def test_seed_reproducibility():
+    rs = np.random.RandomState(42)
+    data = rs.rand(10, 4)
+
+    explainer1 = shap.explainers.PermutationExplainer(simple_sum_model, data, seed=42)
+    explainer2 = shap.explainers.PermutationExplainer(simple_sum_model, data, seed=42)
+
+    vals1 = explainer1(data).values
+    vals2 = explainer2(data).values
+
+    assert np.allclose(vals1, vals2)
+
+
+def test_main_effects():
+    rs = np.random.RandomState(42)
+    data = rs.rand(5, 3)
+
+    explainer = shap.explainers.PermutationExplainer(simple_sum_model, data)
+    explanation = explainer(data, main_effects=True)
+
+    # Just verify no crash and shape consistency if present
+    if explanation.main_effects is not None:
+        assert explanation.main_effects.shape == data.shape
+
+
+def test_error_bounds():
+    rs = np.random.RandomState(42)
+    data = rs.rand(5, 3)
+
+    explainer = shap.explainers.PermutationExplainer(simple_sum_model, data)
+    explanation = explainer(data, error_bounds=True)
+
+    assert explanation.error_std is not None
+
+
+def test_constant_features():
+    rs = np.random.RandomState(42)  # Adding rs here for consistency
+    data = np.ones((10, 4)) * rs.uniform(1.0, 1.0)
+
+    explainer = shap.explainers.PermutationExplainer(simple_sum_model, data)
+    explanation = explainer(data)
+
+    assert np.allclose(explanation.values, 0)
