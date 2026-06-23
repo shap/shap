@@ -60,6 +60,8 @@ if have_matplotlib:
     from .plots._group_difference import group_difference as group_difference_plot
     from .plots._heatmap import heatmap as heatmap_plot
     from .plots._image import image as image_plot
+    from .plots._interaction import interaction_beeswarm as interaction_beeswarm_plot
+    from .plots._interaction import interaction_heatmap as interaction_heatmap_plot
     from .plots._monitoring import monitoring as monitoring_plot
     from .plots._partial_dependence import partial_dependence as partial_dependence_plot
     from .plots._scatter import dependence_legacy as dependence_plot
@@ -78,6 +80,8 @@ else:
     save_html = unsupported
     group_difference_plot = unsupported
     heatmap_plot = unsupported
+    interaction_heatmap_plot = unsupported
+    interaction_beeswarm_plot = unsupported
     image_plot = unsupported
     monitoring_plot = unsupported
     partial_dependence_plot = unsupported
@@ -94,7 +98,7 @@ else:
 # other stuff :)
 from . import datasets, links, utils  # noqa: E402
 from .actions._optimizer import ActionOptimizer  # noqa: E402
-from .utils import approximate_interactions, sample  # noqa: E402
+from .utils import approximate_interactions, rank_interactions, sample  # noqa: E402
 
 # from . import benchmark
 from .utils._legacy import kmeans  # noqa: E402
@@ -131,6 +135,8 @@ __all__ = [
     "save_html",
     "group_difference_plot",
     "heatmap_plot",
+    "interaction_heatmap_plot",
+    "interaction_beeswarm_plot",
     "image_plot",
     "monitoring_plot",
     "partial_dependence_plot",
@@ -144,6 +150,7 @@ __all__ = [
     "utils",
     "ActionOptimizer",
     "approximate_interactions",
+    "rank_interactions",
     "sample",
     "kmeans",
 ]
