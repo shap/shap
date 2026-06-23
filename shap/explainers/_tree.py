@@ -1714,7 +1714,7 @@ class TreeEnsemble:
         if tree_limit < 0 or tree_limit > self.values.shape[0]:
             tree_limit = self.values.shape[0]
 
-        if output == "logloss":
+        if output == "log_loss":
             if y is None:
                 raise ValueError(
                     "Both samples and labels must be provided when explaining the loss"
