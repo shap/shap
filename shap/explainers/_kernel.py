@@ -78,6 +78,11 @@ class KernelExplainer(Explainer):
         If the model output is a probability, then "logit" can be used to transform the SHAP values
         into log-odds units.
 
+    silent : bool
+        If ``True``, hide the tqdm progress bar by default when explaining datasets with
+        multiple rows. This can be overridden per call by passing ``silent=...`` to
+        :meth:`shap_values` or :meth:`__call__`.
+
     Examples
     --------
     See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`.
@@ -99,6 +104,7 @@ class KernelExplainer(Explainer):
     expected_value: float | npt.NDArray[np.floating[Any]]
     vector_out: bool
     D: int
+    silent: bool
     varyingInds: npt.NDArray[np.intp]
     varyingFeatureGroups: npt.NDArray[Any] | list[Any]
     M: int
@@ -129,6 +135,7 @@ class KernelExplainer(Explainer):
 
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
+        self.silent = kwargs.get("silent", False)
         self.keep_index = kwargs.get("keep_index", False)
         self.keep_index_ordered = kwargs.get("keep_index_ordered", False)
         self.model = convert_to_model(model, keep_index=self.keep_index)
@@ -199,7 +206,7 @@ class KernelExplainer(Explainer):
         self,
         X: npt.NDArray[Any] | pd.DataFrame | scipy.sparse.spmatrix,
         l1_reg: str | float | bool = "num_features(10)",
-        silent: bool = False,
+        silent: bool | None = None,
     ) -> Explanation:
         start_time = time.time()
 
@@ -208,6 +215,8 @@ class KernelExplainer(Explainer):
         else:
             feature_names = getattr(self, "data_feature_names", None)  # type: ignore[assignment]
 
+        if silent is None:
+            silent = self.silent
         v = self.shap_values(X, l1_reg=l1_reg, silent=silent)
         if isinstance(v, list):
             v = np.stack(v, axis=-1)  # put outputs at the end
@@ -259,7 +268,8 @@ class KernelExplainer(Explainer):
                 The default value changed from ``"auto"`` to ``"num_features(10)"``.
 
         silent: bool
-            If True, hide tqdm progress bar. Default False.
+            If True, hide tqdm progress bar. Defaults to the value set on the
+            explainer via ``KernelExplainer(..., silent=...)``.
 
         gc_collect : bool
            Run garbage collection after each explanation round. Sometime needed for memory intensive explanations (default False).
@@ -316,7 +326,7 @@ class KernelExplainer(Explainer):
         # explain the whole dataset
         elif len(X.shape) == 2:
             explanations = []
-            for i in tqdm(range(X.shape[0]), disable=kwargs.get("silent", False)):
+            for i in tqdm(range(X.shape[0]), disable=kwargs.get("silent", self.silent)):
                 data = X[i : i + 1, :]
                 if self.keep_index:
                     data = convert_to_instance_with_index(data, column_name, index_value[i : i + 1], index_name)
