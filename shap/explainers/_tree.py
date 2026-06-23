@@ -336,12 +336,53 @@ class TreeExplainer(Explainer):
             if hasattr(self.expected_value, "__len__") and len(self.expected_value) == 1:
                 self.expected_value = self.expected_value[0]
         elif hasattr(self.model, "node_sample_weight"):
-            self.expected_value = self.model.values[:, 0].sum(0)
-            if self.expected_value.size == 1:
-                self.expected_value = self.expected_value[0]
-            self.expected_value += self.model.base_offset
-            if self.model.model_output != "raw":
-                self.expected_value = None  # we don't handle transforms in this case right now...
+            # For external model types (XGBoost, LightGBM, CatBoost) that use
+            # the C++ shortcut path in shap_values(), the correct expected_value
+            # is embedded in the last column of the pred_contribs output.
+            # The manual Python calculation from tree weights below is inaccurate
+            # for these models and would be silently overwritten on the first
+            # shap_values() call (a known silent mutation bug, first reported in
+            # GH #652). We fix this at init time by querying the model's own
+            # C++ engine for the baseline directly.
+            if self.model.model_type == "xgboost" and self.model.model_output == "raw":
+                import xgboost
+
+                _check_xgboost_version(xgboost.__version__)
+                try:
+                    # Use a single all-zero dummy row to obtain the baseline
+                    # (last column of pred_contribs). This is identical to what
+                    # shap_values() does internally on every call.
+                    n_features = self.model.original_model.num_features()
+                    dummy = xgboost.DMatrix(np.zeros((1, n_features)))
+                    n_iterations = _xgboost_n_iterations(-1, self.model.num_stacked_models)
+                    phi_init = self.model.original_model.predict(
+                        dummy,
+                        iteration_range=(0, n_iterations),
+                        pred_contribs=True,
+                        validate_features=False,
+                    )
+                    if len(phi_init.shape) == 3:
+                        self.expected_value = [phi_init[0, i, -1] for i in range(phi_init.shape[1])]
+                    else:
+                        self.expected_value = phi_init[0, -1]
+                except Exception as e:
+                    # Fallback to the manual calculation if the XGBoost query
+                    # fails for any reason (e.g. unusual model configuration).
+                    warnings.warn(
+                        f"Failed to directly query XGBoost for the baseline 'expected_value'. "
+                        f"Falling back to manual weight-based calculation. Error: {str(e)}"
+                    )
+                    self.expected_value = self.model.values[:, 0].sum(0)
+                    if self.expected_value.size == 1:
+                        self.expected_value = self.expected_value[0]
+                    self.expected_value += self.model.base_offset
+            else:
+                self.expected_value = self.model.values[:, 0].sum(0)
+                if self.expected_value.size == 1:
+                    self.expected_value = self.expected_value[0]
+                self.expected_value += self.model.base_offset
+                if self.model.model_output != "raw":
+                    self.expected_value = None  # we don't handle transforms in this case right now...
 
         # if our output format requires binary classification to be represented as two outputs then we do that here
         if self.model.model_output == "probability_doubled" and self.expected_value is not None:
@@ -1948,9 +1989,12 @@ class SingleTree:
             self.node_sample_weight = np.empty(num_nodes, dtype=np.float64)
 
             # BFS traversal through the tree structure
-            visited, queue = [], [start]
+            from collections import deque
+
+            visited = set()
+            queue = deque([start])
             while queue:
-                vertex = queue.pop(0)  # TODO(perf): benchmark this against deque.popleft()
+                vertex = queue.popleft()
                 is_branch_node = "split_index" in vertex
                 if is_branch_node:
                     vsplit_idx: int = vertex["split_index"]
@@ -1989,7 +2033,7 @@ class SingleTree:
                         raise TypeError(f"Threshold type {type(vertex['threshold'])} not supported")
                     self.values[vsplit_idx] = [vertex["internal_value"]]
                     self.node_sample_weight[vsplit_idx] = vertex["internal_count"]
-                    visited.append(vsplit_idx)
+                    visited.add(vsplit_idx)
                     queue.append(left_child)
                     queue.append(right_child)
                 else:

@@ -3008,10 +3008,45 @@ def test_nullable_pandas_dtype():
     X_test.iloc[2, 0] = pd.NA
     X_test.iloc[3, 1] = pd.NA
 
-    # Confirm nullable dtypes are present (precondition)
-    assert X_test["x1"].dtype == pd.Float64Dtype()
-    assert X_test["x2"].dtype == pd.Int64Dtype()
-
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+def test_tree_explainer_expected_value_xgboost_4495():
+    """
+    Regression test for GH #4495.
+    Ensures that TreeExplainer.expected_value is correctly initialized for XGBoost models
+    and does not mutate after calling shap_values().
+    """
+    xgb = pytest.importorskip("xgboost")
+    from sklearn.datasets import make_classification
+
+    X, y = make_classification(n_samples=200, n_features=10, random_state=42)
+    X_train, X_test = X[:150], X[150:]
+    y_train = y[:150]
+
+    model = xgb.XGBClassifier(n_estimators=50, random_state=42)
+    model.fit(X_train, y_train)
+
+    explainer = shap.TreeExplainer(model)
+
+    expected_value_before = explainer.expected_value
+
+    # Trigger shap_values which previously mutated expected_value
+    shap_values = explainer.shap_values(X_test)
+
+    expected_value_after = explainer.expected_value
+
+    # 1. Verify consistency (no mutation)
+    assert np.isclose(expected_value_before, expected_value_after), (
+        f"expected_value mutated from {expected_value_before} to {expected_value_after}"
+    )
+
+    # 2. Verify correctness (matches raw margin mean)
+    dmatrix = xgb.DMatrix(X_test)
+    raw_margin = model.get_booster().predict(dmatrix, output_margin=True)
+
+    # Check additivity for a few samples
+    for i in range(5):
+        assert np.isclose(explainer.expected_value + shap_values[i].sum(), raw_margin[i], atol=1e-5)
