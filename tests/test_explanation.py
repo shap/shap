@@ -245,3 +245,225 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_cohorts_with_array_and_repr():
+    """Test cohorts created from an array of labels, and that repr works."""
+    exp = shap.Explanation(
+        values=np.random.RandomState(0).randn(10, 3),
+        data=np.random.RandomState(0).randn(10, 3),
+        feature_names=list("abc"),
+    )
+    labels = np.array(["a", "a", "a", "b", "b", "b", "c", "c", "c", "c"])
+    ch = exp.cohorts(labels)
+    assert isinstance(ch, shap.Cohorts)
+    assert len(ch.cohorts) == 3
+
+    repr_str = repr(ch)
+    assert "Cohorts" in repr_str
+    assert "3 cohorts" in repr_str
+
+    with pytest.raises(TypeError, match="not recognized"):
+        exp.cohorts("invalid")
+
+
+def test_explanation_init_from_explanation():
+    """Test initializing an Explanation from another Explanation."""
+    exp1 = shap.Explanation(
+        values=np.array([1.0, 2.0, 3.0]),
+        base_values=0.5,
+        data=np.array([10.0, 20.0, 30.0]),
+    )
+    exp2 = shap.Explanation(exp1)
+    np.testing.assert_array_equal(exp2.values, exp1.values)
+    assert exp2.base_values == exp1.base_values
+    np.testing.assert_array_equal(exp2.data, exp1.data)
+
+
+@pytest.mark.parametrize(
+    ("op", "other", "expected_values"),
+    [
+        param(lambda e, o: e + o, 1, [3.0, 5.0, 7.0], id="add_scalar"),
+        param(lambda e, o: o + e, 1, [3.0, 5.0, 7.0], id="radd_scalar"),
+        param(lambda e, o: e - o, 1, [1.0, 3.0, 5.0], id="sub_scalar"),
+        param(lambda e, o: e * o, 2, [4.0, 8.0, 12.0], id="mul_scalar"),
+        param(lambda e, o: e / o, 2, [1.0, 2.0, 3.0], id="truediv_scalar"),
+    ],
+)
+def test_explanation_binary_operators_scalar(op, other, expected_values):
+    """Test arithmetic operators with scalars and reverse variants."""
+    exp = shap.Explanation(values=np.array([2.0, 4.0, 6.0]), base_values=1.0, data=np.array([1.0, 2.0, 3.0]))
+    result = op(exp, other)
+    np.testing.assert_array_equal(result.values, expected_values)
+
+
+def test_explanation_binary_operators_between_explanations():
+    """Arithmetic between two Explanations must propagate to base_values and data."""
+    vals = np.array([1.0, 2.0, 3.0])
+    data = np.array([10.0, 20.0, 30.0])
+    exp1 = shap.Explanation(values=vals.copy(), base_values=1.0, data=data.copy())
+    exp2 = shap.Explanation(values=vals.copy(), base_values=2.0, data=data.copy())
+
+    result = exp1 + exp2
+    np.testing.assert_array_equal(result.values, [2.0, 4.0, 6.0])
+    assert result.base_values == 3.0
+    np.testing.assert_array_equal(result.data, [20.0, 40.0, 60.0])
+
+
+@pytest.mark.parametrize(
+    ("prop", "expected"),
+    [
+        param("argsort", [1, 2, 0], id="argsort"),
+        param("flip", [2.0, 1.0, 3.0], id="flip"),
+    ],
+)
+def test_explanation_argsort_and_flip(prop, expected):
+    """Test the argsort and flip properties."""
+    exp = shap.Explanation(values=np.array([3.0, 1.0, 2.0]))
+    np.testing.assert_array_equal(getattr(exp, prop).values, expected)
+
+
+@pytest.mark.parametrize(
+    ("method", "args", "expected"),
+    [
+        param("max", (), [4.0, 6.0], id="max"),
+        param("min", (), [1.0, 2.0], id="min"),
+        param("mean", (), [2.6666666666666665, 4.333333333333333], id="mean"),
+        param("percentile", (50,), [3.0, 5.0], id="percentile_50"),
+    ],
+)
+def test_explanation_reduction_ops(method, args, expected):
+    """Reduction ops (min/max/mean/percentile) along axis=0."""
+    vals = np.array([[1.0, 5.0], [3.0, 2.0], [4.0, 6.0]])
+    exp = shap.Explanation(values=vals, data=vals.copy())
+    result = getattr(exp, method)(*args, axis=0)
+    np.testing.assert_allclose(result.values, expected)
+
+
+@pytest.mark.parametrize(
+    ("values", "axis", "expected_shape"),
+    [
+        param(np.array([[1.0, 2.0, 3.0, 4.0]]), 1, (1, 2), id="rank2"),
+        param(np.array([1.0, 2.0, 3.0, 4.0]), None, (2,), id="rank1"),
+    ],
+)
+def test_explanation_sum_with_grouping(values, axis, expected_shape):
+    """Sum with feature grouping on rank-1 and rank-2 explanations."""
+    exp = shap.Explanation(
+        values=values,
+        data=values.copy(),
+        feature_names=["a", "b", "c", "d"],
+    )
+    grouping = {"a": "group1", "b": "group1", "c": "group2", "d": "group2"}
+    result = exp.sum(axis=axis, grouping=grouping)
+    assert result.shape == expected_shape
+    np.testing.assert_array_equal(result.values.flatten(), [3.0, 7.0])
+
+
+def test_explanation_sum_grouping_invalid_axis():
+    """Sum with grouping on an invalid axis must raise DimensionError."""
+    from shap.utils._exceptions import DimensionError
+
+    exp = shap.Explanation(
+        values=np.array([[1.0, 2.0], [3.0, 4.0]]),
+        data=np.array([[10.0, 20.0], [30.0, 40.0]]),
+        feature_names=["a", "b"],
+    )
+    with pytest.raises(DimensionError, match="Only axis = 1"):
+        exp.sum(axis=0, grouping={"a": "group1", "b": "group1"})
+
+
+@pytest.mark.parametrize(
+    ("max_samples", "expected_rows"),
+    [
+        param(10, 10, id="subsample"),
+        param(200, 100, id="cap_at_len"),
+    ],
+)
+def test_explanation_sample(max_samples, expected_rows):
+    """Test the sample method with subsampling and capping."""
+    exp = shap.Explanation(values=np.random.RandomState(0).randn(100, 5))
+    sampled = exp.sample(max_samples, random_state=42)
+    assert sampled.shape == (expected_rows, 5)
+
+
+@pytest.mark.parametrize("axis", [0, 1])
+def test_explanation_hclust_method(axis):
+    """Test the hclust method on Explanation along both axes."""
+    vals = np.random.RandomState(0).randn(20, 5)
+    exp = shap.Explanation(values=vals)
+    order = exp.hclust(axis=axis)
+    expected_len = 20 if axis == 0 else 5
+    assert len(order) == expected_len
+    assert set(order) == set(range(expected_len))
+
+
+def test_explanation_hclust_dimension_error():
+    """Test that hclust raises DimensionError for non-2D arrays."""
+    from shap.utils._exceptions import DimensionError
+
+    exp = shap.Explanation(values=np.array([1.0, 2.0, 3.0]))
+    with pytest.raises(DimensionError, match="2D"):
+        exp.hclust()
+
+
+def test_explanation_getitem_with_ellipsis_and_explanation():
+    """Test slicing with Ellipsis and indexing with another Explanation."""
+    vals = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
+    exp = shap.Explanation(values=vals, feature_names=list("abc"))
+    assert exp[..., :2].shape == (3, 2)
+
+    idx_exp = shap.Explanation(values=np.array([0, 2]))
+    assert exp[idx_exp].shape == (2, 3)
+
+
+def test_explanation_numpy_func_edge_cases():
+    """Test _numpy_func with base_values, non-reducible data, and 3D clustering collapse."""
+    # base_values reduction
+    vals = np.array([[1.0, 2.0], [3.0, 4.0]])
+    exp = shap.Explanation(values=vals, base_values=np.array([0.5, 0.6]), data=vals.copy())
+    result = exp.mean(axis=0)
+    np.testing.assert_allclose(result.values, [2.0, 3.0])
+
+    # string data can't be reduced — should set data to None
+    exp2 = shap.Explanation(values=vals, data=[["a", "b"], ["c", "d"]])
+    assert exp2.mean(axis=0).data is None
+
+    # 3D clustering with no variance across axis 0 should collapse
+    clustering = np.array([[[0.0, 1.0, 0.5, 2.0]], [[0.0, 1.0, 0.5, 2.0]]])
+    exp3 = shap.Explanation(values=vals, clustering=clustering)
+    result3 = exp3.mean(axis=0)
+    assert result3.clustering is not None
+    assert result3.clustering.shape == (1, 4)
+
+
+def test_explanation_from_tree_explainer_operations():
+    """Test Explanation operations using real TreeExplainer output.
+
+    Exercises _compute_shape, list_wrap, and is_1d through the public
+    Explanation interface rather than testing private functions directly.
+    """
+    from sklearn.ensemble import GradientBoostingRegressor
+
+    X, y = shap.datasets.california(n_points=50)
+    model = GradientBoostingRegressor(n_estimators=10, max_depth=3, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer(X[:10])
+
+    # shape and len work on real explainer output
+    assert shap_values.shape == (10, 8)
+    assert len(shap_values) == 10
+
+    # reduction ops on real output
+    mean_exp = shap_values.mean(axis=0)
+    assert mean_exp.shape == (8,)
+
+    # sample on real output
+    sampled = shap_values.sample(5, random_state=0)
+    assert sampled.shape == (5, 8)
+
+    # display_data setter with DataFrame
+    shap_values.display_data = X[:10]
+    assert isinstance(shap_values.display_data, np.ndarray)
