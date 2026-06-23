@@ -541,6 +541,56 @@ def summary_legacy(
     use_log_scale: bool = False,
     rng: np.random.Generator | None = None,
 ):
+    return _summary_legacy(
+        shap_values,
+        features=features,
+        feature_names=feature_names,
+        max_display=max_display,
+        plot_type=plot_type,
+        color=color,
+        axis_color=axis_color,
+        title=title,
+        alpha=alpha,
+        show=show,
+        sort=sort,
+        color_bar=color_bar,
+        plot_size=plot_size,
+        layered_violin_max_num_bins=layered_violin_max_num_bins,
+        class_names=class_names,
+        class_inds=class_inds,
+        color_bar_label=color_bar_label,
+        cmap=cmap,
+        show_values_in_legend=show_values_in_legend,
+        use_log_scale=use_log_scale,
+        rng=rng,
+        _internal=False,
+    )
+
+
+def _summary_legacy(
+    shap_values,
+    features=None,
+    feature_names=None,
+    max_display=None,
+    plot_type=None,
+    color=None,
+    axis_color="#333333",
+    title=None,
+    alpha=1,
+    show=True,
+    sort=True,
+    color_bar=True,
+    plot_size="auto",
+    layered_violin_max_num_bins=20,
+    class_names=None,
+    class_inds=None,
+    color_bar_label=labels["FEATURE_VALUE"],
+    cmap=colors.red_blue,
+    show_values_in_legend: bool = False,
+    use_log_scale: bool = False,
+    rng: np.random.Generator | None = None,
+    _internal: bool = False,
+):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
     Parameters
@@ -683,7 +733,7 @@ def summary_legacy(
                     else:
                         new_feature_names.append(c1 + "* - " + c2)
 
-            return summary_legacy(
+            return _summary_legacy(
                 new_shap_values,
                 new_features,
                 new_feature_names,
@@ -720,7 +770,7 @@ def summary_legacy(
         plt.subplot(1, max_display, 1)
         proj_shap_values = shap_values[:, sort_inds[0], sort_inds]
         proj_shap_values[:, 1:] *= 2  # because off diag effects are split in half
-        summary_legacy(
+        _summary_legacy(
             proj_shap_values,
             features[:, sort_inds] if features is not None else None,
             feature_names=np.array(feature_names)[sort_inds].tolist(),
@@ -729,6 +779,7 @@ def summary_legacy(
             color_bar=False,
             plot_size=None,
             max_display=max_display,
+            _internal=True,
         )
         plt.xlim((slow, shigh))
         plt.xlabel("")
@@ -740,7 +791,7 @@ def summary_legacy(
             proj_shap_values = shap_values[:, ind, sort_inds]
             proj_shap_values *= 2
             proj_shap_values[:, i] /= 2  # because only off diag effects are split in half
-            summary_legacy(
+            _summary_legacy(
                 proj_shap_values,
                 features[:, sort_inds] if features is not None else None,
                 sort=False,
@@ -749,6 +800,7 @@ def summary_legacy(
                 color_bar=False,
                 plot_size=None,
                 max_display=max_display,
+                _internal=True,
             )
             plt.xlim((slow, shigh))
             plt.xlabel("")
@@ -760,6 +812,28 @@ def summary_legacy(
         if show:
             plt.show()
         return
+
+    # GH #3920: repeated summary_plot on the same axes stacked colorbars. Remove our
+    # previous colorbar and clear the axes only when redrawing after a prior summary
+    # (avoid cla() on a fresh axes so image tests stay stable). Nested interaction
+    # subplots pass _internal=True and skip this entirely.
+    if not _internal:
+        ax = plt.gca()
+        removed_prior_colorbar = False
+        if hasattr(ax, "_shap_summary_colorbar"):
+            removed_prior_colorbar = True
+            try:
+                ax._shap_summary_colorbar.remove()
+            except (AttributeError, ValueError, RuntimeError):
+                pass
+            try:
+                delattr(ax, "_shap_summary_colorbar")
+            except AttributeError:
+                pass
+        if removed_prior_colorbar:
+            ax.cla()
+            if use_log_scale:
+                plt.xscale("symlog")
 
     if max_display is None:
         max_display = 20
@@ -1122,7 +1196,9 @@ def summary_legacy(
 
         m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else plt.get_cmap(color))
         m.set_array([0, 1])
-        cb = plt.colorbar(m, ax=plt.gca(), ticks=[0, 1], aspect=80)
+        ax = plt.gca()
+        cb = plt.colorbar(m, ax=ax, ticks=[0, 1], aspect=80)
+        ax._shap_summary_colorbar = cb  # type: ignore[attr-defined]
         cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
