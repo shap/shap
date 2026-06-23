@@ -1,3 +1,4 @@
+import html
 import json
 import random
 import string
@@ -187,7 +188,7 @@ def text(
                 document.getElementById(document._zoom_{uuid}+'_name').style.borderBottom = '3px solid #000000';
             }} else {{
                 document.getElementById(document._zoom_{uuid}).style.display = 'none';
-                document.getElementById(document._zoom_{uuid}+'_name').style.borderBottom = 'none';
+                document.getElementById(document._zoom_{uuid}+'_name').style.borderBottom = '3px solid transparent';
             }}
         }}
         if (document._zoom_{uuid} !== '_tp_{uuid}_output_' + i) {{
@@ -201,7 +202,7 @@ def text(
     function _output_onmouseover_{uuid}(i, el) {{
         if (document._zoom_{uuid} !== undefined) {{ return; }}
         if (document._hover_{uuid} !== undefined) {{
-            document.getElementById(document._hover_{uuid} + '_name').style.borderBottom = 'none';
+            document.getElementById(document._hover_{uuid} + '_name').style.borderBottom = '3px solid transparent';
             document.getElementById(document._hover_{uuid}).style.display = 'none';
         }}
         document.getElementById('_tp_{uuid}_output_' + i).style.display = 'block';
@@ -212,15 +213,33 @@ def text(
 <div style=\"color: rgb(120,120,120); font-size: 12px;\">outputs</div>"""
         output_values = shap_values.values.sum(0) + shap_values.base_values
         output_max = np.max(np.abs(output_values))
+        top_inds_outputs = np.argsort(-np.abs(output_values))[:num_starting_labels]
         for i, name in enumerate(shap_values.output_names):
             scaled_value = 0.5 + 0.5 * output_values[i] / (output_max + 1e-8)
             color = colors.red_transparent_blue(scaled_value)
             rgba_css = _css_rgba(color[0] * 255, color[1] * 255, color[2] * 255, color[3])
-            # '#dddddd' if i == 0 else '#ffffff' border-bottom: {'3px solid #000000' if i == 0 else 'none'};
-            out += f"""
-<div style="display: inline; border-bottom: {"3px solid #000000" if i == 0 else "none"}; background: {rgba_css}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
-    onclick="_output_onclick_{uuid}({i})"
-    onmouseover="_output_onmouseover_{uuid}({i}, this);">{name}</div>"""
+
+            label_display = "none"
+            wrapper_display = "inline"
+            if i in top_inds_outputs:
+                label_display = "block"
+                wrapper_display = "inline-block"
+
+            value_label = str(output_values[i].round(3))
+            escaped_name = html.escape(str(name)).replace(" ##", "")
+            out += f"""<div style='display: {wrapper_display}; text-align: center;'
+    ><div style='display: {label_display}; color: #999; padding-top: 0px; font-size: 12px;'>{value_label}</div
+        ><div style="display: inline; border-bottom: {"3px solid #000000" if i == 0 else "3px solid transparent"}; background: {rgba_css}; border-radius: 3px; padding: 0px; cursor: pointer;" id="_tp_{uuid}_output_{i}_name"
+    onclick="
+    if (this.previousSibling.style.display == 'none') {{
+        this.previousSibling.style.display = 'block';
+        this.parentNode.style.display = 'inline-block';
+    }} else {{
+        this.previousSibling.style.display = 'none';
+        this.parentNode.style.display = 'inline';
+    }}
+    _output_onclick_{uuid}({i});"
+    onmouseover="_output_onmouseover_{uuid}({i}, this);">{escaped_name}</div></div>"""
         out += "<br><br>"
         for i, name in enumerate(shap_values.output_names):
             out += f"<div id='_tp_{uuid}_output_{i}' style='display: {'block' if i == 0 else 'none'}';>"
@@ -364,7 +383,7 @@ def text(
         out += f"""<div style='display: {wrapper_display}; text-align: center;'
     ><div style='display: {label_display}; color: #999; padding-top: 0px; font-size: 12px;'>{value_label}</div
         ><div id='_tp_{uuid}_ind_{i}'
-            style='display: inline; background: {rgba_css}; border-radius: 3px; padding: 0px'
+            style='display: inline; background: {rgba_css}; border-radius: 3px; padding: 0px; cursor: pointer;'
             onclick="
             if (this.previousSibling.style.display == 'none') {{
                 this.previousSibling.style.display = 'block';
