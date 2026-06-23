@@ -1,10 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { AdditiveForceVisualizer } from "../visualizers";
 import React from 'react';
 
 describe('AdditiveForceVisualizer', () => {
   it('renders correctly', () => {
-    // Render the component
     const { container } = render(
       <AdditiveForceVisualizer
         baseValue={0.0}
@@ -25,7 +24,14 @@ describe('AdditiveForceVisualizer', () => {
       />
     );
 
-    // Compare with snapshot
+    // ✅ Snapshot
     expect(container).toMatchSnapshot();
+
+    // ✅ Check SVG exists (D3 rendering container)
+    const svg = container.querySelector("svg");
+    expect(svg).not.toBeNull();
+
+    // ✅ Check main container rendered
+    expect(container.firstChild).not.toBeNull();
   });
 });
