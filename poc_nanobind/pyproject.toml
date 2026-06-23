@@ -1,0 +1,12 @@
+[build-system]
+requires = ["scikit-build-core", "nanobind"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "shap_cpp_poc"
+version = "0.1.0"
+dependencies = []
+
+[tool.scikit-build]
+cmake.build-type = "Release"
+wheel.install-dir = "."
