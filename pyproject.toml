@@ -204,7 +204,6 @@ module = [
   "shap.plots._force_matplotlib",
   "shap.plots._force",
   "shap.plots._text",
-  "shap.plots._waterfall",
 ]
 check_untyped_defs = false
 
