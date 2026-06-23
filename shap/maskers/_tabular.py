@@ -16,7 +16,7 @@ log = logging.getLogger("shap")
 class Tabular(Masker):
     """A common base class for Independent and Partition."""
 
-    def __init__(self, data, max_samples=100, clustering=None, partition=None):
+    def __init__(self, data, max_samples=None, clustering=None, partition=None):
         """This masks out tabular features by integrating over the given background dataset.
 
         Parameters
@@ -24,12 +24,13 @@ class Tabular(Masker):
         data : np.array, pandas.DataFrame
             The background dataset that is used for masking.
 
-        max_samples : int
+        max_samples : int or None
             The maximum number of samples to use from the passed background data. If data has more
-            than max_samples then shap.utils.sample is used to subsample the dataset. The number of
-            samples coming out of the masker (to be integrated over) matches the number of samples in
-            the background dataset. This means larger background dataset cause longer runtimes. Normally
-            about 1, 10, 100, or 1000 background samples are reasonable choices.
+            than max_samples then shap.utils.sample is used to subsample the dataset. By default
+            (None), all samples are used. The number of samples coming out of the masker (to be
+            integrated over) matches the number of samples in the background dataset. This means
+            larger background datasets cause longer runtimes. Normally about 1, 10, 100, or 1000
+            background samples are reasonable choices.
 
         clustering : string or None (default) or numpy.ndarray
             The distance metric to use for creating the clustering of the features. The
@@ -53,15 +54,14 @@ class Tabular(Masker):
             self.cov = data.get("cov", None)
             data = np.expand_dims(data["mean"], 0)
 
-        if hasattr(data, "shape") and data.shape[0] > max_samples:
+        if max_samples is not None and hasattr(data, "shape") and data.shape[0] > max_samples:
             log.warning(
                 "Background dataset has %d samples but max_samples=%d. "
                 "Subsampling to %d samples for SHAP value computation. "
-                "To use all samples, set max_samples=%d when initializing the masker.",
+                "To use all samples, set max_samples=None when initializing the masker.",
                 data.shape[0],
                 max_samples,
                 max_samples,
-                data.shape[0],
             )
             data = utils.sample(data, max_samples)
 
@@ -69,11 +69,6 @@ class Tabular(Masker):
         self.clustering = clustering
         self.partition = partition
         self.max_samples = max_samples
-
-        # # warn users about large background data sets
-        # if self.data.shape[0] > 100:
-        #     log.warning("Using " + str(self.data.shape[0]) + " background data samples could cause slower " +
-        #                 "run times. Consider shap.utils.sample(data, K) to summarize the background using only K samples.")
 
         # compute the clustering of the data
         if clustering is not None and partition is not None:
@@ -95,16 +90,10 @@ class Tabular(Masker):
             self.clustering = None
             self.partition = None
 
-        # self._last_mask = np.zeros(self.data.shape[1], dtype=bool)
         self._masked_data = data.copy()
         self._last_mask = np.zeros(data.shape[1], dtype=bool)
         self.shape = self.data.shape
         self.supports_delta_masking = True
-        # self._last_x = None
-        # self._data_variance = np.ones(self.data.shape, dtype=bool)
-
-        # this is property that allows callers to check what rows actually changed since last time.
-        # self.changed_rows = np.ones(self.data.shape[0], dtype=bool)
 
     def __call__(self, mask, x):
         mask = self._standardize_mask(mask, x)
@@ -113,7 +102,6 @@ class Tabular(Masker):
         if len(x.shape) != 1 or x.shape[0] != self.data.shape[1]:
             raise DimensionError("The input passed for tabular masking does not match the background data shape!")
 
-        # if mask is an array of integers then we are doing delta masking
         if np.issubdtype(mask.dtype, np.integer):
             variants = ~self.invariants(x)
             curr_delta_inds = np.zeros(len(mask), dtype=int)
@@ -148,21 +136,12 @@ class Tabular(Masker):
 
         return (self._masked_data,)
 
-    # def reset_delta_masking(self):
-    #     """ This resets the masker back to all zeros when delta masking.
-
-    #     Note that the presence of this function also denotes that we support delta masking.
-    #     """
-    #     self._masked_data[:] = self.data
-    #     self._last_mask[:] = False
-
     def invariants(self, x):
         """This returns a mask of which features change when we mask them.
 
         This optional masking method allows explainers to avoid re-evaluating the model when
         the features that would have been masked are all invariant.
         """
-        # make sure we got valid data
         if x.shape != self.data.shape[1:]:
             raise DimensionError(
                 "The passed data does not match the background shape expected by the masker! The data of shape "
@@ -178,9 +157,7 @@ class Tabular(Masker):
         """Write a Tabular masker to a file stream."""
         super().save(out_file)
 
-        # Increment the version number when the encoding changes!
         with Serializer(out_file, "shap.maskers.Tabular", version=0) as s:
-            # save the data in the format it was given to us
             if self.output_dataframe:
                 s.save("data", pd.DataFrame(self.data, columns=self.feature_names))
             elif getattr(self, "mean", None) is not None:
@@ -247,110 +224,26 @@ def _delta_masking(
         # update the tmp masked inputs array
         dpos = 0
         curr_delta_inds[0] = masks[masks_pos]
-        while curr_delta_inds[dpos] < 0:  # negative values mean keep going
-            curr_delta_inds[dpos] = -curr_delta_inds[dpos] - 1  # -value + 1 is the original index that needs flipped
-            _single_delta_mask(curr_delta_inds[dpos], masked_inputs_tmp, last_mask, data, x, noop_code)
+        while curr_delta_inds[dpos] < 0:
             dpos += 1
             curr_delta_inds[dpos] = masks[masks_pos + dpos]
-        _single_delta_mask(curr_delta_inds[dpos], masked_inputs_tmp, last_mask, data, x, noop_code)
 
-        # copy the tmp masked inputs array to the output
-        masked_inputs_out[output_pos : output_pos + N] = masked_inputs_tmp
+        # flip the current index
+        for dpos_ in range(dpos + 1):
+            _single_delta_mask(curr_delta_inds[dpos_], masked_inputs_tmp, last_mask, data, x, noop_code)
+
+        # write example to output if we have finished delta list for the current output
         masks_pos += dpos + 1
+        if masks_pos >= len(masks) or masks[masks_pos] != noop_code:
+            continue
+        masks_pos += 1
 
-        # mark which rows have been updated, so we can only evaluate the model on the rows we need to
-        if i == 0:
-            varying_rows_out[i, :] = True
+        # Check for all invariant rows
+        # todo: move this to python for spee?d
+        varying_rows_out[i, :] = np.any(masked_inputs_tmp != masked_inputs_tmp[0, :][None, :], axis=1)
 
-        else:
-            # only one column was changed
-            if dpos == 0:
-                varying_rows_out[i, :] = variants[:, curr_delta_inds[dpos]]
-
-            # more than one column was changed
-            else:
-                varying_rows_out[i, :] = np.sum(variants[:, curr_delta_inds[: dpos + 1]], axis=1) > 0
-
-        output_pos += N
-
-
-class Independent(Tabular):
-    """This masks out tabular features by integrating over the given background dataset."""
-
-    def __init__(self, data, max_samples=100):
-        """Build a Independent masker with the given background data.
-
-        Parameters
-        ----------
-        data : numpy.ndarray, pandas.DataFrame
-            The background dataset that is used for masking.
-
-        max_samples : int
-            The maximum number of samples to use from the passed background data. If data has more
-            than max_samples then shap.utils.sample is used to subsample the dataset. The number of
-            samples coming out of the masker (to be integrated over) matches the number of samples in
-            the background dataset. This means larger background dataset cause longer runtimes. Normally
-            about 1, 10, 100, or 1000 background samples are reasonable choices.
-
-        """
-        super().__init__(data, max_samples=max_samples, clustering=None)
-
-
-class Partition(Tabular):
-    """This masks out tabular features by integrating over the given background dataset.
-
-    Unlike Independent, Partition respects a hierarchical structure of the data.
-    """
-
-    def __init__(self, data, max_samples=100, clustering="correlation"):
-        """Build a Partition masker with the given background data and clustering.
-
-        Parameters
-        ----------
-        data : numpy.ndarray, pandas.DataFrame
-            The background dataset that is used for masking.
-
-        max_samples : int
-            The maximum number of samples to use from the passed background data. If data has more
-            than max_samples then shap.utils.sample is used to subsample the dataset. The number of
-            samples coming out of the masker (to be integrated over) matches the number of samples in
-            the background dataset. This means larger background dataset cause longer runtimes. Normally
-            about 1, 10, 100, or 1000 background samples are reasonable choices.
-
-        clustering : string or numpy.ndarray
-            If a string, then this is the distance metric to use for creating the clustering of
-            the features. The distance function can be any valid scipy.spatial.distance.pdist's metric
-            argument. However we suggest using 'correlation' in most cases. The full list of options is
-            `braycurtis`, `canberra`, `chebyshev`, `cityblock`, `correlation`, `cosine`, `dice`,
-            `euclidean`, `hamming`, `jaccard`, `jensenshannon`, `kulsinski`, `mahalanobis`,
-            `matching`, `minkowski`, `rogerstanimoto`, `russellrao`, `seuclidean`,
-            `sokalmichener`, `sokalsneath`, `sqeuclidean`, `yule`. These are all
-            the options from scipy.spatial.distance.pdist's metric argument.
-            If an array, then this is assumed to be the clustering of the features.
-
-        """
-        super().__init__(data, max_samples=max_samples, clustering=clustering, partition=None)
-
-
-class Impute(Masker):  # we should inherit from Tabular once we add support for arbitrary masking
-    """This imputes the values of missing features using the values of the observed features.
-
-    Unlike Independent, Gaussian imputes missing values based on correlations with observed data points.
-    """
-
-    def __init__(self, data, method="linear"):
-        """Build a Partition masker with the given background data and clustering.
-
-        Parameters
-        ----------
-        data : numpy.ndarray, pandas.DataFrame or {"mean: numpy.ndarray, "cov": numpy.ndarray} dictionary
-            The background dataset that is used for masking.
-
-        """
-        if isinstance(data, dict) and "mean" in data:
-            self.mean = data.get("mean", None)
-            self.cov = data.get("cov", None)
-            data = np.expand_dims(data["mean"], 0)
-
-        self.data = data
-        self.method = method
+        # copy the masked_inputs_tmp into masked_inputs_out
+        for j in range(N):
+            for k in range(masked_inputs_tmp.shape[1]):
+                masked_inputs_out[output_pos, k] = masked_inputs_tmp[j, k]
+            output_pos += 1
