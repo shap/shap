@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy
 
 from .. import Explanation
 from ..utils import OpChain
@@ -273,3 +274,45 @@ def parse_axis_limit(ax_limit: AxisLimitSpec, ax_values: np.ndarray, *, is_shap_
         return float(ax_limit.values) if is_shap_axis else float(ax_limit.data)
     # Else, should be float or None
     return ax_limit
+
+
+def aggregate_features_into_coalitions(values, feature_names, partition_tree, clustering_cutoff):
+    """Aggregate feature-level values into flat coalitions.
+
+    The flat coalitions are obtained by cutting the partition tree at
+    ``clustering_cutoff``. Each coalition value is the net contribution of its
+    members, i.e. the sum of the feature-level SHAP values within the coalition.
+    """
+    cluster_ids = scipy.cluster.hierarchy.fcluster(
+        partition_tree,
+        t=clustering_cutoff,
+        criterion="distance",
+    )
+
+    coalitions = []
+    for cluster_id in np.unique(cluster_ids):
+        inds = np.where(cluster_ids == cluster_id)[0].tolist()
+        coalitions.append(inds)
+
+    # Keep a stable order based on the first feature in each coalition.
+    coalitions = sorted(coalitions, key=lambda inds: min(inds))
+
+    # Sum the values of each features in each coalition
+    coalition_values = np.array([values[:, inds].sum(axis=1) for inds in coalitions]).T
+
+    coalition_names = np.array(
+        [format_coalition_name(feature_names, inds, values) for inds in coalitions],
+        dtype=object,
+    )
+
+    return coalition_values, coalition_names
+
+
+def format_coalition_name(feature_names, inds, values, max_len=40):
+    """Aggregate features names into coaltion labels"""
+    full_print = " + ".join([feature_names[i] for i in inds])
+    if len(full_print) <= max_len:
+        return full_print
+
+    max_ind = inds[np.argmax(np.abs(values).mean(0)[inds])]
+    return f"{feature_names[max_ind]} + {len(inds) - 1} other features"
