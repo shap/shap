@@ -245,3 +245,33 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_explanation_to_dataframe():
+    exp = shap.Explanation(
+        values=np.array([[0.1, -0.2], [0.3, 0.4]]),
+        base_values=np.array([0.5, 0.6]),
+        instance_names=["row-0", "row-1"],
+        feature_names=["f0", "f1"],
+    )
+
+    df = exp.to_dataframe(include_base_values=True)
+
+    assert list(df.columns) == ["base_value", "f0", "f1"]
+    assert list(df.index) == ["row-0", "row-1"]
+    assert np.allclose(df["base_value"].to_numpy(), [0.5, 0.6])
+    assert np.allclose(df[["f0", "f1"]].to_numpy(), exp.values)
+
+
+def test_explanation_to_dataframe_single_row():
+    exp = shap.Explanation(
+        values=np.array([0.1, -0.2, 0.3]),
+        base_values=0.25,
+        feature_names=["f0", "f1", "f2"],
+    )
+
+    df = exp.to_dataframe(include_base_values=True)
+
+    assert df.shape == (1, 4)
+    assert list(df.columns) == ["base_value", "f0", "f1", "f2"]
+    assert np.allclose(df.iloc[0].to_numpy(), [0.25, 0.1, -0.2, 0.3])
