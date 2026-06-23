@@ -1,5 +1,7 @@
 """This file contains tests for the FixedComposite masker."""
 
+import io
+import pickle
 import tempfile
 
 import numpy as np
@@ -55,3 +57,107 @@ def test_serialization_fixedcomposite_masker():
     new_masked_output = new_masker(test_input_mask, test_text)
 
     assert original_masked_output == new_masked_output
+
+
+class _MaskerForAttributePropagation(shap.maskers.Masker):
+    def __init__(self):
+        self.shape = (None, 2)
+        self.invariants = np.array([True, False])
+        self.clustering = None
+        self.feature_names = ["f1", "f2"]
+        self.text_data = True
+
+    def __call__(self, mask, *args):  # type: ignore[override]
+        x = args[0]
+        return ([x],)
+
+
+class _NonTupleMasker(shap.maskers.Masker):
+    def __init__(self):
+        self.shape = (None, 0)
+
+    def __call__(self, mask, *args):  # type: ignore[override]
+        x = args[0]
+        return np.asarray(x) * 2
+
+
+class _TupleMasker(shap.maskers.Masker):
+    def __init__(self):
+        self.shape = (None, 0)
+
+    def __call__(self, mask, *args):  # type: ignore[override]
+        x = np.asarray(args[0])
+        return ([x], [x + 1])
+
+
+def test_fixed_composite_propagates_only_non_none_attributes():
+    masker = _MaskerForAttributePropagation()
+    composite = shap.maskers.FixedComposite(masker)
+
+    assert composite.masker is masker
+    assert composite.shape == (None, 2)
+    np.testing.assert_array_equal(composite.invariants, np.array([True, False]))
+    assert composite.feature_names == ["f1", "f2"]
+    assert composite.text_data is True
+    assert not hasattr(composite, "clustering")
+
+
+def test_fixed_composite_call_wraps_non_tuple_masked_output_and_args():
+    masker = _NonTupleMasker()
+    composite = shap.maskers.FixedComposite(masker)
+
+    x = np.array([1, 2, 3])
+    result = composite(np.array([], dtype=bool), x, "label")
+
+    assert isinstance(result, tuple)
+    assert len(result) == 3
+    np.testing.assert_array_equal(result[0], np.array([2, 4, 6]))
+    np.testing.assert_array_equal(result[1], np.array([x]))
+    np.testing.assert_array_equal(result[2], np.array(["label"]))
+
+
+def test_fixed_composite_call_keeps_tuple_masked_output_shape():
+    masker = _TupleMasker()
+    composite = shap.maskers.FixedComposite(masker)
+
+    x = np.array([4, 5])
+    result = composite(np.array([], dtype=bool), x)
+
+    assert isinstance(result, tuple)
+    assert len(result) == 3
+    np.testing.assert_array_equal(result[0][0], x)
+    np.testing.assert_array_equal(result[1][0], x + 1)
+    np.testing.assert_array_equal(result[2], np.array([x]))
+
+
+def test_fixed_composite_serialization_round_trip_without_transformers():
+    original_masker = shap.maskers.FixedComposite(shap.maskers.Fixed())
+
+    stream = io.BytesIO()
+    original_masker.save(stream)
+    stream.seek(0)
+
+    loaded_masker = shap.maskers.FixedComposite.load(stream)
+
+    x = np.array([1, 2, 3])
+    mask = np.array([], dtype=bool)
+    original_result = original_masker(mask, x)
+    loaded_result = loaded_masker(mask, x)
+
+    np.testing.assert_array_equal(original_result[0][0], loaded_result[0][0])
+    np.testing.assert_array_equal(original_result[1], loaded_result[1])
+
+
+def test_fixed_composite_load_instantiate_false_returns_kwargs():
+    masker = shap.maskers.FixedComposite(shap.maskers.Fixed())
+    stream = io.BytesIO()
+    masker.save(stream)
+    stream.seek(0)
+
+    loaded_type = pickle.load(stream)
+    assert loaded_type is shap.maskers.FixedComposite
+
+    kwargs = shap.maskers.FixedComposite.load(stream, instantiate=False)
+
+    assert set(kwargs) == {"masker"}
+    assert isinstance(kwargs["masker"], shap.maskers.Fixed)
