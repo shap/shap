@@ -117,6 +117,16 @@ def beeswarm(
             "an explanation matrix with many instances!"
         )
         raise ValueError(emsg)
+
+    elif len(sv_shape) == 3 and sv_shape[2] == 2:
+        warnings.warn(
+            "The passed Explanation object has two classes, but the beeswarm plot only"
+            " supports single-class explanations. The plot will assume the explanation"
+            " is a binary classifier and use the second class. Pass shap_values[:,:,1]"
+            " explicity to silence this warning."
+        )
+        shap_values = shap_values[:, :, 1]
+
     elif len(sv_shape) > 2:
         emsg = (
             "The beeswarm plot does not support plotting explanations with instances that have more than one dimension!"
