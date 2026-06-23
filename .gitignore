@@ -41,3 +41,4 @@ node_modules
 mpl-results
 # intermediate AI skill files
 .claude/disclosures/
+.mypy_cache/
