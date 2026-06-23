@@ -375,27 +375,6 @@ def _partition_masks_recurse(
     _partition_masks_recurse(right_index, m00, ind00, ind01, inds_lists, mask_matrix, partition_tree, M, all_masks)
 
 
-def gray_code_masks(nbits: int) -> npt.NDArray[np.bool_]:
-    """Produces an array of all binary patterns of size nbits in gray code order.
-
-    This is based on code from: http://code.activestate.com/recipes/576592-gray-code-generatoriterator/
-    """
-    out = np.zeros((2**nbits, nbits), dtype=bool)
-    li = np.zeros(nbits, dtype=bool)
-
-    for term in range(2, (1 << nbits) + 1):
-        if term % 2 == 1:  # odd
-            for i in range(-1, -nbits, -1):
-                if li[i] == 1:
-                    li[i - 1] = li[i - 1] ^ 1
-                    break
-        else:  # even
-            li[-1] = li[-1] ^ 1
-
-        out[term - 1, :] = li
-    return out
-
-
 def gray_code_indexes(nbits: int) -> npt.NDArray[np.intp]:
     """Produces an array of which bits flip at which position.
 
