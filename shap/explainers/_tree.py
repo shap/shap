@@ -475,6 +475,9 @@ class TreeExplainer(Explainer):
         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
+        if X.shape[0] == 0:
+            raise ValueError("Input data must contain at least one sample.")
+
         if self.model.model_output == "log_loss":
             if y is None:
                 emsg = (
