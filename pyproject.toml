@@ -360,6 +360,12 @@ omit = ["shap/benchmark/*"]
 [tool.coverage.paths]
 combine = ["shap", "*/site-packages/shap"]
 
+[tool.coverage.report]
+exclude_also = [
+    "def partition_tree_shuffle",
+    "def delta_minimization_order",
+]
+
 [tool.cibuildwheel]
 # TODO: Should we use uv as build frontend for faster builds?
 # build-frontend = "uv"
