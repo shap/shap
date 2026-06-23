@@ -437,6 +437,47 @@ def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
     np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-5)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
+def test_pytorch_tuple_output_lnn_style(random_seed):
+    """GradientExplainer should support models that return (prediction, state)."""
+    torch = pytest.importorskip("torch")
+    from torch import nn
+
+    torch.manual_seed(random_seed)
+
+    class LiquidLikeNet(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.in_proj = nn.Linear(3, 4)
+            self.state_proj = nn.Linear(4, 4)
+            self.out_proj = nn.Linear(4, 2)
+
+        def forward(self, x, state=None):
+            if state is None:
+                state = torch.zeros((x.shape[0], 4), device=x.device)
+            next_state = torch.tanh(self.in_proj(x) + self.state_proj(state))
+            output = self.out_proj(next_state)
+            return output, next_state
+
+    model = LiquidLikeNet()
+    background = torch.zeros(8, 3)
+    to_explain = torch.randn(4, 3)
+
+    explainer = shap.GradientExplainer(model, background)
+    shap_values = explainer.shap_values(to_explain, nsamples=200)
+
+    model.eval()
+    with torch.no_grad():
+        outputs, _ = model(to_explain)
+        expected_value = model(background)[0].mean(0).detach().cpu().numpy()
+
+    sums = shap_values.sum(axis=1)
+    np.testing.assert_allclose(sums + expected_value, outputs.detach().cpu().numpy(), atol=2e-2)
+
+
 @pytest.mark.parametrize("input_type", ["numpy", "dataframe"])
 def test_tf_input(random_seed, input_type):
     """Test tabular (batch_size, features) pd.DataFrame and numpy input."""

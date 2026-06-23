@@ -475,6 +475,15 @@ class _PyTorchGradient(Explainer):
     multi_output: bool
     gradients: list[Any]
 
+    @staticmethod
+    def _primary_output(outputs: Any) -> Any:
+        """Return predictions when forward() also returns auxiliary state."""
+        if isinstance(outputs, (tuple, list)):
+            if len(outputs) == 0:
+                raise ValueError("Model returned an empty output tuple/list.")
+            return outputs[0]
+        return outputs
+
     def __init__(
         self,
         model: Any,
@@ -527,7 +536,7 @@ class _PyTorchGradient(Explainer):
         self.model = model.eval()
 
         multi_output = False
-        outputs = self.model(*self.model_inputs)
+        outputs = self._primary_output(self.model(*self.model_inputs))
         if len(outputs.shape) > 1 and outputs.shape[1] > 1:
             multi_output = True
         self.multi_output = multi_output
@@ -542,7 +551,7 @@ class _PyTorchGradient(Explainer):
 
         self.model.zero_grad()
         X = [x.requires_grad_() for x in inputs]
-        outputs = self.model(*X)
+        outputs = self._primary_output(self.model(*X))
         selected = [val for val in outputs[:, idx]]
         if self.input_handle is not None:
             interim_inputs = self.layer.target_input  # type: ignore[union-attr]
@@ -594,7 +603,7 @@ class _PyTorchGradient(Explainer):
 
         if ranked_outputs is not None and self.multi_output:
             with torch.no_grad():
-                model_output_values = self.model(*X)
+                model_output_values = self._primary_output(self.model(*X))
             # rank and determine the model outputs that we will explain
             if output_rank_order == "max":
                 _, model_output_ranks = torch.sort(model_output_values, descending=True)
