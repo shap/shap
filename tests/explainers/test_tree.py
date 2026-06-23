@@ -1915,8 +1915,122 @@ def test_check_consistent_outputs_binary_classification():
         assert np.allclose(explanation.values.sum(1) + explanation.base_values, predicted, atol=1e-4)
 
 
-# todo: multi class classification + multi class regression tests
-# todo: test binary classification with model_output="predict_proba"
+def _assert_explanation_additivity(explanation, predicted, *, interactions=False, atol=1e-4):
+    if interactions:
+        summed_values = explanation.values.sum(axis=(1, 2)) + explanation.base_values
+    else:
+        summed_values = explanation.values.sum(axis=1) + explanation.base_values
+    assert np.allclose(summed_values, predicted, atol=atol)
+
+
+def test_check_consistent_outputs_multiclass_classification_interactions():
+    X, y = shap.datasets.iris(n_points=60)
+
+    models = [
+        (
+            "sklearn_random_forest",
+            sklearn.ensemble.RandomForestClassifier(n_estimators=30, max_depth=3, random_state=0).fit(X, y),
+            lambda model, data: model.predict_proba(data),
+        ),
+    ]
+
+    try:
+        import xgboost
+    except ImportError:
+        xgboost = None
+
+    if xgboost is not None:
+        models.append(
+            (
+                "xgboost",
+                xgboost.XGBClassifier(
+                    max_depth=3,
+                    n_estimators=30,
+                    learning_rate=0.2,
+                    subsample=0.9,
+                    colsample_bytree=0.9,
+                    eval_metric="mlogloss",
+                    random_state=0,
+                ).fit(X, y),
+                lambda model, data: model.predict(data, output_margin=True),
+            ),
+        )
+
+    for _, model, predict_fn in models:
+        explainer = shap.TreeExplainer(model)
+        explanation = explainer(X, interactions=False)
+        interaction_explanation = explainer(X, interactions=True)
+        predicted = predict_fn(model, X)
+
+        assert explanation.values.shape == (len(X), X.shape[1], predicted.shape[1])
+        assert explanation.base_values.shape == (len(X), predicted.shape[1])
+        assert interaction_explanation.values.shape == (len(X), X.shape[1], X.shape[1], predicted.shape[1])
+        assert interaction_explanation.base_values.shape == (len(X), predicted.shape[1])
+
+        _assert_explanation_additivity(explanation, predicted, interactions=False)
+        _assert_explanation_additivity(interaction_explanation, predicted, interactions=True)
+
+
+def test_check_consistent_outputs_multioutput_regression_interactions():
+    X, y = shap.datasets.linnerud()
+
+    models = [
+        sklearn.ensemble.RandomForestRegressor(n_estimators=30, max_depth=4, random_state=0).fit(X, y),
+        sklearn.ensemble.ExtraTreesRegressor(n_estimators=30, max_depth=4, random_state=0).fit(X, y),
+    ]
+
+    for model in models:
+        explainer = shap.TreeExplainer(model)
+        explanation = explainer(X, interactions=False)
+        interaction_explanation = explainer(X, interactions=True)
+        predicted = model.predict(X)
+
+        assert explanation.values.shape == (len(X), X.shape[1], predicted.shape[1])
+        assert explanation.base_values.shape == (len(X), predicted.shape[1])
+        assert interaction_explanation.values.shape == (len(X), X.shape[1], X.shape[1], predicted.shape[1])
+        assert interaction_explanation.base_values.shape == (len(X), predicted.shape[1])
+
+        _assert_explanation_additivity(explanation, predicted, interactions=False)
+        _assert_explanation_additivity(interaction_explanation, predicted, interactions=True)
+
+
+def test_check_consistent_outputs_binary_classification_predict_proba():
+    X, y = shap.datasets.iris()
+    y = (y == 2).astype(int)
+    X_background = X.iloc[:20]
+    X_eval = X.iloc[20:50]
+
+    models = [
+        sklearn.ensemble.HistGradientBoostingClassifier(max_iter=30, max_depth=4, random_state=0).fit(X, y),
+    ]
+
+    try:
+        import xgboost
+    except ImportError:
+        xgboost = None
+
+    if xgboost is not None:
+        models.append(
+            xgboost.XGBClassifier(
+                max_depth=3,
+                n_estimators=30,
+                learning_rate=0.2,
+                subsample=0.9,
+                colsample_bytree=0.9,
+                eval_metric="logloss",
+                random_state=0,
+            ).fit(X, y),
+        )
+
+    for model in models:
+        explainer = shap.TreeExplainer(model, X_background, model_output="predict_proba")
+        explanation = explainer(X_eval)
+        predicted = model.predict_proba(X_eval)
+
+        assert explanation.values.shape == (len(X_eval), X.shape[1], predicted.shape[1])
+        assert explanation.base_values.shape == (len(X_eval), predicted.shape[1])
+
+        _assert_explanation_additivity(explanation, predicted, interactions=False)
 
 
 def test_check_consistent_outputs_for_regression():
