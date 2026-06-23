@@ -112,3 +112,38 @@ def test_scatter_plot_value_input(input):
     shap.plots.scatter(explanations, show=False)
     plt.tight_layout()
     return plt.gcf()
+
+
+def test_scatter_plot_without_feature_names_single_column():
+    explanations = shap.Explanation(
+        values=np.array([1.0, 3.0]),
+        data=np.array([10.0, 30.0]),
+    )
+
+    shap.plots.scatter(explanations, hist=False, show=False)
+
+    xlabels = [ax.get_xlabel() for ax in plt.gcf().axes if ax.get_xlabel()]
+    assert xlabels == ["Feature 0"]
+
+
+def test_scatter_plot_without_feature_names_multiple_columns():
+    explanations = shap.Explanation(
+        values=np.array([[1.0, 2.0], [3.0, 4.0]]),
+        data=np.array([[10.0, 20.0], [30.0, 40.0]]),
+    )
+
+    shap.plots.scatter(explanations, hist=False, show=False)
+
+    xlabels = [ax.get_xlabel() for ax in plt.gcf().axes if ax.get_xlabel()]
+    assert xlabels == ["Feature 0", "Feature 1"]
+
+
+def test_scatter_plot_without_feature_names_color_explanation():
+    explanations = shap.Explanation(
+        values=np.array([[1.0, 2.0], [3.0, 4.0]]),
+        data=np.array([[10.0, 20.0], [30.0, 40.0]]),
+    )
+
+    ax = shap.plots.scatter(explanations[:, 0], color=explanations, hist=False, show=False)
+
+    assert ax.get_xlabel() == "Feature 0"
