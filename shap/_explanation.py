@@ -13,11 +13,11 @@ import scipy.cluster
 import scipy.sparse
 import scipy.spatial
 import sklearn
-from slicer import Alias, Obj, Slicer
 
 from .utils._clustering import hclust_ordering
 from .utils._exceptions import DimensionError
 from .utils._general import OpChain
+from .utils._slicer import Alias, Obj, Slicer
 
 op_chain_root = OpChain("shap.Explanation")
 
@@ -142,40 +142,32 @@ class Explanation(metaclass=MetaExplanation):
             assert num_names is not None, "Unexpected shape of values"
             output_names = [f"Output {i}" for i in range(num_names)]
 
-        if (
-            feature_names is not None and len(_compute_shape(feature_names)) == 1
-        ):  # TODO: should always be an alias once slicer supports per-row aliases
-            if len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
-                feature_names = Alias(list(feature_names), 1)  # type: ignore[arg-type]
-            elif len(values_shape) >= 1 and len(feature_names) == values_shape[0]:
-                feature_names = Alias(list(feature_names), 0)  # type: ignore[arg-type]
+        if feature_names is not None and len(_compute_shape(feature_names)) == 1:
+            if len(values_shape) >= 2 and len(feature_names) == values_shape[1]:  # type: ignore[arg-type]
+                feature_names = Alias(list(feature_names), 1)  # type: ignore[assignment, arg-type]
+            elif len(values_shape) >= 1 and len(feature_names) == values_shape[0]:  # type: ignore[arg-type]
+                feature_names = Alias(list(feature_names), 0)  # type: ignore[assignment, arg-type]
 
-        if (
-            output_names is not None and len(_compute_shape(output_names)) == 1
-        ):  # TODO: should always be an alias once slicer supports per-row aliases
-            output_names = Alias(list(output_names), self.output_dims[0])  # type: ignore[arg-type]
-            # if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
-            #     output_names = Alias(list(output_names), 0)
-            # elif len(values_shape) >= 2 and len(output_names) == values_shape[1]:
-            #     output_names = Alias(list(output_names), 1)
+        if output_names is not None and len(_compute_shape(output_names)) == 1:
+            output_names = Alias(list(output_names), self.output_dims[0])  # type: ignore[assignment, arg-type]
 
         if output_names is not None and not isinstance(output_names, Alias):
             output_names_order = len(_compute_shape(output_names))
             if output_names_order == 0:
                 pass
             elif output_names_order == 1:
-                output_names = Obj(output_names, self.output_dims)
+                output_names = Obj(output_names, self.output_dims)  # type: ignore[assignment]
             elif output_names_order == 2:
-                output_names = Obj(output_names, [0] + list(self.output_dims))
+                output_names = Obj(output_names, [0] + list(self.output_dims))  # type: ignore[assignment]
             else:
                 raise ValueError("shap.Explanation does not yet support output_names of order greater than 3!")
 
         if base_values is None or not hasattr(base_values, "__len__") or len(base_values) == 0:
             pass
         elif len(_compute_shape(base_values)) == len(self.output_dims):
-            base_values = Obj(base_values, list(self.output_dims))
+            base_values = Obj(base_values, list(self.output_dims))  # type: ignore[assignment]
         else:
-            base_values = Obj(base_values, [0] + list(self.output_dims))
+            base_values = Obj(base_values, [0] + list(self.output_dims))  # type: ignore[assignment]
 
         self._s = Slicer(
             values=values,
