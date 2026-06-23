@@ -1,5 +1,6 @@
 """Tests for Explainer class."""
 
+import numpy as np
 import pytest
 import sklearn
 
@@ -95,3 +96,27 @@ def test_explainer_xgboost():
     # check the properties of Explanation object
     assert explanation.values.shape == (*X.shape,)  # type: ignore[union-attr]
     assert explanation.base_values.shape == (len(X),)  # type: ignore[union-attr]
+
+
+def test_text_explainer_auto_wraps():
+    """Exercise Explainer text masker auto-wrapping with real tokenizer inputs."""
+    transformers = pytest.importorskip("transformers")
+    tokenizer = transformers.AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-BertModel")
+
+    # Keep the model simple but text-shaped: one numeric score per string.
+    def model(texts):
+        texts = np.asarray(texts, dtype=object)
+        return np.array([float(len(str(text).split())) for text in texts])
+
+    explainer = shap.Explainer(model, tokenizer, seed=1)
+
+    assert isinstance(explainer, shap.PartitionExplainer)
+    assert shap.utils.safe_isinstance(explainer.masker, "shap.maskers.Text")
+
+    inputs = ["This game was unexpectedly good", "The gameplay looked too real"]
+    shap_values = explainer(inputs, max_evals=64, silent=True)
+
+    assert len(shap_values.values) == len(inputs)  # type: ignore[arg-type]
+    assert len(shap_values.data) == len(inputs)  # type: ignore[arg-type]
+    for values, data in zip(shap_values.values, shap_values.data):  # type: ignore[arg-type]
+        assert len(values) == len(data)
