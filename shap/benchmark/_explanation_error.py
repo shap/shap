@@ -104,8 +104,7 @@ class ExplanationError:
 
         # it is important that we choose the same permutations for the different explanations we are comparing
         # so as to avoid needless noise
-        old_seed = np.random.seed()
-        np.random.seed(self.seed)
+        rng = np.random.default_rng(self.seed)
 
         pbar = None
         start_time = time.time()
@@ -147,7 +146,7 @@ class ExplanationError:
                     inds_mask = np.ones(feature_size, dtype=bool)
                     partition_tree_shuffle(ordered_inds, inds_mask, row_clustering)
                 else:
-                    np.random.shuffle(ordered_inds)
+                    rng.shuffle(ordered_inds)
 
                 increment = max(1, int(feature_size * step_fraction))
                 for j in range(0, feature_size, increment):
@@ -184,8 +183,5 @@ class ExplanationError:
             pbar.close()
 
         svals = np.array(svals)
-
-        # reset the random seed so we don't mess up the caller
-        np.random.seed(old_seed)
 
         return BenchmarkResult("explanation error", name, value=np.sqrt(np.sum(total_values) / len(total_values)))
