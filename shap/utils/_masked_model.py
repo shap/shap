@@ -280,8 +280,17 @@ class MaskedModel:
 
 def _assert_output_input_match(inputs, outputs):
     assert len(outputs) == len(inputs[0]), (
-        f"The model produced {len(outputs)} output rows when given {len(inputs[0])} input rows! Check the implementation of the model you provided for errors."
+        f"The model produced {len(outputs)} output rows when given {len(inputs[0])} input rows! "
+        "Check the implementation of the model you provided for errors."
     )
+
+    outputs_arr = np.asarray(outputs)
+
+    if not np.issubdtype(outputs_arr.dtype, np.number):
+        raise ValueError(
+            "Model outputs must be numeric. "
+            "For classifiers returning labels, consider using predict_proba() instead of predict()."
+        )
 
 
 def _convert_delta_mask_to_full(masks, full_masks):
