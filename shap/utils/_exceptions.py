@@ -42,3 +42,9 @@ class InvalidClusteringError(ValueError):
 
 class InvalidStyleOptionError(ValueError):
     pass
+
+
+class TypeError(ValueError):
+    """Used when a parameter has an unexpected type."""
+
+    pass
