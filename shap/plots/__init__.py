@@ -14,6 +14,7 @@ from ._force import force, initjs
 from ._group_difference import group_difference
 from ._heatmap import heatmap
 from ._image import image, image_to_text
+from ._interaction import interaction_beeswarm, interaction_heatmap
 from ._monitoring import monitoring
 from ._partial_dependence import partial_dependence
 from ._scatter import scatter
@@ -31,6 +32,8 @@ __all__ = [
     "initjs",
     "group_difference",
     "heatmap",
+    "interaction_heatmap",
+    "interaction_beeswarm",
     "image",
     "image_to_text",
     "monitoring",

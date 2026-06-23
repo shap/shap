@@ -367,7 +367,7 @@ class Explanation(metaclass=MetaExplanation):
                             data=np.array(new_data),
                             display_data=self.display_data,
                             instance_names=self.instance_names,
-                            feature_names=np.array(new_data),  # FIXME: this is probably a bug
+                            feature_names=self.feature_names,
                             output_names=t,
                             output_indexes=self.output_indexes,
                             lower_bounds=self.lower_bounds,
@@ -378,13 +378,10 @@ class Explanation(metaclass=MetaExplanation):
                             clustering=self.clustering,
                         )
                         new_self.op_history = copy.copy(self.op_history)
-                        # new_self = copy.deepcopy(self)
-                        # new_self.values = np.array(new_values)
-                        # new_self.base_values = np.array(new_base_values)
-                        # new_self.data = np.array(new_data)
-                        # new_self.output_names = t
-                        # new_self.feature_names = np.array(new_data)
-                        # new_self.clustering = None
+                        new_self.op_history.append(
+                            OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape)
+                        )
+                        return new_self
 
                 # work around for 2D feature_names since they are not yet slicer supported
                 feature_names_dims = []
@@ -403,7 +400,8 @@ class Explanation(metaclass=MetaExplanation):
                     new_self.data = new_data
                     new_self.feature_names = t
                     new_self.clustering = None
-                    # return new_self
+                    new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
+                    return new_self
 
             if isinstance(t, (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)

@@ -60,6 +60,8 @@ plots
     shap.plots.waterfall
     shap.plots.scatter
     shap.plots.heatmap
+    shap.plots.interaction_heatmap
+    shap.plots.interaction_beeswarm
     shap.plots.force
     shap.plots.text
     shap.plots.image
@@ -122,6 +124,7 @@ utils
     shap.utils.partition_tree_shuffle
     shap.utils.delta_minimization_order
     shap.utils.approximate_interactions
+    shap.utils.rank_interactions
     shap.utils.potential_interactions
     shap.utils.sample
     shap.utils.shapley_coefficients
