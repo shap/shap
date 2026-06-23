@@ -326,7 +326,7 @@ inline void dense_tree_saabas(tfloat *out_contribs, const TreeEnsemble& trees, c
 
     // build explanation for each sample
     for (unsigned i = 0; i < data.num_X; ++i) {
-        instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
+        instance_out_contribs = out_contribs + static_cast<unsigned long long>(i) * (data.M + 1) * trees.num_outputs;
         data.get_x_instance(instance, i);
 
         // aggregate the effect of explaining each tree
@@ -1201,7 +1201,7 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
         for (unsigned i = 0; i < data.num_X; ++i) {
             const tfloat *x = data.X + i * data.M;
             const bool *x_missing = data.X_missing + i * data.M;
-            instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
+            instance_out_contribs = out_contribs + static_cast<unsigned long long>(i) * (data.M + 1) * trees.num_outputs;
             const tfloat y_i = data.y == NULL ? 0 : data.y[i];
 
             print_progress_bar(last_print, start_time, oind * data.num_X + i, data.num_X * trees.num_outputs);
@@ -1356,7 +1356,7 @@ inline void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, co
     tfloat *on_contribs = new tfloat[contrib_row_size];
     tfloat *off_contribs = new tfloat[contrib_row_size];
     for (unsigned i = 0; i < data.num_X; ++i) {
-        instance_out_contribs = out_contribs + i * (data.M + 1) * contrib_row_size;
+        instance_out_contribs = out_contribs + static_cast<unsigned long long>(i) * (data.M + 1) * contrib_row_size;
         data.get_x_instance(instance, i);
 
         // aggregate the effect of explaining each tree
@@ -1432,7 +1432,7 @@ inline void dense_global_path_dependent(const TreeEnsemble& trees, const Explana
     ExplanationDataset instance;
     tfloat *instance_out_contribs;
     for (unsigned i = 0; i < data.num_X; ++i) {
-        instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
+        instance_out_contribs = out_contribs + static_cast<unsigned long long>(i) * (data.M + 1) * trees.num_outputs;
         data.get_x_instance(instance, i);
 
         // since we now just have a single merged tree we can just use the tree_path_dependent algorithm
