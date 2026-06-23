@@ -129,6 +129,16 @@ shap.plots.bar(shap_values)
   <img width="570" src="./docs/artwork/california_global_bar.png" />
 </p>
 
+For before/after audits or fairness checks, SHAP now also supports direct cohort-to-cohort comparison with bootstrap uncertainty:
+
+```python
+recent = shap_values[recent_mask]
+baseline = shap_values[~recent_mask]
+shap.plots.cohort_difference({"baseline": baseline, "recent": recent})
+```
+
+This plot highlights which features shifted the most between two groups and adds confidence intervals so you can tell whether a change is likely to be real or just sampling noise.
+
 ## Natural language example (transformers)
 
 SHAP has specific support for natural language models like those in the Hugging Face transformers library. By adding coalitional rules to traditional Shapley values we can form games that explain large modern NLP model using very few function evaluations. Using this functionality is as simple as passing a supported transformers pipeline to SHAP:

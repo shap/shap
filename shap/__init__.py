@@ -52,6 +52,7 @@ if have_matplotlib:
     from . import plots
     from .plots._bar import bar_legacy as bar_plot
     from .plots._beeswarm import summary_legacy as summary_plot
+    from .plots._cohort_difference import cohort_difference as cohort_difference_plot
     from .plots._decision import decision as decision_plot
     from .plots._decision import multioutput_decision as multioutput_decision_plot
     from .plots._embedding import embedding as embedding_plot
@@ -69,6 +70,7 @@ if have_matplotlib:
 else:
     bar_plot = unsupported
     summary_plot = unsupported
+    cohort_difference_plot = unsupported
     decision_plot = unsupported
     multioutput_decision_plot = unsupported
     embedding_plot = unsupported
@@ -122,6 +124,7 @@ __all__ = [
     "plots",
     "bar_plot",
     "summary_plot",
+    "cohort_difference_plot",
     "decision_plot",
     "multioutput_decision_plot",
     "embedding_plot",
