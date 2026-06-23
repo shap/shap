@@ -315,114 +315,125 @@ class Explanation(metaclass=MetaExplanation):
         return out
 
     def __getitem__(self, item) -> Explanation:
-        """This adds support for OpChain indexing."""
-        new_self = None
+        """This adds support for OpChain indexing and optimized vectorized lookups."""
         if not isinstance(item, tuple):
             item = (item,)
 
-        # convert any OpChains or magic strings
-        pos = -1
-        for t in item:
-            pos += 1
+        # 1. Safely locate Ellipsis (avoiding NumPy boolean ambiguity arrays)
+        e_idx = next((i for i, x in enumerate(item) if x is Ellipsis), None)
 
-            # skip over Ellipsis
-            if t is Ellipsis:
-                pos += len(self.shape) - len(item)
-                continue
+        full_item = [slice(None)] * len(self.shape)
+        if e_idx is not None:
+            for i in range(e_idx):
+                full_item[i] = item[i]
+            for i in range(1, len(item) - e_idx):
+                full_item[-i] = item[-i]
+        else:
+            for i in range(len(item)):
+                full_item[i] = item[i]
 
-            orig_t = t
+        # 2. String to Integer Lookups
+        for i, t in enumerate(full_item):
             if isinstance(t, OpChain):
                 t = t.apply(self)
-                if isinstance(t, (np.int64, np.int32)):  # because slicer does not like numpy indexes
-                    t = int(t)
-                elif isinstance(t, np.ndarray):
-                    t = [int(v) for v in t]  # slicer wants lists not numpy arrays for indexing
             elif isinstance(t, Explanation):
                 t = t.values
-            elif isinstance(t, str):
-                # work around for 2D output_names since they are not yet slicer supported
-                output_names_dims = []
-                if "output_names" in self._s._objects:
-                    output_names_dims = self._s._objects["output_names"].dim
-                elif "output_names" in self._s._aliases:
-                    output_names_dims = self._s._aliases["output_names"].dim
-                if pos != 0 and pos in output_names_dims:
-                    if len(output_names_dims) == 1:
-                        t = np.argwhere(np.array(self.output_names) == t)[0][0]
-                    elif len(output_names_dims) == 2:
-                        new_values = []
-                        new_base_values = []
-                        new_data = []
-                        new_self = copy.deepcopy(self)
-                        for i, v in enumerate(self.values):
-                            for j, s in enumerate(self.output_names[i]):
-                                if s == t:
-                                    new_values.append(np.array(v[:, j]))
-                                    new_data.append(np.array(self.data[i]))
-                                    new_base_values.append(self.base_values[i][j])
 
-                        new_self = Explanation(
-                            np.array(new_values),
-                            base_values=np.array(new_base_values),
-                            data=np.array(new_data),
-                            display_data=self.display_data,
-                            instance_names=self.instance_names,
-                            feature_names=np.array(new_data),  # FIXME: this is probably a bug
-                            output_names=t,
-                            output_indexes=self.output_indexes,
-                            lower_bounds=self.lower_bounds,
-                            upper_bounds=self.upper_bounds,
-                            error_std=self.error_std,
-                            main_effects=self.main_effects,
-                            hierarchical_values=self.hierarchical_values,
-                            clustering=self.clustering,
-                        )
-                        new_self.op_history = copy.copy(self.op_history)
-                        # new_self = copy.deepcopy(self)
-                        # new_self.values = np.array(new_values)
-                        # new_self.base_values = np.array(new_base_values)
-                        # new_self.data = np.array(new_data)
-                        # new_self.output_names = t
-                        # new_self.feature_names = np.array(new_data)
-                        # new_self.clustering = None
+            if isinstance(t, str):
+                found_idx = None
+                for attr_name in ["output_names", "feature_names"]:
+                    meta = getattr(self, attr_name, None)
+                    if meta is not None:
+                        names_vec = np.asarray(meta)
+                        search_vec = names_vec[0] if names_vec.ndim == 2 else names_vec
+                        idxs = np.where(search_vec == t)[0]
+                        if len(idxs) > 0:
+                            found_idx = int(idxs[0])
+                            break
+                if found_idx is not None:
+                    full_item[i] = found_idx
+                else:
+                    raise ValueError(f"The name '{t}' was not found in metadata.")
+            elif isinstance(t, (np.integer, np.int64, np.int32)):
+                full_item[i] = int(t)
 
-                # work around for 2D feature_names since they are not yet slicer supported
-                feature_names_dims = []
-                if "feature_names" in self._s._objects:
-                    feature_names_dims = self._s._objects["feature_names"].dim
-                if pos != 0 and pos in feature_names_dims and len(feature_names_dims) == 2:
-                    new_values = []
-                    new_data = []
-                    for i, val_i in enumerate(self.values):
-                        for s, v, d in zip(self.feature_names[i], val_i, self.data[i]):
-                            if s == t:
-                                new_values.append(v)
-                                new_data.append(d)
-                    new_self = copy.deepcopy(self)
-                    new_self.values = new_values
-                    new_self.data = new_data
-                    new_self.feature_names = t
-                    new_self.clustering = None
-                    # return new_self
+        final_item = tuple(full_item)
+        if len(final_item) == 0:
+            return self
 
-            if isinstance(t, (np.int8, np.int16, np.int32, np.int64)):
-                t = int(t)
-
-            if t is not orig_t:
-                tmp = list(item)
-                tmp[pos] = t
-                item = tuple(tmp)
-
-        # call slicer for the real work
-        item = tuple(v for v in item)  # SML I cut out: `if not isinstance(v, str)`
-        if len(item) == 0:
-            return new_self  # type: ignore
-        if new_self is None:
+        # 3. Native Delegation with 3D Heterogeneous Array Fallback
+        try:
+            # Fast-path: Slicer handles homogeneous dimensions perfectly
             new_self = copy.copy(self)
-        new_self._s = new_self._s.__getitem__(item)
-        new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
+            new_self._s = self._s.__getitem__(final_item)
+            # IMPORTANT: Save the original user `item` to keep Cohort tracking perfectly intact
+            new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
+            return new_self
 
-        return new_self
+        except IndexError:
+            # Fallback: Slicer crashes on 3D tuples applied to 2D arrays (e.g., `data`).
+            Instances = final_item[0]
+            Features = final_item[1] if len(final_item) > 1 else slice(None)
+            Outputs = final_item[2] if len(final_item) > 2 else slice(None)
+
+            kwargs = {}
+            if getattr(self, "values", None) is not None:
+                kwargs["values"] = self.values[final_item]
+
+            if getattr(self, "data", None) is not None:
+                if isinstance(self.data, np.ndarray):
+                    kwargs["data"] = self.data[(Instances, Features)[: self.data.ndim]]
+                else:
+                    kwargs["data"] = self.data
+
+            if getattr(self, "base_values", None) is not None:
+                bv = self.base_values
+                if isinstance(bv, np.ndarray):
+                    if bv.ndim == 2:
+                        kwargs["base_values"] = bv[Instances, Outputs]
+                    elif bv.ndim == 1:
+                        if len(self.shape) == 3 and bv.shape[0] == self.shape[2]:
+                            kwargs["base_values"] = bv[Outputs]
+                        else:
+                            kwargs["base_values"] = bv[Instances]
+                    else:
+                        kwargs["base_values"] = bv
+                else:
+                    kwargs["base_values"] = bv
+
+            if getattr(self, "display_data", None) is not None:
+                if isinstance(self.display_data, np.ndarray):
+                    kwargs["display_data"] = self.display_data[(Instances, Features)[: self.display_data.ndim]]
+                else:
+                    kwargs["display_data"] = self.display_data
+
+            if getattr(self, "feature_names", None) is not None:
+                fn = np.asarray(self.feature_names)
+                sliced_fn = fn[Features] if fn.ndim == 1 else (fn[Instances, Features] if fn.ndim == 2 else fn)
+                kwargs["feature_names"] = (
+                    sliced_fn.tolist()
+                    if isinstance(self.feature_names, list) and hasattr(sliced_fn, "tolist")
+                    else sliced_fn
+                )
+
+            if getattr(self, "output_names", None) is not None:
+                on = np.asarray(self.output_names)
+                sliced_on = on[Outputs] if on.ndim == 1 else (on[Instances, Outputs] if on.ndim == 2 else on)
+                kwargs["output_names"] = (
+                    sliced_on.tolist()
+                    if isinstance(self.output_names, list) and hasattr(sliced_on, "tolist")
+                    else sliced_on
+                )
+
+            # Reconstruct safely
+            new_exp = self.__class__(**kwargs)
+            if hasattr(self, "custom_metadata"):
+                new_exp.custom_metadata = self.custom_metadata
+
+            new_exp.op_history = getattr(self, "op_history", []).copy()
+            # IMPORTANT: Save the original user `item`
+            new_exp.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
+            return new_exp
 
     @property
     def shape(self) -> tuple[int, ...]:
