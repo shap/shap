@@ -843,7 +843,7 @@ class TreeExplainer(Explainer):
             # note we pull off the last column and keep it as our expected_value
             if len(phi.shape) == 4:
                 self.expected_value = getattr(self, "expected_value", [phi[0, i, -1, -1] for i in range(phi.shape[1])])
-                return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]  # type: ignore[return-value]
+                return np.swapaxes(phi[:, :, :-1, :-1], axis1=1, axis2=3)
             else:
                 self.expected_value = getattr(self, "expected_value", phi[0, -1, -1])
                 return phi[:, :-1, :-1]
