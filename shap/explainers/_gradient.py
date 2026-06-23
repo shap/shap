@@ -14,6 +14,7 @@ from ..explainers.tf_utils import (
     _get_model_output,
     _get_session,
 )
+from ..utils._general import extract_feature_names
 
 keras = None
 tf = None
@@ -87,7 +88,8 @@ class GradientExplainer(Explainer):
                 framework = "tensorflow"
 
         if isinstance(data, pd.DataFrame):
-            self.features = data.columns.values
+            extracted_names = extract_feature_names(data)
+            self.features = extracted_names if extracted_names is not None else data.columns.values
         else:
             self.features = None
 

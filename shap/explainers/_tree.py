@@ -25,6 +25,7 @@ from ..utils._exceptions import (
     InvalidMaskerError,
     InvalidModelError,
 )
+from ..utils._general import _convert_nodes_to_tree_dict, extract_feature_names
 from ..utils._legacy import DenseData
 from ..utils._warnings import ExperimentalWarning
 from ._explainer import Explainer
@@ -235,7 +236,7 @@ class TreeExplainer(Explainer):
         if feature_names is not None:
             self.data_feature_names = feature_names
         elif isinstance(data, pd.DataFrame):
-            self.data_feature_names = list(data.columns)
+            self.data_feature_names = extract_feature_names(data)
 
         masker = data
         super().__init__(model, masker, feature_names=feature_names)
@@ -389,10 +390,7 @@ class TreeExplainer(Explainer):
         start_time = time.time()
 
         feature_names: Any
-        if isinstance(X, pd.DataFrame):
-            feature_names = list(X.columns)
-        else:
-            feature_names = getattr(self, "data_feature_names", None)
+        feature_names = extract_feature_names(X) or getattr(self, "data_feature_names", None)
 
         if not interactions:
             v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity, approximate=approximate)
@@ -1198,15 +1196,7 @@ class TreeEnsemble:
             for p in model._predictors:
                 nodes = p[0].nodes
                 # each node has values: ('value', 'count', 'feature_idx', 'threshold', 'missing_go_to_left', 'left', 'right', 'gain', 'depth', 'is_leaf', 'bin_threshold')
-                tree = {
-                    "children_left": np.array([-1 if n[9] else n[5] for n in nodes]),
-                    "children_right": np.array([-1 if n[9] else n[6] for n in nodes]),
-                    "children_default": np.array([-1 if n[9] else (n[5] if n[4] else n[6]) for n in nodes]),
-                    "features": np.array([-2 if n[9] else n[2] for n in nodes]),
-                    "thresholds": np.array([n[3] for n in nodes], dtype=np.float64),
-                    "values": np.array([[n[0]] for n in nodes], dtype=np.float64),
-                    "node_sample_weight": np.array([n[1] for n in nodes], dtype=np.float64),
-                }
+                tree = _convert_nodes_to_tree_dict(nodes)
                 self.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
             self.objective = objective_name_map.get(model.loss, None)
             self.tree_output = "raw_value"
@@ -1240,15 +1230,7 @@ class TreeEnsemble:
                 for i in range(self.num_stacked_models):
                     nodes = p[i].nodes
                     # each node has values: ('value', 'count', 'feature_idx', 'threshold', 'missing_go_to_left', 'left', 'right', 'gain', 'depth', 'is_leaf', 'bin_threshold')
-                    tree = {
-                        "children_left": np.array([-1 if n[9] else n[5] for n in nodes]),
-                        "children_right": np.array([-1 if n[9] else n[6] for n in nodes]),
-                        "children_default": np.array([-1 if n[9] else (n[5] if n[4] else n[6]) for n in nodes]),
-                        "features": np.array([-2 if n[9] else n[2] for n in nodes]),
-                        "thresholds": np.array([n[3] for n in nodes], dtype=np.float64),
-                        "values": np.array([[n[0]] for n in nodes], dtype=np.float64),
-                        "node_sample_weight": np.array([n[1] for n in nodes], dtype=np.float64),
-                    }
+                    tree = _convert_nodes_to_tree_dict(nodes)
                     self.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
             self.objective = objective_name_map.get(model.loss, None)
             self.tree_output = "log_odds"

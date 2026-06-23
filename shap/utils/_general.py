@@ -294,6 +294,153 @@ def ordinal_str(n: int) -> str:
     return str(n) + {1: "st", 2: "nd", 3: "rd"}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
 
 
+# ============================================================================
+# Utility Functions for Code Refactoring (DRY Principle)
+# ============================================================================
+
+
+def extract_feature_names(
+    data: Any,
+) -> list[str] | None:
+    """Extract feature names from data structure.
+
+    Handles DataFrames, arrays, and other data types. Returns None if feature
+    names are not available.
+
+    Parameters
+    ----------
+    data : Any
+        Input data (DataFrame, array, dict, etc.)
+
+    Returns
+    -------
+    list[str] | None
+        Feature names if available, otherwise None
+    """
+    if isinstance(data, pd.DataFrame):
+        return list(data.columns)
+    return None
+
+
+def generate_feature_names(n_features: int) -> list[str]:
+    """Generate default feature names for n features.
+
+    Parameters
+    ----------
+    n_features : int
+        Number of features
+
+    Returns
+    -------
+    list[str]
+        List of feature names like ['0', '1', '2', ...]
+    """
+    return [str(i) for i in range(n_features)]
+
+
+def generate_output_names(n_outputs: int) -> list[str]:
+    """Generate default output names for n outputs.
+
+    Parameters
+    ----------
+    n_outputs : int
+        Number of outputs
+
+    Returns
+    -------
+    list[str]
+        List of output names like ['Output 0', 'Output 1', ...]
+    """
+    return [f"Output {i}" for i in range(n_outputs)]
+
+
+def ensure_numpy_array(
+    x: Any,
+    dtype: type | None = None,
+) -> npt.NDArray[Any]:
+    """Convert data to numpy array, preserving NaN handling.
+
+    Converts various data types (DataFrame, list, dict) to numpy arrays
+    with appropriate dtype handling.
+
+    Parameters
+    ----------
+    x : Any
+        Input data (array, DataFrame, list, dict, etc.)
+    dtype : type, optional
+        Desired output dtype
+
+    Returns
+    -------
+    np.ndarray
+        Converted numpy array
+    """
+    if isinstance(x, np.ndarray):
+        if dtype is not None and x.dtype != dtype:
+            return x.astype(dtype)
+        return x
+    elif isinstance(x, pd.DataFrame):
+        return x.to_numpy(dtype=dtype, na_value=np.nan)
+    elif isinstance(x, (list, tuple)):
+        return np.array(x, dtype=dtype)
+    elif isinstance(x, dict):
+        # Handle statistical representation with 'mean' key
+        if "mean" in x:
+            return np.expand_dims(x["mean"], 0)
+        # Try to convert dict values
+        try:
+            return np.array(list(x.values()), dtype=dtype)
+        except (ValueError, TypeError):
+            raise TypeError(f"Cannot convert dict to numpy array: {x}")
+    else:
+        try:
+            return np.array(x, dtype=dtype)
+        except (ValueError, TypeError):
+            raise TypeError(f"Cannot convert {type(x)} to numpy array")
+
+
+def _convert_nodes_to_tree_dict(
+    nodes: Any,
+    is_leaf_field_idx: int = 9,
+) -> dict[str, npt.NDArray[Any]]:
+    """Convert node list to standardized tree structure dictionary.
+
+    Consolidates repeated code for converting LightGBM/sklearn HistGradientBoosting
+    node structures to a standardized tree dictionary format used internally.
+
+    Parameters
+    ----------
+    nodes : Any
+        List of node tuples from LightGBM or HistGradientBoosting models.
+        Each node tuple contains:
+        (value, count, feature_idx, threshold, missing_go_to_left, left, right, gain, depth, is_leaf, ...)
+    is_leaf_field_idx : int, default=9
+        Index of the 'is_leaf' field in the node tuple. Default is 9 for
+        LightGBM/HistGradientBoosting models.
+
+    Returns
+    -------
+    dict[str, np.ndarray]
+        Dictionary with keys:
+        - 'children_left': Left child indices
+        - 'children_right': Right child indices
+        - 'children_default': Default child indices (missing value direction)
+        - 'features': Feature indices (-2 for leaf nodes)
+        - 'thresholds': Split thresholds
+        - 'values': Node prediction values
+        - 'node_sample_weight': Sample weights at each node
+    """
+    return {
+        "children_left": np.array([-1 if n[is_leaf_field_idx] else n[5] for n in nodes]),
+        "children_right": np.array([-1 if n[is_leaf_field_idx] else n[6] for n in nodes]),
+        "children_default": np.array([-1 if n[is_leaf_field_idx] else (n[5] if n[4] else n[6]) for n in nodes]),
+        "features": np.array([-2 if n[is_leaf_field_idx] else n[2] for n in nodes]),
+        "thresholds": np.array([n[3] for n in nodes], dtype=np.float64),
+        "values": np.array([[n[0]] for n in nodes], dtype=np.float64),
+        "node_sample_weight": np.array([n[1] for n in nodes], dtype=np.float64),
+    }
+
+
 class OpChain:
     """A way to represent a set of dot chained operations on an object without actually running them."""
 

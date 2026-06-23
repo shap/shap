@@ -112,3 +112,60 @@ def compare_numpy_outputs_against_baseline(*, func_file, baseline_dir=None, rtol
         return wrapper
 
     return decorator
+
+
+# ============================================================================
+# Common Test Data Fixtures
+# ============================================================================
+
+
+@pytest.fixture()
+def simple_random_data():
+    """Generate simple random data for testing.
+
+    Returns:
+        tuple: (X, y) where X is (100, 5) array and y is (100,) array
+    """
+    rs = np.random.RandomState(seed=0)
+    X = rs.randn(100, 5)
+    y = rs.randint(0, 2, 100)
+    return X, y
+
+
+@pytest.fixture()
+def simple_random_data_small():
+    """Generate small random data for testing.
+
+    Returns:
+        tuple: (X, y) where X is (20, 4) array and y is (20,) array
+    """
+    rs = np.random.RandomState(seed=0)
+    X = rs.randn(20, 4)
+    y = rs.randint(0, 2, 20)
+    return X, y
+
+
+@pytest.fixture()
+def simple_random_data_large_features():
+    """Generate random data with many features.
+
+    Returns:
+        tuple: (X, y) where X is (100, 20) array and y is (100,) array
+    """
+    rs = np.random.RandomState(seed=0)
+    X = rs.randn(100, 20)
+    y = rs.randint(0, 2, 100)
+    return X, y
+
+
+@pytest.fixture()
+def simple_random_data_multilabel():
+    """Generate random data for multi-class/multi-label testing.
+
+    Returns:
+        tuple: (X, y) where X is (100, 5) array and y is (100, 3) array
+    """
+    rs = np.random.RandomState(seed=0)
+    X = rs.randn(100, 5)
+    y = rs.randint(0, 3, (100, 3))
+    return X, y

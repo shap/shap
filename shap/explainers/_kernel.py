@@ -22,6 +22,7 @@ from .._cutils import compute_exp_val
 from .._explanation import Explanation
 from ..utils import safe_isinstance
 from ..utils._exceptions import DimensionError
+from ..utils._general import extract_feature_names
 from ..utils._legacy import (
     DenseData,
     SparseData,
@@ -125,7 +126,9 @@ class KernelExplainer(Explainer):
         if feature_names is not None:
             self.data_feature_names = feature_names
         elif isinstance(data, pd.DataFrame):
-            self.data_feature_names = list(data.columns)
+            extracted = extract_feature_names(data)
+            if extracted is not None:
+                self.data_feature_names = extracted
 
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
@@ -203,10 +206,7 @@ class KernelExplainer(Explainer):
     ) -> Explanation:
         start_time = time.time()
 
-        if isinstance(X, pd.DataFrame):
-            feature_names = list(X.columns)
-        else:
-            feature_names = getattr(self, "data_feature_names", None)  # type: ignore[assignment]
+        feature_names = extract_feature_names(X) or getattr(self, "data_feature_names", None)  # type: ignore[assignment]
 
         v = self.shap_values(X, l1_reg=l1_reg, silent=silent)
         if isinstance(v, list):
