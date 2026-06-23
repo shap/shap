@@ -352,12 +352,7 @@ def violin(
         plt.xlim(shap_min, shap_max)
 
     # draw the color bar
-    if (
-        color_bar
-        and features is not None
-        and plot_type != "bar"
-        and (plot_type != "layered_violin" or color in plt.colormaps)
-    ):
+    if color_bar and features is not None and (plot_type != "layered_violin" or color in plt.colormaps):
         import matplotlib.cm as cm
 
         m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else plt.get_cmap(color))
@@ -411,10 +406,3 @@ def _trim_crange(values, nan_mask):
     cvals[cvals_imp < vmin] = vmin
 
     return vmin, vmax, cvals
-
-
-def shorten_text(text, length_limit):
-    if len(text) > length_limit:
-        return text[: length_limit - 3] + "..."
-    else:
-        return text
