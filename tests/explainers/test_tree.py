@@ -3015,3 +3015,45 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+def test_build_trees_from_dump_model_returns_singletree_list():
+    """Helper returns a list of SingleTree from a valid lightgbm booster."""
+    lightgbm = pytest.importorskip("lightgbm")
+    from shap.explainers._tree import _build_trees_from_dump_model
+
+    X, y = sklearn.datasets.make_regression(n_samples=100, n_features=5, random_state=0)
+    booster = lightgbm.train(
+        {"objective": "regression", "verbose": -1},
+        lightgbm.Dataset(X, y),
+        num_boost_round=3,
+    )
+
+    trees = _build_trees_from_dump_model(booster, data=None, data_missing=None)
+
+    assert trees is not None
+    assert len(trees) == 3
+    assert all(isinstance(t, SingleTree) for t in trees)
+
+
+def test_build_trees_from_dump_model_returns_none_on_parse_failure(monkeypatch):
+    """Helper swallows parse exceptions and returns None.
+
+    This preserves the silent-fallback semantics the original branches relied on
+    for the categorical-splits case where the cext cannot parse the dump.
+    """
+    from shap.explainers import _tree
+    from shap.explainers._tree import _build_trees_from_dump_model
+
+    class FakeBooster:
+        def dump_model(self):
+            return {"tree_info": [{"unparseable": "data"}]}
+
+    def boom(*args, **kwargs):
+        raise ValueError("simulated parse failure")
+
+    monkeypatch.setattr(_tree, "SingleTree", boom)
+
+    result = _build_trees_from_dump_model(FakeBooster(), data=None, data_missing=None)
+
+    assert result is None
