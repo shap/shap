@@ -156,7 +156,7 @@ def test_tf_keras_activations(activation):
     np.testing.assert_allclose(shap_values.sum(axis=1) + e.expected_value, preds, atol=1e-5)
 
 
-def test_tf_keras_linear():
+def test_tf_keras_linear_tuple_input():
     """Test verifying that a linear model with linear data gives the correct result."""
     # FIXME: this test should ideally pass with any random seed. See #2960
     random_seed = 0
@@ -187,6 +187,43 @@ def test_tf_keras_linear():
 
     # explain
     e = shap.DeepExplainer((model.inputs, model.layers[-1].output), x)
+    shap_values = e.shap_values(x)
+
+    assert shap_values.shape == (1000, 2, 1)
+
+    # verify that the explanation follows the equation in LinearExplainer
+    expected = (x - x.mean(0)) * fit_coef
+    np.testing.assert_allclose(shap_values.sum(-1), expected, atol=1e-5)
+
+
+def test_tf_keras_linear_model_input():
+    """Test verifying that a linear model with linear data gives the correct result."""
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
+
+    tf = pytest.importorskip("tensorflow")
+
+    tf.compat.v1.random.set_random_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
+    # coefficients relating y with x1 and x2.
+    coef = np.array([1, 2]).T
+
+    # generate data following a linear relationship
+    x = rs.normal(1, 10, size=(1000, len(coef)))
+    y = np.dot(x, coef) + 1 + rs.normal(scale=0.1, size=1000)
+
+    # create a linear model
+    inputs = tf.keras.layers.Input(shape=(2,))
+    preds = tf.keras.layers.Dense(1, activation="linear")(inputs)
+
+    model = tf.keras.models.Model(inputs=inputs, outputs=preds)
+    model.compile(optimizer=tf.keras.optimizers.SGD(), loss="mse", metrics=["mse"])
+    model.fit(x, y, epochs=30, shuffle=False, verbose=0)
+
+    fit_coef = model.layers[1].get_weights()[0].T[0]
+    # explain
+    e = shap.DeepExplainer(model, x)
     shap_values = e.shap_values(x)
 
     assert shap_values.shape == (1000, 2, 1)
