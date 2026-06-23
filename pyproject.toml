@@ -83,9 +83,9 @@ test = [
   "pytest-cov",
   "xgboost",
   "lightgbm",
-  'catboost; python_version < "3.14"',  # TODO: pending 3.14 support
+  'catboost>=1.2.8; python_version < "3.14"',  # TODO: pending 3.14 support. Requires >=1.2.8 for numpy 2.0, see GH #3922
   'gpboost==1.6.3.1; python_version < "3.14"',  # TODO: pending 3.14 support, see GH #4210
-  "ngboost",
+  "ngboost>=0.5.8",  # Requires >=0.5.8 for numpy 2.0, see GH #3922
   "pyspark",
   "pyod",
   "transformers < 4.54.0",  # TODO: fix once tests pass for 4.54.0
@@ -127,9 +127,9 @@ test = [
   "pytest-cov",
   "xgboost",
   "lightgbm",
-  'catboost; python_version < "3.14"',         # TODO: pending 3.14 support
+  'catboost>=1.2.8; python_version < "3.14"',   # TODO: pending 3.14 support. Requires >=1.2.8 for numpy 2.0, see GH #3922
   'gpboost==1.6.3.1; python_version < "3.14"', # TODO: pending 3.14 support, see GH #4210
-  "ngboost",
+  "ngboost>=0.5.8",                             # Requires >=0.5.8 for numpy 2.0, see GH #3922
   "pyspark",
   "pyod",
   "transformers < 4.54.0",                     # TODO: fix once tests pass for 4.54.0
