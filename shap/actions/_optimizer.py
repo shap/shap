@@ -30,9 +30,11 @@ class ActionOptimizer:
 
     def __call__(self, *args, max_evals=10000):
         # init our queue with all the least costly actions
-        q: queue.PriorityQueue[tuple[float, list[Action]]] = queue.PriorityQueue()
+        q: queue.PriorityQueue[tuple[float, int, list[Action]]] = queue.PriorityQueue()
+        counter = 0
         for group in self.action_groups:
-            q.put((group[0].cost, [group[0]]))
+            q.put((group[0].cost, counter, [group[0]]))
+            counter += 1
 
         nevals = 0
         while not q.empty():
@@ -44,7 +46,7 @@ class ActionOptimizer:
                 )
 
             # get the next cheapest set of actions we can do
-            cost, actions = q.get()
+            cost, _, actions = q.get()
 
             # apply those actions
             args_tmp = copy.deepcopy(args)
@@ -83,4 +85,5 @@ class ActionOptimizer:
 
                     # add the new option to our queue
                     if new_actions is not None:
-                        q.put((sum([a.cost for a in new_actions]), new_actions))
+                        q.put((sum([a.cost for a in new_actions]), counter, new_actions))
+                        counter += 1
