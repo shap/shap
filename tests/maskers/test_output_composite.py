@@ -223,3 +223,31 @@ def test_output_composite_image_data_flag():
 
     assert hasattr(output_composite, "image_data")
     assert output_composite.image_data is True
+
+
+def test_output_composite_wraps_non_tuple_masked_input():
+    """Test OutputComposite __call__ when masker returns non-tuple data."""
+
+    class NonTupleMasker(shap.maskers.Masker):
+        def __init__(self):
+            self.shape = (None, 0)
+
+        def __call__(self, mask, *args):  # type: ignore[override]
+            x = args[0]
+            return np.asarray(x) * 3
+
+    masker = NonTupleMasker()
+
+    def simple_model(x):
+        return np.sum(x)
+
+    output_composite = shap.maskers.OutputComposite(masker, simple_model)
+
+    test_input = np.array([1, 2, 3])
+    mask = np.array([], dtype=bool)
+    result = output_composite(mask, test_input)
+
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+    np.testing.assert_array_equal(result[0], np.array([3, 6, 9]))
+    assert result[1] == 6
