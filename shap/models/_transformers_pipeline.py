@@ -25,12 +25,12 @@ class TransformersPipeline(Model):
         if len(self.output_shape) == 1:
             self.output_names = [self.id2label.get(i, "Unknown") for i in range(self.output_shape[0])]
 
-    def __call__(self, strings):
+    def __call__(self, strings, **kwargs):
         assert not isinstance(strings, str), (
             "shap.models.TransformersPipeline expects a list of strings not a single string!"
         )
         output = np.zeros([len(strings)] + list(self.output_shape))
-        pipeline_dicts = self.inner_model(list(strings))
+        pipeline_dicts = self.inner_model(list(strings), **kwargs)
         for i, val in enumerate(pipeline_dicts):
             if not isinstance(val, list):
                 val = [val]
