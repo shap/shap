@@ -4,6 +4,7 @@ import itertools
 import math
 import pickle
 import sys
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -3015,3 +3016,31 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+def test_tree_explainer_link_warns():
+
+    X, y = sklearn.datasets.make_classification(n_samples=100, n_features=5, random_state=0)
+    model = RandomForestClassifier(n_estimators=10, random_state=0).fit(X, y)
+
+    with pytest.warns(FutureWarning, match="link.*parameter is not supported by TreeExplainer"):
+        shap.TreeExplainer(model, link="logit")
+
+
+def test_tree_explainer_linearize_link_warns():
+
+    X, y = sklearn.datasets.make_classification(n_samples=100, n_features=5, random_state=0)
+    model = RandomForestClassifier(n_estimators=10, random_state=0).fit(X, y)
+
+    with pytest.warns(FutureWarning, match="linearize_link.*parameter is not supported by TreeExplainer"):
+        shap.TreeExplainer(model, linearize_link=True)
+
+
+def test_tree_explainer_no_link_no_warning():
+    """Passing neither link= nor linearize_link= must not emit any FutureWarning."""
+    X, y = sklearn.datasets.make_classification(n_samples=100, n_features=5, random_state=0)
+    model = RandomForestClassifier(n_estimators=10, random_state=0).fit(X, y)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        shap.TreeExplainer(model)

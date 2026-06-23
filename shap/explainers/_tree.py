@@ -144,7 +144,6 @@ class TreeExplainer(Explainer):
         feature_perturbation: Literal["auto", "interventional", "tree_path_dependent"] = "auto",
         feature_names: list[str] | None = None,
         approximate: Any = DEPRECATED_APPROX,
-        # FIXME: The `link` and `linearize_link` arguments are ignored. GH #3513
         link: Any = None,
         linearize_link: Any = None,
     ) -> None:
@@ -219,6 +218,17 @@ class TreeExplainer(Explainer):
             Deprecated, will be deprecated in v0.47.0 and removed in version v0.49.0.
             Please use the ``approximate`` argument in the :meth:`.shap_values` or ``__call__`` methods instead.
 
+        link : None
+            .. deprecated::
+               The ``link`` parameter is not supported by ``TreeExplainer`` and has never had any
+               effect. It will be removed in a future release. To explain probability outputs use
+               ``model_output="probability"`` instead.
+
+        linearize_link : None
+            .. deprecated::
+               The ``linearize_link`` parameter is not supported by ``TreeExplainer`` and has never
+               had any effect. It will be removed in a future release.
+
         References
         ----------
         .. [1] Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum.
@@ -231,6 +241,21 @@ class TreeExplainer(Explainer):
                 "The approximate argument has been deprecated in version v0.47.0 and will be removed in version v0.48.0. "
                 "Please use the approximate argument in the shap_values or the __call__ method instead.",
                 DeprecationWarning,
+            )
+        if link is not None:
+            warnings.warn(
+                "The `link` parameter is not supported by TreeExplainer and has never had any effect. "
+                "It will be removed in a future release. "
+                "To explain probability outputs, use model_output='probability' instead.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if linearize_link is not None:
+            warnings.warn(
+                "The `linearize_link` parameter is not supported by TreeExplainer and has never had any effect. "
+                "It will be removed in a future release.",
+                FutureWarning,
+                stacklevel=2,
             )
         if feature_names is not None:
             self.data_feature_names = feature_names
