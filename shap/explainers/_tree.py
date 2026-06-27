@@ -1534,6 +1534,17 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(shap_trees[0].criterion, None)
             self.tree_output = "raw_value"
             self.base_offset = model.init_params[param_idx]
+        elif safe_isinstance(model, ["treelite.Model", "treelite.core.Model"]):
+            assert_import("treelite")
+            self.original_model = model
+            loader = TreeliteModelLoader(model)
+            self.trees = loader.get_trees(data=data, data_missing=data_missing)
+            self.base_offset = loader.base_score
+            self.objective = loader.objective
+            self.tree_output = loader.tree_output
+            self.input_dtype = np.float64
+            if loader.num_stacked_models > 1:
+                self.num_stacked_models = loader.num_stacked_models
         else:
             raise InvalidModelError("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
@@ -2570,3 +2581,126 @@ class CatBoostTreeModelLoader:
             )
 
         return trees
+
+
+class TreeliteModelLoader:
+    """Load a TreeLite model into SHAP's tree format.
+
+    Requires treelite >= 4.0 (regression, binary clf, multi-class clf).
+    Uses the field accessor API for both header and tree structure.
+    """
+
+    def __init__(self, treelite_model: Any) -> None:
+        self.num_feature: int = treelite_model.num_feature
+        self.num_tree: int = treelite_model.num_tree
+
+        ha = treelite_model.get_header_accessor()
+        task_type_list = ["kBinaryClf", "kRegressor", "kMultiClf", "kLearningToRank", "kIsolationForest"]
+        task_type: str = task_type_list[int(ha.get_field("task_type")[0])]
+        self.average_tree_output: bool = bool(ha.get_field("average_tree_output")[0])
+        self.num_class: int = int(ha.get_field("num_class")[0])
+        self.base_score: float = float(ha.get_field("base_scores")[0])
+
+        self.num_stacked_models: int = self.num_class if (task_type == "kMultiClf" and self.num_class > 1) else 1
+
+        _task_map: dict[str, tuple[str | None, str]] = {
+            "kRegressor": ("squared_error", "raw_value"),
+            "kBinaryClf": ("binary_crossentropy", "log_odds"),
+            "kMultiClf": (None, "raw_value"),
+            "kLearningToRank": (None, "raw_value"),
+        }
+        self.objective, self.tree_output = _task_map.get(task_type, (None, "raw_value"))
+
+        self._trees_data: list[dict] = [self._parse_tree(treelite_model, i) for i in range(self.num_tree)]
+
+    def _parse_tree(self, treelite_model: Any, tree_id: int) -> dict:
+        """Load one tree via the tree accessor API into SHAP's dict format.
+
+        treelite's ``cmp`` field encodes which direction (cleft/cright) is taken
+        when the split condition is TRUE.  SHAP always uses ``feature <= threshold``
+        to mean *go left*, so we must normalise any other operator:
+
+        * cmp=1 (<)  : cleft is the left child; shift threshold down by 1 ULP
+        * cmp=2 (<=) : cleft is the left child; no adjustment needed
+        * cmp=3 (>)  : condition is inverted → swap cleft/cright for SHAP
+        * cmp=4 (>=) : swap cleft/cright and shift threshold up by 1 ULP
+        """
+        ta = treelite_model.get_tree_accessor(tree_id)
+
+        num_nodes: int = int(ta.get_field("num_nodes")[0])
+        node_type = ta.get_field("node_type")
+        cleft = ta.get_field("cleft").astype(np.int32)
+        cright = ta.get_field("cright").astype(np.int32)
+        split_index = ta.get_field("split_index").astype(np.int32)
+        default_left = ta.get_field("default_left")
+        leaf_value = ta.get_field("leaf_value").astype(np.float64)
+        threshold = ta.get_field("threshold").astype(np.float64)
+        cmp = ta.get_field("cmp")
+
+        # Node sample weight: prefer sum_hess (XGBoost), fall back to data_count (LightGBM)
+        sum_hess = ta.get_field("sum_hess")
+        data_count = ta.get_field("data_count")
+        if len(sum_hess) == num_nodes:
+            node_sample_weight = sum_hess.astype(np.float64)
+        elif len(data_count) == num_nodes:
+            node_sample_weight = data_count.astype(np.float64)
+        else:
+            node_sample_weight = np.zeros(num_nodes, dtype=np.float64)
+
+        is_leaf = node_type == 0
+        is_internal = ~is_leaf
+
+        # Normalise to SHAP convention (<=): operators that invert left/right
+        # cmp=3 (>) and cmp=4 (>=) mean cleft is taken when feature > threshold,
+        # which is SHAP's right direction — so we swap cleft and cright.
+        swap_mask = is_internal & ((cmp == 3) | (cmp == 4))
+        children_left = np.where(swap_mask, cright, cleft).astype(np.int32)
+        children_right = np.where(swap_mask, cleft, cright).astype(np.int32)
+
+        # Adjust threshold for strict inequalities so SHAP's <= is equivalent
+        # cmp=1 (<)  → threshold = nextafter(threshold, -inf)  (left when feature < T)
+        # cmp=4 (>=) → threshold = nextafter(threshold, +inf)  (left when feature >= T, after swap)
+        threshold = np.where(
+            is_internal & (cmp == 1),
+            np.nextafter(threshold, -np.inf),
+            threshold,
+        )
+        threshold = np.where(
+            is_internal & (cmp == 4),
+            np.nextafter(threshold, np.inf),
+            threshold,
+        )
+        # SHAP convention: leaf threshold = -2.0
+        threshold = np.where(is_leaf, -2.0, threshold)
+
+        # children_default: swapping cleft/cright also swaps the default direction
+        effective_default_left = np.logical_xor(default_left.astype(bool), swap_mask)
+        children_default = np.where(
+            is_leaf,
+            np.int32(-1),
+            np.where(effective_default_left, children_left, children_right),
+        ).astype(np.int32)
+
+        # SHAP convention: leaf feature index = -2
+        features = np.where(is_leaf, np.int32(-2), split_index).astype(np.int32)
+
+        values = leaf_value.reshape(num_nodes, 1)
+        if self.average_tree_output and self.num_tree > 0:
+            values = values / self.num_tree
+
+        return {
+            "children_left": children_left,
+            "children_right": children_right,
+            "children_default": children_default,
+            "features": features,
+            "thresholds": threshold,
+            "values": values,
+            "node_sample_weight": node_sample_weight,
+        }
+
+    def get_trees(
+        self,
+        data: npt.NDArray[Any] | None = None,
+        data_missing: npt.NDArray[np.bool_] | None = None,
+    ) -> list[SingleTree]:
+        return [SingleTree(td, data=data, data_missing=data_missing) for td in self._trees_data]

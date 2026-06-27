@@ -3015,3 +3015,44 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+def test_treelite_regressor():
+    treelite = pytest.importorskip("treelite")
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.california(n_points=100)
+    bst = xgboost.train(
+        {"learning_rate": 0.1, "max_depth": 3, "verbosity": 0},
+        xgboost.DMatrix(X, label=y),
+        num_boost_round=20,
+    )
+    tl_model = treelite.frontend.from_xgboost(bst)
+    explainer = shap.TreeExplainer(tl_model)
+    sv = explainer(X)
+    assert sv.values.shape == (len(X), X.shape[1])
+
+
+def test_treelite_binary_classifier():
+    treelite = pytest.importorskip("treelite")
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.adult(n_points=100)
+    bst = xgboost.train(
+        {"objective": "binary:logistic", "learning_rate": 0.1, "max_depth": 3, "verbosity": 0},
+        xgboost.DMatrix(X, label=y),
+        num_boost_round=10,
+    )
+    tl_model = treelite.frontend.from_xgboost(bst)
+    explainer = shap.TreeExplainer(tl_model, model_output="raw")
+    sv = explainer(X)
+    assert sv.values.shape == (len(X), X.shape[1])
+
+
+def test_treelite_lightgbm():
+    treelite = pytest.importorskip("treelite")
+    lgb = pytest.importorskip("lightgbm")
+    X, y = shap.datasets.california(n_points=100)
+    bst = lgb.train({"num_leaves": 7, "n_iter": 10, "verbose": -1}, lgb.Dataset(X, label=y))
+    tl_model = treelite.frontend.from_lightgbm(bst)
+    explainer = shap.TreeExplainer(tl_model)
+    sv = explainer(X)
+    assert sv.values.shape == (len(X), X.shape[1])
