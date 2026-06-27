@@ -1534,7 +1534,7 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(shap_trees[0].criterion, None)
             self.tree_output = "raw_value"
             self.base_offset = model.init_params[param_idx]
-        elif safe_isinstance(model, ["treelite.Model", "treelite.core.Model"]):  # ✅ 8 spaces
+        elif safe_isinstance(model, ["treelite.Model", "treelite.core.Model"]):  
             assert_import("treelite")
             self.original_model = model
             loader = TreeliteModelLoader(model)
