@@ -2587,12 +2587,10 @@ class TreeliteModelLoader:
     """Load a TreeLite model into SHAP's tree format.
 
     Requires treelite >= 4.0 (regression, binary clf, multi-class clf).
-    Uses the field accessor API for header fields and JSON dump for tree structure.
+    Uses the field accessor API for both header and tree structure.
     """
 
     def __init__(self, treelite_model: Any) -> None:
-        import json as _json
-
         self.num_feature: int = treelite_model.num_feature
         self.num_tree: int = treelite_model.num_tree
 
@@ -2613,68 +2611,89 @@ class TreeliteModelLoader:
         }
         self.objective, self.tree_output = _task_map.get(task_type, (None, "raw_value"))
 
-        # Tree/node structure still parsed from JSON dump
-        trees_list = _json.loads(treelite_model.dump_as_json(pretty_print=False)).get("trees", [])
-        self._trees_data: list[dict] = [self._parse_tree(t) for t in trees_list]
+        self._trees_data: list[dict] = [self._parse_tree(treelite_model, i) for i in range(self.num_tree)]
 
-    def _parse_tree(self, tree_json: dict) -> dict:
-        """Convert one treelite JSON tree into SHAP's dict format."""
-        nodes_list = tree_json.get("nodes", [])
-        num_nodes: int = tree_json.get("num_nodes", len(nodes_list))
+    def _parse_tree(self, treelite_model: Any, tree_id: int) -> dict:
+        """Load one tree via the tree accessor API into SHAP's dict format.
 
-        children_left = np.full(num_nodes, -1, dtype=np.int32)
-        children_right = np.full(num_nodes, -1, dtype=np.int32)
-        children_default = np.full(num_nodes, -1, dtype=np.int32)
-        features = np.full(num_nodes, -2, dtype=np.int32)
-        thresholds = np.zeros(num_nodes, dtype=np.float64)
-        values = np.zeros((num_nodes, 1), dtype=np.float64)
-        node_sample_weight = np.zeros(num_nodes, dtype=np.float64)
+        treelite's ``cmp`` field encodes which direction (cleft/cright) is taken
+        when the split condition is TRUE.  SHAP always uses ``feature <= threshold``
+        to mean *go left*, so we must normalise any other operator:
 
-        for node in nodes_list:
-            nid: int = node["node_id"]
+        * cmp=1 (<)  : cleft is the left child; shift threshold down by 1 ULP
+        * cmp=2 (<=) : cleft is the left child; no adjustment needed
+        * cmp=3 (>)  : condition is inverted → swap cleft/cright for SHAP
+        * cmp=4 (>=) : swap cleft/cright and shift threshold up by 1 ULP
+        """
+        ta = treelite_model.get_tree_accessor(tree_id)
 
-            node_sample_weight[nid] = float(node.get("data_count") or node.get("sum_hess") or 0.0)
+        num_nodes: int = int(ta.get_field("num_nodes")[0])
+        node_type = ta.get_field("node_type")
+        cleft = ta.get_field("cleft").astype(np.int32)
+        cright = ta.get_field("cright").astype(np.int32)
+        split_index = ta.get_field("split_index").astype(np.int32)
+        default_left = ta.get_field("default_left")
+        leaf_value = ta.get_field("leaf_value").astype(np.float64)
+        threshold = ta.get_field("threshold").astype(np.float64)
+        cmp = ta.get_field("cmp")
 
-            # treelite 4.x: leaf nodes have "leaf_value" key and no "left_child"
-            # treelite 3.x: leaf nodes have left_child == -1
-            is_leaf = "leaf_value" in node or "left_child" not in node
+        # Node sample weight: prefer sum_hess (XGBoost), fall back to data_count (LightGBM)
+        sum_hess = ta.get_field("sum_hess")
+        data_count = ta.get_field("data_count")
+        if len(sum_hess) == num_nodes:
+            node_sample_weight = sum_hess.astype(np.float64)
+        elif len(data_count) == num_nodes:
+            node_sample_weight = data_count.astype(np.float64)
+        else:
+            node_sample_weight = np.zeros(num_nodes, dtype=np.float64)
 
-            if is_leaf:
-                children_left[nid] = -1
-                children_right[nid] = -1
-                children_default[nid] = -1
-                features[nid] = -2
-                thresholds[nid] = -2.0
-                leaf_val = node.get("leaf_value")
-                values[nid, 0] = float(leaf_val) if leaf_val is not None else 0.0
-            else:
-                left = int(node["left_child"])
-                right = int(node["right_child"])
-                children_left[nid] = left
-                children_right[nid] = right
+        is_leaf = node_type == 0
+        is_internal = ~is_leaf
 
-                default_left: bool = bool(node.get("default_left", False))
-                children_default[nid] = left if default_left else right
+        # Normalise to SHAP convention (<=): operators that invert left/right
+        # cmp=3 (>) and cmp=4 (>=) mean cleft is taken when feature > threshold,
+        # which is SHAP's right direction — so we swap cleft and cright.
+        swap_mask = is_internal & ((cmp == 3) | (cmp == 4))
+        children_left = np.where(swap_mask, cright, cleft).astype(np.int32)
+        children_right = np.where(swap_mask, cleft, cright).astype(np.int32)
 
-                # treelite 4.x uses "split_feature_id"; 3.x used "split_feature"
-                features[nid] = int(node.get("split_feature_id", node.get("split_feature", -2)))
+        # Adjust threshold for strict inequalities so SHAP's <= is equivalent
+        # cmp=1 (<)  → threshold = nextafter(threshold, -inf)  (left when feature < T)
+        # cmp=4 (>=) → threshold = nextafter(threshold, +inf)  (left when feature >= T, after swap)
+        threshold = np.where(
+            is_internal & (cmp == 1),
+            np.nextafter(threshold, -np.inf),
+            threshold,
+        )
+        threshold = np.where(
+            is_internal & (cmp == 4),
+            np.nextafter(threshold, np.inf),
+            threshold,
+        )
+        # SHAP convention: leaf threshold = -2.0
+        threshold = np.where(is_leaf, -2.0, threshold)
 
-                thresh: float = float(node.get("threshold", 0.0))
-                cmp_op: str = node.get("comparison_op", "<=")
-                if cmp_op == "<":
-                    thresh = float(np.nextafter(np.float64(thresh), -np.inf))
-                thresholds[nid] = thresh
-                values[nid, 0] = 0.0
+        # children_default: swapping cleft/cright also swaps the default direction
+        effective_default_left = np.logical_xor(default_left.astype(bool), swap_mask)
+        children_default = np.where(
+            is_leaf,
+            np.int32(-1),
+            np.where(effective_default_left, children_left, children_right),
+        ).astype(np.int32)
 
+        # SHAP convention: leaf feature index = -2
+        features = np.where(is_leaf, np.int32(-2), split_index).astype(np.int32)
+
+        values = leaf_value.reshape(num_nodes, 1)
         if self.average_tree_output and self.num_tree > 0:
-            values /= self.num_tree
+            values = values / self.num_tree
 
         return {
             "children_left": children_left,
             "children_right": children_right,
             "children_default": children_default,
             "features": features,
-            "thresholds": thresholds,
+            "thresholds": threshold,
             "values": values,
             "node_sample_weight": node_sample_weight,
         }
