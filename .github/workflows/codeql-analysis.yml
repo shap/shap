@@ -24,6 +24,7 @@ on:
       - "**.cc"
       - "**.cu"
       - "**.h"
+      - "**.cpp"
   schedule:
     - cron: '16 9 * * 1'
 
@@ -65,10 +66,11 @@ jobs:
     # - name: Autobuild
     #   uses: github/codeql-action/autobuild@v2
 
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+
     - name: Build python package
-      run: |
-        pip install build
-        python -m build
+      run: uv build
 
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
