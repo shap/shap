@@ -105,23 +105,55 @@ def test_random_multi_image():
 
 
 def test_image_to_text_single():
-    """Just make sure the image_to_text function doesn't crash."""
+    """Just make sure image_to_text doesn't crash."""
+    test_data = np.ones((50, 50, 3)) * 50
+    test_values = np.random.rand(50, 50, 3, 4)
+    test_output_names = np.array(["token_" + str(i) for i in range(4)])
 
-    class MockImageExplanation:
-        """Fake explanation object."""
+    shap_values_test = shap.Explanation(
+        values=test_values,
+        data=test_data,
+        output_names=test_output_names,
+    )
+    shap.plots.image_to_text(shap_values_test, show=False)
+    plt.close("all")
 
-        def __init__(self, data, values, output_names):
-            self.data = data
-            self.values = values
-            self.output_names = output_names
 
-    test_image_height = 500
-    test_image_width = 500
-    test_word_length = 4
+def test_image_to_text_max_display():
+    """Check that max_display limits the number of token subplots."""
+    test_data = np.ones((20, 20, 3)) * 50
+    test_values = np.random.rand(20, 20, 3, 8)
+    test_output_names = np.array(["tok_" + str(i) for i in range(8)])
 
-    test_data = np.ones((test_image_height, test_image_width, 3)) * 50
-    test_values = np.random.rand(test_image_height, test_image_width, 3, test_word_length)
-    test_output_names = np.array([str(i) for i in range(test_word_length)])
+    shap_values_test = shap.Explanation(
+        values=test_values,
+        data=test_data,
+        output_names=test_output_names,
+    )
+    shap.plots.image_to_text(shap_values_test, max_display=3, show=False)
+    fig = plt.gcf()
+    axes = fig.get_axes()
+    # 1 input image + 3 token heatmaps + 1 colorbar
+    assert len(axes) >= 4
+    plt.close("all")
 
-    shap_values_test = MockImageExplanation(test_data, test_values, test_output_names)
-    shap.plots.image_to_text(shap_values_test)
+
+def test_image_to_text_requires_explanation():
+    """image_to_text should raise TypeError for non-Explanation input."""
+    with pytest.raises(TypeError, match="Explanation"):
+        shap.plots.image_to_text(np.random.randn(20, 20, 3, 4))
+
+
+def test_image_to_text_grayscale():
+    """Just make sure image_to_text works with a single-channel image."""
+    test_data = np.ones((20, 20, 1)) * 128
+    test_values = np.random.rand(20, 20, 1, 3)
+    test_output_names = np.array(["w" + str(i) for i in range(3)])
+
+    shap_values_test = shap.Explanation(
+        values=test_values,
+        data=test_data,
+        output_names=test_output_names,
+    )
+    shap.plots.image_to_text(shap_values_test, show=False)
+    plt.close("all")
