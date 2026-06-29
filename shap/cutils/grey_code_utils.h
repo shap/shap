@@ -28,7 +28,7 @@ void compute_grey_code_row_values_2d(
 	double on_coeff;
 	double off_coeff = shapley_coeff(0);
 	double multiplication_factor;
-	for (size_t i=0; i<pow(2, M); i++) {
+	for (size_t i=0; i<(static_cast<size_t>(1) << M); i++) {
                 assert(i < extended_delta_indexes.shape(0));
 		assert(i < outputs.shape(0));
 
@@ -83,7 +83,6 @@ void compute_grey_code_row_values_1d(
     const int noop_code
 ) {
 	assert(row_values.shape(0) == mask.shape(0));
-	// assert(row_values.shape(0) == mask.shape(0));
 	size_t set_size = 0;
 	size_t shapley_idx = 0;
 	int M = inds.shape(0);
@@ -92,7 +91,7 @@ void compute_grey_code_row_values_1d(
 	double on_coeff;
 	double off_coeff = shapley_coeff(0);
 	double multiplication_factor;
-	for (size_t i=0; i<pow(2, M); i++) {
+	for (size_t i=0; i<(static_cast<size_t>(1) << M); i++) {
                 assert(i < extended_delta_indexes.shape(0));
 		assert(i < outputs.shape(0));
 
@@ -127,7 +126,7 @@ void compute_grey_code_row_values_1d(
 				multiplication_factor = -off_coeff;
 			}
 			assert (i < outputs.shape(0));
-		        rv(inds(ii)) += multiplication_factor * outputs(i);
+			rv(inds(ii)) += multiplication_factor * outputs(i);
 		}
         }
 }

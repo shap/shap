@@ -157,14 +157,14 @@ module = [
   # "shap.explainers._tree",           # NOW TYPE CHECKED - type hints added
   # "shap.explainers._coalition",      # NOW TYPE CHECKED - type hints added
   # "shap.explainers.other._random",  # NOW TYPE CHECKED - type hints added
-  "shap.explainers.pytree",
-  "shap.explainers.tf_utils",
+  # "shap.explainers.pytree",  # NOW TYPE CHECKED - type hints added
+  # "shap.explainers.tf_utils",  # NOW TYPE CHECKED - type hints added
   # "shap.maskers._composite",  # NOW TYPE CHECKED - type hints added
   # "shap.maskers._fixed",      # NOW TYPE CHECKED - type hints added
   "shap.maskers._image",
   # "shap.maskers._masker",     # NOW TYPE CHECKED - type hints added
-  "shap.maskers._tabular",
-  "shap.maskers._text",
+  # "shap.maskers._tabular",  # NOW TYPE CHECKED - type hints added
+  # "shap.maskers._text",  # NOW TYPE CHECKED - type hints added
   "shap.plots._benchmark",
   "shap.plots._force_matplotlib",
   "shap.plots._force",

@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -10,13 +13,24 @@ from ..utils import MaskedModel
 from ..utils._exceptions import DimensionError, InvalidClusteringError
 from ._masker import Masker
 
+if TYPE_CHECKING:
+    import numpy.typing as npt
+
 log = logging.getLogger("shap")
 
 
 class Tabular(Masker):
     """A common base class for Independent and Partition."""
 
-    def __init__(self, data, max_samples=100, clustering=None, partition=None):
+    shape: tuple[int | None, int]
+
+    def __init__(
+        self,
+        data: npt.NDArray[Any] | pd.DataFrame | dict[str, Any],
+        max_samples: int = 100,
+        clustering: str | npt.NDArray[Any] | None = None,
+        partition: npt.NDArray[Any] | None = None,
+    ) -> None:
         """This masks out tabular features by integrating over the given background dataset.
 
         Parameters
@@ -66,7 +80,7 @@ class Tabular(Masker):
             data = utils.sample(data, max_samples)
 
         self.data = data
-        self.clustering = clustering
+        self.clustering: Any = clustering
         self.partition = partition
         self.max_samples = max_samples
 
@@ -106,7 +120,7 @@ class Tabular(Masker):
         # this is property that allows callers to check what rows actually changed since last time.
         # self.changed_rows = np.ones(self.data.shape[0], dtype=bool)
 
-    def __call__(self, mask, x):
+    def __call__(self, mask: bool | npt.NDArray[Any], x: npt.NDArray[Any]) -> Any:  # type: ignore[override]
         mask = self._standardize_mask(mask, x)
 
         # make sure we are given a single sample
@@ -118,8 +132,8 @@ class Tabular(Masker):
             variants = ~self.invariants(x)
             curr_delta_inds = np.zeros(len(mask), dtype=int)
             num_masks = (mask >= 0).sum()
-            varying_rows_out = np.zeros((num_masks, self.shape[0]), dtype=bool)
-            masked_inputs_out = np.zeros((num_masks * self.shape[0], self.shape[1]))
+            varying_rows_out = np.zeros((num_masks, int(self.shape[0] or 0)), dtype=bool)
+            masked_inputs_out = np.zeros((int(num_masks * (self.shape[0] or 0)), self.shape[1]))
             self._last_mask[:] = False
             self._masked_data[:] = self.data
             _delta_masking(
@@ -156,7 +170,7 @@ class Tabular(Masker):
     #     self._masked_data[:] = self.data
     #     self._last_mask[:] = False
 
-    def invariants(self, x):
+    def invariants(self, x: npt.NDArray[Any]) -> npt.NDArray[np.bool_]:
         """This returns a mask of which features change when we mask them.
 
         This optional masking method allows explainers to avoid re-evaluating the model when
@@ -174,7 +188,7 @@ class Tabular(Masker):
 
         return np.isclose(x, self.data)
 
-    def save(self, out_file):
+    def save(self, out_file: Any) -> None:
         """Write a Tabular masker to a file stream."""
         super().save(out_file)
 
@@ -193,7 +207,7 @@ class Tabular(Masker):
             s.save("partition", self.partition)
 
     @classmethod
-    def load(cls, in_file, instantiate=True):
+    def load(cls, in_file: Any, instantiate: bool = True) -> Any:
         """Load a Tabular masker from a file stream."""
         if instantiate:
             return cls._instantiated_load(in_file)
@@ -277,7 +291,7 @@ def _delta_masking(
 class Independent(Tabular):
     """This masks out tabular features by integrating over the given background dataset."""
 
-    def __init__(self, data, max_samples=100):
+    def __init__(self, data: npt.NDArray[Any] | pd.DataFrame, max_samples: int = 100) -> None:
         """Build a Independent masker with the given background data.
 
         Parameters
@@ -302,7 +316,12 @@ class Partition(Tabular):
     Unlike Independent, Partition respects a hierarchical structure of the data.
     """
 
-    def __init__(self, data, max_samples=100, clustering="correlation"):
+    def __init__(
+        self,
+        data: npt.NDArray[Any] | pd.DataFrame,
+        max_samples: int = 100,
+        clustering: str | npt.NDArray[Any] | None = "correlation",
+    ) -> None:
         """Build a Partition masker with the given background data and clustering.
 
         Parameters
@@ -338,7 +357,7 @@ class Impute(Masker):  # we should inherit from Tabular once we add support for 
     Unlike Independent, Gaussian imputes missing values based on correlations with observed data points.
     """
 
-    def __init__(self, data, method="linear"):
+    def __init__(self, data: npt.NDArray[Any] | pd.DataFrame | dict[str, Any], method: str = "linear") -> None:
         """Build a Partition masker with the given background data and clustering.
 
         Parameters
