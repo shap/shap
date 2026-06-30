@@ -50,8 +50,8 @@ def test_transformers_label_to_id_mapping_enforces_ints():
     pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
 
-    name = "distilbert/distilbert-base-uncased-finetuned-sst-2-english"
-    pipe = transformers.pipeline("text-classification", name)
+    name = "hf-internal-testing/tiny-random-DistilBertForSequenceClassification"
+    pipe = transformers.pipeline("text-classification", model=name, tokenizer=name)
 
     # Make the model label2id mapping have str values
     # to test that our TransformersPipeline converts them to int
