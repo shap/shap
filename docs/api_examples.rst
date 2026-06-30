@@ -4,8 +4,7 @@
 
 API Examples
 ----------------
-
-These examples parallel the namespace structure of SHAP. Each object or function in SHAP has a
+These examples follow the namespace structure of SHAP. Each object or function in SHAP has a
 corresponding example notebook here that demonstrates its API usage. The source notebooks
 are `available on GitHub <https://github.com/shap/shap/tree/master/notebooks/api_examples>`_.
 
@@ -18,7 +17,7 @@ are `available on GitHub <https://github.com/shap/shap/tree/master/notebooks/api
 
 .. _explainers_examples:
 
-explainers
+Explainers
 ==========
 *See also:* :ref:`Explainer API Reference <explainers_api>`.
 
@@ -31,7 +30,7 @@ explainers
 
 .. _maskers_examples:
 
-maskers
+Maskers
 =======
 *See also:* :ref:`Masker API Reference <maskers_api>`.
 
@@ -44,7 +43,7 @@ maskers
 
 .. _models_examples:
 
-models
+Models
 ======
 .. Examples for members of :ref:`shap.models <models_api>`.
 
@@ -60,7 +59,7 @@ Work in progress.
 
 .. _plots_examples:
 
-plots
+Plots
 =====
 *See also:* :ref:`Plot API Reference <plots_api>`.
 
