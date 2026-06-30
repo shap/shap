@@ -1070,7 +1070,7 @@ class TreeEnsemble:
                 "sklearn.ensemble._iforest.IsolationForest",
             ],
         ):
-            self.dtype = np.float32
+            self.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_)  # output is average of trees
             self.trees = [
                 IsoTree(e.tree_, f, scaling=scaling, data=data, data_missing=data_missing)
@@ -1078,7 +1078,7 @@ class TreeEnsemble:
             ]
             self.tree_output = "raw_value"
         elif safe_isinstance(model, ["pyod.models.iforest.IForest"]):
-            self.dtype = np.float32
+            self.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_)  # output is average of trees
             self.trees = [
                 IsoTree(e.tree_, f, scaling=scaling, data=data, data_missing=data_missing)
