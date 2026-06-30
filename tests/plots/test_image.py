@@ -1,8 +1,13 @@
+import builtins
+import importlib.util
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
 import shap
+from shap.plots import _image as image_module
 
 
 def set_reproducible_mpl_rcparams() -> None:
@@ -125,3 +130,116 @@ def test_image_to_text_single():
 
     shap_values_test = MockImageExplanation(test_data, test_values, test_output_names)
     shap.plots.image_to_text(shap_values_test)
+
+
+def test_image_requires_pixel_values_for_ndarray_input():
+    with pytest.raises(AssertionError, match="The input pixel_values must be a numpy array"):
+        shap.image_plot(np.random.randn(1, 3, 3), pixel_values=None, show=False)
+
+
+def test_image_raises_for_unsupported_explanation_output_dims():
+    explanation = shap.Explanation(
+        values=np.zeros((1, 3, 3, 1), dtype=float),
+        data=np.zeros((1, 3, 3, 1), dtype=float),
+        output_names=["class0"],
+    )
+    explanation.output_dims = (0, 1)
+
+    with pytest.raises(Exception, match="Number of outputs needs to have support added"):
+        shap.image_plot(explanation, show=False)
+
+
+def test_image_covers_channel_one_true_labels_auto_layout_and_show(monkeypatch):
+    shown = {"called": False}
+
+    def fake_show():
+        shown["called"] = True
+
+    monkeypatch.setattr(image_module.plt, "show", fake_show)
+
+    pixel_values = np.random.RandomState(0).randn(1, 4, 4, 1)
+    shap_values = np.random.RandomState(1).randn(1, 4, 4, 1)
+
+    shap.image_plot(
+        shap_values,
+        pixel_values=pixel_values,
+        true_labels=["true-label"],
+        width=1,
+        hspace="auto",
+        show=True,
+    )
+
+    assert shown["called"] is True
+
+
+def test_image_uses_2d_abs_value_path_with_custom_array_like():
+    class FakeShapArray:
+        def __init__(self, data: np.ndarray):
+            self._data = data
+            # Use a 4D shape signature to bypass the len(shape)==3 reshape branch.
+            self.shape = data.shape + (1,)
+
+        def __getitem__(self, item):
+            return self._data[item]
+
+        def __array__(self, dtype=None):
+            return np.asarray(self._data, dtype=dtype)
+
+    pixel_values = np.random.RandomState(2).randn(1, 4, 4)
+    shap_values = [FakeShapArray(np.random.RandomState(3).randn(1, 4, 4))]
+
+    image_module.image(shap_values, pixel_values=pixel_values, show=False)
+
+
+def test_image_to_text_multi_instance_branch(monkeypatch):
+    class MockImageExplanation:
+        def __init__(self, data, values, output_names):
+            self.data = data
+            self.values = values
+            self.output_names = output_names
+
+    class MockBatchImageExplanation:
+        def __init__(self):
+            self.values = np.zeros((2, 3, 3, 3, 2))
+            self._instances = [
+                MockImageExplanation(
+                    data=np.ones((3, 3, 3), dtype=float) * 50,
+                    values=np.random.RandomState(4 + i).rand(3, 3, 3, 2),
+                    output_names=np.array(["tok0", "tok1"]),
+                )
+                for i in range(2)
+            ]
+
+        def __getitem__(self, item):
+            return self._instances[item]
+
+    captured = []
+
+    monkeypatch.setattr(image_module, "HTML", lambda content: content)
+    monkeypatch.setattr(image_module, "display", lambda content: captured.append(content))
+
+    image_module.image_to_text(MockBatchImageExplanation())
+
+    assert len(captured) >= 4
+
+
+def test_image_module_import_without_ipython_sets_flag_false(monkeypatch):
+    module_name = "shap.plots._image_no_ipython"
+    real_import = builtins.__import__
+
+    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "IPython.display":
+            raise ImportError("IPython unavailable")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    spec = importlib.util.spec_from_file_location(module_name, image_module.__file__)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+        assert module.have_ipython is False
+    finally:
+        sys.modules.pop(module_name, None)
