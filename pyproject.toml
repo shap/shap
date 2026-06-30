@@ -244,6 +244,8 @@ addopts = "--mpl -m 'not xslow'"
 mpl-default-style = "default"
 testpaths = ["tests"]
 filterwarnings = [
+  # DeepExplainer's TF 2.4+ eager UserWarning (deep_tf.py);
+  "ignore:Your TensorFlow version is newer than 2\\.4\\.0 and so graph support has been removed in eager mode and some static graphs may not be supported\\. See PR #1483 for discussion\\.:UserWarning",
   # Ignore warnings that are entirely from 3rd party libs outside our control
   "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:.*pandas.*",
   "ignore:.*typing.io is deprecated.*:DeprecationWarning:.*pyspark.*",
