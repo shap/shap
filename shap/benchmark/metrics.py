@@ -324,7 +324,7 @@ def keep_absolute_impute__roc_auc(X, y, model_generator, method_name, num_fcount
     sort_order = 19
     """
     return __run_measure(
-        measures.keep_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score
+        measures.keep_impute, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score
     )
 
 
@@ -368,7 +368,7 @@ def remove_absolute_impute__roc_auc(X, y, model_generator, method_name, num_fcou
     sort_order = 9
     """
     return __run_measure(
-        measures.remove_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score
+        measures.remove_impute, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score
     )
 
 
@@ -532,7 +532,6 @@ def __score_method(
                     _attribution_cache[attr_key] = attr_function(X_inner)
                 return _attribution_cache[attr_key]
 
-            # cached_attr_function = lambda X: __check_cache(attr_function, X)
             if fcounts is None:
                 return score_function(X_train, X_test, y_train, y_test, cached_attr_function, model, i)
             else:
@@ -549,32 +548,6 @@ def __score_method(
 
     np.random.seed(old_seed)
     return np.array(method_reps).mean(0)
-
-
-# used to memoize explainer functions so we don't waste time re-explaining the same object
-__cache0 = None
-__cache_X0 = None
-__cache_f0 = None
-__cache1 = None
-__cache_X1 = None
-__cache_f1 = None
-
-
-def __check_cache(f, X):
-    global __cache0, __cache_X0, __cache_f0
-    global __cache1, __cache_X1, __cache_f1
-    if X is __cache_X0 and f is __cache_f0:
-        return __cache0
-    elif X is __cache_X1 and f is __cache_f1:
-        return __cache1
-    else:
-        __cache_f1 = __cache_f0
-        __cache_X1 = __cache_X0
-        __cache1 = __cache0
-        __cache_f0 = f
-        __cache_X0 = X
-        __cache0 = f(X)
-        return __cache0
 
 
 def __intlogspace(start, end, count):
