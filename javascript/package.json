@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.9.0",
-    "@babel/preset-env": "^7.22.9",
+    "@babel/preset-env": "^8.0.2",
     "@babel/preset-react": "^7.22.5",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
