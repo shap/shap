@@ -22,7 +22,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
       - name: Install dependencies for dataset download
         run: |
-          uv pip install --system '.[download_datasets]'
+          uv pip install --system . --group download-datasets
       - name: Pre-download datasets
         run: python tests/datasets_to_cache.py
       - name: Create unified cache directory
