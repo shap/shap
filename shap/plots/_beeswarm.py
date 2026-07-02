@@ -123,7 +123,7 @@ def beeswarm(
         )
         raise ValueError(emsg)
 
-    if ax and plot_size:
+    if ax is not None and plot_size is not None and plot_size != "auto":
         emsg = (
             "The beeswarm plot does not support passing an axis and adjusting the plot size. "
             "To adjust the size of the plot, set plot_size to None and adjust the size on the original figure the axes was part of"
@@ -193,8 +193,10 @@ def beeswarm(
     if feature_names is None:
         feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
 
-    if ax is None:
+    _ax_provided = ax is not None
+    if not _ax_provided:
         ax = plt.gca()
+    plt.sca(ax)
     fig = ax.get_figure()
     assert isinstance(fig, Figure)  # type narrowing for mypy
 
@@ -366,12 +368,13 @@ def beeswarm(
         yticklabels[-1] = f"Sum of {num_cut} other features"
 
     row_height = 0.4
-    if plot_size == "auto":
-        fig.set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
-    elif isinstance(plot_size, (list, tuple)):
-        fig.set_size_inches(plot_size[0], plot_size[1])
-    elif plot_size is not None:
-        fig.set_size_inches(8, min(len(feature_order), max_display) * plot_size + 1.5)
+    if not _ax_provided:
+        if plot_size == "auto":
+            fig.set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
+        elif isinstance(plot_size, (list, tuple)):
+            fig.set_size_inches(plot_size[0], plot_size[1])
+        elif plot_size is not None:
+            fig.set_size_inches(8, min(len(feature_order), max_display) * plot_size + 1.5)
     ax.axvline(x=0, color="#999999", zorder=-1)
 
     # make the beeswarm dots
@@ -513,7 +516,7 @@ def shorten_text(text, length_limit):
 
 
 def is_color_map(color):
-    return safe_isinstance(color, "matplotlib.colors.Colormap")
+    safe_isinstance(color, "matplotlib.colors.Colormap")
 
 
 # TODO: remove unused title argument / use title argument
@@ -781,6 +784,7 @@ def summary_legacy(
         plt.gcf().set_size_inches(plot_size[0], plot_size[1])
     elif plot_size is not None:
         plt.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
+    _legacy_ax = plt.gca()
     plt.axvline(x=0, color="#999999", zorder=-1)
 
     if plot_type == "dot":
@@ -1122,7 +1126,7 @@ def summary_legacy(
 
         m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else plt.get_cmap(color))
         m.set_array([0, 1])
-        cb = plt.colorbar(m, ax=plt.gca(), ticks=[0, 1], aspect=80)
+        cb = plt.colorbar(m, ax=_legacy_ax, ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
