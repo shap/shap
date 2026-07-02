@@ -311,3 +311,5 @@ def hclust(
         return scipy.cluster.hierarchy.complete(dist)
     elif linkage == "average":
         return scipy.cluster.hierarchy.average(dist)
+
+    raise AssertionError(f"Unhandled linkage type: {linkage}")
