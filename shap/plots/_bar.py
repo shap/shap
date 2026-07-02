@@ -239,13 +239,13 @@ def bar(
             yticklabels.append(feature_names[i])
     if num_features < len(values[0]):
         yticklabels[-1] = f"Sum of {num_cut} other features"
+    
+    if ax is None:
+    fig, ax = plt.subplots()
 
-    _ax_provided = ax is not None
-    if not _ax_provided:
-        fig, ax = plt.subplots()
-        # compute our figure size based on how many features we are showing
-        row_height = 0.5
-        fig.set_size_inches(8, num_features * row_height * np.sqrt(len(values)) + 1.5)
+    # Only modify the figure size if we created the figure.
+    row_height = 0.5
+    fig.set_size_inches(8, num_features * row_height * np.sqrt(len(values)) + 1.5)
 
     # if negative values are present then we draw a vertical line to mark 0, otherwise the axis does this for us...
     negative_values_present = np.sum(values[:, feature_order[:num_features]] < 0) > 0
