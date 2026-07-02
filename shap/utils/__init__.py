@@ -21,10 +21,12 @@ from ._general import (
 )
 from ._masked_model import MaskedModel, make_masks
 from ._show_progress import show_progress
+from ._spark import shap_values_distributed
 
 __all__ = [
     "delta_minimization_order",
     "hclust",
+    "shap_values_distributed",
     "hclust_ordering",
     "partition_tree",
     "partition_tree_shuffle",
