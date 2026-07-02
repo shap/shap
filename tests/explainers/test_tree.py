@@ -8,6 +8,7 @@ import sys
 import numpy as np
 import pandas as pd
 import pytest
+import scipy.sparse
 import sklearn
 import sklearn.pipeline
 from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor, RandomForestClassifier
@@ -3015,3 +3016,30 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+def test_tree_explainer_with_sparse_input():
+    """Test if TreeExplainer correctly handles sparse matrix input
+    by converting it to a dense numpy array.
+    """
+    # Create a simple sparse matrix and labels
+    x_sparse = scipy.sparse.csr_matrix([[1, 0, 1], [0, 1, 0], [1, 1, 1]])
+    y = np.array([0, 1, 0])
+
+    # Fit a model that supports sparse input
+    model = RandomForestClassifier(n_estimators=2, random_state=42).fit(x_sparse, y)
+    explainer = shap.TreeExplainer(model)
+
+    # Execute SHAP values calculation
+    shap_values = explainer(x_sparse)
+    assert isinstance(shap_values.values, np.ndarray), "SHAP values should be a numpy array"
+
+    # Validate SHAP additivity
+    raw_predictions = model.predict_proba(x_sparse)
+    for class_idx in range(model.n_classes_):
+        expected_value = explainer.expected_value[class_idx]
+        sum_shap_values = shap_values.values[:, :, class_idx].sum(axis=1)
+        reconstructed_output = expected_value + sum_shap_values
+
+        actual_output = raw_predictions[:, class_idx]
+        np.testing.assert_allclose(reconstructed_output, actual_output, atol=1e-5)
