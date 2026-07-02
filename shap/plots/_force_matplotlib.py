@@ -122,7 +122,7 @@ def draw_labels(
         else:
             va_alignment = "baseline"
 
-        text_out_val = plt.text(
+        text_out_val = ax.text(
             start_text - sign * offset_text,
             -0.15,
             text,
@@ -188,7 +188,7 @@ def draw_labels(
     cm = matplotlib.colors.LinearSegmentedColormap.from_list("cm", colors)
 
     _, Z2 = np.meshgrid(np.linspace(0, 10), np.linspace(-10, 10))
-    im = plt.imshow(
+    im = ax.imshow(
         Z2,
         interpolation="quadric",
         cmap=cm,
@@ -281,12 +281,12 @@ def draw_output_element(out_name, out_value, ax):
     font0 = FontProperties()
     font = font0.copy()
     font.set_weight("bold")
-    text_out_val = plt.text(
+    text_out_val = ax.text(
         out_value, 0.25, f"{out_value:.2f}", fontproperties=font, fontsize=14, horizontalalignment="center"
     )
     text_out_val.set_bbox(dict(facecolor="white", edgecolor="white"))
 
-    text_out_val = plt.text(out_value, 0.33, out_name, fontsize=12, alpha=0.5, horizontalalignment="center")
+    text_out_val = ax.text(out_value, 0.33, out_name, fontsize=12, alpha=0.5, horizontalalignment="center")
     text_out_val.set_bbox(dict(facecolor="white", edgecolor="white"))
 
 
@@ -296,18 +296,18 @@ def draw_base_element(base_value, ax):
     line.set_clip_on(False)
     ax.add_line(line)
 
-    text_out_val = plt.text(base_value, 0.33, "base value", fontsize=12, alpha=0.5, horizontalalignment="center")
+    text_out_val = ax.text(base_value, 0.33, "base value", fontsize=12, alpha=0.5, horizontalalignment="center")
     text_out_val.set_bbox(dict(facecolor="white", edgecolor="white"))
 
 
-def draw_higher_lower_element(out_value, offset_text):
-    plt.text(out_value - offset_text, 0.405, "higher", fontsize=13, color="#FF0D57", horizontalalignment="right")
+def draw_higher_lower_element(out_value, offset_text, ax):
+    ax.text(out_value - offset_text, 0.405, "higher", fontsize=13, color="#FF0D57", horizontalalignment="right")
 
-    plt.text(out_value + offset_text, 0.405, "lower", fontsize=13, color="#1E88E5", horizontalalignment="left")
+    ax.text(out_value + offset_text, 0.405, "lower", fontsize=13, color="#1E88E5", horizontalalignment="left")
 
-    plt.text(out_value, 0.4, r"$\leftarrow$", fontsize=13, color="#1E88E5", horizontalalignment="center")
+    ax.text(out_value, 0.4, r"$\leftarrow$", fontsize=13, color="#1E88E5", horizontalalignment="center")
 
-    plt.text(out_value, 0.425, r"$\rightarrow$", fontsize=13, color="#FF0D57", horizontalalignment="center")
+    ax.text(out_value, 0.425, r"$\rightarrow$", fontsize=13, color="#FF0D57", horizontalalignment="center")
 
 
 def update_axis_limits(ax, total_pos, pos_features, total_neg, neg_features, base_value, out_value):
@@ -324,16 +324,38 @@ def update_axis_limits(ax, total_pos, pos_features, total_neg, neg_features, bas
         max_x = out_value + padding
     ax.set_xlim(min_x, max_x)
 
-    plt.tick_params(top=True, bottom=False, left=False, right=False, labelleft=False, labeltop=True, labelbottom=False)
-    plt.locator_params(axis="x", nbins=12)
+    ax.tick_params(top=True, bottom=False, left=False, right=False, labelleft=False, labeltop=True, labelbottom=False)
+    ax.locator_params(axis="x", nbins=12)
 
-    for key, spine in zip(plt.gca().spines.keys(), plt.gca().spines.values()):
+    for key, spine in zip(ax.spines.keys(), ax.spines.values()):
         if key != "top":
             spine.set_visible(False)
 
 
-def draw_additive_plot(data, figsize, show, text_rotation=0, min_perc=0.05):
-    """Draw additive plot."""
+def draw_additive_plot(data, figsize, show, text_rotation=0, min_perc=0.05, ax=None):
+    """Draw additive plot.
+
+    Parameters
+    ----------
+    data : dict
+        Formatted plot data produced by :class:`AdditiveForceVisualizer`.
+    figsize : tuple
+        Figure size passed to :func:`matplotlib.pyplot.subplots` when ``ax``
+        is not supplied.
+    show : bool
+        If ``True``, call :func:`matplotlib.pyplot.show` before returning.
+        If ``False``, return the :class:`matplotlib.axes.Axes` object.
+    text_rotation : float
+        Rotation angle (degrees) for feature-label text.
+    min_perc : float
+        Minimum fractional contribution required for a feature label to be shown.
+    ax : matplotlib.axes.Axes or None
+        Axes to draw into.  When *None* (default) a new figure/axes pair is
+        created with ``figsize``.  When an Axes is supplied, ``figsize`` is
+        ignored and the caller is responsible for figure sizing.
+    """
+    _ax_provided = ax is not None
+
     # Turn off interactive plot
     if show is False:
         plt.ioff()
@@ -346,8 +368,11 @@ def draw_additive_plot(data, figsize, show, text_rotation=0, min_perc=0.05):
     out_value = data["outValue"]
     offset_text = (np.abs(total_neg) + np.abs(total_pos)) * 0.04
 
-    # Define plots
-    fig, ax = plt.subplots(figsize=figsize)
+    if not _ax_provided:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
+    plt.sca(ax)
 
     # Compute axis limit
     update_axis_limits(ax, total_pos, pos_features, total_neg, neg_features, base_value, out_value)
@@ -399,7 +424,7 @@ def draw_additive_plot(data, figsize, show, text_rotation=0, min_perc=0.05):
     )
 
     # higher lower legend
-    draw_higher_lower_element(out_value, offset_text)
+    draw_higher_lower_element(out_value, offset_text, ax)
 
     # Add label for base value
     draw_base_element(base_value, ax)
@@ -410,11 +435,11 @@ def draw_additive_plot(data, figsize, show, text_rotation=0, min_perc=0.05):
 
     # Scale axis
     if data["link"] == "logit":
-        plt.xscale("logit")
+        ax.set_xscale("logit")
         ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
         ax.ticklabel_format(style="plain")
 
     if show:
         plt.show()
     else:
-        return plt.gcf()
+        return ax
