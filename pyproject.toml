@@ -172,7 +172,6 @@ module = [
   "shap.plots._waterfall",
 ]
 check_untyped_defs = false
-follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 # Ignore missing types for 3rd party libraries
