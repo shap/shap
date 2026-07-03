@@ -109,8 +109,8 @@ class KernelExplainer(Explainer):
     synth_data: npt.NDArray[Any] | scipy.sparse.lil_matrix
     maskMatrix: npt.NDArray[np.floating[Any]]
     kernelWeights: npt.NDArray[np.floating[Any]]
-    y: npt.NDArray[np.floating[Any]]
-    ey: npt.NDArray[np.floating[Any]]
+    y: npt.NDArray[np.float64]
+    ey: npt.NDArray[np.float64]
     lastMask: npt.NDArray[np.floating[Any]]
     synth_data_index: npt.NDArray[Any]
 
@@ -625,8 +625,8 @@ class KernelExplainer(Explainer):
 
         self.maskMatrix = np.zeros((self.nsamples, self.M))
         self.kernelWeights = np.zeros(self.nsamples)
-        self.y = np.zeros((self.nsamples * self.N, self.D))
-        self.ey = np.zeros((self.nsamples, self.D))
+        self.y = np.zeros((self.nsamples * self.N, self.D), dtype=np.float64)
+        self.ey = np.zeros((self.nsamples, self.D), dtype=np.float64)
         self.lastMask = np.zeros(self.nsamples)
         self.nsamplesAdded = 0
         self.nsamplesRun = 0

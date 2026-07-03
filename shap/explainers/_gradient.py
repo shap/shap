@@ -383,7 +383,7 @@ class _TFGradient(Explainer):
                         samples_delta[u][k] = x - self.data[u][rind]
 
                 # compute the gradients at all the sample points
-                find = model_output_ranks[j, i]
+                find = int(model_output_ranks[j, i])
                 grads = []
                 for b in range(0, nsamples, self.batch_size):
                     batch = [samples_input[a][b : min(b + self.batch_size, nsamples)] for a in range(len(X))]
@@ -672,7 +672,7 @@ class _PyTorchGradient(Explainer):
                                 samples_delta[0][k] = interim_inputs.cpu().numpy()  # type: ignore[attr-defined]
 
                 # compute the gradients at all the sample points
-                find = model_output_ranks[j, i]
+                find: int = int(model_output_ranks[j, i])
                 grads = []
                 for b in range(0, nsamples, self.batch_size):
                     batch = [

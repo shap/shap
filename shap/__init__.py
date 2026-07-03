@@ -92,7 +92,7 @@ else:
 
 
 # other stuff :)
-from . import datasets, links, utils  # noqa: E402
+from . import actions, datasets, links, utils  # noqa: E402
 from .actions._optimizer import ActionOptimizer  # noqa: E402
 from .utils import approximate_interactions, sample  # noqa: E402
 
@@ -139,6 +139,7 @@ __all__ = [
     "violin_plot",
     "waterfall_plot",
     # Other stuff
+    "actions",
     "datasets",
     "links",
     "utils",

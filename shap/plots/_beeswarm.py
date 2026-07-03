@@ -826,15 +826,17 @@ def summary_legacy(
             ys *= 0.9 * (row_height / np.max(ys + 1))
 
             if features is not None and colored_feature:
+                assert values is not None
+                values = np.asarray(values, dtype=np.float64)
                 # trim the color range, but prevent the color range from collapsing
-                vmin = np.nanpercentile(values, 5)
-                vmax = np.nanpercentile(values, 95)
+                vmin = float(np.nanpercentile(values, 5))
+                vmax = float(np.nanpercentile(values, 95))
                 if vmin == vmax:
-                    vmin = np.nanpercentile(values, 1)
-                    vmax = np.nanpercentile(values, 99)
+                    vmin = float(np.nanpercentile(values, 1))
+                    vmax = float(np.nanpercentile(values, 99))
                     if vmin == vmax:
-                        vmin = np.min(values)
-                        vmax = np.max(values)
+                        vmin = float(np.min(values))
+                        vmax = float(np.max(values))
                 if vmin > vmax:  # fixes rare numerical precision issues
                     vmin = vmax
 
