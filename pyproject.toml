@@ -99,6 +99,8 @@ test = [
   "numpy>=2.0",
   "causalml>=0.15.5",
   "selenium",  # needed to test the javascript based plots
+  # performance monitoring for time-critical explainers
+  "asv",
 ]
 nbtest = [
   "jupyter",
