@@ -7,13 +7,13 @@ import numpy as np
 import numpy.typing as npt
 
 
-@numba.njit
+@numba.njit  # type: ignore[attr-defined]
 def identity(x: npt.NDArray[Any] | float) -> npt.NDArray[Any] | float:
     """A no-op link function."""
     return x
 
 
-@numba.njit
+@numba.njit  # type: ignore[attr-defined]
 def _identity_inverse(x: npt.NDArray[Any] | float) -> npt.NDArray[Any] | float:
     return x
 
@@ -21,13 +21,13 @@ def _identity_inverse(x: npt.NDArray[Any] | float) -> npt.NDArray[Any] | float:
 identity.inverse = _identity_inverse  # type: ignore[attr-defined]
 
 
-@numba.njit
+@numba.njit  # type: ignore[attr-defined]
 def logit(x: npt.NDArray[Any] | float) -> npt.NDArray[Any] | float:
     """A logit link function useful for going from probability units to log-odds units."""
     return np.log(x / (1 - x))
 
 
-@numba.njit
+@numba.njit  # type: ignore[attr-defined]
 def _logit_inverse(x: npt.NDArray[Any] | float) -> npt.NDArray[Any] | float:
     return 1 / (1 + np.exp(-x))
 

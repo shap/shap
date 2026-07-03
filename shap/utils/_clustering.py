@@ -10,7 +10,7 @@ import pandas as pd
 import scipy.cluster
 import scipy.spatial
 import sklearn
-from numba import njit
+from numba import njit  # type: ignore[attr-defined]
 
 from ..utils._exceptions import DimensionError
 from ._show_progress import show_progress
