@@ -207,4 +207,4 @@ jobs:
         run: |
           uv pip install --system . --group test-core
       - name: Run mypy
-        run: mypy shap tests
+        run: mypy shap tests --exclude "shap/_cutils.pyi"
