@@ -687,17 +687,6 @@ class TreeExplainer(Explainer):
             )
             if phi is not None:
                 return phi
-        if self.model.model_type == "xgboost" and self.model.model_type != "internal":
-            n_iterations = _xgboost_n_iterations(tree_limit, self.model.num_stacked_models)
-
-            phi = self.model.original_model.predict(
-                X,
-                iteration_range=(0, n_iterations),
-                pred_contribs=True,
-                approx_contribs=approximate,
-                validate_features=False,
-            )
-            return phi
 
         X, y, X_missing, flat_output, tree_limit, check_additivity = self._validate_inputs(
             X, y, tree_limit, check_additivity
