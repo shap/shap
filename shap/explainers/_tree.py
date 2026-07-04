@@ -687,6 +687,17 @@ class TreeExplainer(Explainer):
             )
             if phi is not None:
                 return phi
+        if self.model.model_type == "xgboost" and self.model.model_type != "internal":
+            n_iterations = _xgboost_n_iterations(tree_limit, self.model.num_stacked_models)
+
+            phi = self.model.original_model.predict(
+                X,
+                iteration_range=(0, n_iterations),
+                pred_contribs=True,
+                approx_contribs=approximate,
+                validate_features=False,
+            )
+            return phi
 
         X, y, X_missing, flat_output, tree_limit, check_additivity = self._validate_inputs(
             X, y, tree_limit, check_additivity
@@ -1580,7 +1591,7 @@ class TreeEnsemble:
                 # XGBoost supports boosting forest, which is not compatible with the
                 # current assumption here that the number of stacked models represents
                 # the number of outputs.
-                if self.model_type == "xgboost":
+                if self.model.model_type == "xgboost":
                     n_stacks = self.num_outputs
                 else:
                     n_stacks = self.num_stacked_models
@@ -1634,7 +1645,7 @@ class TreeEnsemble:
     def num_outputs(self) -> int:
         # Currently, XGBoost models derive the num_outputs attribute from the input
         # models, which is set during model load.
-        if self.model_type == "xgboost":
+        if self.model.model_type == "xgboost":
             assert hasattr(self, "_xgboost_n_outputs")
             return self._xgboost_n_outputs
 
@@ -1704,7 +1715,7 @@ class TreeEnsemble:
             raise NotImplementedError(
                 "Predict with pyspark isn't implemented. Don't run 'interventional' as feature_perturbation."
             )
-        if self.model_type == "xgboost" and self.num_stacked_models != self.num_outputs:
+        if self.model.model_type == "xgboost" and self.num_stacked_models != self.num_outputs:
             # TODO: Support random forest in XGBoost.
             raise NotImplementedError("XGBoost with boosted random forest is not yet supported.")
 
