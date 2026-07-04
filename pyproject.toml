@@ -98,6 +98,9 @@ test = [
   # See GH #3707, #3768, 3922
   "numpy>=2.0",
   "causalml>=0.15.5",
+  # causalml imports private sklearn.ensemble._forest internals (DOUBLE, DTYPE, MAX_INT)
+  # that were removed in scikit-learn 1.9. See https://github.com/uber/causalml/issues/926
+  "scikit-learn<1.9",
   "selenium",  # needed to test the javascript based plots
 ]
 nbtest = [
