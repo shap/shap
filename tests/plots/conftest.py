@@ -25,6 +25,7 @@ def explainer():
     y = y[:100]
 
     # train an XGBoost model (but any other model type would also work)
+    breakpoint()
     model = xgboost.XGBClassifier(random_state=0, tree_method="exact", base_score=0.5).fit(X, y)
 
     # build an Exact explainer and explain the model predictions on the given dataset
