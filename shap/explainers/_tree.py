@@ -104,10 +104,34 @@ def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
     return n_iterations
 
 
+_XGBOOST_ENABLE_CATEGORICAL_DEFAULT_TRUE_VERSION = "3.3"
+
+
 def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
-    if model.model_type == "xgboost" and (
-        model.cat_feature_indices is not None or getattr(model, "_xgb_enable_categorical", False)
-    ):
+    # XGBoost's own internal SHAP calculation (used for feature_perturbation=
+    # "tree_path_dependent") has natively supported categorical splits since
+    # XGBoost 1.5.0, so no guard is needed there. This guard only applies to
+    # shap's own C extension (used for "interventional" and by GPUTreeExplainer),
+    # which still cannot interpret XGBoost's categorical split encoding.
+    if model.model_type != "xgboost":
+        return
+
+    has_cat_columns = model.cat_feature_indices is not None
+    enable_categorical_flag = getattr(model, "_xgb_enable_categorical", False)
+
+    # Before XGBoost 3.3, `enable_categorical` defaulted to False, so a user
+    # setting it to True was a meaningful signal on its own (even before we can
+    # see any actual categorical columns, e.g. a Booster loaded without data).
+    # From 3.3 onward it defaults to True regardless of the data, so it's no
+    # longer trustworthy on its own -- only the actually-detected categorical
+    # columns (cat_feature_indices) are.
+    if enable_categorical_flag:
+        import xgboost
+
+        if version.parse(xgboost.__version__) < version.parse(_XGBOOST_ENABLE_CATEGORICAL_DEFAULT_TRUE_VERSION):
+            has_cat_columns = True
+
+    if has_cat_columns:
         raise NotImplementedError(
             "Categorical split is not yet supported. You can still use"
             " TreeExplainer with `feature_perturbation=tree_path_dependent`."
@@ -692,6 +716,7 @@ class TreeExplainer(Explainer):
             X, y, tree_limit, check_additivity
         )
         transform = self.model.get_transform()
+        _xgboost_cat_unsupported(self.model)
 
         # run the core algorithm using the C extension
         assert_import("cext")
@@ -1580,7 +1605,7 @@ class TreeEnsemble:
                 # XGBoost supports boosting forest, which is not compatible with the
                 # current assumption here that the number of stacked models represents
                 # the number of outputs.
-                if self.model.model_type == "xgboost":
+                if self.model_type == "xgboost":
                     n_stacks = self.num_outputs
                 else:
                     n_stacks = self.num_stacked_models
@@ -1634,7 +1659,7 @@ class TreeEnsemble:
     def num_outputs(self) -> int:
         # Currently, XGBoost models derive the num_outputs attribute from the input
         # models, which is set during model load.
-        if self.model.model_type == "xgboost":
+        if self.model_type == "xgboost":
             assert hasattr(self, "_xgboost_n_outputs")
             return self._xgboost_n_outputs
 
@@ -1704,7 +1729,7 @@ class TreeEnsemble:
             raise NotImplementedError(
                 "Predict with pyspark isn't implemented. Don't run 'interventional' as feature_perturbation."
             )
-        if self.model.model_type == "xgboost" and self.num_stacked_models != self.num_outputs:
+        if self.model_type == "xgboost" and self.num_stacked_models != self.num_outputs:
             # TODO: Support random forest in XGBoost.
             raise NotImplementedError("XGBoost with boosted random forest is not yet supported.")
 
