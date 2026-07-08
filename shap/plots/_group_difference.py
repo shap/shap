@@ -73,7 +73,7 @@ def group_difference(
     group_mask_arr = np.asarray(group_mask)
     if group_mask_arr.ndim != 1:
         raise ValueError("group_mask must be a one-dimensional boolean mask.")
-        
+
     if group_mask_arr.dtype != bool:
         # Zero python overhead vector check
         if not np.all(np.isin(group_mask_arr, [0, 1])):
@@ -111,12 +111,12 @@ def group_difference(
     # Replaced loop containing 200 array allocations with a single 2D broadcast operation
     gmean = float(group_mask_arr.mean())
     r_matrix = np.random.rand(200, n_samples) > gmean  # Shape: (200, n_samples)
-    
+
     # Calculate group means completely inside C-memory
     mean_true = np.array([shap_values_arr[row].mean(0) for row in r_matrix])
     mean_false = np.array([shap_values_arr[~row].mean(0) for row in r_matrix])
     vs_ = mean_true - mean_false
-    
+
     xerr = np.vstack([np.percentile(vs_, 95, axis=0), np.percentile(vs_, 5, axis=0)])
 
     # Compute actual difference

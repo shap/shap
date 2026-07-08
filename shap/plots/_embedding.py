@@ -88,9 +88,7 @@ def embedding(
     shap_values_arr = np.asarray(shap_values.values)
 
     # 3. Streamlined Feature Names Fallback (Requested by @CloseChoice)
-    feature_names = shap_values.feature_names or [
-        labels["FEATURE"] % str(i) for i in range(n_features)
-    ]
+    feature_names = shap_values.feature_names or [labels["FEATURE"] % str(i) for i in range(n_features)]
     feature_names_list = list(feature_names)
 
     # 4. Core Transformation Logic
@@ -134,7 +132,7 @@ def embedding(
     )
     ax.axis("off")
 
-    # 7. Clean Colorbar Formatting 
+    # 7. Clean Colorbar Formatting
     cb = fig.colorbar(sc, ax=ax)
     cb.set_label(f"SHAP value for\n{fname}", size=13)
     cb.outline.set_visible(False)  # type: ignore
