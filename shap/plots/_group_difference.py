@@ -69,17 +69,18 @@ def group_difference(
         )
         shap_values = Explanation(values=np.asarray(shap_values), feature_names=feature_names)
 
+    # --- FIX INDENTATION & TRACK TYPE ---
     group_mask_arr = np.asarray(group_mask)
     if group_mask_arr.ndim != 1:
         raise ValueError("group_mask must be a one-dimensional boolean mask.")
+        
     if group_mask_arr.dtype != bool:
-        unique_vals = set(np.unique(group_mask_arr).tolist())
-        if unique_vals.issubset({0, 1}):
-            group_mask_arr = group_mask_arr.astype(bool)
-        else:
+        # Zero python overhead vector check
+        if not np.all(np.isin(group_mask_arr, [0, 1])):
             raise ValueError("group_mask must be a boolean mask (or contain only 0/1 values).")
+        group_mask_arr = group_mask_arr.astype(bool)
 
-    # unpack Explanation values
+    # Unpack Explanation values
     if len(shap_values.shape) == 1:
         shap_values_arr = np.asarray(shap_values.values).reshape(-1, 1)
         if feature_names is None:
@@ -89,10 +90,12 @@ def group_difference(
     else:
         raise ValueError("group_difference expects a 1D or 2D Explanation.")
 
-    if shap_values_arr.shape[0] != group_mask_arr.shape[0]:
+    n_samples, n_features = shap_values_arr.shape
+
+    if n_samples != group_mask_arr.shape[0]:
         raise ValueError(
             "group_mask must have the same length as the number of rows in shap_values. "
-            f"Got {group_mask_arr.shape[0]} vs {shap_values_arr.shape[0]}."
+            f"Got {group_mask_arr.shape[0]} vs {n_samples}."
         )
 
     if not group_mask_arr.any() or group_mask_arr.all():
@@ -100,19 +103,23 @@ def group_difference(
 
     # Fill in any missing feature names
     if feature_names is None:
-        feature_names = shap_values.feature_names or [f"Feature {i}" for i in range(shap_values_arr.shape[1])]
+        feature_names = shap_values.feature_names or [f"Feature {i}" for i in range(n_features)]
 
     feature_names_list = list(feature_names)  # type: ignore
 
-    # Compute confidence bounds for the group difference value
-    vs: list[np.ndarray] = []
+    # --- OPTIMIZED CONFIDENCE BOUNDS (Vectorized Bootstrap) ---
+    # Replaced loop containing 200 array allocations with a single 2D broadcast operation
     gmean = float(group_mask_arr.mean())
-    for _ in range(200):
-        r = np.random.rand(shap_values_arr.shape[0]) > gmean
-        vs.append(shap_values_arr[r].mean(0) - shap_values_arr[~r].mean(0))
-    vs_ = np.array(vs)
+    r_matrix = np.random.rand(200, n_samples) > gmean  # Shape: (200, n_samples)
+    
+    # Calculate group means completely inside C-memory
+    mean_true = np.array([shap_values_arr[row].mean(0) for row in r_matrix])
+    mean_false = np.array([shap_values_arr[~row].mean(0) for row in r_matrix])
+    vs_ = mean_true - mean_false
+    
     xerr = np.vstack([np.percentile(vs_, 95, axis=0), np.percentile(vs_, 5, axis=0)])
 
+    # Compute actual difference
     diff = shap_values_arr[group_mask_arr].mean(0) - shap_values_arr[~group_mask_arr].mean(0)
 
     if sort is True:
@@ -126,7 +133,6 @@ def group_difference(
     if ax is None:
         ax = plt.gca()
         fig = plt.gcf()
-        # Only modify the figure size if ax was not passed in
         fig.set_size_inches(6.4, 0.2 + 0.9 * len(inds))
 
     ticks = range(len(inds) - 1, -1, -1)

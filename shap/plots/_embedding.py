@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
-import sklearn
+import sklearn.decomposition
 
 from .. import Explanation
 from ..utils import convert_name
@@ -67,6 +67,7 @@ def embedding(
         onto it. Only returned if ``show=False``.
 
     """
+    # 1. Standardized Explanation Conversion Path
     if not isinstance(shap_values, Explanation):
         warnings.warn(
             "Passing a numpy array to the embedding plot is deprecated and will be removed in a future version. "
@@ -76,45 +77,49 @@ def embedding(
         )
         shap_values = Explanation(values=np.asarray(shap_values), feature_names=feature_names)
 
-    if len(shap_values.shape) != 2:
+    # 2. Early Shape Validation & Unpacking
+    try:
+        n_samples, n_features = shap_values.shape
+    except ValueError:
         raise ValueError(
             "The embedding plot expects a 2D Explanation of SHAP values with shape (# samples, # features)."
         )
 
     shap_values_arr = np.asarray(shap_values.values)
 
-    if feature_names is None:
-        feature_names = shap_values.feature_names or [
-            labels["FEATURE"] % str(i) for i in range(shap_values_arr.shape[1])
-        ]
+    # 3. Streamlined Feature Names Fallback (Requested by @CloseChoice)
+    feature_names = shap_values.feature_names or [
+        labels["FEATURE"] % str(i) for i in range(n_features)
+    ]
+    feature_names_list = list(feature_names)
 
-    feature_names_list = list(feature_names)  # type: ignore
+    # 4. Core Transformation Logic
     ind_converted = convert_name(ind, shap_values_arr, feature_names_list)
     if ind_converted == "sum()":
-        cvals = shap_values_arr.sum(1)
+        cvals = shap_values_arr.sum(axis=1)
         fname = "sum(SHAP values)"
     else:
         assert isinstance(ind_converted, int)
         cvals = shap_values_arr[:, ind_converted]
         fname = feature_names_list[ind_converted]
 
-    # compute the embedding
+    # 5. Embedding Coordinates Computation
     if isinstance(method, str) and method == "pca":
-        pca = sklearn.decomposition.PCA(2)
+        pca = sklearn.decomposition.PCA(n_components=2)
         embedding_values = pca.fit_transform(shap_values_arr)
     else:
         embedding_values = np.asarray(method)
         if embedding_values.ndim != 2 or embedding_values.shape[1] != 2:
             raise ValueError("Unsupported embedding method. Pass method='pca' or an array of shape (# samples, 2).")
-        if embedding_values.shape[0] != shap_values_arr.shape[0]:
+        if embedding_values.shape[0] != n_samples:
             raise ValueError(
                 "When passing explicit embedding coordinates, method must have the same number of rows as shap_values."
             )
 
+    # 6. Matplotlib OO API Implementation
     if ax is None:
         ax = plt.gca()
         fig = plt.gcf()
-        # Only modify the figure size if ax was not passed in
         fig.set_size_inches(7.5, 5)
     else:
         fig = ax.figure
@@ -129,13 +134,14 @@ def embedding(
     )
     ax.axis("off")
 
+    # 7. Clean Colorbar Formatting 
     cb = fig.colorbar(sc, ax=ax)
-    cb.set_label("SHAP value for\n" + fname, size=13)
+    cb.set_label(f"SHAP value for\n{fname}", size=13)
     cb.outline.set_visible(False)  # type: ignore
 
     bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     cb.ax.set_aspect((bbox.height - 0.7) * 10)
-    cb.set_alpha(1)
+    cb.set_alpha(1.0)
 
     if show:
         plt.show()
