@@ -3015,3 +3015,39 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+def test_nullable_pandas_dtype_background_data():
+    """TreeExplainer handles pandas nullable dtypes (Int64, Float64) in background data.
+
+    Previously, DataFrame.values on nullable dtypes produced object arrays,
+    which caused TypeError when passed to the C extension expecting float64.
+    Addresses #4911.
+    """
+    X = pd.DataFrame(
+        {
+            "x1": pd.array([1.0, 2.0, 3.0, 4.0, 5.0] * 20, dtype="Float64"),
+            "x2": pd.array([10, 20, 30, 40, 50] * 20, dtype="Int64"),
+        }
+    )
+    y = np.array([0, 1, 0, 1, 0] * 20)
+
+    model = DecisionTreeClassifier(max_depth=2, random_state=0)
+    model.fit(X, y)
+
+    # Background data with nullable dtypes
+    X_bg = pd.DataFrame(
+        {
+            "x1": pd.array([1.0, 2.0, 3.0], dtype="Float64"),
+            "x2": pd.array([10, 20, 30], dtype="Int64"),
+        }
+    )
+
+    # Confirm nullable dtypes are present (precondition)
+    assert X_bg["x1"].dtype == pd.Float64Dtype()
+    assert X_bg["x2"].dtype == pd.Int64Dtype()
+
+    # This should not raise TypeError from C extension
+    explainer = shap.TreeExplainer(model, data=X_bg)
+    sv = explainer.shap_values(X.iloc[:5])
+    assert sv.shape == (5, 2)
