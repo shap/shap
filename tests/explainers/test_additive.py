@@ -6,7 +6,7 @@ import shap
 
 @pytest.fixture
 def ebm_classifier_no_interaction():
-    interpret = pytest.importorskip("interpret")
+    pytest.importorskip("interpret")
     from interpret.glassbox import ExplainableBoostingClassifier
 
     X = np.array([[1, 2], [3, 4], [5, 6]])
@@ -18,7 +18,7 @@ def ebm_classifier_no_interaction():
 
 @pytest.fixture
 def ebm_classifier_with_interaction():
-    interpret = pytest.importorskip("interpret")
+    pytest.importorskip("interpret")
     from interpret.glassbox import ExplainableBoostingClassifier
 
     X = np.array([[1, 2], [3, 4], [5, 6]])
@@ -30,7 +30,7 @@ def ebm_classifier_with_interaction():
 
 @pytest.fixture
 def ebm_regressor_no_interaction():
-    interpret = pytest.importorskip("interpret")
+    pytest.importorskip("interpret")
     from interpret.glassbox import ExplainableBoostingRegressor
 
     X = np.array([[1, 2], [3, 4], [5, 6]])
