@@ -41,21 +41,15 @@ def ebm_regressor_no_interaction():
 
 
 def test_supports_classifier_no_interaction(ebm_classifier_no_interaction):
-    assert shap.explainers.AdditiveExplainer.supports_model_with_masker(
-        ebm_classifier_no_interaction, None
-    )
+    assert shap.explainers.AdditiveExplainer.supports_model_with_masker(ebm_classifier_no_interaction, None)
 
 
 def test_supports_classifier_with_interaction(ebm_classifier_with_interaction):
-    assert not shap.explainers.AdditiveExplainer.supports_model_with_masker(
-        ebm_classifier_with_interaction, None
-    )
+    assert not shap.explainers.AdditiveExplainer.supports_model_with_masker(ebm_classifier_with_interaction, None)
 
 
 def test_supports_regressor_no_interaction(ebm_regressor_no_interaction):
-    assert shap.explainers.AdditiveExplainer.supports_model_with_masker(
-        ebm_regressor_no_interaction, None
-    )
+    assert shap.explainers.AdditiveExplainer.supports_model_with_masker(ebm_regressor_no_interaction, None)
 
 
 def test_additive_explainer_with_ebm_regressor(ebm_regressor_no_interaction):
