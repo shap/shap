@@ -199,7 +199,7 @@ slicer==0.0.8
     # via shap (pyproject.toml)
 snowballstemmer==3.0.1
     # via sphinx
-soupsieve==2.8.3
+soupsieve==2.8.4
     # via beautifulsoup4
 sphinx==9.1.0
     # via
