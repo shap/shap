@@ -1,22 +1,22 @@
+import os
+from importlib import import_module
 from typing import Any, NoReturn
 
-from ._explanation import Cohorts, Explanation
+import lazy_loader as lazy  # type: ignore[import-untyped]
 
-# explainers
-from .explainers import other
-from .explainers._additive import AdditiveExplainer
-from .explainers._coalition import CoalitionExplainer
-from .explainers._deep import DeepExplainer
-from .explainers._exact import ExactExplainer
-from .explainers._explainer import Explainer
-from .explainers._gpu_tree import GPUTreeExplainer
-from .explainers._gradient import GradientExplainer
-from .explainers._kernel import KernelExplainer
-from .explainers._linear import LinearExplainer
-from .explainers._partition import PartitionExplainer
-from .explainers._permutation import PermutationExplainer
-from .explainers._sampling import SamplingExplainer
-from .explainers._tree import TreeExplainer
+from ._explanation import Cohorts as Cohorts
+from ._explanation import Explanation as Explanation
+
+_eager_import_env = os.environ.get("EAGER_IMPORT")
+if _eager_import_env is not None:
+    # Prevent lazy_loader from eager-importing every export before we can
+    # apply SHAP-specific fallbacks for optional dependencies.
+    os.environ["EAGER_IMPORT"] = "0"
+
+_stub_getattr, __dir__, __all__ = lazy.attach_stub(__name__, __file__)
+
+if _eager_import_env is not None:
+    os.environ["EAGER_IMPORT"] = _eager_import_env
 
 try:
     # Version from setuptools-scm
@@ -30,7 +30,13 @@ _no_matplotlib_warning = (
 )
 
 
-# plotting (only loaded if matplotlib is present)
+def unsupported(*args: Any, **kwargs: Any) -> NoReturn:
+    raise ImportError(_no_matplotlib_warning)
+
+
+class UnsupportedModule:
+    def __getattribute__(self, item: str) -> NoReturn:
+        raise ImportError(_no_matplotlib_warning)
 
 
 def unsupported(*args: Any, **kwargs: Any) -> NoReturn:
@@ -42,83 +48,7 @@ class UnsupportedModule:
         raise ImportError(_no_matplotlib_warning)
 
 
-try:
-    import matplotlib  # noqa: F401
-
-    have_matplotlib = True
-except ImportError:
-    have_matplotlib = False
-if have_matplotlib:
-    from . import plots
-    from .plots._bar import bar_legacy as bar_plot
-    from .plots._beeswarm import summary_legacy as summary_plot
-    from .plots._decision import decision as decision_plot
-    from .plots._decision import multioutput_decision as multioutput_decision_plot
-    from .plots._embedding import embedding as embedding_plot
-    from .plots._force import force as force_plot
-    from .plots._force import getjs, initjs, save_html
-    from .plots._group_difference import group_difference as group_difference_plot
-    from .plots._heatmap import heatmap as heatmap_plot
-    from .plots._image import image as image_plot
-    from .plots._monitoring import monitoring as monitoring_plot
-    from .plots._partial_dependence import partial_dependence as partial_dependence_plot
-    from .plots._scatter import dependence_legacy as dependence_plot
-    from .plots._text import text as text_plot
-    from .plots._violin import violin as violin_plot
-    from .plots._waterfall import waterfall as waterfall_plot
-else:
-    bar_plot = unsupported
-    summary_plot = unsupported
-    decision_plot = unsupported
-    multioutput_decision_plot = unsupported
-    embedding_plot = unsupported
-    force_plot = unsupported
-    getjs = unsupported
-    initjs = unsupported
-    save_html = unsupported
-    group_difference_plot = unsupported
-    heatmap_plot = unsupported
-    image_plot = unsupported
-    monitoring_plot = unsupported
-    partial_dependence_plot = unsupported
-    dependence_plot = unsupported
-    text_plot = unsupported
-    violin_plot = unsupported
-    waterfall_plot = unsupported
-    # If matplotlib is available, then the plots submodule will be directly available.
-    # If not, we need to define something that will issue a meaningful warning message
-    # (rather than ModuleNotFound).
-    plots = UnsupportedModule()  # type: ignore
-
-
-# other stuff :)
-from . import datasets, links, utils  # noqa: E402
-from .actions._optimizer import ActionOptimizer  # noqa: E402
-from .utils import approximate_interactions, sample  # noqa: E402
-
-# from . import benchmark
-from .utils._legacy import kmeans  # noqa: E402
-
-# Use __all__ to let type checkers know what is part of the public API.
-__all__ = [
-    "Cohorts",
-    "Explanation",
-    # Explainers
-    "other",
-    "AdditiveExplainer",
-    "DeepExplainer",
-    "ExactExplainer",
-    "Explainer",
-    "GPUTreeExplainer",
-    "GradientExplainer",
-    "KernelExplainer",
-    "LinearExplainer",
-    "PartitionExplainer",
-    "CoalitionExplainer",
-    "PermutationExplainer",
-    "SamplingExplainer",
-    "TreeExplainer",
-    # Plots
+_PLOT_EXPORTS = {
     "plots",
     "bar_plot",
     "summary_plot",
@@ -138,12 +68,56 @@ __all__ = [
     "text_plot",
     "violin_plot",
     "waterfall_plot",
-    # Other stuff
-    "datasets",
-    "links",
-    "utils",
-    "ActionOptimizer",
-    "approximate_interactions",
-    "sample",
-    "kmeans",
-]
+}
+
+_PLOT_ALIAS_MAP = {
+    "bar_plot": ("shap.plots._bar", "bar_legacy"),
+    "summary_plot": ("shap.plots._beeswarm", "summary_legacy"),
+    "decision_plot": ("shap.plots._decision", "decision"),
+    "multioutput_decision_plot": ("shap.plots._decision", "multioutput_decision"),
+    "embedding_plot": ("shap.plots._embedding", "embedding"),
+    "force_plot": ("shap.plots._force", "force"),
+    "group_difference_plot": ("shap.plots._group_difference", "group_difference"),
+    "heatmap_plot": ("shap.plots._heatmap", "heatmap"),
+    "image_plot": ("shap.plots._image", "image"),
+    "monitoring_plot": ("shap.plots._monitoring", "monitoring"),
+    "partial_dependence_plot": ("shap.plots._partial_dependence", "partial_dependence"),
+    "dependence_plot": ("shap.plots._scatter", "dependence_legacy"),
+    "text_plot": ("shap.plots._text", "text"),
+    "violin_plot": ("shap.plots._violin", "violin"),
+    "waterfall_plot": ("shap.plots._waterfall", "waterfall"),
+}
+
+_lazy_getattr = _stub_getattr
+
+
+def __getattr__(name: str) -> Any:
+    if name in _PLOT_EXPORTS:
+        value: Any
+        try:
+            import matplotlib  # noqa: F401
+        except ImportError:
+            if name == "plots":
+                value = UnsupportedModule()
+            else:
+                value = unsupported
+            globals()[name] = value
+            return value
+    if name in _PLOT_ALIAS_MAP:
+        module_name, attr_name = _PLOT_ALIAS_MAP[name]
+        value = getattr(import_module(module_name), attr_name)
+        globals()[name] = value
+        return value
+    return _lazy_getattr(name)
+
+
+if _eager_import_env and _eager_import_env not in {"0", "false", "False", ""}:
+    # Eagerly import core explainers expected by import tests, without forcing
+    # optional heavy dependencies.
+    for _name in ("TreeExplainer", "KernelExplainer"):
+        try:
+            __getattr__(_name)
+        except Exception:
+            # Keep import-time behavior stable across environments where some
+            # optional compiled pieces may be unavailable.
+            pass

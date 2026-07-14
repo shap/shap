@@ -83,6 +83,8 @@ jupyterlab-widgets==3.0.16
     # via ipywidgets
 kiwisolver==1.5.0
     # via matplotlib
+lazy-loader==0.5
+    # via shap (pyproject.toml)
 llvmlite==0.47.0
     # via
     #   shap (pyproject.toml)
