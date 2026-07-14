@@ -6,7 +6,7 @@ import json
 import os
 import time
 import warnings
-from typing import Any, Literal
+from typing import Any, Final, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -40,7 +40,7 @@ try:
 except ImportError as e:
     record_import_error("pyspark", "PySpark could not be imported!", e)
 
-DEPRECATED_APPROX = object()
+DEPRECATED_APPROX: Final = object()
 
 output_transform_codes = {
     "identity": 0,
@@ -131,10 +131,10 @@ class TreeExplainer(Explainer):
     data: npt.NDArray[Any] | None
     data_missing: npt.NDArray[np.bool_] | None
     feature_perturbation: str
-    expected_value: Any
+    expected_value: float | list[float] | npt.NDArray[Any] | None
     model: TreeEnsemble
     model_output: str
-    data_feature_names: list[str]
+    data_feature_names: list[str] | None
 
     def __init__(
         self,
@@ -323,10 +323,16 @@ class TreeExplainer(Explainer):
 
         # compute the expected value if we have a parsed tree for the cext
         if self.model.model_output == "log_loss":
-            self.expected_value = self.__dynamic_expected_value
+            self.expected_value = self.__dynamic_expected_value  # type: ignore[assignment]
         elif data is not None:
             try:
-                self.expected_value = self.model.predict(self.data).mean(0)  # type: ignore[union-attr]
+                pred_result = self.model.predict(self.data)  # type: ignore[union-attr]
+                if isinstance(pred_result, np.ndarray):
+                    self.expected_value = pred_result.mean(0)
+                elif hasattr(pred_result, "mean"):
+                    self.expected_value = pred_result.mean(0)  # type: ignore[union-attr]
+                else:
+                    self.expected_value = pred_result
             except ValueError:
                 raise ExplainerError(
                     "Currently TreeExplainer can only handle models with categorical splits when "
@@ -334,31 +340,41 @@ class TreeExplainer(Explainer):
                     'shap.TreeExplainer(model, feature_perturbation="tree_path_dependent").'
                 )
             if hasattr(self.expected_value, "__len__") and len(self.expected_value) == 1:
-                self.expected_value = self.expected_value[0]
+                if isinstance(self.expected_value, (list, np.ndarray)):
+                    self.expected_value = self.expected_value[0]
         elif hasattr(self.model, "node_sample_weight"):
             self.expected_value = self.model.values[:, 0].sum(0)
-            if self.expected_value.size == 1:
-                self.expected_value = self.expected_value[0]
+            if hasattr(self.expected_value, "size") and self.expected_value.size == 1:
+                if isinstance(self.expected_value, np.ndarray):
+                    self.expected_value = self.expected_value[0]
             self.expected_value += self.model.base_offset
             if self.model.model_output != "raw":
-                self.expected_value = None  # we don't handle transforms in this case right now...
+                self.expected_value = None  # we don't handle transforms in this case right now
 
         # if our output format requires binary classification to be represented as two outputs then we do that here
         if self.model.model_output == "probability_doubled" and self.expected_value is not None:
-            self.expected_value = [1 - self.expected_value, self.expected_value]
+            if isinstance(self.expected_value, (int, float)):
+                self.expected_value = [1 - self.expected_value, self.expected_value]
+            elif isinstance(self.expected_value, np.ndarray) and self.expected_value.size == 1:
+                val = float(self.expected_value.item())
+                self.expected_value = [1 - val, val]
+            elif isinstance(self.expected_value, list) and len(self.expected_value) == 1:
+                val = self.expected_value[0]
+                self.expected_value = [1 - val, val]
 
     def __dynamic_expected_value(self, y: npt.NDArray[Any]) -> npt.NDArray[Any]:
         """This computes the expected value conditioned on the given label value."""
-        return self.model.predict(self.data, np.ones(self.data.shape[0]) * y).mean(0)  # type: ignore[union-attr]
+        if self.data is None:
+            raise ValueError("Cannot compute dynamic expected value without background data")
+        pred_result = self.model.predict(self.data, np.ones(self.data.shape[0]) * y)
+        if isinstance(pred_result, np.ndarray):
+            return pred_result.mean(0)
+        elif hasattr(pred_result, "mean"):
+            return pred_result.mean(0)  # type: ignore[union-attr]
+        else:
+            return pred_result  # type: ignore[return-value]
 
-    def __call__(  # type: ignore
-        self,
-        X: Any,
-        y: np.ndarray | pd.Series | None = None,
-        interactions: bool = False,
-        check_additivity: bool = True,
-        approximate: bool = False,
-    ) -> Explanation:
+    def __call__(self, *args: Any, **kwargs: Any) -> Explanation:
         """Calculate the SHAP values for the model applied to the data.
 
         Parameters
@@ -366,19 +382,12 @@ class TreeExplainer(Explainer):
         X : Any
             Can be a dataframe like object e.g. numpy.array, pandas.DataFrame or catboost.Pool (for catboost).
             A matrix of samples (# samples x # features) on which to explain the model's output.
-
         y : numpy.array, optional
             An array of label values for each sample. Used when explaining loss functions.
-
         approximate : bool
-            Run fast, but only roughly approximate the Tree SHAP values. This runs a method
-            previously proposed by Saabas which only considers a single feature ordering. Take care
-            since this does not have the consistency guarantees of Shapley values and places too
-            much weight on lower splits in the tree.
-
+            Run fast, but only roughly approximate the Tree SHAP values.
         interactions: bool
             Whether to compute the SHAP interaction values.
-
         check_additivity: bool
             Check if the sum of the SHAP values equals the output of the model.
 
@@ -386,6 +395,12 @@ class TreeExplainer(Explainer):
         -------
             shap.Explanation object containing the given data and the SHAP values.
         """
+        # Extract parameters
+        X = args[0] if len(args) > 0 else kwargs.get("X")
+        y = args[1] if len(args) > 1 else kwargs.get("y", None)
+        interactions = kwargs.get("interactions", False)
+        check_additivity = kwargs.get("check_additivity", True)
+        approximate = kwargs.get("approximate", False)
         start_time = time.time()
 
         feature_names: Any
@@ -404,18 +419,22 @@ class TreeExplainer(Explainer):
             v = self.shap_interaction_values(X)
 
         # the Explanation object expects an `expected_value` for each row
-        if hasattr(self.expected_value, "__len__") and len(self.expected_value) > 1:
-            # `expected_value` is a list / array of numbers, length k, e.g. for multi-output scenarios
-            # we repeat it N times along the first axis, so ev_tiled.shape == (N, k)
-            if isinstance(v, list):
-                num_rows = v[0].shape[0]
-            else:
-                num_rows = v.shape[0]
-            ev_tiled = np.tile(self.expected_value, (num_rows, 1))
+        if hasattr(self.expected_value, "__len__") and self.expected_value is not None:
+            try:
+                if len(self.expected_value) > 1:  # type: ignore[arg-type]
+                    # `expected_value` is a list / array of numbers, length k, e.g. for multi-output scenarios
+                    # we repeat it N times along the first axis, so ev_tiled.shape == (N, k)
+                    if isinstance(v, list):
+                        num_rows = v[0].shape[0]
+                    else:
+                        num_rows = v.shape[0]
+                    ev_tiled = np.tile(self.expected_value, (num_rows, 1))  # type: ignore[arg-type]
+                else:
+                    ev_tiled = np.tile(self.expected_value, v.shape[0])  # type: ignore[arg-type]
+            except TypeError:
+                ev_tiled = np.tile(self.expected_value, v.shape[0])  # type: ignore[arg-type]
         else:
-            # `expected_value` is a scalar / array of 1 number, so we simply repeat it for every row in `v`
-            # ev_tiled.shape == (N,)
-            ev_tiled = np.tile(self.expected_value, v.shape[0])
+            ev_tiled = np.tile(self.expected_value, v.shape[0])  # type: ignore[arg-type]
 
         X_data: np.ndarray | None | scipy.sparse.csr_matrix
         # cf. GH dsgibbons#66, this conversion to numpy array should be done AFTER
@@ -437,7 +456,7 @@ class TreeExplainer(Explainer):
                 warnings.warn(wmsg)
                 X_data = None
             else:
-                X_data = X.get_data()
+                X_data = X.get_data() if X is not None else None
         else:
             X_data = X
 
@@ -520,7 +539,7 @@ class TreeExplainer(Explainer):
         approximate: bool = False,
         check_additivity: bool = True,
         from_call: bool = False,
-    ) -> npt.NDArray[Any]:
+    ) -> npt.NDArray[Any] | list[npt.NDArray[Any]]:
         """Estimate the SHAP values for a set of samples.
 
         Parameters
@@ -662,7 +681,7 @@ class TreeExplainer(Explainer):
             if phi is not None:
                 if len(phi.shape) == 3:
                     self.expected_value = [phi[0, i, -1] for i in range(phi.shape[1])]
-                    out = [phi[:, i, :-1] for i in range(phi.shape[1])]
+                    out: npt.NDArray[Any] | list[npt.NDArray[Any]] = [phi[:, i, :-1] for i in range(phi.shape[1])]
                 else:
                     self.expected_value = phi[0, -1]
                     out = phi[:, :-1]
@@ -736,26 +755,31 @@ class TreeExplainer(Explainer):
             out = np.stack(out, axis=-1)  # type: ignore[assignment]
         return out  # type: ignore[return-value]
 
-    def _get_shap_output(self, phi: npt.NDArray[Any], flat_output: bool) -> Any:
+    def _get_shap_output(self, phi: npt.NDArray[Any], flat_output: bool) -> npt.NDArray[Any] | list[npt.NDArray[Any]]:
         """Pull off the last column of ``phi`` and keep it as our expected_value."""
         if self.model.num_outputs == 1:
             if self.expected_value is None and self.model.model_output != "log_loss":
                 self.expected_value = phi[0, -1, 0]
             if flat_output:
-                out = phi[0, :-1, 0]
+                out: npt.NDArray[Any] | list[npt.NDArray[Any]] = phi[0, :-1, 0]
             else:
                 out = phi[:, :-1, 0]
         else:
             if self.expected_value is None and self.model.model_output != "log_loss":
                 self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
             if flat_output:
-                out = [phi[0, :-1, i] for i in range(self.model.num_outputs)]  # type: ignore[assignment]
+                out = [phi[0, :-1, i] for i in range(self.model.num_outputs)]
             else:
-                out = [phi[:, :-1, i] for i in range(self.model.num_outputs)]  # type: ignore[assignment]
+                out = [phi[:, :-1, i] for i in range(self.model.num_outputs)]
 
         # if our output format requires binary classification to be represented as two outputs then we do that here
         if self.model.model_output == "probability_doubled":
-            out = [-out, out]  # type: ignore[assignment]
+            if isinstance(out, list):
+                # Create new list with negated arrays plus original list
+                negated_arrays = [-arr for arr in out]
+                out = negated_arrays + out  # type: ignore[operator]
+            else:
+                out = [-out, out]  # type: ignore[list-item]
         return out
 
     def shap_interaction_values(
@@ -918,9 +942,13 @@ class TreeExplainer(Explainer):
 
         if isinstance(phi, list):
             for i in range(len(phi)):
-                check_sum(self.expected_value[i] + phi[i].sum(-1), model_output[:, i])
+                if isinstance(self.expected_value, (list, np.ndarray)):
+                    base_val = self.expected_value[i]
+                else:
+                    base_val = self.expected_value
+                check_sum(base_val + phi[i].sum(-1), model_output[:, i])  # type: ignore[arg-type]
         else:
-            check_sum(self.expected_value + phi.sum(-1), model_output)
+            check_sum(self.expected_value + phi.sum(-1), model_output)  # type: ignore[arg-type]
 
     @staticmethod
     def supports_model_with_masker(model: Any, masker: Any) -> bool:
@@ -1539,7 +1567,7 @@ class TreeEnsemble:
 
         # build a dense numpy version of all the tree objects
         if self.trees is not None and self.trees:
-            max_nodes = np.max([len(t.values) for t in self.trees])
+            max_nodes: int = np.max([len(t.values) for t in self.trees])
             assert len(np.unique([t.values.shape[1] for t in self.trees])) == 1, (
                 "All trees in the ensemble must have the same output dimension!"
             )
@@ -1811,7 +1839,7 @@ class SingleTree:
     features: npt.NDArray[np.int32]
     thresholds: npt.NDArray[np.float64]
     threshold_types: npt.NDArray[np.int32]
-    values: npt.NDArray[Any]
+    values: npt.NDArray[np.float64]
     node_sample_weight: npt.NDArray[np.float64]
     max_depth: int
 
@@ -2063,13 +2091,13 @@ class SingleTree:
             for n in nodes:
                 nodes_dict[int(n.split(":")[0])] = n.split(":")[1]
             m = max(nodes_dict.keys()) + 1
-            children_left = -1 * np.ones(m, dtype="int32")
-            children_right = -1 * np.ones(m, dtype="int32")
-            children_default = -1 * np.ones(m, dtype="int32")
-            features = -2 * np.ones(m, dtype="int32")
-            thresholds = -1 * np.ones(m, dtype="float64")
-            values = 1 * np.ones(m, dtype="float64")
-            node_sample_weight = np.zeros(m, dtype="float64")
+            children_left: npt.NDArray[np.int32] = -1 * np.ones(m, dtype="int32")
+            children_right: npt.NDArray[np.int32] = -1 * np.ones(m, dtype="int32")
+            children_default: npt.NDArray[np.int32] = -1 * np.ones(m, dtype="int32")
+            features: npt.NDArray[np.int32] = -2 * np.ones(m, dtype="int32")
+            thresholds: npt.NDArray[np.float64] = -1 * np.ones(m, dtype="float64")
+            values: npt.NDArray[np.float64] = 1 * np.ones(m, dtype="float64")
+            node_sample_weight: npt.NDArray[np.float64] = np.zeros(m, dtype="float64")
             values_lst = list(nodes_dict.values())
             keys_lst = list(nodes_dict.keys())
             for i in range(len(keys_lst)):
