@@ -472,8 +472,10 @@ class TreeExplainer(Explainer):
         if X.dtype != self.model.input_dtype:
             X = X.astype(self.model.input_dtype)
         X_missing = np.isnan(X, dtype=bool)
-        assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
-        assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
+        if not isinstance(X, np.ndarray):
+            raise TypeError("Unknown instance type: " + str(type(X)))
+        if len(X.shape) != 2:
+            raise ValueError("Passed input data matrix X must have 1 or 2 dimensions!")
 
         if self.model.model_output == "log_loss":
             if y is None:
@@ -628,7 +630,8 @@ class TreeExplainer(Explainer):
                     )
 
             elif self.model.model_type == "lightgbm":
-                assert not approximate, "approximate=True is not supported for LightGBM models!"
+                if approximate:
+                    raise ValueError("approximate=True is not supported for LightGBM models!")
                 phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
                 # Note: the data must be joined on the last axis
                 if (
@@ -650,8 +653,10 @@ class TreeExplainer(Explainer):
                         raise ValueError(emsg) from e
 
             elif self.model.model_type == "catboost":  # thanks to the CatBoost team for implementing this...
-                assert not approximate, "approximate=True is not supported for CatBoost models!"
-                assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
+                if approximate:
+                    raise ValueError("approximate=True is not supported for CatBoost models!")
+                if tree_limit != -1:
+                    raise ValueError("tree_limit is not yet supported for CatBoost models!")
                 import catboost
 
                 if not isinstance(X, catboost.Pool):
@@ -798,9 +803,8 @@ class TreeExplainer(Explainer):
                 Return type for models with multiple outputs changed from list to np.ndarray.
 
         """
-        assert self.model.model_output == "raw", (
-            'Only model_output = "raw" is supported for SHAP interaction values right now!'
-        )
+        if self.model.model_output != "raw":
+            raise ValueError('Only model_output = "raw" is supported for SHAP interaction values right now!')
         # assert self.feature_perturbation == "tree_path_dependent", "Only feature_perturbation = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
         transform = "identity"
 
@@ -834,7 +838,8 @@ class TreeExplainer(Explainer):
         elif (self.model.model_type == "catboost") and (
             self.feature_perturbation == "tree_path_dependent"
         ):  # thanks again to the CatBoost team for implementing this...
-            assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
+            if tree_limit != -1:
+                raise ValueError("tree_limit is not yet supported for CatBoost models!")
             import catboost
 
             if not isinstance(X, catboost.Pool):
@@ -1054,7 +1059,8 @@ class TreeEnsemble:
                 "causalml.inference.tree.CausalRandomForestRegressor",
             ],
         ):
-            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
+            if not hasattr(model, "estimators_"):
+                raise ValueError("Model has no `estimators_`! Have you called `model.fit`?")
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_)  # output is average of trees
@@ -1094,7 +1100,8 @@ class TreeEnsemble:
                 "skopt.learning.forest.ExtraTreesRegressor",
             ],
         ):
-            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
+            if not hasattr(model, "estimators_"):
+                raise ValueError("Model has no `estimators_`! Have you called `model.fit`?")
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_)  # output is average of trees
@@ -1138,7 +1145,8 @@ class TreeEnsemble:
                 "sklearn.ensemble.forest.RandomForestClassifier",
             ],
         ):
-            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
+            if not hasattr(model, "estimators_"):
+                raise ValueError("Model has no `estimators_`! Have you called `model.fit`?")
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_)  # output is average of trees
@@ -1493,7 +1501,8 @@ class TreeEnsemble:
                 "ngboost.api.NGBClassifier",
             ],
         ):
-            assert model.base_models, "The NGBoost model has empty `base_models`! Have you called `model.fit`?"
+            if not model.base_models:
+                raise ValueError("The NGBoost model has empty `base_models`! Have you called `model.fit`?")
             if self.model_output == "raw":
                 param_idx = 0  # default to the first parameter of the output distribution
                 warnings.warn(
@@ -1502,10 +1511,11 @@ class TreeEnsemble:
             elif isinstance(self.model_output, int):
                 param_idx = self.model_output
                 self.model_output = "raw"  # note that after loading we have a new model_output type
-            assert safe_isinstance(
+            if not safe_isinstance(
                 model.base_models[0][param_idx],
                 ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor"],
-            ), "You must use default_tree_learner!"
+            ):
+                raise ValueError("You must use default_tree_learner!")
             shap_trees = [trees[param_idx] for trees in model.base_models]
             self.internal_dtype = shap_trees[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -1540,9 +1550,8 @@ class TreeEnsemble:
         # build a dense numpy version of all the tree objects
         if self.trees is not None and self.trees:
             max_nodes = np.max([len(t.values) for t in self.trees])
-            assert len(np.unique([t.values.shape[1] for t in self.trees])) == 1, (
-                "All trees in the ensemble must have the same output dimension!"
-            )
+            if len(np.unique([t.values.shape[1] for t in self.trees])) != 1:
+                raise ValueError("All trees in the ensemble must have the same output dimension!")
             num_trees = len(self.trees)
             # important to be -1 in unused sections!! This way we can tell which entries are valid.
             self.children_left = -np.ones((num_trees, max_nodes), dtype=np.int32)
@@ -1589,7 +1598,10 @@ class TreeEnsemble:
             if not hasattr(self.base_offset, "__len__") or len(self.base_offset) == 0:
                 self.base_offset = (np.ones(self.num_outputs) * self.base_offset).astype(self.internal_dtype)
             self.base_offset = self.base_offset.flatten()
-            assert len(self.base_offset) == self.num_outputs
+            if len(self.base_offset) != self.num_outputs:
+                raise ValueError(
+                    f"base_offset length ({len(self.base_offset)}) does not match num_outputs ({self.num_outputs})!"
+                )
 
     def _set_xgboost_model_attributes(
         self,
@@ -1621,7 +1633,8 @@ class TreeEnsemble:
         # Currently, XGBoost models derive the num_outputs attribute from the input
         # models, which is set during model load.
         if self.model_type == "xgboost":
-            assert hasattr(self, "_xgboost_n_outputs")
+            if not hasattr(self, "_xgboost_n_outputs"):
+                raise AttributeError("XGBoost model is missing '_xgboost_n_outputs'. Was the model loaded correctly?")
             return self._xgboost_n_outputs
 
         if self.num_stacked_models > 1:
@@ -1708,8 +1721,10 @@ class TreeEnsemble:
         if X.dtype.type != self.input_dtype:
             X = X.astype(self.input_dtype)
         X_missing = np.isnan(X, dtype=bool)
-        assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
-        assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
+        if not isinstance(X, np.ndarray):
+            raise TypeError("Unknown instance type: " + str(type(X)))
+        if len(X.shape) != 2:
+            raise ValueError("Passed input data matrix X must have 1 or 2 dimensions!")
 
         if tree_limit < 0 or tree_limit > self.values.shape[0]:
             tree_limit = self.values.shape[0]

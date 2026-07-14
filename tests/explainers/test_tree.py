@@ -30,6 +30,65 @@ def test_unsupported_model_raises_error():
         _ = shap.TreeExplainer(CustomEstimator())
 
 
+def test_unfitted_model_raises_valueerror():
+    """Passing an unfitted model to TreeEnsemble should give ValueError, not AssertionError."""
+    from sklearn.ensemble import ExtraTreesRegressor
+
+    from shap.explainers._tree import TreeEnsemble
+
+    model = ExtraTreesRegressor()
+    with pytest.raises(ValueError, match="Have you called `model.fit`"):
+        TreeEnsemble(model)
+
+
+def test_catboost_unsupported_args():
+    """CatBoost doesn't support approximate or tree_limit, check we get ValueError."""
+    catboost = pytest.importorskip("catboost")
+
+    model = catboost.CatBoostRegressor(iterations=10, verbose=0, random_seed=0)
+    X = np.random.randn(50, 4)
+    model.fit(X, np.random.randn(50))
+    explainer = shap.TreeExplainer(model)
+
+    with pytest.raises(ValueError, match="approximate=True is not supported for CatBoost"):
+        explainer.shap_values(X[:3], approximate=True)
+
+    with pytest.raises(ValueError, match="tree_limit is not yet supported for CatBoost"):
+        explainer.shap_values(X[:3], tree_limit=5)
+
+
+def test_mismatched_tree_output_dims():
+    """TreeEnsemble should reject trees with different output dimensions."""
+    from shap.explainers._tree import TreeEnsemble
+
+    # two single-node trees: first has 1 output, second has 2
+    model_dict = {
+        "trees": [
+            {
+                "children_left": np.array([-1], dtype=np.int32),
+                "children_right": np.array([-1], dtype=np.int32),
+                "children_default": np.array([-1], dtype=np.int32),
+                "features": np.array([-2], dtype=np.int32),
+                "thresholds": np.array([0.0]),
+                "values": np.array([[1.0]]),
+                "node_sample_weight": np.array([10.0]),
+            },
+            {
+                "children_left": np.array([-1], dtype=np.int32),
+                "children_right": np.array([-1], dtype=np.int32),
+                "children_default": np.array([-1], dtype=np.int32),
+                "features": np.array([-2], dtype=np.int32),
+                "thresholds": np.array([0.0]),
+                "values": np.array([[1.0, 2.0]]),
+                "node_sample_weight": np.array([10.0]),
+            },
+        ],
+    }
+
+    with pytest.raises(ValueError, match="same output dimension"):
+        TreeEnsemble(model_dict)
+
+
 def test_large_background_dataset_warning():
     """A warning should be emitted when >1000 background samples are passed
     with feature_perturbation='interventional'. Regression test for GH#4385."""
