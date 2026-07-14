@@ -1,4 +1,4 @@
-from typing import Any, NoReturn, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from ._explanation import Cohorts, Explanation
 
