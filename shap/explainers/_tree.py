@@ -691,6 +691,7 @@ class TreeExplainer(Explainer):
                 self.model.features,
                 self.model.thresholds,
                 self.model.threshold_types,
+                self.model.cat_bitsets,
                 self.model.values,
                 self.model.node_sample_weight,
                 self.model.max_depth,
@@ -714,6 +715,7 @@ class TreeExplainer(Explainer):
                 self.model.features,
                 self.model.thresholds,
                 self.model.threshold_types,
+                self.model.cat_bitsets,
                 self.model.values,
                 self.model.max_depth,
                 tree_limit,
@@ -859,6 +861,7 @@ class TreeExplainer(Explainer):
             self.model.features,
             self.model.thresholds,
             self.model.threshold_types,
+            self.model.cat_bitsets,
             self.model.values,
             self.model.node_sample_weight,
             self.model.max_depth,
@@ -965,6 +968,7 @@ class TreeEnsemble:
     features: npt.NDArray[np.int32]
     thresholds: npt.NDArray[Any]
     threshold_types: npt.NDArray[np.int32]
+    cat_bitsets: npt.NDArray[np.uint32]
     values: npt.NDArray[Any]
     node_sample_weight: npt.NDArray[Any]
     num_nodes: npt.NDArray[np.int32]
@@ -1555,13 +1559,66 @@ class TreeEnsemble:
             self.values = np.zeros((num_trees, max_nodes, self.num_outputs), dtype=self.internal_dtype)
             self.node_sample_weight = np.zeros((num_trees, max_nodes), dtype=self.internal_dtype)
 
+            cat_bitset_chunks = []
+            cat_bitset_offset = 0
+            # Bitset offsets are stored in floating-point thresholds. Keep every offset in
+            # the range where this model's threshold dtype represents integers exactly.
+            max_exact_bitset_offset = (1 << (np.finfo(self.thresholds.dtype).nmant + 1)) - 1
             for i in range(num_trees):
                 self.children_left[i, : len(self.trees[i].children_left)] = self.trees[i].children_left
                 self.children_right[i, : len(self.trees[i].children_right)] = self.trees[i].children_right
                 self.children_default[i, : len(self.trees[i].children_default)] = self.trees[i].children_default
                 self.features[i, : len(self.trees[i].features)] = self.trees[i].features
-                self.thresholds[i, : len(self.trees[i].thresholds)] = self.trees[i].thresholds
+                tree_thresholds = np.asarray(self.trees[i].thresholds).copy()
+                tree_cat_bitsets = np.asarray(getattr(self.trees[i], "cat_bitsets", []), dtype=np.uint32)
+                cat_node_idx = np.nonzero(self.trees[i].threshold_types == 1)[0]
+
+                if cat_node_idx.size and tree_cat_bitsets.size == 0:
+                    # Before categorical bitsets were introduced, custom SingleTree objects
+                    # stored a packed 32-bit mask in the threshold. Migrate bit k to category
+                    # k + 1, preserving the old behavior for categories 1..32. Category 0 did
+                    # an undefined negative shift in C++; it is deliberately left unset.
+                    legacy_blocks: list[int] = []
+                    for node_idx in cat_node_idx:
+                        legacy_threshold = tree_thresholds[node_idx]
+                        if not np.isfinite(legacy_threshold) or not (
+                            np.iinfo(np.int32).min <= legacy_threshold <= np.iinfo(np.int32).max
+                        ):
+                            raise ValueError(
+                                f"Categorical node {node_idx} in tree {i} has legacy threshold "
+                                f"{legacy_threshold!r}, which cannot be represented as a packed 32-bit mask."
+                            )
+                        legacy_mask = int(legacy_threshold) & 0xFFFFFFFF
+                        tree_thresholds[node_idx] = len(legacy_blocks)
+                        legacy_blocks.extend([2, (legacy_mask << 1) & 0xFFFFFFFF, legacy_mask >> 31])
+                    tree_cat_bitsets = np.asarray(legacy_blocks, dtype=np.uint32)
+
+                if cat_node_idx.size:
+                    local_offsets = tree_thresholds[cat_node_idx]
+                    invalid_offsets = (
+                        ~np.isfinite(local_offsets) | (local_offsets < 0) | (local_offsets != np.trunc(local_offsets))
+                    )
+                    if np.any(invalid_offsets):
+                        node_idx = cat_node_idx[np.flatnonzero(invalid_offsets)[0]]
+                        raise ValueError(
+                            f"Categorical node {node_idx} in tree {i} has an invalid bitset offset "
+                            f"{tree_thresholds[node_idx]!r}."
+                        )
+                    if cat_bitset_offset + int(np.max(local_offsets)) > max_exact_bitset_offset:
+                        raise ValueError(
+                            "Categorical bitset offsets exceed the exact-integer range of the model threshold dtype."
+                        )
+                    tree_thresholds[cat_node_idx] += cat_bitset_offset
+
+                if cat_bitset_offset + tree_cat_bitsets.size > max_exact_bitset_offset:
+                    raise ValueError(
+                        "Categorical bitset buffer exceeds the exact-integer range of the model threshold dtype."
+                    )
+
+                self.thresholds[i, : len(tree_thresholds)] = tree_thresholds
                 self.threshold_types[i, : len(self.trees[i].threshold_types)] = self.trees[i].threshold_types
+                cat_bitset_chunks.append(tree_cat_bitsets)
+                cat_bitset_offset += tree_cat_bitsets.size
 
                 # XGBoost supports boosting forest, which is not compatible with the
                 # current assumption here that the number of stacked models represents
@@ -1581,6 +1638,12 @@ class TreeEnsemble:
                 # ensure that the passed background dataset lands in every leaf
                 if np.min(self.trees[i].node_sample_weight) <= 0:
                     self.fully_defined_weighting = False
+
+            self.cat_bitsets = (
+                np.concatenate(cat_bitset_chunks).astype(np.uint32)
+                if cat_bitset_offset > 0
+                else np.zeros(1, dtype=np.uint32)
+            )
 
             self.num_nodes = np.array([len(t.values) for t in self.trees], dtype=np.int32)
             self.max_depth = np.max([t.max_depth for t in self.trees])
@@ -1735,6 +1798,7 @@ class TreeEnsemble:
             self.features,
             self.thresholds,
             self.threshold_types,
+            self.cat_bitsets,
             self.values,
             self.max_depth,
             tree_limit,
@@ -1811,6 +1875,7 @@ class SingleTree:
     features: npt.NDArray[np.int32]
     thresholds: npt.NDArray[np.float64]
     threshold_types: npt.NDArray[np.int32]
+    cat_bitsets: npt.NDArray[np.uint32]
     values: npt.NDArray[Any]
     node_sample_weight: npt.NDArray[np.float64]
     max_depth: int
@@ -1841,6 +1906,7 @@ class SingleTree:
             self.features = tree.feature.astype(np.int32)
             self.thresholds = tree.threshold.astype(np.float64)
             self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
+            self.cat_bitsets = np.zeros(0, dtype=np.uint32)
             self.values = tree.value.reshape(tree.value.shape[0], tree.value.shape[1] * tree.value.shape[2])
             if normalize:
                 self.values = (self.values.T / self.values.sum(1)).T
@@ -1854,6 +1920,7 @@ class SingleTree:
             self.features = tree["features"].astype(np.int32)
             self.thresholds = tree["thresholds"]
             self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
+            self.cat_bitsets = np.zeros(0, dtype=np.uint32)
             self.values = tree["values"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
@@ -1865,6 +1932,7 @@ class SingleTree:
             self.features = tree["feature"].astype(np.int32)
             self.thresholds = tree["threshold"]
             self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
+            self.cat_bitsets = np.zeros(0, dtype=np.uint32)
             self.values = tree["value"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
@@ -1891,6 +1959,7 @@ class SingleTree:
             self.features = np.full(num_nodes, -2, dtype=np.int32)
             self.thresholds = np.full(num_nodes, -2, dtype=np.float64)
             self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
+            self.cat_bitsets = np.zeros(0, dtype=np.uint32)
             self.values = [-2] * num_nodes  # type: ignore[assignment]
             self.node_sample_weight = np.full(num_nodes, -2, dtype=np.float64)
 
@@ -1947,6 +2016,11 @@ class SingleTree:
             self.values = [-2 for _ in range(num_nodes)]  # type: ignore[assignment]
             self.node_sample_weight = np.empty(num_nodes, dtype=np.float64)
 
+            # flat uint32 buffer of category bitset blocks, one per categorical node:
+            # [n_words, w0, w1, ...] with bit (cat % 32) of word (cat // 32) set for each
+            # category routed left; a node's threshold stores its block's start index.
+            cat_bitset_words: list[int] = []
+
             # BFS traversal through the tree structure
             visited, queue = [], [start]
             while queue:
@@ -1979,11 +2053,15 @@ class SingleTree:
                         self.thresholds[vsplit_idx] = vertex["threshold"]
                         self.threshold_types[vsplit_idx] = 0
                     elif isinstance(vertex["threshold"], str):
-                        threshold = 0.0
                         categories = [int(x) for x in vertex["threshold"].split("||")]
+                        n_words = max(categories) // 32 + 1
+                        words = [0] * n_words
                         for cat in categories:
-                            threshold += 2 ** (cat - 1)
-                        self.thresholds[vsplit_idx] = threshold
+                            words[cat // 32] |= 1 << (cat % 32)
+                        start_idx = len(cat_bitset_words)
+                        cat_bitset_words.append(n_words)
+                        cat_bitset_words.extend(words)
+                        self.thresholds[vsplit_idx] = float(start_idx)
                         self.threshold_types[vsplit_idx] = 1  # Indicates that this is a categorical split
                     else:
                         raise TypeError(f"Threshold type {type(vertex['threshold'])} not supported")
@@ -2013,6 +2091,7 @@ class SingleTree:
                     # currently unavailable in `tree`, so we set to 0 first.
                     # cf. https://github.com/lightgbm-org/LightGBM/issues/5962
                     self.node_sample_weight[vleaf_idx] = vertex.get("leaf_count", 0)
+            self.cat_bitsets = np.array(cat_bitset_words, dtype=np.uint32)
             self.values = np.asarray(self.values)
             self.values = np.multiply(self.values, scaling)
 
@@ -2033,6 +2112,7 @@ class SingleTree:
             self.features = -np.ones(m, dtype=np.int32)
             self.thresholds = np.zeros(m, dtype=np.float64)
             self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
+            self.cat_bitsets = np.zeros(0, dtype=np.uint32)
             self.values = np.zeros((m, 1), dtype=np.float64)
             self.node_sample_weight = np.empty(m, dtype=np.float64)
 
@@ -2107,6 +2187,7 @@ class SingleTree:
             self.features = features
             self.thresholds = thresholds  # type: ignore[assignment]
             self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
+            self.cat_bitsets = np.zeros(0, dtype=np.uint32)
             self.values = values[:, np.newaxis] * scaling
             self.node_sample_weight = node_sample_weight
         else:
@@ -2122,6 +2203,7 @@ class SingleTree:
                 self.features,
                 self.thresholds,
                 self.threshold_types,
+                self.cat_bitsets,
                 self.values,
                 1,
                 self.node_sample_weight,
