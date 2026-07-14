@@ -69,7 +69,7 @@ def test_front_page_xgboost():
     shap.dependence_plot("Longitude", shap_values, X, show=False)
 
     # summarize the effects of all the features
-    shap.summary_plot(shap_values, X, show=False)
+    shap.summary_plot(shap_values, X, show=False, rng=np.random.default_rng(0))
 
 
 def test_xgboost_predictions():
@@ -119,7 +119,7 @@ def test_front_page_sklearn():
         shap.dependence_plot("Longitude", shap_values, X, show=False)
 
         # summarize the effects of all the features
-        shap.summary_plot(shap_values, X, show=False)
+        shap.summary_plot(shap_values, X, show=False, rng=np.random.default_rng(0))
 
 
 def _conditional_expectation(tree, S, x):
@@ -1039,7 +1039,7 @@ class TestExplainerSklearn:
         assert np.allclose(interaction_vals, np.swapaxes(interaction_vals, 1, 2))
 
         # ensure the interaction plot works
-        shap.summary_plot(interaction_vals[:, :, :, 0], X, show=False)
+        shap.summary_plot(interaction_vals[:, :, :, 0], X, show=False, rng=np.random.default_rng(0))
 
         # text interaction call from TreeExplainer
         X, y = shap.datasets.adult(n_points=50)
