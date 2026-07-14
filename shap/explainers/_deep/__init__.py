@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+import warnings
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+    import pandas as pd
+
 from ..._explanation import Explanation
 from .._explainer import Explainer
 
@@ -99,23 +106,21 @@ class DeepExplainer(Explainer):
         self.expected_value = self.explainer.expected_value
         self.explainer.framework = framework  # type: ignore
 
-    def __call__(self, X: list | np.ndarray | pd.DataFrame | torch.tensor) -> Explanation:  # type: ignore  # noqa: F821
-        """Return an explanation object for the model applied to X.
-
-        Parameters
-        ----------
-        X : list,
-            if framework == 'tensorflow': numpy.array, or pandas.DataFrame
-            if framework == 'pytorch': torch.tensor
-            A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
-            explain the model's output.
-
-        Returns
-        -------
-        shap.Explanation:
-        """
-        shap_values = self.shap_values(X)
-        return Explanation(values=shap_values, data=X)
+    def __call__(  # type: ignore[override]
+        self,
+        X: list | np.ndarray | pd.DataFrame,
+        ranked_outputs: int | None = None,
+        output_rank_order: str = "max",
+        check_additivity: bool = True,
+    ) -> Explanation:
+        """Return an explanation object for the model applied to X."""
+        sv = self.explainer.shap_values(X, ranked_outputs, output_rank_order, check_additivity=check_additivity)
+        if ranked_outputs is not None:
+            sv, output_indices = sv
+            exp = Explanation(values=sv, data=X)
+            exp.output_indices = output_indices
+            return exp
+        return Explanation(values=sv, data=X)
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
         """Return approximate SHAP values for the model applied to the data given by X.
@@ -161,4 +166,10 @@ class DeepExplainer(Explainer):
                 Return type for models with multiple outputs and one input changed from list to np.ndarray.
 
         """
+        warnings.warn(
+            "shap_values() is deprecated and will be removed in a future release. "
+            "Use the explainer directly as a callable instead: explainer(X).",
+            FutureWarning,
+            stacklevel=2,
+        )
         return self.explainer.shap_values(X, ranked_outputs, output_rank_order, check_additivity=check_additivity)

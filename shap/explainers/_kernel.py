@@ -200,6 +200,8 @@ class KernelExplainer(Explainer):
         X: npt.NDArray[Any] | pd.DataFrame | scipy.sparse.spmatrix,
         l1_reg: str | float | bool = "num_features(10)",
         silent: bool = False,
+        nsamples: str | int = "auto",
+        gc_collect: bool = False,
     ) -> Explanation:
         start_time = time.time()
 
@@ -208,7 +210,7 @@ class KernelExplainer(Explainer):
         else:
             feature_names = getattr(self, "data_feature_names", None)  # type: ignore[assignment]
 
-        v = self.shap_values(X, l1_reg=l1_reg, silent=silent)
+        v = self._compute_shap_values(X, l1_reg=l1_reg, silent=silent, nsamples=nsamples, gc_collect=gc_collect)
         if isinstance(v, list):
             v = np.stack(v, axis=-1)  # put outputs at the end
 
@@ -283,6 +285,20 @@ class KernelExplainer(Explainer):
                 Return type for models with multiple outputs and one input changed from list to np.ndarray.
 
         """
+        warnings.warn(
+            "shap_values() is deprecated and will be removed in a future release. "
+            "Use the explainer directly as a callable instead: explainer(X).",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return self._compute_shap_values(X, **kwargs)
+
+    def _compute_shap_values(
+        self,
+        X: npt.NDArray[Any] | pd.DataFrame | pd.Series | scipy.sparse.spmatrix,
+        **kwargs: Any,
+    ) -> npt.NDArray[Any]:
+        """Internal implementation shared by ``__call__`` and the deprecated ``shap_values``."""
         # convert dataframes
         if isinstance(X, pd.Series):
             X = X.values

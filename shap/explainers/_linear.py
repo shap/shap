@@ -9,6 +9,7 @@ from scipy.sparse import issparse
 from tqdm.auto import tqdm
 
 from .. import links, maskers
+from .._explanation import Explanation
 from ..utils._exceptions import (
     DimensionError,
     InvalidFeaturePerturbationError,
@@ -425,6 +426,33 @@ class LinearExplainer(Explainer):
             "clustering": None,
         }
 
+    def __call__(  # type: ignore[override]
+        self,
+        X: npt.NDArray[np.floating[Any]] | pd.DataFrame | pd.Series,
+    ) -> Explanation:
+        """Explain the model output for samples ``X``."""
+        feature_names: list[str] | None
+        if isinstance(X, pd.DataFrame):
+            feature_names = list(X.columns)
+        else:
+            feature_names = getattr(self, "data_feature_names", None)
+
+        v = self._compute_shap_values(X)
+        if isinstance(v, list):
+            v = np.stack(v, axis=-1)
+
+        if hasattr(self.expected_value, "__len__"):
+            ev_tiled = np.tile(self.expected_value, (v.shape[0], 1))
+        else:
+            ev_tiled = np.tile(self.expected_value, v.shape[0])
+
+        return Explanation(
+            values=v,
+            base_values=ev_tiled,
+            data=X.values if isinstance(X, (pd.DataFrame, pd.Series)) else X,
+            feature_names=feature_names,
+        )
+
     def shap_values(self, X: npt.NDArray[np.floating[Any]] | pd.DataFrame | pd.Series) -> npt.NDArray[np.floating[Any]]:
         """Estimate the SHAP values for a set of samples.
 
@@ -452,6 +480,18 @@ class LinearExplainer(Explainer):
                 Return type for models with multiple outputs changed from list to np.ndarray.
 
         """
+        warnings.warn(
+            "shap_values() is deprecated and will be removed in a future release. "
+            "Use the explainer directly as a callable instead: explainer(X).",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return self._compute_shap_values(X)
+
+    def _compute_shap_values(
+        self, X: npt.NDArray[np.floating[Any]] | pd.DataFrame | pd.Series
+    ) -> npt.NDArray[np.floating[Any]]:
+        """Internal implementation shared by ``__call__`` and the deprecated ``shap_values``."""
         # convert dataframes
         if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
