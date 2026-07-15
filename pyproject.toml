@@ -102,6 +102,8 @@ test = [
   # that were removed in scikit-learn 1.9. See https://github.com/uber/causalml/issues/926
   "scikit-learn<1.9",
   "selenium",  # needed to test the javascript based plots
+  # performance monitoring for time-critical explainers
+  "asv",
 ]
 nbtest = [
   "jupyter",
