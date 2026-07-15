@@ -54,9 +54,13 @@ if have_matplotlib:
     from .plots._beeswarm import summary_legacy as summary_plot
     from .plots._decision import decision as decision_plot
     from .plots._decision import multioutput_decision as multioutput_decision_plot
+
+    # Map directly to the normalized embedding plot function
     from .plots._embedding import embedding as embedding_plot
     from .plots._force import force as force_plot
     from .plots._force import getjs, initjs, save_html
+
+    # Map directly to the normalized group_difference plot function
     from .plots._group_difference import group_difference as group_difference_plot
     from .plots._heatmap import heatmap as heatmap_plot
     from .plots._image import image as image_plot
