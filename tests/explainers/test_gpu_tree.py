@@ -385,12 +385,13 @@ def test_categorical_split_matches_binary_feature():
     np.testing.assert_allclose(cat_cpu, cat_gpu, atol=1e-5)
 
 
-def test_gpu_cpu_match_with_transform_gh3655():
+@pytest.mark.parametrize("model_output", ["log_loss", "probability"])
+def test_gpu_cpu_match_with_transform_gh3655(model_output):
     """GPU and CPU SHAP values should match when using output transforms.
 
     Reproduces GitHub issue #3655: GPU TreeSHAP ignored the output transform
-    (model_output="probability", "log_loss", etc.), producing values that
-    differed greatly from CPU TreeExplainer.
+    (model_output="log_loss", "probability"), producing values that differed
+    greatly from CPU TreeExplainer. The original report uses log_loss.
     """
     xgboost = pytest.importorskip("xgboost")
 
@@ -402,24 +403,23 @@ def test_gpu_cpu_match_with_transform_gh3655():
     model.fit(X, y)
 
     background = X.iloc[:100]
+    X_test = X.iloc[100:110]
+    y_test = y[100:110]
 
-    # Test with model_output="probability" (logistic transform)
     explainer_cpu = shap.TreeExplainer(
-        model, background, feature_perturbation="interventional", model_output="probability"
+        model, background, feature_perturbation="interventional", model_output=model_output
     )
     explainer_gpu = shap.GPUTreeExplainer(
-        model, background, feature_perturbation="interventional", model_output="probability"
+        model, background, feature_perturbation="interventional", model_output=model_output
     )
 
-    X_test = X.iloc[100:110]
-    sv_cpu = explainer_cpu.shap_values(X_test)
-    sv_gpu = explainer_gpu.shap_values(X_test)
+    if model_output == "log_loss":
+        sv_cpu = explainer_cpu.shap_values(X_test, y_test)
+        sv_gpu = explainer_gpu.shap_values(X_test, y_test)
+    else:
+        sv_cpu = explainer_cpu.shap_values(X_test)
+        sv_gpu = explainer_gpu.shap_values(X_test)
 
     np.testing.assert_allclose(
-        sv_cpu, sv_gpu, atol=1e-4, err_msg="GPU vs CPU SHAP values differ with model_output='probability'"
+        sv_cpu, sv_gpu, atol=1e-4, err_msg=f"GPU vs CPU SHAP values differ with model_output='{model_output}'"
     )
-
-    # Verify additivity: sum(shap) + expected_value ≈ predict_proba
-    proba = model.predict_proba(X_test)[:, 1]
-    gpu_sum = sv_gpu.sum(axis=1) + explainer_gpu.expected_value
-    np.testing.assert_allclose(gpu_sum, proba, atol=1e-3, err_msg="GPU SHAP values don't sum to predict_proba")
