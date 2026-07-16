@@ -1350,9 +1350,11 @@ class TestExplainerXGBoost:
         # check that SHAP values sum to model output
         np.testing.assert_allclose(margin, explainer.expected_value + shap_values.sum(axis=1), atol=1e-4, rtol=1e-4)
         # check that interaction values sum to SHAP values and model output
+        # XGBoost computes interactions in float32 (HostDeviceVector<float>),
+        # so summing features accumulates ~1e-6 rounding error
         interaction_values = explainer.shap_interaction_values(X_nan)
-        assert np.allclose(shap_values, interaction_values.sum(axis=2))
-        assert np.allclose(margin, explainer.expected_value + interaction_values.sum(axis=(1, 2)))
+        np.testing.assert_allclose(shap_values, interaction_values.sum(axis=2), atol=1e-5)
+        np.testing.assert_allclose(margin, explainer.expected_value + interaction_values.sum(axis=(1, 2)), atol=1e-5)
 
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_mixed_category_and_nan(self, Clf):
@@ -1374,11 +1376,12 @@ class TestExplainerXGBoost:
         explainer = shap.TreeExplainer(clf)
         shap_values = explainer.shap_values(X)
         # check that SHAP values sum to model output
-        assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
+        # XGBoost computes SHAP in float32, atol=1e-5 for accumulation noise
+        np.testing.assert_allclose(margin, explainer.expected_value + shap_values.sum(axis=1), atol=1e-5)
         # check that interaction values sum to SHAP values and model output
         interaction_values = explainer.shap_interaction_values(X)
-        assert np.allclose(shap_values, interaction_values.sum(axis=2))
-        assert np.allclose(margin, explainer.expected_value + interaction_values.sum(axis=(1, 2)))
+        np.testing.assert_allclose(shap_values, interaction_values.sum(axis=2), atol=1e-5)
+        np.testing.assert_allclose(margin, explainer.expected_value + interaction_values.sum(axis=(1, 2)), atol=1e-5)
 
     @pytest.mark.parametrize("Reg", regressors)
     def test_xgboost_direct(self, Reg):
