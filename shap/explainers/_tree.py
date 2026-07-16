@@ -114,6 +114,89 @@ def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
         )
 
 
+def _empty_cat_bitsets() -> npt.NDArray[np.uint32]:
+    return np.empty(0, dtype=np.uint32)
+
+
+def _check_cat_bitset_offset_representable(offset: int, dtype: npt.DTypeLike, context: str) -> None:
+    threshold_value = np.asarray(offset, dtype=dtype).item()
+    if not np.isfinite(threshold_value) or int(threshold_value) != offset:
+        raise ValueError(
+            f"Categorical bitset offset {offset} for {context} cannot be represented exactly "
+            f"in threshold dtype {np.dtype(dtype)}."
+        )
+
+
+def _cat_bitset_offset_from_threshold(
+    threshold: float,
+    cat_bitsets_size: int,
+    context: str,
+) -> int:
+    if not np.isfinite(threshold):
+        raise ValueError(f"Categorical bitset offset for {context} must be finite, got {threshold}.")
+    offset = int(threshold)
+    if offset != threshold or offset < 0:
+        raise ValueError(f"Categorical bitset offset for {context} must be a non-negative integer, got {threshold}.")
+    if offset >= cat_bitsets_size:
+        raise ValueError(
+            f"Categorical bitset offset {offset} for {context} is outside cat_bitsets buffer "
+            f"of length {cat_bitsets_size}."
+        )
+    return offset
+
+
+def _validate_cat_bitset_block(cat_bitsets: npt.NDArray[np.uint32], offset: int, context: str) -> None:
+    n_words = int(cat_bitsets[offset])
+    if n_words <= 0:
+        raise ValueError(f"Categorical bitset block for {context} must contain at least one word.")
+    end = offset + 1 + n_words
+    if end > cat_bitsets.size:
+        raise ValueError(
+            f"Categorical bitset block for {context} extends past cat_bitsets buffer "
+            f"(offset {offset}, n_words {n_words}, length {cat_bitsets.size})."
+        )
+
+
+def _validate_cat_bitsets(
+    threshold_types: npt.NDArray[np.int32],
+    thresholds: npt.NDArray[Any],
+    cat_bitsets: npt.NDArray[np.uint32],
+    context: str,
+) -> None:
+    if threshold_types.shape != thresholds.shape:
+        raise ValueError(
+            f"{context} threshold_types shape {threshold_types.shape} does not match thresholds shape {thresholds.shape}."
+        )
+    cat_nodes = np.flatnonzero(threshold_types == 1)
+    if cat_nodes.size == 0:
+        return
+    if cat_bitsets.size == 0:
+        raise ValueError(
+            f"{context} has categorical threshold_types but no cat_bitsets buffer. "
+            "Categorical thresholds must be offsets into a uint32 cat_bitsets buffer."
+        )
+    for node_idx in cat_nodes:
+        offset = _cat_bitset_offset_from_threshold(float(thresholds[node_idx]), cat_bitsets.size, context)
+        _check_cat_bitset_offset_representable(offset, thresholds.dtype, context)
+        _validate_cat_bitset_block(cat_bitsets, offset, context)
+
+
+def _build_cat_bitset_block(categories: list[int], context: str) -> npt.NDArray[np.uint32]:
+    if not categories:
+        raise ValueError(f"Categorical split for {context} must contain at least one category.")
+    for category in categories:
+        if category < 0:
+            raise ValueError(f"Categorical split for {context} has negative category {category}.")
+    n_words = max(categories) // 32 + 1
+    block = np.zeros(n_words + 1, dtype=np.uint32)
+    block[0] = n_words
+    for category in categories:
+        word = category // 32
+        bit = category % 32
+        block[1 + word] |= np.uint32(1 << bit)
+    return block
+
+
 class TreeExplainer(Explainer):
     """Uses Tree SHAP algorithms to explain the output of ensemble tree models.
 
@@ -690,6 +773,7 @@ class TreeExplainer(Explainer):
                 self.model.features,
                 self.model.thresholds,
                 self.model.threshold_types,
+                self.model.cat_bitsets,
                 self.model.values,
                 self.model.node_sample_weight,
                 self.model.max_depth,
@@ -713,6 +797,7 @@ class TreeExplainer(Explainer):
                 self.model.features,
                 self.model.thresholds,
                 self.model.threshold_types,
+                self.model.cat_bitsets,
                 self.model.values,
                 self.model.max_depth,
                 tree_limit,
@@ -861,6 +946,7 @@ class TreeExplainer(Explainer):
             self.model.features,
             self.model.thresholds,
             self.model.threshold_types,
+            self.model.cat_bitsets,
             self.model.values,
             self.model.node_sample_weight,
             self.model.max_depth,
@@ -967,6 +1053,7 @@ class TreeEnsemble:
     features: npt.NDArray[np.int32]
     thresholds: npt.NDArray[Any]
     threshold_types: npt.NDArray[np.int32]
+    cat_bitsets: npt.NDArray[np.uint32]
     values: npt.NDArray[Any]
     node_sample_weight: npt.NDArray[Any]
     num_nodes: npt.NDArray[np.int32]
@@ -999,6 +1086,7 @@ class TreeEnsemble:
         self.tree_limit = None  # used for limiting the number of trees we use by default (like from early stopping)
         self.num_stacked_models = 1  # If this is greater than 1 it means we have multiple stacked models with the same number of trees in each model (XGBoost multi-output style)
         self.cat_feature_indices = None  # If this is set it tells us which features are treated categorically
+        self.cat_bitsets = _empty_cat_bitsets()
         self._xgb_enable_categorical = False
 
         # we use names like keras
@@ -1556,14 +1644,39 @@ class TreeEnsemble:
             self.threshold_types = np.zeros((num_trees, max_nodes), dtype=np.int32)
             self.values = np.zeros((num_trees, max_nodes, self.num_outputs), dtype=self.internal_dtype)
             self.node_sample_weight = np.zeros((num_trees, max_nodes), dtype=self.internal_dtype)
+            cat_bitsets: list[npt.NDArray[np.uint32]] = []
+            cat_bitset_offset = 0
 
             for i in range(num_trees):
-                self.children_left[i, : len(self.trees[i].children_left)] = self.trees[i].children_left
-                self.children_right[i, : len(self.trees[i].children_right)] = self.trees[i].children_right
-                self.children_default[i, : len(self.trees[i].children_default)] = self.trees[i].children_default
-                self.features[i, : len(self.trees[i].features)] = self.trees[i].features
-                self.thresholds[i, : len(self.trees[i].thresholds)] = self.trees[i].thresholds
-                self.threshold_types[i, : len(self.trees[i].threshold_types)] = self.trees[i].threshold_types
+                tree = self.trees[i]
+                self.children_left[i, : len(tree.children_left)] = tree.children_left
+                self.children_right[i, : len(tree.children_right)] = tree.children_right
+                self.children_default[i, : len(tree.children_default)] = tree.children_default
+                self.features[i, : len(tree.features)] = tree.features
+                self.threshold_types[i, : len(tree.threshold_types)] = tree.threshold_types
+
+                tree_thresholds = tree.thresholds.astype(self.internal_dtype, copy=True)
+                cat_nodes = np.flatnonzero(tree.threshold_types == 1)
+                if cat_nodes.size > 0:
+                    if tree.cat_bitsets.size == 0:
+                        raise ValueError(
+                            f"Tree {i} has categorical threshold_types but no cat_bitsets buffer. "
+                            "Categorical thresholds must be offsets into a uint32 cat_bitsets buffer."
+                        )
+                    for node_idx in cat_nodes:
+                        local_offset = _cat_bitset_offset_from_threshold(
+                            float(tree.thresholds[node_idx]), tree.cat_bitsets.size, f"tree {i}, node {node_idx}"
+                        )
+                        _validate_cat_bitset_block(tree.cat_bitsets, local_offset, f"tree {i}, node {node_idx}")
+                        global_offset = cat_bitset_offset + local_offset
+                        _check_cat_bitset_offset_representable(
+                            global_offset, self.internal_dtype, f"tree {i}, node {node_idx}"
+                        )
+                        tree_thresholds[node_idx] = global_offset
+                self.thresholds[i, : len(tree_thresholds)] = tree_thresholds
+                if tree.cat_bitsets.size > 0:
+                    cat_bitsets.append(tree.cat_bitsets)
+                    cat_bitset_offset += tree.cat_bitsets.size
 
                 # XGBoost supports boosting forest, which is not compatible with the
                 # current assumption here that the number of stacked models represents
@@ -1575,15 +1688,16 @@ class TreeEnsemble:
 
                 if n_stacks > 1:
                     stack_pos = i % n_stacks
-                    self.values[i, : len(self.trees[i].values[:, 0]), stack_pos] = self.trees[i].values[:, 0]
+                    self.values[i, : len(tree.values[:, 0]), stack_pos] = tree.values[:, 0]
                 else:
-                    self.values[i, : len(self.trees[i].values)] = self.trees[i].values
-                self.node_sample_weight[i, : len(self.trees[i].node_sample_weight)] = self.trees[i].node_sample_weight
+                    self.values[i, : len(tree.values)] = tree.values
+                self.node_sample_weight[i, : len(tree.node_sample_weight)] = tree.node_sample_weight
 
                 # ensure that the passed background dataset lands in every leaf
-                if np.min(self.trees[i].node_sample_weight) <= 0:
+                if np.min(tree.node_sample_weight) <= 0:
                     self.fully_defined_weighting = False
 
+            self.cat_bitsets = np.concatenate(cat_bitsets) if cat_bitsets else _empty_cat_bitsets()
             self.num_nodes = np.array([len(t.values) for t in self.trees], dtype=np.int32)
             self.max_depth = np.max([t.max_depth for t in self.trees])
 
@@ -1737,6 +1851,7 @@ class TreeEnsemble:
             self.features,
             self.thresholds,
             self.threshold_types,
+            self.cat_bitsets,
             self.values,
             self.max_depth,
             tree_limit,
@@ -1813,6 +1928,7 @@ class SingleTree:
     features: npt.NDArray[np.int32]
     thresholds: npt.NDArray[np.float64]
     threshold_types: npt.NDArray[np.int32]
+    cat_bitsets: npt.NDArray[np.uint32]
     values: npt.NDArray[Any]
     node_sample_weight: npt.NDArray[np.float64]
     max_depth: int
@@ -1826,6 +1942,7 @@ class SingleTree:
         data_missing: npt.NDArray[np.bool_] | None = None,
     ) -> None:
         assert_import("cext")
+        self.cat_bitsets = _empty_cat_bitsets()
 
         if safe_isinstance(
             tree,
@@ -1854,8 +1971,12 @@ class SingleTree:
             self.children_right = tree["children_right"].astype(np.int32)
             self.children_default = tree["children_default"].astype(np.int32)
             self.features = tree["features"].astype(np.int32)
-            self.thresholds = tree["thresholds"]
-            self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
+            self.thresholds = np.asarray(tree["thresholds"])
+            self.threshold_types = np.asarray(
+                tree.get("threshold_types", tree.get("threshold_type", np.zeros_like(self.thresholds))),
+                dtype=np.int32,
+            )
+            self.cat_bitsets = np.asarray(tree.get("cat_bitsets", _empty_cat_bitsets()), dtype=np.uint32)
             self.values = tree["values"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
@@ -1865,8 +1986,12 @@ class SingleTree:
             self.children_right = tree["children_right"].astype(np.int32)
             self.children_default = tree["children_default"].astype(np.int32)
             self.features = tree["feature"].astype(np.int32)
-            self.thresholds = tree["threshold"]
-            self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
+            self.thresholds = np.asarray(tree["threshold"])
+            self.threshold_types = np.asarray(
+                tree.get("threshold_types", tree.get("threshold_type", np.zeros_like(self.thresholds))),
+                dtype=np.int32,
+            )
+            self.cat_bitsets = np.asarray(tree.get("cat_bitsets", _empty_cat_bitsets()), dtype=np.uint32)
             self.values = tree["value"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
@@ -1948,6 +2073,8 @@ class SingleTree:
             self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = [-2 for _ in range(num_nodes)]  # type: ignore[assignment]
             self.node_sample_weight = np.empty(num_nodes, dtype=np.float64)
+            cat_bitsets: list[npt.NDArray[np.uint32]] = []
+            cat_bitset_offset = 0
 
             # BFS traversal through the tree structure
             visited, queue = [], [start]
@@ -1981,12 +2108,15 @@ class SingleTree:
                         self.thresholds[vsplit_idx] = vertex["threshold"]
                         self.threshold_types[vsplit_idx] = 0
                     elif isinstance(vertex["threshold"], str):
-                        threshold = 0.0
                         categories = [int(x) for x in vertex["threshold"].split("||")]
-                        for cat in categories:
-                            threshold += 2**cat
-                        self.thresholds[vsplit_idx] = threshold
+                        block = _build_cat_bitset_block(categories, f"LightGBM node {vsplit_idx}")
+                        _check_cat_bitset_offset_representable(
+                            cat_bitset_offset, self.thresholds.dtype, f"LightGBM node {vsplit_idx}"
+                        )
+                        self.thresholds[vsplit_idx] = cat_bitset_offset
                         self.threshold_types[vsplit_idx] = 1  # Indicates that this is a categorical split
+                        cat_bitsets.append(block)
+                        cat_bitset_offset += block.size
                     else:
                         raise TypeError(f"Threshold type {type(vertex['threshold'])} not supported")
                     self.values[vsplit_idx] = [vertex["internal_value"]]
@@ -2017,6 +2147,7 @@ class SingleTree:
                     self.node_sample_weight[vleaf_idx] = vertex.get("leaf_count", 0)
             self.values = np.asarray(self.values)
             self.values = np.multiply(self.values, scaling)
+            self.cat_bitsets = np.concatenate(cat_bitsets) if cat_bitsets else _empty_cat_bitsets()
 
         elif isinstance(tree, dict) and "nodeid" in tree:
             """ Directly create tree given the JSON dump (with stats) of a XGBoost model.
@@ -2114,6 +2245,8 @@ class SingleTree:
         else:
             raise TypeError("Unknown input to SingleTree constructor: " + str(tree))
 
+        _validate_cat_bitsets(self.threshold_types, self.thresholds, self.cat_bitsets, "SingleTree")
+
         # Re-compute the number of samples that pass through each node if we are given data
         if data is not None and data_missing is not None:
             self.node_sample_weight.fill(0.0)
@@ -2124,6 +2257,7 @@ class SingleTree:
                 self.features,
                 self.thresholds,
                 self.threshold_types,
+                self.cat_bitsets,
                 self.values,
                 1,
                 self.node_sample_weight,

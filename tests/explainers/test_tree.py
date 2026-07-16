@@ -3317,6 +3317,184 @@ def test_interventional_categorical():
     np.testing.assert_allclose(total + explainer.expected_value, preds, atol=1e-4)
 
 
+def _wide_categorical_lightgbm_model():
+    lightgbm = pytest.importorskip("lightgbm")
+
+    categories = np.tile(np.arange(50, dtype=np.float64), 10)
+    cont = np.linspace(-1.0, 1.0, categories.size)
+    X = np.column_stack([categories, cont])
+    y = np.where(np.isin(categories, [0, 31, 32, 47]), 10.0, -1.0) + 0.1 * cont
+
+    required = np.array(
+        [
+            [0, -0.75],
+            [31, -0.25],
+            [32, 0.25],
+            [47, 0.75],
+        ],
+        dtype=np.float64,
+    )
+    required_y = np.where(np.isin(required[:, 0], [0, 31, 32, 47]), 10.0, -1.0) + 0.1 * required[:, 1]
+    X = np.vstack([required, X])
+    y = np.concatenate([required_y, y])
+
+    dataset = lightgbm.Dataset(X, label=y, categorical_feature=[0], free_raw_data=False)
+    model = lightgbm.train(
+        {
+            "objective": "regression",
+            "verbose": -1,
+            "learning_rate": 0.5,
+            "num_leaves": 8,
+            "max_depth": 3,
+            "min_data_in_leaf": 1,
+            "min_data_in_bin": 1,
+            "max_cat_to_onehot": 1,
+            "cat_smooth": 0,
+            "cat_l2": 0,
+            "seed": 0,
+            "feature_fraction_seed": 0,
+            "bagging_seed": 0,
+            "data_random_seed": 0,
+            "num_threads": 1,
+        },
+        dataset,
+        num_boost_round=6,
+    )
+    return model, X, required
+
+
+def _cat_bitset_contains(cat_bitsets, offset, category):
+    word_index = category // 32
+    bit_index = category % 32
+    n_words = int(cat_bitsets[offset])
+    return word_index < n_words and (int(cat_bitsets[offset + 1 + word_index]) & (1 << bit_index)) != 0
+
+
+def test_interventional_categorical_uint32_bitsets():
+    """Verify interventional TreeSHAP handles LightGBM categorical splits past category 31."""
+    model, X, X_test = _wide_categorical_lightgbm_model()
+    bg = X[:80]
+    required_categories = {0, 31, 32, 47}
+    assert required_categories.issubset(set(X_test[:, 0].astype(int)))
+    assert required_categories.issubset(set(bg[:, 0].astype(int)))
+
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+
+    cat_nodes = np.argwhere(explainer.model.threshold_types == 1)
+    assert cat_nodes.shape[0] > 1
+    assert explainer.model.cat_bitsets.dtype == np.uint32
+    global_offsets = explainer.model.thresholds[explainer.model.threshold_types == 1].astype(int)
+    np.testing.assert_allclose(global_offsets, explainer.model.thresholds[explainer.model.threshold_types == 1])
+    assert np.all(global_offsets >= 0)
+    assert np.all(global_offsets < explainer.model.cat_bitsets.size)
+    assert any(int(explainer.model.cat_bitsets[offset]) >= 2 for offset in global_offsets)
+    assert any(_cat_bitset_contains(explainer.model.cat_bitsets, offset, 0) for offset in global_offsets)
+    assert any(_cat_bitset_contains(explainer.model.cat_bitsets, offset, 31) for offset in global_offsets)
+    assert any(_cat_bitset_contains(explainer.model.cat_bitsets, offset, 32) for offset in global_offsets)
+    assert any(_cat_bitset_contains(explainer.model.cat_bitsets, offset, 47) for offset in global_offsets)
+
+    cat_bitset_offset = 0
+    shifted_later_tree = False
+    for tree_idx, tree in enumerate(explainer.model.trees):
+        local_cat_nodes = np.flatnonzero(tree.threshold_types == 1)
+        if local_cat_nodes.size:
+            local_offsets = tree.thresholds[local_cat_nodes].astype(int)
+            dense_offsets = explainer.model.thresholds[tree_idx, local_cat_nodes].astype(int)
+            np.testing.assert_array_equal(dense_offsets, local_offsets + cat_bitset_offset)
+            shifted_later_tree |= cat_bitset_offset > 0 and np.any(local_offsets == 0)
+        cat_bitset_offset += tree.cat_bitsets.size
+    assert cat_bitset_offset == explainer.model.cat_bitsets.size
+    assert shifted_later_tree
+
+    sv = explainer.shap_values(X_test)
+    preds = model.predict(X_test)
+    np.testing.assert_allclose(sv.sum(axis=1) + explainer.expected_value, preds, atol=1e-4)
+
+    interactions = explainer.shap_interaction_values(X_test)
+    np.testing.assert_allclose(interactions, np.swapaxes(interactions, 1, 2), atol=1e-6)
+    np.testing.assert_allclose(interactions.sum(axis=2), sv, atol=1e-4)
+    np.testing.assert_allclose(interactions.sum(axis=(1, 2)) + explainer.expected_value, preds, atol=1e-4)
+
+
+def test_lightgbm_categorical_uint32_bitsets_saabas():
+    """Approximate Tree SHAP must route categorical bitset offsets correctly."""
+    model, X, X_test = _wide_categorical_lightgbm_model()
+    explainer = shap.TreeExplainer(model, X[:80], feature_perturbation="interventional")
+
+    shap_values = explainer.shap_values(X_test, approximate=True)
+    preds = model.predict(X_test)
+
+    np.testing.assert_allclose(shap_values.sum(axis=1) + explainer.expected_value, preds, atol=1e-4)
+
+
+def _categorical_tree_dict(cat_bitsets=None):
+    tree = {
+        "children_left": np.array([1, -1, -1], dtype=np.int32),
+        "children_right": np.array([2, -1, -1], dtype=np.int32),
+        "children_default": np.array([1, -1, -1], dtype=np.int32),
+        "features": np.array([0, -1, -1], dtype=np.int32),
+        "thresholds": np.array([0.0, -1.0, -1.0], dtype=np.float64),
+        "threshold_types": np.array([1, -1, -1], dtype=np.int32),
+        "values": np.array([[0.0], [1.0], [-1.0]], dtype=np.float64),
+        "node_sample_weight": np.array([2.0, 1.0, 1.0], dtype=np.float64),
+    }
+    if cat_bitsets is not None:
+        tree["cat_bitsets"] = cat_bitsets
+    return tree
+
+
+def test_categorical_tree_requires_cat_bitsets():
+    """Categorical nodes must not fall back to legacy packed threshold masks."""
+    from shap.explainers._tree import TreeEnsemble
+
+    message = "categorical threshold_types but no cat_bitsets buffer"
+    with pytest.raises(ValueError, match=message):
+        SingleTree(_categorical_tree_dict())
+
+    tree = SingleTree(_categorical_tree_dict(np.array([2, 1, 1], dtype=np.uint32)))
+    tree.cat_bitsets = np.empty(0, dtype=np.uint32)
+    with pytest.raises(ValueError, match=message):
+        TreeEnsemble([tree])
+
+
+def test_categorical_global_path_dependent_rejected():
+    """The global path dependent C extension path must reject categorical offsets."""
+    from shap import _cext
+    from shap.explainers import _tree
+    from shap.explainers._tree import TreeEnsemble
+
+    tree = SingleTree(_categorical_tree_dict(np.array([2, 1, 1], dtype=np.uint32)))
+    ensemble = TreeEnsemble([tree])
+    X = np.array([[0.0], [32.0], [7.0]], dtype=np.float64)
+    X_missing = np.zeros_like(X, dtype=bool)
+    phi = np.zeros((X.shape[0], X.shape[1] + 1, 1), dtype=np.float64)
+
+    with pytest.raises(ValueError, match="global_path_dependent.*categorical splits"):
+        _cext.dense_tree_shap(
+            ensemble.children_left,
+            ensemble.children_right,
+            ensemble.children_default,
+            ensemble.features,
+            ensemble.thresholds,
+            ensemble.threshold_types,
+            ensemble.cat_bitsets,
+            ensemble.values,
+            ensemble.node_sample_weight,
+            ensemble.max_depth,
+            X,
+            X_missing,
+            None,
+            X,
+            X_missing,
+            -1,
+            ensemble.base_offset,
+            phi,
+            _tree.feature_perturbation_codes["global_path_dependent"],
+            _tree.output_transform_codes["identity"],
+            False,
+        )
+
+
 def test_interventional_vs_path_dependent_uncorrelated():
     """On uncorrelated data, both modes should approximately agree."""
     np.random.seed(42)
