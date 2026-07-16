@@ -3015,3 +3015,48 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+def test_uint32_overflow_out_contribs():
+    """Unsigned 32-bit overflow in out_contribs pointer arithmetic.
+
+    When num_samples * (num_features + 1) exceeds 2^32, unsigned pointer
+    offset wraps around silently, writing SHAP values to wrong memory
+    locations. With 65537 samples and 65535 features, sample 65536's
+    offset wraps to 0, corrupting sample 0.
+
+    Fixes #4151, #4002.
+    """
+    import psutil
+
+    avail = psutil.virtual_memory().available
+    # 65537 samples * 65536 columns * 8 bytes = ~32GB for the output array
+    required = 65537 * 65536 * 8
+    if avail < required * 1.2:
+        pytest.skip(f"not enough RAM: {avail / 2**30:.0f}GB available, need ~{required * 1.2 / 2**30:.0f}GB")
+
+    np.random.seed(42)
+    n_features = 65535
+    n_samples = 65537  # i=65536 causes 65536 * 65536 = 2^32 = 0 (wraps)
+
+    # Trivial model: single split on feature 0
+    X = np.random.randn(200, n_features).astype(np.float32)
+    y = (X[:, 0] > 0).astype(float)
+    model = DecisionTreeRegressor(max_depth=1, random_state=42)
+    model.fit(X, y)
+
+    # Build test data: first and last samples have distinct feature 0 values
+    X_test = np.zeros((n_samples, n_features), dtype=np.float64)
+    X_test[0, 0] = -2.0  # goes left at the split
+    X_test[-1, 0] = 2.0  # goes right at the split
+
+    explainer = shap.TreeExplainer(model)
+    sv = explainer.shap_values(X_test, approximate=True)
+
+    # Sample 0 and sample 65536 should have different SHAP values
+    # (feature 0 value differs). On unpatched code, sample 65536
+    # overwrites sample 0 due to pointer wrap.
+    assert sv[0, 0] != sv[-1, 0], (
+        f"sample 0 and sample 65536 have identical SHAP values ({sv[0, 0]}) — "
+        "pointer arithmetic likely wrapped (uint32 overflow)"
+    )
