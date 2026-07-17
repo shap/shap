@@ -12,7 +12,7 @@ import scipy.spatial
 import sklearn
 from numba import njit
 
-from .._cutils import reverse_window, reverse_window_score_gain
+from .._cutils import delta_minimization_order as delta_minimization_order
 from ..utils._exceptions import DimensionError
 from ._show_progress import show_progress
 
@@ -75,19 +75,19 @@ def _pt_shuffle_rec(
     return pos
 
 
-# @njit
-def delta_minimization_order(
-    all_masks: npt.NDArray[Any],
-    max_swap_size: int = 100,
-    num_passes: int = 2,
-) -> npt.NDArray[Any]:  # type: ignore[misc]
-    order = np.arange(len(all_masks), dtype=np.int64)
-    for _ in range(num_passes):
-        for length in list(range(2, max_swap_size)):
-            for i in range(1, len(order) - length):
-                if reverse_window_score_gain(all_masks, order, i, length) > 0:
-                    reverse_window(order, i, length)
-    return order
+# # @njit
+# def delta_minimization_order(
+#     all_masks: npt.NDArray[Any],
+#     max_swap_size: int = 100,
+#     num_passes: int = 2,
+# ) -> npt.NDArray[Any]:  # type: ignore[misc]
+#     order = np.arange(len(all_masks), dtype=np.int64)
+#     for _ in range(num_passes):
+#         for length in list(range(2, max_swap_size)):
+#             for i in range(1, len(order) - length):
+#                 if reverse_window_score_gain(all_masks, order, i, length) > 0:
+#                     reverse_window(order, i, length)
+#     return order
 
 
 @njit

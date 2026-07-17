@@ -13,4 +13,5 @@ NB_MODULE(_cutils, m)
     m.def("compute_exp_val", &compute_exp_val, "nsamples_run"_a, "nsamples_added"_a, "D"_a, "N"_a, "weights"_a, "y"_a, "ey"_a, "Compute the expected value for the kernel explainer algorithm");
     m.def("reverse_window", &clustering::reverse_window, "order"_a, "start"_a, "length"_a, "Reverse a window of the order array in place");
     m.def("reverse_window_score_gain", &clustering::reverse_window_score_gain, "masks"_a, "order"_a, "start"_a, "length"_a, "Compute the score gain from reversing a window of the order array");
+    m.def("delta_minimization_order", &clustering::delta_minimization_order, "all_masks"_a, "max_swap_size"_a = 100, "num_passes"_a = 2, "Compute the order of elements that minimizes the delta score");
 }
