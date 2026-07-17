@@ -75,51 +75,6 @@ def _pt_shuffle_rec(
     return pos
 
 
-# # @njit
-# def delta_minimization_order(
-#     all_masks: npt.NDArray[Any],
-#     max_swap_size: int = 100,
-#     num_passes: int = 2,
-# ) -> npt.NDArray[Any]:  # type: ignore[misc]
-#     order = np.arange(len(all_masks), dtype=np.int64)
-#     for _ in range(num_passes):
-#         for length in list(range(2, max_swap_size)):
-#             for i in range(1, len(order) - length):
-#                 if reverse_window_score_gain(all_masks, order, i, length) > 0:
-#                     reverse_window(order, i, length)
-#     return order
-
-
-@njit
-def _reverse_window(order: npt.NDArray[Any], start: int, length: int) -> None:  # type: ignore[misc]
-    for i in range(length // 2):
-        tmp = order[start + i]
-        order[start + i] = order[start + length - i - 1]
-        order[start + length - i - 1] = tmp
-
-
-@njit
-def _reverse_window_score_gain(
-    masks: npt.NDArray[Any],
-    order: npt.NDArray[Any],
-    start: int,
-    length: int,
-) -> int:  # type: ignore[misc]
-    forward_score = _mask_delta_score(masks[order[start - 1]], masks[order[start]]) + _mask_delta_score(
-        masks[order[start + length - 1]], masks[order[start + length]]
-    )
-    reverse_score = _mask_delta_score(masks[order[start - 1]], masks[order[start + length - 1]]) + _mask_delta_score(
-        masks[order[start]], masks[order[start + length]]
-    )
-
-    return forward_score - reverse_score
-
-
-@njit
-def _mask_delta_score(m1: npt.NDArray[Any], m2: npt.NDArray[Any]) -> int:  # type: ignore[misc]
-    return (m1 ^ m2).sum()
-
-
 def hclust_ordering(
     X: npt.NDArray[Any],
     metric: str = "sqeuclidean",
