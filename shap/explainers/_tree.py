@@ -456,6 +456,10 @@ class TreeExplainer(Explainer):
         tree_limit: int | None,
         check_additivity: bool,
     ) -> tuple[npt.NDArray[Any], npt.NDArray[Any] | pd.Series | None, npt.NDArray[np.bool_], bool, int, bool]:
+        # convert plain Python lists to numpy arrays
+        if isinstance(X, list):
+            X = np.array(X, dtype=self.model.input_dtype)
+
         # see if we have a default tree_limit in place.
         if tree_limit is None:
             tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
