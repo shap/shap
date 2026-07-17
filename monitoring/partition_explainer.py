@@ -57,7 +57,7 @@ class ImagePartitionSuite:
         tmp = x.copy()
         if len(tmp.shape) == 2:
             tmp = tmp.reshape(tmp.shape[0], *self.X[0].shape)
-        preprocess_input(tmp)
+        tmp = preprocess_input(tmp)
         return self.model(tmp)
 
     def time_masker_init(self):

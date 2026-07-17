@@ -1,10 +1,7 @@
-# TODO: heapq in numba does not yet support Typed Lists so we can move to them yet...
 import heapq
 
-# import numba.typed
 import numpy as np
 
-# from numba import njit
 from .._serializable import Deserializer, Serializer
 from ..utils import assert_import, record_import_error, safe_isinstance
 from ..utils._exceptions import DimensionError
