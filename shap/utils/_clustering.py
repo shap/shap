@@ -12,7 +12,7 @@ import scipy.spatial
 import sklearn
 from numba import njit
 
-from ..cutils import reverse_window
+from .._cutils import reverse_window, reverse_window_score_gain
 from ..utils._exceptions import DimensionError
 from ._show_progress import show_progress
 
@@ -85,7 +85,7 @@ def delta_minimization_order(
     for _ in range(num_passes):
         for length in list(range(2, max_swap_size)):
             for i in range(1, len(order) - length):
-                if _reverse_window_score_gain(all_masks, order, i, length) > 0:
+                if reverse_window_score_gain(all_masks, order, i, length) > 0:
                     reverse_window(order, i, length)
     return order
 
