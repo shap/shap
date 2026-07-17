@@ -50,6 +50,9 @@ class ImagePartitionSuite:
             self.model = ResNet50(weights="imagenet")
         self.X, self.y = imagenet50()
 
+        # Dry run to avoid numba jit compilation time in the benchmark
+        _ = Image("inpaint_telea", self.X[0].shape)
+
     def predict(self, x):
         tmp = x.copy()
         if len(tmp.shape) == 2:
