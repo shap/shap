@@ -11,12 +11,12 @@ using namespace nb::literals;
 
 
 void compute_grey_code_row_values_2d(
-    nb::ndarray<double, nb::shape<-1, -1>, nb::device::cpu>& row_values,
-    nb::ndarray<bool, nb::shape<-1>, nb::device::cpu>& mask,
-    const nb::ndarray<uint64_t, nb::shape<-1>, nb::device::cpu>& inds,
-    nb::ndarray<double, nb::shape<-1, -1>, nb::device::cpu>& outputs,
-    const nb::ndarray<double, nb::shape<-1>, nb::device::cpu>& shapley_coeff,
-    const nb::ndarray<uint64_t, nb::shape<-1>, nb::device::cpu>& extended_delta_indexes,
+    nb::ndarray<double, nb::shape<-1, -1>>& row_values,
+    nb::ndarray<bool, nb::shape<-1>>& mask,
+    const nb::ndarray<uint64_t, nb::shape<-1>>& inds,
+    nb::ndarray<double, nb::shape<-1, -1>>& outputs,
+    const nb::ndarray<double, nb::shape<-1>>& shapley_coeff,
+    const nb::ndarray<uint64_t, nb::shape<-1>>& extended_delta_indexes,
     const int noop_code
 ) {
 	assert(row_values.shape(0) == mask.shape(0));
@@ -74,12 +74,12 @@ void compute_grey_code_row_values_2d(
 }
 
 void compute_grey_code_row_values_1d(
-    nb::ndarray<double, nb::shape<-1>, nb::device::cpu>& row_values,
-    nb::ndarray<bool, nb::shape<-1>, nb::device::cpu>& mask,
-    const nb::ndarray<uint64_t, nb::shape<-1>, nb::device::cpu>& inds,
-    nb::ndarray<double, nb::shape<-1>, nb::device::cpu>& outputs,
-    const nb::ndarray<double, nb::shape<-1>, nb::device::cpu>& shapley_coeff,
-    const nb::ndarray<uint64_t, nb::shape<-1>, nb::device::cpu>& extended_delta_indexes,
+    nb::ndarray<double, nb::shape<-1>>& row_values,
+    nb::ndarray<bool, nb::shape<-1>>& mask,
+    const nb::ndarray<uint64_t, nb::shape<-1>>& inds,
+    nb::ndarray<double, nb::shape<-1>>& outputs,
+    const nb::ndarray<double, nb::shape<-1>>& shapley_coeff,
+    const nb::ndarray<uint64_t, nb::shape<-1>>& extended_delta_indexes,
     const int noop_code
 ) {
 	assert(row_values.shape(0) == mask.shape(0));
@@ -133,12 +133,12 @@ void compute_grey_code_row_values_1d(
 }
 
 void compute_grey_code_row_values_st_1d(
-    nb::ndarray<double, nb::shape<-1, -1>, nb::device::cpu>& row_values,
-    nb::ndarray<bool, nb::shape<-1>, nb::device::cpu>& mask,
-    const nb::ndarray<uint64_t, nb::shape<-1>, nb::device::cpu>& inds,
-    nb::ndarray<double, nb::shape<-1>, nb::device::cpu>& outputs,
-    const nb::ndarray<double, nb::shape<-1>, nb::device::cpu>& shapley_coeff,
-    const nb::ndarray<uint64_t, nb::shape<-1>, nb::device::cpu>& extended_delta_indexes,
+    nb::ndarray<double, nb::shape<-1, -1>>& row_values,
+    nb::ndarray<bool, nb::shape<-1>>& mask,
+    const nb::ndarray<uint64_t, nb::shape<-1>>& inds,
+    nb::ndarray<double, nb::shape<-1>>& outputs,
+    const nb::ndarray<double, nb::shape<-1>>& shapley_coeff,
+    const nb::ndarray<uint64_t, nb::shape<-1>>& extended_delta_indexes,
     const int noop_code
 ) {
     size_t set_size = 0;
@@ -174,12 +174,12 @@ void compute_grey_code_row_values_st_1d(
 }
 
 void compute_grey_code_row_values_st_2d(
-    nb::ndarray<double, nb::shape<-1, -1, -1>, nb::device::cpu>& row_values,
-    nb::ndarray<bool, nb::shape<-1>, nb::device::cpu>& mask,
-    const nb::ndarray<uint64_t, nb::shape<-1>, nb::device::cpu>& inds,
-    nb::ndarray<double, nb::shape<-1, -1>, nb::device::cpu>& outputs,
-    const nb::ndarray<double, nb::shape<-1>, nb::device::cpu>& shapley_coeff,
-    const nb::ndarray<uint64_t, nb::shape<-1>, nb::device::cpu>& extended_delta_indexes,
+    nb::ndarray<double, nb::shape<-1, -1, -1>>& row_values,
+    nb::ndarray<bool, nb::shape<-1>>& mask,
+    const nb::ndarray<uint64_t, nb::shape<-1>>& inds,
+    nb::ndarray<double, nb::shape<-1, -1>>& outputs,
+    const nb::ndarray<double, nb::shape<-1>>& shapley_coeff,
+    const nb::ndarray<uint64_t, nb::shape<-1>>& extended_delta_indexes,
     const int noop_code
 ) {
     size_t set_size = 0;
