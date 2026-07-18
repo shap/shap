@@ -7,6 +7,42 @@
 namespace nb = nanobind;
 
 namespace clustering {
+    int64_t pt_shuffle_rec(
+        const int64_t i,
+        nb::ndarray<nb::numpy, int64_t, nb::ndim<1>>& indexes,
+        const nb::ndarray<nb::numpy, bool, nb::ndim<1>>& index_mask,
+        const nb::ndarray<nb::numpy, double, nb::ndim<2>>& partition_tree,
+        const int64_t num_features,
+        const int64_t pos,
+        const nb::ndarray<nb::numpy, bool, nb::ndim<1>>& switches
+    ) {
+        auto inds = indexes.view();
+        auto mask = index_mask.view();
+        auto tree = partition_tree.view();
+        auto branch_switches = switches.view();
+
+        if (i < 0) {
+            const int64_t feature_index = i + num_features;
+            if (mask(feature_index)) {
+                inds(pos) = feature_index;
+                return pos + 1;
+            }
+            return pos;
+        }
+
+        const int64_t left = static_cast<int64_t>(tree(i, 0)) - num_features;
+        const int64_t right = static_cast<int64_t>(tree(i, 1)) - num_features;
+        int64_t next_pos = pos;
+        if (branch_switches(i)) {
+            next_pos = pt_shuffle_rec(left, indexes, index_mask, partition_tree, num_features, next_pos, switches);
+            next_pos = pt_shuffle_rec(right, indexes, index_mask, partition_tree, num_features, next_pos, switches);
+        } else {
+            next_pos = pt_shuffle_rec(right, indexes, index_mask, partition_tree, num_features, next_pos, switches);
+            next_pos = pt_shuffle_rec(left, indexes, index_mask, partition_tree, num_features, next_pos, switches);
+        }
+        return next_pos;
+    }
+
     void reverse_window(
         nb::ndarray<nb::numpy, int64_t, nb::ndim<1>>& order,
         const int64_t start,
