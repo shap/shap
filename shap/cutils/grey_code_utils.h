@@ -13,10 +13,10 @@ using namespace nb::literals;
 void compute_grey_code_row_values_2d(
     nb::ndarray<double, nb::shape<-1, -1>>& row_values,
     nb::ndarray<bool, nb::shape<-1>>& mask,
-    const nb::ndarray<uint64_t, nb::shape<-1>>& inds,
+    const nb::ndarray<int64_t, nb::shape<-1>>& inds,
     nb::ndarray<double, nb::shape<-1, -1>>& outputs,
     const nb::ndarray<double, nb::shape<-1>>& shapley_coeff,
-    const nb::ndarray<uint64_t, nb::shape<-1>>& extended_delta_indexes,
+    const nb::ndarray<int64_t, nb::shape<-1>>& extended_delta_indexes,
     const int noop_code
 ) {
 	assert(row_values.shape(0) == mask.shape(0));
@@ -76,10 +76,10 @@ void compute_grey_code_row_values_2d(
 void compute_grey_code_row_values_1d(
     nb::ndarray<double, nb::shape<-1>>& row_values,
     nb::ndarray<bool, nb::shape<-1>>& mask,
-    const nb::ndarray<uint64_t, nb::shape<-1>>& inds,
+    const nb::ndarray<int64_t, nb::shape<-1>>& inds,
     nb::ndarray<double, nb::shape<-1>>& outputs,
     const nb::ndarray<double, nb::shape<-1>>& shapley_coeff,
-    const nb::ndarray<uint64_t, nb::shape<-1>>& extended_delta_indexes,
+    const nb::ndarray<int64_t, nb::shape<-1>>& extended_delta_indexes,
     const int noop_code
 ) {
 	assert(row_values.shape(0) == mask.shape(0));
@@ -135,10 +135,10 @@ void compute_grey_code_row_values_1d(
 void compute_grey_code_row_values_st_1d(
     nb::ndarray<double, nb::shape<-1, -1>>& row_values,
     nb::ndarray<bool, nb::shape<-1>>& mask,
-    const nb::ndarray<uint64_t, nb::shape<-1>>& inds,
+    const nb::ndarray<int64_t, nb::shape<-1>>& inds,
     nb::ndarray<double, nb::shape<-1>>& outputs,
     const nb::ndarray<double, nb::shape<-1>>& shapley_coeff,
-    const nb::ndarray<uint64_t, nb::shape<-1>>& extended_delta_indexes,
+    const nb::ndarray<int64_t, nb::shape<-1>>& extended_delta_indexes,
     const int noop_code
 ) {
     size_t set_size = 0;
@@ -161,7 +161,7 @@ void compute_grey_code_row_values_st_1d(
                 double delta;
                 if (!mask(j) && !mask(k)) {
                     delta = outputs(i) * shapley_coeff(set_size);
-                } else if (!mask(j) || !mask(k)) {
+                } else if (mask(j) != mask(k)) {
                     delta = -outputs(i) * shapley_coeff(set_size - 1);
                 } else {
                     delta = outputs(i) * shapley_coeff(set_size - 2);
@@ -176,10 +176,10 @@ void compute_grey_code_row_values_st_1d(
 void compute_grey_code_row_values_st_2d(
     nb::ndarray<double, nb::shape<-1, -1, -1>>& row_values,
     nb::ndarray<bool, nb::shape<-1>>& mask,
-    const nb::ndarray<uint64_t, nb::shape<-1>>& inds,
+    const nb::ndarray<int64_t, nb::shape<-1>>& inds,
     nb::ndarray<double, nb::shape<-1, -1>>& outputs,
     const nb::ndarray<double, nb::shape<-1>>& shapley_coeff,
-    const nb::ndarray<uint64_t, nb::shape<-1>>& extended_delta_indexes,
+    const nb::ndarray<int64_t, nb::shape<-1>>& extended_delta_indexes,
     const int noop_code
 ) {
     size_t set_size = 0;
@@ -203,7 +203,7 @@ void compute_grey_code_row_values_st_2d(
                     double delta;
                     if (!mask(j) && !mask(k)) {
                         delta = outputs(i, output_ind) * shapley_coeff(set_size);
-                    } else if (!mask(j) || !mask(k)) {
+                    } else if (mask(j) != mask(k)) {
                         delta = -outputs(i, output_ind) * shapley_coeff(set_size - 1);
                     } else {
                         delta = outputs(i, output_ind) * shapley_coeff(set_size - 2);

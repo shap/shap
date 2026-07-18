@@ -137,6 +137,7 @@ class ExactExplainer(Explainer):
         if getattr(self.masker, "clustering", None) is None:
             # see which elements we actually need to perturb
             inds = fm.varying_inputs()
+            inds = inds.astype(np.int64)
             if len(inds) == 0:
                 # if nothing varies then we can just return the expected value as the output and be done with it
                 outputs = fm(np.array([MaskedModel.delta_mask_noop_value]), zero_index=0, batch_size=batch_size)
@@ -161,7 +162,7 @@ class ExactExplainer(Explainer):
             delta_indexes = self._cached_gray_codes(len(inds))
 
             # map to a larger mask that includes the invariant entries
-            extended_delta_indexes = np.zeros(2 ** len(inds), dtype=int)
+            extended_delta_indexes = np.zeros(2 ** len(inds), dtype=np.int64)
             for i in range(2 ** len(inds)):
                 if delta_indexes[i] == MaskedModel.delta_mask_noop_value:
                     extended_delta_indexes[i] = delta_indexes[i]
@@ -176,7 +177,7 @@ class ExactExplainer(Explainer):
             if interactions is False or (interactions == 1 and interactions is not True):
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
-                row_values = np.zeros((len(fm),) + outputs.shape[1:])
+                row_values = np.zeros((len(fm),) + outputs.shape[1:], dtype=np.float64)
                 mask = np.zeros(len(fm), dtype=bool)
 
                 compute_grey_code_row_values(
@@ -187,7 +188,7 @@ class ExactExplainer(Explainer):
             elif interactions is True or interactions == 2:
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
-                row_values = np.zeros((len(fm), len(fm)) + outputs.shape[1:])
+                row_values = np.zeros((len(fm), len(fm)) + outputs.shape[1:], dtype=np.float64)
                 mask = np.zeros(len(fm), dtype=bool)
                 compute_grey_code_row_values_st(
                     row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value
