@@ -31,6 +31,10 @@ class TabularMaskerSuite:
         self.independent_masker = Independent(self.X)
         self.partition_masker = Partition(self.X, clustering=None)
 
+        # Dry run to avoid numba jit compilation time in the benchmark
+        _ = self.independent_masker(self.delta_masks, self.x)
+        _ = self.partition_masker(self.delta_masks, self.x)
+
     def time_independent_masking(self):
         _ = self.independent_masker(self.mask, self.x)
 
