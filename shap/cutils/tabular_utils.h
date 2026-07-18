@@ -13,10 +13,10 @@ namespace tabular {
 template <typename T>
 void single_delta_mask(
     const int64_t dind,
-    nb::ndarray<T, nb::shape<-1, -1>, nb::device::cpu>& masked_inputs,
-    nb::ndarray<bool, nb::shape<-1>, nb::device::cpu>& last_mask,
-    const nb::ndarray<const T, nb::shape<-1, -1>, nb::device::cpu>& data,
-    const nb::ndarray<const T, nb::shape<-1>, nb::device::cpu>& x,
+    nb::ndarray<T, nb::ndim<2>>& masked_inputs,
+    nb::ndarray<bool, nb::ndim<1>>& last_mask,
+    const nb::ndarray<const T, nb::ndim<2>>& data,
+    const nb::ndarray<const T, nb::ndim<1>>& x,
     const int64_t noop_code
 ) {
     if (dind == noop_code) {
@@ -43,15 +43,15 @@ void single_delta_mask(
 
 template <typename T>
 void delta_masking(
-    const nb::ndarray<const int64_t, nb::shape<-1>, nb::device::cpu>& masks,
-    const nb::ndarray<const T, nb::shape<-1>, nb::device::cpu>& x,
-    nb::ndarray<int64_t, nb::shape<-1>, nb::device::cpu>& curr_delta_inds,
-    nb::ndarray<bool, nb::shape<-1, -1>, nb::device::cpu>& varying_rows_out,
-    nb::ndarray<T, nb::shape<-1, -1>, nb::device::cpu>& masked_inputs_tmp,
-    nb::ndarray<bool, nb::shape<-1>, nb::device::cpu>& last_mask,
-    const nb::ndarray<const T, nb::shape<-1, -1>, nb::device::cpu>& data,
-    const nb::ndarray<const bool, nb::shape<-1, -1>, nb::device::cpu>& variants,
-    nb::ndarray<double, nb::shape<-1, -1>, nb::device::cpu>& masked_inputs_out,
+    const nb::ndarray<const int64_t, nb::ndim<1>>& masks,
+    const nb::ndarray<const T, nb::ndim<1>>& x,
+    nb::ndarray<int64_t, nb::ndim<1>>& curr_delta_inds,
+    nb::ndarray<bool, nb::ndim<2>>& varying_rows_out,
+    nb::ndarray<T, nb::ndim<2>>& masked_inputs_tmp,
+    nb::ndarray<bool, nb::ndim<1>>& last_mask,
+    const nb::ndarray<const T, nb::ndim<2>>& data,
+    const nb::ndarray<const bool, nb::ndim<2>>& variants,
+    nb::ndarray<double, nb::ndim<2>>& masked_inputs_out,
     const int64_t noop_code
 ) {
     auto masks_view = masks.view();
