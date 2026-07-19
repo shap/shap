@@ -17,7 +17,7 @@ class LinkSuite:
         self.probabilities = np.linspace(0.01, 0.99, element_count, dtype=np.float64).reshape(shape)
         self.log_odds = np.linspace(-5.0, 5.0, element_count, dtype=np.float64).reshape(shape)
 
-        # Dry runs exclude Numba compilation time from the benchmarks.
+        # Dry runs exclude Numba compilation time when comparing against older revisions.
         _ = identity(self.probabilities)
         _ = identity.inverse(self.probabilities)
         _ = logit(self.probabilities)
