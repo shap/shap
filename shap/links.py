@@ -4,6 +4,7 @@ from typing import Any
 
 import numpy as np
 import numpy.typing as npt
+from scipy.special import expit
 
 
 def identity(x: npt.NDArray[Any] | float) -> npt.NDArray[Any] | float:
@@ -24,7 +25,7 @@ def logit(x: npt.NDArray[Any] | float) -> npt.NDArray[Any] | float:
 
 
 def _logit_inverse(x: npt.NDArray[Any] | float) -> npt.NDArray[Any] | float:
-    return 1 / (1 + np.exp(-x))
+    return expit(x)
 
 
 logit.inverse = _logit_inverse  # type: ignore[attr-defined]
