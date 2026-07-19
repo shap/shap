@@ -315,15 +315,14 @@ def _build_fixed_output(
 
     averaged_outs_work = np.ascontiguousarray(averaged_outs, dtype=dtype)
     last_outs_work = np.ascontiguousarray(last_outs, dtype=dtype)
-    outputs_work = np.ascontiguousarray(outputs, dtype=dtype)
     batch_positions = np.asarray(batch_positions, dtype=np.int64)
     varying_rows = np.asarray(varying_rows, dtype=bool)
     num_varying_rows = np.asarray(num_varying_rows, dtype=np.int64)
 
-    if linearizing_weights is not None:
-        if link != links.identity:
-            last_outs_work = np.ascontiguousarray(link(last_outs_work), dtype=dtype)
-            outputs_work = np.ascontiguousarray(link(outputs_work), dtype=dtype)
+    if linearizing_weights is None:
+        outputs_work = np.ascontiguousarray(outputs, dtype=dtype)
+    else:
+        outputs_work = np.ascontiguousarray(link(outputs), dtype=dtype)
         linearizing_weights = np.ascontiguousarray(linearizing_weights, dtype=dtype)
 
     if len(last_outs.shape) == 1:
