@@ -58,6 +58,8 @@ def add_sample_images(path):
 def load_image(path_to_image):
     """Function to load image at given path and return numpy array of RGB float values."""
     image = cv2.imread(path_to_image)
+    if image is None:
+        raise ValueError(f"Failed to load image at {path_to_image!r}")
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     return np.array(image).astype("float")
 
