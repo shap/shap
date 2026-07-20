@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-import numba
-from numba import njit
 import numpy as np
 import numpy.typing as npt
+from numba import njit
 
 
 @njit
