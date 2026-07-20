@@ -101,6 +101,7 @@ from .utils._legacy import kmeans  # noqa: E402
 
 # Use __all__ to let type checkers know what is part of the public API.
 __all__ = [
+    "actions",
     "Cohorts",
     "Explanation",
     # Explainers
