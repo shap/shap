@@ -20,7 +20,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-  'numpy>=2,<2.5',  # numba does not yet support numpy>=2.5, see numba/numba#10327
+  'numpy>=2,<2.5',  # numba does not yet support numpy>=2.5, see numba/numba#10689
   'scipy',
   'scikit-learn',
   'pandas',
