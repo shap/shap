@@ -2527,7 +2527,7 @@ def test_tree_explainer_single_sample():
     prediction = model.predict_proba(single_sample.reshape(1, -1))[0, 1]
     if shap_values.ndim == 3:
         shap_sum = shap_values[0, :, 1].sum() + explainer.expected_value[1]
-    elif shap_values.ndim == 2 and shap_values.shape[1] == 2:
+    elif shap_values.ndim == 2 and shap_values.shape[1] == 2:  # type: ignore[misc]
         shap_sum = shap_values[:, 1].sum() + explainer.expected_value[1]
     elif shap_values.ndim == 2:
         shap_sum = shap_values[0].sum() + explainer.expected_value

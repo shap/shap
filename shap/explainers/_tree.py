@@ -538,7 +538,7 @@ class TreeExplainer(Explainer):
 
     def _short_circuit_tree_path_dependent_to_external_shap_calculation(
         self,
-        X: npt.NDArray[Any],
+        X: Any,
         tree_limit: int,
         approximate: bool,
         check_additivity: bool,
@@ -612,6 +612,7 @@ class TreeExplainer(Explainer):
             if isinstance(out, list):
                 out = np.stack(out, axis=-1)  # type: ignore[assignment]
             return out  # type: ignore[return-value]
+        return None
 
     def shap_values(
         self,
