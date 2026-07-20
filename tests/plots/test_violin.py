@@ -15,7 +15,7 @@ def test_violin_wrong_features_shape():
     """Checks that DimensionError is raised if the features data matrix
     has an incompatible shape with the shap_values matrix.
     """
-    rs = np.random.RandomState(42)
+    rng = np.random.default_rng(42)
 
     emsg = (
         "The shape of the shap_values matrix does not match the shape of "
@@ -23,30 +23,30 @@ def test_violin_wrong_features_shape():
     )
     with pytest.raises(DimensionError, match=emsg):
         expln = shap.Explanation(
-            values=rs.randn(20, 5),
-            data=rs.randn(20, 4),
+            values=rng.standard_normal((20, 5)),
+            data=rng.standard_normal((20, 4)),
         )
         shap.plots.violin(expln, show=False)
     # legacy API
     with pytest.raises(DimensionError, match=emsg):
         shap.plots.violin(
-            shap_values=rs.randn(20, 5),
-            features=rs.randn(20, 4),
+            shap_values=rng.standard_normal((20, 5)),
+            features=rng.standard_normal((20, 4)),
             show=False,
         )
 
     emsg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
     with pytest.raises(DimensionError, match=emsg):
         expln = shap.Explanation(
-            values=rs.randn(20, 5),
-            data=rs.randn(20, 1),
+            values=rng.standard_normal((20, 5)),
+            data=rng.standard_normal((20, 1)),
         )
         shap.plots.violin(expln, show=False)
     # legacy API
     with pytest.raises(DimensionError, match=emsg):
         shap.plots.violin(
-            shap_values=rs.randn(20, 5),
-            features=rs.randn(20, 1),
+            shap_values=rng.standard_normal((20, 5)),
+            features=rng.standard_normal((20, 1)),
             show=False,
         )
 
@@ -70,11 +70,11 @@ def test_violin(explainer):
 )
 def test_summary_violin_with_data2():
     """Check a violin chart with shap_values as a np.array."""
-    rs = np.random.RandomState(0)
+    rng = np.random.default_rng(0)
     fig = plt.figure()
     shap.plots.violin(
-        rs.standard_normal(size=(20, 5)),
-        rs.standard_normal(size=(20, 5)),
+        rng.standard_normal(size=(20, 5)),
+        rng.standard_normal(size=(20, 5)),
         plot_type="violin",
         show=False,
     )
@@ -89,10 +89,10 @@ def test_summary_violin_with_data2():
 )
 def test_summary_layered_violin_with_data2():
     """Check a layered violin chart with shap_values as a np.array."""
-    rs = np.random.RandomState(0)
+    rng = np.random.default_rng(0)
     fig = plt.figure()
-    shap_values = rs.randn(200, 5)
-    feats = rs.randn(200, 5)
+    shap_values = rng.standard_normal((200, 5))
+    feats = rng.standard_normal((200, 5))
     shap.plots.violin(
         shap_values,
         feats,

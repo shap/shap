@@ -18,8 +18,8 @@ def values_features():
 
 def test_random_decision(random_seed):
     """Make sure the decision plot does not crash on random data."""
-    rs = np.random.RandomState(random_seed)
-    shap.decision_plot(0, rs.standard_normal(size=(20, 5)), rs.standard_normal(size=(20, 5)), show=False)
+    rng = np.random.default_rng(random_seed)
+    shap.decision_plot(0, rng.standard_normal(size=(20, 5)), rng.standard_normal(size=(20, 5)), show=False)
 
 
 @pytest.mark.mpl_image_compare
