@@ -109,8 +109,8 @@ class KernelExplainer(Explainer):
     synth_data: npt.NDArray[Any] | scipy.sparse.lil_matrix
     maskMatrix: npt.NDArray[np.floating[Any]]
     kernelWeights: npt.NDArray[np.floating[Any]]
-    y: npt.NDArray[np.floating[Any]]
-    ey: npt.NDArray[np.floating[Any]]
+    y: npt.NDArray[np.float64]
+    ey: npt.NDArray[np.float64]
     lastMask: npt.NDArray[np.floating[Any]]
     synth_data_index: npt.NDArray[Any]
 
