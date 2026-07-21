@@ -250,8 +250,8 @@ class PartitionExplainer(Explainer):
         if max_evals == "auto":
             max_evals = 500
 
-        self.values = np.zeros(out_shape)
-        self.dvalues = np.zeros(out_shape)
+        self.values = np.zeros(out_shape, dtype=np.float64)
+        self.dvalues = np.zeros(out_shape, dtype=np.float64)
 
         self.owen(fm, self._curr_base_value, f11, max_evals - 2, outputs, fixed_context, batch_size, silent)  # type: ignore[arg-type]
 
@@ -264,7 +264,14 @@ class PartitionExplainer(Explainer):
         # drop the interaction terms down onto self.values
         self.values[:] = self.dvalues
 
-        lower_credit(i=len(self.dvalues) - 1, M=M, values=self.values, clustering=self._clustering)
+        lower_credit(
+            i=len(self.dvalues) - 1,
+            M=M,
+            prev_i=len(self.dvalues) - 1,
+            factor=0.0,
+            values=self.values,
+            clustering=self._clustering,
+        )
 
         return {
             "values": self.values[:M].copy(),
