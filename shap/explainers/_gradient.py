@@ -72,7 +72,7 @@ class GradientExplainer(Explainer):
 
         """
         # first, we need to find the framework
-        if type(model) is tuple:
+        if isinstance(model, tuple):
             a, b = model
             try:
                 a.named_parameters()
@@ -517,7 +517,7 @@ class _PyTorchGradient(Explainer):
             with torch.no_grad():
                 _ = model(*data)
                 interim_inputs = self.layer.target_input
-                if type(interim_inputs) is tuple:
+                if isinstance(interim_inputs, tuple):
                     # this should always be true, but just to be safe
                     self.data = [i.clone().detach() for i in interim_inputs]
                 else:
@@ -664,13 +664,12 @@ class _PyTorchGradient(Explainer):
                             _ = self.model(*[samples_input[a][k].unsqueeze(0) for a in range(len(X))])
                             interim_inputs = self.layer.target_input  # type: ignore[union-attr]
                             del self.layer.target_input  # type: ignore[union-attr]
-                            if type(interim_inputs) is tuple:
-                                if type(interim_inputs) is tuple:
-                                    # this should always be true, but just to be safe
-                                    for a in range(len(interim_inputs)):
-                                        samples_delta[a][k] = interim_inputs[a].cpu().numpy()
-                                else:
-                                    samples_delta[0][k] = interim_inputs.cpu().numpy()  # type: ignore[attr-defined]
+                            if isinstance(interim_inputs, tuple):
+                                # this should always be true, but just to be safe
+                                for a in range(len(interim_inputs)):
+                                    samples_delta[a][k] = interim_inputs[a].cpu().numpy()
+                            else:
+                                samples_delta[0][k] = interim_inputs.cpu().numpy()  # type: ignore[attr-defined]
 
                 # compute the gradients at all the sample points
                 find = model_output_ranks[j, i]
