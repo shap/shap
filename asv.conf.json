@@ -1,0 +1,21 @@
+{
+    "version": 1,
+    "project": "shap",
+    "project_url": "https://github.com/shap/shap",
+    "repo": ".",
+    "branches": ["master"],
+    "environment_type": "uv",
+    "build_command": [
+        "python -m build --wheel --outdir {build_cache_dir} {build_dir}"
+    ],
+    "matrix": {
+        "req": {
+            "xgboost": []
+        }
+    },
+    "show_commit_url": "https://github.com/shap/shap/commit/",
+    "pythons": ["3.13"],
+    "benchmark_dir": "monitoring",
+    "html_dir": "monitoring/html",
+    "results_dir": "monitoring/results"
+}
