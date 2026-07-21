@@ -13,8 +13,8 @@ namespace partition
         int M,
         int prev_i,
         double factor,
-        nb::ndarray<nb::numpy, double> values,
-        nb::ndarray<nb::numpy, double, nb::ndim<2>> clustering)
+        nb::ndarray<double, nb::ndim<1>> values,
+        nb::ndarray<double, nb::ndim<2>> clustering)
     {
         auto v = values.view<double, nb::ndim<1>>();
         v(i) += factor * v(prev_i);
@@ -48,8 +48,8 @@ namespace partition
         int M,
         int prev_i,
         double factor,
-        nb::ndarray<nb::numpy, double> values,
-        nb::ndarray<nb::numpy, double, nb::ndim<2>> clustering)
+        nb::ndarray<double, nb::ndim<2>> values,
+        nb::ndarray<double, nb::ndim<2>> clustering)
     {
         auto v = values.view<double, nb::ndim<2>>();
         for (int j = 0; j < v.shape(1); ++j)
