@@ -7,6 +7,7 @@ import pytest
 
 import shap
 from shap.utils import assert_import
+from shap.utils._exceptions import DimensionError
 
 try:
     assert_import("cv2")
@@ -121,3 +122,62 @@ def test_serialization_image_masker_mask():
 
     # comparing masked values
     assert np.array_equal(original_image_masker(mask, test_data), new_image_masker(mask, test_data))
+
+
+def test_init_string_mask_without_shape():
+    """Make sure masker raises error when initializing with string mask value without shape"""
+    with pytest.raises(TypeError):
+        shap.maskers.Image("inpaint_telea")
+
+
+def test_init_ndarray_mask_without_shape():
+    """Make sure that shape is inferred correctly from np.array when no shape is passed"""
+    mask_value = np.zeros((5, 5, 3))
+    image_masker = shap.maskers.Image(mask_value)  # no shape parameter passed
+    assert image_masker.input_shape == (5, 5, 3)
+    assert image_masker.shape == (1, 75)  # 5*5*3 = 75, when flattened
+
+
+def test_init_scalar_mask_with_shape():
+    """Make sure mask_value is expanded to a flat array of the scalar when mask_value is an int"""
+    image_masker = shap.maskers.Image(5, shape=(5, 5, 3))
+    assert image_masker.input_shape == (5, 5, 3)
+    assert image_masker.mask_value.shape == (75,)
+    assert np.all(image_masker.mask_value == 5)
+
+
+def test_call_with_torch_tensor():
+    """x is converted from torch Tensor to numpy array before masking"""
+    torch = pytest.importorskip("torch")
+    image_masker = shap.maskers.Image(np.zeros((5, 5, 3)))
+    x = torch.zeros(5, 5, 3)
+    mask = np.ones(75, dtype=bool)
+    result = image_masker(mask, x)
+    assert isinstance(result[0], np.ndarray)
+
+
+def test_call_image_masker_shape_mismatch():
+    """Make sure DimensionError when image and masker shapes mismatch"""
+    image_masker = shap.maskers.Image(np.zeros((4, 4, 3)))
+    image = np.zeros((5, 5, 3))
+    mask = np.ones(48, dtype=bool)
+    with pytest.raises(DimensionError):
+        image_masker(mask, image)
+
+
+def test_call_image_masker_with_no_mask():
+    """Make sure the entire image is masked when mask=None is passed."""
+    image_masker = shap.maskers.Image(np.zeros((5, 5, 3)))
+    image = np.ones((5, 5, 3))
+    result = image_masker(None, image)
+    assert np.all(result[0] == 0)  # entire image masked with mask_value (all 0)
+
+
+def test_inpaint_fully_masked_image():
+    """Make sure mean colour is used when entire image is masked during inpainting"""
+    image_masker = shap.maskers.Image("inpaint_telea", (5, 5, 3))
+    image = np.zeros((5, 5, 3))
+    image[0, 0, :] = 100  # one pixel has 100 for all three channels, the rest are all 0
+    # mean = 100/ (5*5) = 4.00
+    result = image_masker(None, image)
+    assert np.all(result[0] == 4.0)
