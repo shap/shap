@@ -168,7 +168,6 @@ class Image(Masker):
         return kwargs
 
 
-# @njit  # pragma: no cover
 def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q):
     """This partitions an image into a hierarchical clustering based on axis-aligned splits."""
     # heapq.heappush(q, (0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
