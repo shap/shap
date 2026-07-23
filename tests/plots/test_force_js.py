@@ -120,6 +120,35 @@ def capture_plot_screenshot(driver, plot, filename=None, wait_time=2):
     return Image.open(io.BytesIO(screenshot))
 
 
+# Chrome/Chromedriver versions are not pinned across machines and CI runners, and can render
+# the same page a few pixels taller/shorter (e.g. differing scrollbar or font-metrics behavior)
+# with no actual change to the plot. Tolerate a small size drift and compare pixels over the
+# shared top-left region rather than requiring an exact dimension match.
+_MAX_SIZE_DRIFT = 10
+
+
+def assert_matches_baseline(screenshot, baseline_path, tolerance):
+    """Compare a screenshot against a baseline image, saving the baseline if it doesn't exist yet."""
+    if not os.path.exists(baseline_path):
+        screenshot.save(baseline_path)
+        pytest.skip(f"Baseline image created at {baseline_path}")
+
+    baseline = Image.open(baseline_path)
+
+    width_diff = abs(screenshot.size[0] - baseline.size[0])
+    height_diff = abs(screenshot.size[1] - baseline.size[1])
+    assert width_diff <= _MAX_SIZE_DRIFT and height_diff <= _MAX_SIZE_DRIFT, (
+        f"Screenshot size {screenshot.size} differs from baseline {baseline.size} by more than {_MAX_SIZE_DRIFT}px"
+    )
+
+    common_size = (min(screenshot.size[0], baseline.size[0]), min(screenshot.size[1], baseline.size[1]))
+    screenshot_array = np.array(screenshot.crop((0, 0, *common_size)))
+    baseline_array = np.array(baseline.crop((0, 0, *common_size)))
+
+    diff = np.mean(np.abs(screenshot_array.astype(float) - baseline_array.astype(float)))
+    assert diff < tolerance, f"Images differ by {diff} average pixel value"
+
+
 @pytest.mark.skipif(platform.system() == "Windows", reason="Selenium force plot tests have different sizes on windows.")
 def test_force_js_visual(driver):
     """Test that force plot renders correctly."""
@@ -136,24 +165,7 @@ def test_force_js_visual(driver):
     # Capture screenshot
     screenshot = capture_plot_screenshot(driver, plot)
 
-    # If baseline doesn't exist, save current screenshot as baseline
-    if not os.path.exists(baseline_path):
-        screenshot.save(baseline_path)
-        pytest.skip(f"Baseline image created at {baseline_path}")
-
-    # Compare with baseline
-    baseline = Image.open(baseline_path)
-
-    # Ensure same dimensions
-    assert screenshot.size == baseline.size, "Screenshot dimensions don't match baseline"
-
-    # Convert to numpy arrays for comparison
-    screenshot_array = np.array(screenshot)
-    baseline_array = np.array(baseline)
-
-    # Calculate difference (allowing for some variation)
-    diff = np.mean(np.abs(screenshot_array.astype(float) - baseline_array.astype(float)))
-    assert diff < 10.0, f"Images differ by {diff} average pixel value"
+    assert_matches_baseline(screenshot, baseline_path, tolerance=10.0)
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Selenium force plot tests have different sizes on windows.")
@@ -172,21 +184,4 @@ def test_force_array_js_visual(driver):
     # Capture screenshot
     screenshot = capture_plot_screenshot(driver, plot, wait_time=3)  # Array plot might need more time
 
-    # If baseline doesn't exist, save current screenshot as baseline
-    if not os.path.exists(baseline_path):
-        screenshot.save(baseline_path)
-        pytest.skip(f"Baseline image created at {baseline_path}")
-
-    # Compare with baseline
-    baseline = Image.open(baseline_path)
-
-    # Ensure same dimensions
-    assert screenshot.size == baseline.size, "Screenshot dimensions don't match baseline"
-
-    # Convert to numpy arrays for comparison
-    screenshot_array = np.array(screenshot)
-    baseline_array = np.array(baseline)
-
-    # Calculate difference (allowing for some variation)
-    diff = np.mean(np.abs(screenshot_array.astype(float) - baseline_array.astype(float)))
-    assert diff < 15.0, f"Images differ by {diff} average pixel value"
+    assert_matches_baseline(screenshot, baseline_path, tolerance=15.0)
