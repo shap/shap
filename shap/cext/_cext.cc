@@ -20,7 +20,6 @@ static PyMethodDef module_methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-#if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
     "_cext",
@@ -32,28 +31,16 @@ static struct PyModuleDef moduledef = {
     NULL,
     NULL
 };
-#endif
 
-#if PY_MAJOR_VERSION >= 3
 PyMODINIT_FUNC PyInit__cext(void)
-#else
-PyMODINIT_FUNC init_cext(void)
-#endif
 {
-    #if PY_MAJOR_VERSION >= 3
-        PyObject *module = PyModule_Create(&moduledef);
-        if (!module) return NULL;
-    #else
-        PyObject *module = Py_InitModule("_cext", module_methods);
-        if (!module) return;
-    #endif
+    PyObject *module = PyModule_Create(&moduledef);
+    if (!module) return NULL;
 
     /* Load `numpy` functionality. */
     import_array();
 
-    #if PY_MAJOR_VERSION >= 3
-        return module;
-    #endif
+    return module;
 }
 
 static PyObject *_cext_compute_expectations(PyObject *self, PyObject *args)
