@@ -11,19 +11,19 @@ namespace nb = nanobind;
 using namespace nb::literals;
 
 template <typename T, typename... Args>
-using Array = nb::ndarray<T, nb::numpy, nb::c_contig, nb::device::cpu, Args...>;
+using Array = nb::ndarray<T, nb::c_contig, Args...>;
 
 using IntArray = Array<const int>;
 using DoubleArray = Array<const double>;
 using BoolArray = Array<const bool>;
 using MutableDoubleArray = Array<double>;
 
-using IntArray1D = Array<const int, nb::shape<-1>>;
-using DoubleArray1D = Array<const double, nb::shape<-1>>;
-using MutableDoubleArray1D = Array<double, nb::shape<-1>>;
-using DoubleArray2D = Array<const double, nb::shape<-1, -1>>;
-using MutableDoubleArray2D = Array<double, nb::shape<-1, -1>>;
-using DoubleArray3D = Array<const double, nb::shape<-1, -1, -1>>;
+using IntArray1D = Array<const int, nb::ndim<1>>;
+using DoubleArray1D = Array<const double, nb::ndim<1>>;
+using MutableDoubleArray1D = Array<double, nb::ndim<1>>;
+using DoubleArray2D = Array<const double, nb::ndim<2>>;
+using MutableDoubleArray2D = Array<double, nb::ndim<2>>;
+using DoubleArray3D = Array<const double, nb::ndim<3>>;
 
 int compute_expectations_wrapper(
     const IntArray1D &children_left,
