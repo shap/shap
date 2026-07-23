@@ -74,11 +74,6 @@ install(TARGETS _cutils LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 # Build the Tree Logic extension module (cext)
 # ==============================================================================
 
-# Check if the SABI version is being requested
-if(NOT "${SKBUILD_SABI_VERSION}" STREQUAL "")
-  set(USE_SABI USE_SABI ${SKBUILD_SABI_VERSION})
-endif()
-
 # Build the CPU Tree SHAP module using nanobind.
 nanobind_add_module(
   _cext
@@ -104,15 +99,6 @@ nanobind_add_stub(
   DEPENDS _cext
 )
 
-# Get the include directory for NumPy. The optional legacy GPU extension below
-# still uses the NumPy C API.
-execute_process(
-    COMMAND "${PYTHON_EXECUTABLE}"
-    -c "import numpy; print(numpy.get_include())"
-    OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
 add_custom_command(
   TARGET _cext_stub POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -127,6 +113,19 @@ install(TARGETS _cext LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 # Optional: Build the GPU Tree SHAP extension module (cext_gpu)
 # Enabled via: SHAP_ENABLE_CUDA=1 pip install .
 # ==============================================================================
+
+# Check if the SABI version is being requested
+if(NOT "${SKBUILD_SABI_VERSION}" STREQUAL "")
+  set(USE_SABI USE_SABI ${SKBUILD_SABI_VERSION})
+endif()
+
+# Get the include directory for NumPy. The GPU extension still uses the NumPy C API.
+execute_process(
+    COMMAND "${PYTHON_EXECUTABLE}"
+    -c "import numpy; print(numpy.get_include())"
+    OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
 if(ENV{SHAP_ENABLE_CUDA})
   message(MESSAGE "SHAP_ENABLE_CUDA is set, attempting to build the GPU extension...")
