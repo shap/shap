@@ -307,6 +307,33 @@ def test_non_numeric():
     assert shap.KernelExplainer.not_equal(pd.Timestamp("2017-01-01T12"), pd.Timestamp("2017-01-01T13"))
     assert shap.KernelExplainer.not_equal(pd.Period("4Q2005"), pd.Period("3Q2005"))
     assert not shap.KernelExplainer.not_equal(pd.Period("4Q2005"), pd.Period("4Q2005"))
+    assert shap.KernelExplainer.not_equal(np.array([1, 2]), np.array([2, 1]))
+    assert not shap.KernelExplainer.not_equal(np.array([1, 2]), np.array([1, 2]))
+
+    # GH #3899: object arrays whose elements are themselves arrays
+    vec = np.array([1.0, 2.0], dtype=np.float32)
+    obj_i = np.empty(1, dtype=object)
+    obj_i[0] = vec
+    obj_j = np.empty((2, 1), dtype=object)
+    obj_j[0, 0] = vec.copy()
+    obj_j[1, 0] = vec.copy()
+    assert not shap.KernelExplainer.not_equal(obj_i, obj_j)
+    obj_j[1, 0] = np.array([3.0, 4.0], dtype=np.float32)
+    assert shap.KernelExplainer.not_equal(obj_i, obj_j)
+
+
+def test_kernel_array_type_features():
+    # GH #3899: features whose values are numpy arrays should not crash varying_groups
+    rs = np.random.RandomState(0)
+    value = list(rs.normal(size=(3, 4)).astype(np.float32))
+    batch = pd.DataFrame({"feature_1": value})
+
+    def model(x):
+        return np.array([np.sum(row[0]) for row in x])
+
+    explainer = shap.KernelExplainer(model, batch)
+    shap_values = explainer.shap_values(batch.iloc[:1])
+    assert np.isfinite(shap_values).all()
 
 
 def test_kernel_explainer_with_tensors():
