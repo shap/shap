@@ -2674,7 +2674,9 @@ class TreeliteModelLoader:
         split_index = ta.get_field("split_index").astype(np.int32)
         default_left = ta.get_field("default_left")
         leaf_value = ta.get_field("leaf_value").astype(np.float64)
-        threshold = ta.get_field("threshold").astype(np.float64)
+        threshold_raw = ta.get_field("threshold")
+        threshold_is_float32 = threshold_raw.dtype == np.float32
+        threshold = threshold_raw.astype(np.float64)
         cmp = ta.get_field("cmp")
 
         # Node sample weight: prefer sum_hess (XGBoost), fall back to data_count (LightGBM)
@@ -2705,13 +2707,20 @@ class TreeliteModelLoader:
             np.nextafter(threshold, -np.inf),
             threshold,
         )
+        # cmp=2 (<=) with float32 source (XGBoost): treelite keeps the original
+        # threshold but XGBoost's real operator is <. Apply the same 1-ULP shift
+        # that SHAP's XGBoost loader uses so thresholds match for parity.
+        if threshold_is_float32:
+            threshold = np.where(
+                is_internal & (cmp == 2),
+                np.nextafter(threshold_raw, -np.float32(np.inf)).astype(np.float64),
+                threshold,
+            )
         threshold = np.where(
             is_internal & (cmp == 4),
             np.nextafter(threshold, np.inf),
             threshold,
         )
-        # SHAP convention: leaf threshold = -2.0
-        threshold = np.where(is_leaf, -2.0, threshold)
 
         # children_default: swapping cleft/cright also swaps the default direction
         effective_default_left = np.logical_xor(default_left.astype(bool), swap_mask)
@@ -2721,8 +2730,8 @@ class TreeliteModelLoader:
             np.where(effective_default_left, children_left, children_right),
         ).astype(np.int32)
 
-        # SHAP convention: leaf feature index = -2
-        features = np.where(is_leaf, np.int32(-2), split_index).astype(np.int32)
+        # treelite stores -1 for leaf split_index (no split feature at leaf nodes)
+        features = split_index.astype(np.int32)
 
         values = leaf_value.reshape(num_nodes, 1)
         if self.average_tree_output and self.num_tree > 0:
