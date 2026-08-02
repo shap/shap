@@ -43,6 +43,21 @@ def test_front_page_xgboost():
     shap.summary_plot(shap_values, X, show=False)
 
 
+def test_gpu_unsupported_model_output_raises():
+    xgboost = pytest.importorskip("xgboost")
+
+    X, y = shap.datasets.california(n_points=100)
+    model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 10)
+
+    with pytest.raises(NotImplementedError, match='model_output="probability"'):
+        shap.GPUTreeExplainer(
+            model,
+            X,
+            feature_perturbation="interventional",
+            model_output="probability",
+        )
+
+
 rs = np.random.RandomState(15921)
 n = 100
 m = 4
