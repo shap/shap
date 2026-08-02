@@ -35,10 +35,24 @@ struct CategoryConstraint {
     return (categories & category_flag) != 0;
   }
 
+  __host__ __device__ static bool CategoryInMaskXgb(int categories,
+                                                    float category) {
+    int category_int = static_cast<int>(category);
+    if (category_int < 0) {
+      return false;
+    }
+    int category_flag = 1 << category_int;
+    return (categories & category_flag) != 0;
+  }
+
   __host__ __device__ bool Contains(float category) const {
     bool included = !has_include_categories ||
-                    CategoryInMask(include_categories, category);
-    return included && !CategoryInMask(exclude_categories, category);
+                    (use_xgb_encoding ? CategoryInMaskXgb(include_categories, category)
+                                      : CategoryInMask(include_categories, category));
+    const bool excluded = use_xgb_encoding
+        ? CategoryInMaskXgb(exclude_categories, category)
+        : CategoryInMask(exclude_categories, category);
+    return included && !excluded;
   }
 
   __host__ __device__ void Intersect(const CategoryConstraint &other) {
@@ -57,6 +71,7 @@ struct CategoryConstraint {
   bool has_include_categories = false;
   int include_categories = 0;
   int exclude_categories = 0;
+  bool use_xgb_encoding = false;
 };
 
 struct ShapSplitCondition {
@@ -160,6 +175,16 @@ void RecurseTree(
     right_condition =
         ShapSplitCondition{-inf, inf, !is_left_default,
                            CategoryConstraint::Exclude(categories)};
+  } else if (threshold_type == 2) {
+    int categories = static_cast<int>(threshold);
+    CategoryConstraint left_categories = CategoryConstraint::Exclude(categories);
+    CategoryConstraint right_categories = CategoryConstraint::Include(categories);
+    left_categories.use_xgb_encoding = true;
+    right_categories.use_xgb_encoding = true;
+    left_condition =
+        ShapSplitCondition{-inf, inf, is_left_default, left_categories};
+    right_condition =
+        ShapSplitCondition{-inf, inf, !is_left_default, right_categories};
   }
 
   // Add left split to the path

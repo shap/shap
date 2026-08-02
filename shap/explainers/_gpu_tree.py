@@ -70,7 +70,7 @@ class GPUTreeExplainer(TreeExplainer):
         )
 
         model = self.model
-        _xgboost_cat_unsupported(model)
+        _xgboost_cat_unsupported(model, self.feature_perturbation)
         transform = model.get_transform()
 
         # run the core algorithm using the C extension

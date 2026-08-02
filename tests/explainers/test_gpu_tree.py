@@ -119,16 +119,40 @@ def test_xgboost_cat_unsupported() -> None:
     clf = xgboost.XGBClassifier(n_estimators=2, enable_categorical=True, device="cuda")
     clf.fit(X, y)
 
-    # Tests for both CPU and GPU in one place
-
-    # Prefer an explict error over silent invalid values.
+    # Interventional still blocked for categorical XGBoost.
     gpu_ex = shap.GPUTreeExplainer(clf, X, feature_perturbation="interventional")
-    with pytest.raises(NotImplementedError, match="Categorical"):
+    with pytest.raises(NotImplementedError, match="interventional"):
         gpu_ex.shap_values(X)
 
     ex = shap.TreeExplainer(clf, X, feature_perturbation="interventional")
-    with pytest.raises(NotImplementedError, match="Categorical"):
+    with pytest.raises(NotImplementedError, match="interventional"):
         ex.shap_values(X)
+
+
+def test_xgboost_categorical_tree_path_dependent_no_background():
+    """GPUTreeExplainer with tree_path_dependent and no background matches CPU pred_contribs."""
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.adult(n_points=300)
+    X = X.copy()
+    X["Workclass"] = X["Workclass"].astype("category")
+    clf = xgboost.XGBClassifier(
+        n_estimators=8,
+        enable_categorical=True,
+        max_depth=4,
+        device="cuda",
+        random_state=0,
+    )
+    clf.fit(X, y)
+    X_explain = X.iloc[:20]
+    preds = clf.predict(X_explain, output_margin=True)
+
+    gpu_ex = shap.GPUTreeExplainer(clf, feature_perturbation="tree_path_dependent")
+    gpu_shap = gpu_ex.shap_values(X_explain)
+    assert np.allclose(gpu_shap.sum(axis=1) + gpu_ex.expected_value, preds, atol=1e-4)
+
+    cpu_ex = shap.TreeExplainer(clf, feature_perturbation="tree_path_dependent")
+    cpu_shap = cpu_ex.shap_values(X_explain)
+    assert np.allclose(cpu_shap, gpu_shap, atol=1e-4)
 
 
 def lightgbm_base():
