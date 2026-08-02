@@ -1,51 +1,104 @@
-# Dummy release workflow to reserve the "shap-gpu" name on PyPI and TestPyPI.
-# Each job builds an sdist (no CUDA/C compilation) with the name overridden to
-# "shap-gpu" and a placeholder version, then publishes via trusted publishing.
-name: release
+# Build and optionally publish shap-gpu wheels (CUDA-enabled TreeExplainer).
+#
+# Tracks https://github.com/shap/shap/issues/4182 — distribute GPUTreeExplainer on PyPI.
+# The PyPI package name is shap-gpu; import name remains `shap` (same codebase + _cext_gpu).
+#
+# Builds Linux x86_64 manylinux wheels with the CUDA toolkit inside cibuildwheel's
+# manylinux_cuda image. GPU runtime tests are not run in CI (no GPU device); we only
+# verify that _cext_gpu imports after install.
+name: Build shap-gpu wheels
+
 on:
   workflow_dispatch:
+    inputs:
+      publish_testpypi:
+        description: Publish built wheels to TestPyPI
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - ".github/workflows/build_gpu.yml"
+      - "CMakeLists.txt"
+      - "pyproject.toml"
+      - "shap/cext/**"
+  push:
+    tags:
+      - "v*"
 
 jobs:
-  publish-pypi:
+  build_wheels:
+    name: Build CUDA manylinux wheels
     runs-on: ubuntu-latest
-    # Only publish tagged releases to PyPI
-    if: startsWith(github.ref, 'refs/tags')
-    environment: pypi
-    permissions:
-      id-token: write   # for PyPI trusted publishing
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0          # setuptools_scm needs full history/tags
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-      - name: Override package name to shap-gpu
+          fetch-depth: 0
+
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Override PyPI distribution name to shap-gpu
         run: sed -i 's/^name = "shap"/name = "shap-gpu"/' pyproject.toml
-      - name: Build sdist
+
+      - name: Build wheels with cibuildwheel
+        uses: pypa/cibuildwheel@v3.2.1
         env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.1.dev0"
-        run: uv build --sdist
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+          # Linux CUDA manylinux image (see cibuildwheel CUDA FAQ)
+          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/manylinux_cuda/manylinux_2_28_x86_64_cuda12_9:latest
+          # Start with cp312/cp313 x86_64 only; expand matrix once pipeline is stable
+          CIBW_BUILD: cp312-manylinux_x86_64 cp313-manylinux_x86_64
+          CIBW_SKIP: "cp*-musllinux_* cp*-macosx_* cp*-win_* cp*-manylinux_aarch64"
+          CIBW_BUILD_VERBOSITY: 1
+          # Compile _cext_gpu during wheel build (see CMakeLists.txt)
+          CIBW_ENVIRONMENT: SHAP_ENABLE_CUDA=1
+          CIBW_ENVIRONMENT_LINUX: SHAP_ENABLE_CUDA=1 SHAP_CUDA_ARCHITECTURES="60;70;75;80"
+          # No GPU device in CI — verify extension is present, skip full pytest suite
+          CIBW_TEST_COMMAND: >-
+            python -c "import shap; from shap.utils import assert_import; assert_import('cext_gpu'); print('shap-gpu: _cext_gpu OK')"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shap-gpu-wheels
+          path: ./wheelhouse/*.whl
+          retention-days: 14
 
   publish-testpypi:
+    name: Publish wheels to TestPyPI
+    needs: build_wheels
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.publish_testpypi
     runs-on: ubuntu-latest
     environment: testpypi
     permissions:
-      id-token: write   # for TestPyPI trusted publishing
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0          # setuptools_scm needs full history/tags
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-      - name: Override package name to shap-gpu
-        run: sed -i 's/^name = "shap"/name = "shap-gpu"/' pyproject.toml
-      - name: Build sdist
-        env:
-          SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.1.dev0"
-        run: uv build --sdist
+          name: shap-gpu-wheels
+          path: dist
+
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist
+
+  publish-pypi:
+    name: Publish wheels to PyPI
+    needs: build_wheels
+    if: startsWith(github.ref, 'refs/tags')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: shap-gpu-wheels
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
