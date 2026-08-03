@@ -107,10 +107,16 @@ install(TARGETS _cext LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 # Enabled via: SHAP_ENABLE_CUDA=1 pip install .
 # ==============================================================================
 
-if(ENV{SHAP_ENABLE_CUDA})
-  message(MESSAGE "SHAP_ENABLE_CUDA is set, attempting to build the GPU extension...")
+if(DEFINED ENV{SHAP_ENABLE_CUDA} AND NOT "$ENV{SHAP_ENABLE_CUDA}" STREQUAL "")
+  message(STATUS "SHAP_ENABLE_CUDA is set. Building the GPU extension module (_cext_gpu).")
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED)
+
+  if(DEFINED ENV{SHAP_CUDA_ARCHITECTURES} AND NOT "$ENV{SHAP_CUDA_ARCHITECTURES}" STREQUAL "")
+    set(SHAP_GPU_CUDA_ARCHITECTURES "$ENV{SHAP_CUDA_ARCHITECTURES}")
+  else()
+    set(SHAP_GPU_CUDA_ARCHITECTURES "60;70;75;80")
+  endif()
 
   python_add_library(
     _cext_gpu MODULE
@@ -126,7 +132,7 @@ if(ENV{SHAP_ENABLE_CUDA})
   target_link_libraries(_cext_gpu PRIVATE CUDA::cudart)
 
   set_target_properties(_cext_gpu PROPERTIES
-    CUDA_ARCHITECTURES "60;70;75;80"
+    CUDA_ARCHITECTURES "${SHAP_GPU_CUDA_ARCHITECTURES}"
     CUDA_STANDARD 14
     CUDA_EXTENSIONS ON
   )
@@ -141,5 +147,5 @@ if(ENV{SHAP_ENABLE_CUDA})
 
   install(TARGETS _cext_gpu LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 else()
-  message(MESSAGE "SHAP_ENABLE_CUDA is not set, skipping the GPU extension.")
+  message(STATUS "SHAP_ENABLE_CUDA is not set. Skipping the GPU extension module.")
 endif()
