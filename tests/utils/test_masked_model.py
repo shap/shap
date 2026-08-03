@@ -1,6 +1,6 @@
 import numpy as np
-
 from shap._cutils import init_masks
+
 from shap.links import identity
 from shap.utils._masked_model import _build_fixed_output
 
