@@ -6,6 +6,7 @@
 #include <nanobind/ndarray.h>
 #include <cmath>
 #include <vector>
+#include <algorithm>
 
 namespace nb = nanobind;
 using namespace nb::literals;
