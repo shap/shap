@@ -11,12 +11,12 @@ using namespace nb::literals;
 
 
 void compute_grey_code_row_values_2d(
-    nb::ndarray<double, nb::shape<-1, -1>, nb::device::cpu>& row_values,
-    nb::ndarray<bool, nb::shape<-1>, nb::device::cpu>& mask,
-    const nb::ndarray<uint64_t, nb::shape<-1>, nb::device::cpu>& inds,
-    nb::ndarray<double, nb::shape<-1, -1>, nb::device::cpu>& outputs,
-    const nb::ndarray<double, nb::shape<-1>, nb::device::cpu>& shapley_coeff,
-    const nb::ndarray<uint64_t, nb::shape<-1>, nb::device::cpu>& extended_delta_indexes,
+    nb::ndarray<double, nb::shape<-1, -1>>& row_values,
+    nb::ndarray<bool, nb::shape<-1>>& mask,
+    const nb::ndarray<int64_t, nb::shape<-1>>& inds,
+    nb::ndarray<double, nb::shape<-1, -1>>& outputs,
+    const nb::ndarray<double, nb::shape<-1>>& shapley_coeff,
+    const nb::ndarray<int64_t, nb::shape<-1>>& extended_delta_indexes,
     const int noop_code
 ) {
 	assert(row_values.shape(0) == mask.shape(0));
@@ -74,12 +74,12 @@ void compute_grey_code_row_values_2d(
 }
 
 void compute_grey_code_row_values_1d(
-    nb::ndarray<double, nb::shape<-1>, nb::device::cpu>& row_values,
-    nb::ndarray<bool, nb::shape<-1>, nb::device::cpu>& mask,
-    const nb::ndarray<uint64_t, nb::shape<-1>, nb::device::cpu>& inds,
-    nb::ndarray<double, nb::shape<-1>, nb::device::cpu>& outputs,
-    const nb::ndarray<double, nb::shape<-1>, nb::device::cpu>& shapley_coeff,
-    const nb::ndarray<uint64_t, nb::shape<-1>, nb::device::cpu>& extended_delta_indexes,
+    nb::ndarray<double, nb::shape<-1>>& row_values,
+    nb::ndarray<bool, nb::shape<-1>>& mask,
+    const nb::ndarray<int64_t, nb::shape<-1>>& inds,
+    nb::ndarray<double, nb::shape<-1>>& outputs,
+    const nb::ndarray<double, nb::shape<-1>>& shapley_coeff,
+    const nb::ndarray<int64_t, nb::shape<-1>>& extended_delta_indexes,
     const int noop_code
 ) {
 	assert(row_values.shape(0) == mask.shape(0));
@@ -130,6 +130,90 @@ void compute_grey_code_row_values_1d(
 		        rv(inds(ii)) += multiplication_factor * outputs(i);
 		}
         }
+}
+
+void compute_grey_code_row_values_st_1d(
+    nb::ndarray<double, nb::shape<-1, -1>>& row_values,
+    nb::ndarray<bool, nb::shape<-1>>& mask,
+    const nb::ndarray<int64_t, nb::shape<-1>>& inds,
+    nb::ndarray<double, nb::shape<-1>>& outputs,
+    const nb::ndarray<double, nb::shape<-1>>& shapley_coeff,
+    const nb::ndarray<int64_t, nb::shape<-1>>& extended_delta_indexes,
+    const int noop_code
+) {
+    size_t set_size = 0;
+    const size_t M = inds.shape(0);
+    auto rv = row_values.view();
+
+    for (size_t i = 0; i < pow(2, M); i++) {
+        const int delta_ind = extended_delta_indexes(i);
+        if (delta_ind != noop_code) {
+            mask(delta_ind) = !mask(delta_ind);
+            if (mask(delta_ind)) {
+                set_size += 1;
+            } else {
+                set_size -= 1;
+            }
+        }
+
+        for (size_t j = 0; j < M; j++) {
+            for (size_t k = j + 1; k < M; k++) {
+                double delta;
+                if (!mask(j) && !mask(k)) {
+                    delta = outputs(i) * shapley_coeff(set_size);
+                } else if (mask(j) != mask(k)) {
+                    delta = -outputs(i) * shapley_coeff(set_size - 1);
+                } else {
+                    delta = outputs(i) * shapley_coeff(set_size - 2);
+                }
+                rv(j, k) += delta;
+                rv(k, j) += delta;
+            }
+        }
+    }
+}
+
+void compute_grey_code_row_values_st_2d(
+    nb::ndarray<double, nb::shape<-1, -1, -1>>& row_values,
+    nb::ndarray<bool, nb::shape<-1>>& mask,
+    const nb::ndarray<int64_t, nb::shape<-1>>& inds,
+    nb::ndarray<double, nb::shape<-1, -1>>& outputs,
+    const nb::ndarray<double, nb::shape<-1>>& shapley_coeff,
+    const nb::ndarray<int64_t, nb::shape<-1>>& extended_delta_indexes,
+    const int noop_code
+) {
+    size_t set_size = 0;
+    const size_t M = inds.shape(0);
+    auto rv = row_values.view();
+
+    for (size_t i = 0; i < pow(2, M); i++) {
+        const int delta_ind = extended_delta_indexes(i);
+        if (delta_ind != noop_code) {
+            mask(delta_ind) = !mask(delta_ind);
+            if (mask(delta_ind)) {
+                set_size += 1;
+            } else {
+                set_size -= 1;
+            }
+        }
+
+        for (size_t j = 0; j < M; j++) {
+            for (size_t k = j + 1; k < M; k++) {
+                for (size_t output_ind = 0; output_ind < outputs.shape(1); output_ind++) {
+                    double delta;
+                    if (!mask(j) && !mask(k)) {
+                        delta = outputs(i, output_ind) * shapley_coeff(set_size);
+                    } else if (mask(j) != mask(k)) {
+                        delta = -outputs(i, output_ind) * shapley_coeff(set_size - 1);
+                    } else {
+                        delta = outputs(i, output_ind) * shapley_coeff(set_size - 2);
+                    }
+                    rv(j, k, output_ind) += delta;
+                    rv(k, j, output_ind) += delta;
+                }
+            }
+        }
+    }
 }
 
 #endif // GREY_CODE_UTILS_H

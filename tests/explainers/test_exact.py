@@ -4,6 +4,7 @@ import pickle
 
 import numpy as np
 from conftest import compare_numpy_outputs_against_baseline
+from shap._cutils import compute_grey_code_row_values_st
 
 import shap
 
@@ -35,6 +36,20 @@ def test_tabular_simple_case():
 def test_interactions():
     model, data = common.basic_xgboost_scenario(100)
     return common.test_interactions_additivity(shap.explainers.ExactExplainer, model.predict, data, data)
+
+
+def test_multi_output_interactions():
+    row_values = np.zeros((2, 2, 2))
+    mask = np.zeros(2, dtype=bool)
+    inds = np.array([0, 1], dtype=np.uint64)
+    outputs = np.array([[0.0, 10.0], [2.0, 20.0], [8.0, 80.0], [3.0, 30.0]])
+    shapley_coeff = np.array([0.5, 0.5])
+    extended_delta_indexes = np.array([2147483647, 0, 1, 0], dtype=np.uint64)
+
+    compute_grey_code_row_values_st(row_values, mask, inds, outputs, shapley_coeff, extended_delta_indexes, 2147483647)
+
+    expected = np.array([[[0.0, 0.0], [1.5, 20.0]], [[1.5, 20.0], [0.0, 0.0]]])
+    np.testing.assert_allclose(row_values, expected)
 
 
 @compare_numpy_outputs_against_baseline(func_file=__file__)
