@@ -3,9 +3,11 @@ from typing import Any
 
 import numpy as np
 import scipy.sparse
-from numba import njit
+from numba import njit  # type: ignore[attr-defined]
 
 from .. import links
+from .._cutils import build_fixed_multi_output as _build_fixed_multi_output
+from .._cutils import build_fixed_single_output as _build_fixed_single_output
 
 
 class MaskedModel:
@@ -305,99 +307,55 @@ def _convert_delta_mask_to_full(masks, full_masks):
         masks_pos += 1
 
 
-def _upcast_array(arr: np.ndarray) -> np.ndarray:
-    """Since njit doesn't support float16, we need to upcast it to float32.
-
-    Args:
-        arr (np.ndarray): array to upcast
-
-    Returns
-    -------
-        np.ndarray: upcasted array
-    """
-    if arr.dtype == np.float16:
-        return arr.astype(np.float32)
-    else:
-        return arr
-
-
 def _build_fixed_output(
     averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights
 ):
-    if len(last_outs.shape) == 1:
-        _build_fixed_single_output(
-            _upcast_array(averaged_outs),
-            _upcast_array(last_outs),
-            _upcast_array(outputs),
-            batch_positions,
-            varying_rows,
-            num_varying_rows,
-            link,
-            linearizing_weights,
-        )
+    result_dtype = np.result_type(averaged_outs.dtype, last_outs.dtype, outputs.dtype)
+    dtype = np.dtype(np.float32 if result_dtype.itemsize <= 4 else np.float64)
+
+    averaged_outs_work = np.ascontiguousarray(averaged_outs, dtype=dtype)
+    last_outs_work = np.ascontiguousarray(last_outs, dtype=dtype)
+    batch_positions = np.asarray(batch_positions, dtype=np.int64)
+    varying_rows = np.asarray(varying_rows, dtype=bool)
+    num_varying_rows = np.asarray(num_varying_rows, dtype=np.int64)
+
+    if linearizing_weights is None:
+        outputs_work = np.ascontiguousarray(outputs, dtype=dtype)
     else:
-        _build_fixed_multi_output(
-            _upcast_array(averaged_outs),
-            _upcast_array(last_outs),
-            _upcast_array(outputs),
+        outputs_work = np.ascontiguousarray(link(outputs), dtype=dtype)
+        linearizing_weights = np.ascontiguousarray(linearizing_weights, dtype=dtype)
+
+    if len(last_outs.shape) == 1:
+        args = (
+            averaged_outs_work,
+            last_outs_work,
+            outputs_work,
             batch_positions,
             varying_rows,
             num_varying_rows,
-            link,
-            linearizing_weights,
         )
-
-
-@njit  # we can't use this when using a custom link function...
-def _build_fixed_single_output(
-    averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights
-):
-    # here we can assume that the outputs will always be the same size, and we need
-    # to carry over evaluation outputs
-    sample_count = last_outs.shape[0]
-    # if linearizing_weights is not None:
-    #     averaged_outs[0] = np.mean(linearizing_weights * link(last_outs))
-    # else:
-    #     averaged_outs[0] = link(np.mean(last_outs))
-    for i in range(len(averaged_outs)):
-        if batch_positions[i] < batch_positions[i + 1]:
-            if num_varying_rows[i] == sample_count:
-                last_outs[:] = outputs[batch_positions[i] : batch_positions[i + 1]]
-            else:
-                last_outs[varying_rows[i]] = outputs[batch_positions[i] : batch_positions[i + 1]]
-            if linearizing_weights is not None:
-                averaged_outs[i] = np.mean(linearizing_weights * link(last_outs))
-            else:
-                averaged_outs[i] = link(np.mean(last_outs))
+        if linearizing_weights is None:
+            _build_fixed_single_output(*args)
         else:
-            averaged_outs[i] = averaged_outs[i - 1]
-
-
-@njit
-def _build_fixed_multi_output(
-    averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights
-):
-    # here we can assume that the outputs will always be the same size, and we need
-    # to carry over evaluation outputs
-
-    sample_count = last_outs.shape[0]
-    for i in range(len(averaged_outs)):
-        if batch_positions[i] < batch_positions[i + 1]:
-            if num_varying_rows[i] == sample_count:
-                last_outs[:] = outputs[batch_positions[i] : batch_positions[i + 1]]
-            else:
-                last_outs[varying_rows[i]] = outputs[batch_positions[i] : batch_positions[i + 1]]
-            # averaged_outs[i] = link(np.mean(last_outs))
-            if linearizing_weights is not None:
-                for j in range(last_outs.shape[-1]):
-                    averaged_outs[i, j] = np.mean(linearizing_weights[:, j] * link(last_outs[:, j]))
-            else:
-                for j in range(last_outs.shape[-1]):  # using -1 is important
-                    averaged_outs[i, j] = link(
-                        np.mean(last_outs[:, j])
-                    )  # we can't just do np.mean(last_outs, 0) because that fails to numba compile
+            _build_fixed_single_output(*args, linearizing_weights)
+    else:
+        args = (
+            averaged_outs_work,
+            last_outs_work,
+            outputs_work,
+            batch_positions,
+            varying_rows,
+            num_varying_rows,
+        )
+        if linearizing_weights is None:
+            _build_fixed_multi_output(*args)
         else:
-            averaged_outs[i] = averaged_outs[i - 1]
+            _build_fixed_multi_output(*args, linearizing_weights)
+
+    if linearizing_weights is None and link != links.identity:
+        averaged_outs_work[:] = link(averaged_outs_work)
+    averaged_outs[:] = averaged_outs_work
+    last_outs[:] = last_outs_work
 
 
 def make_masks(cluster_matrix):
