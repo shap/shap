@@ -360,10 +360,10 @@ class _TFGradient(Explainer):
         samples_delta = [np.zeros((nsamples,) + X[t].shape[1:], dtype=np.float32) for t in range(len(X))]
         # use random seed if no argument given
         if rseed is None:
-            rseed = np.random.randint(0, 1e6)  # type: ignore[call-overload]
+            rseed = int(np.random.default_rng().integers(0, int(1e6)))
 
         for i in range(model_output_ranks.shape[1]):
-            np.random.seed(rseed)  # so we get the same noise patterns for each output class
+            rng = np.random.default_rng(rseed)  # so we get the same noise patterns for each output class
             phis = []
             phi_vars = []
             for k in range(len(X)):
@@ -372,11 +372,11 @@ class _TFGradient(Explainer):
             for j in range(X[0].shape[0]):
                 # fill in the samples arrays
                 for k in range(nsamples):
-                    rind = np.random.choice(self.data[0].shape[0])
-                    t = np.random.uniform()
+                    rind = rng.choice(self.data[0].shape[0])
+                    t = rng.uniform()
                     for u in range(len(X)):
                         if self.local_smoothing > 0:
-                            x = X[u][j] + np.random.randn(*X[u][j].shape) * self.local_smoothing
+                            x = X[u][j] + rng.standard_normal(X[u][j].shape) * self.local_smoothing
                         else:
                             x = X[u][j]
                         samples_input[u][k] = t * x + (1 - t) * self.data[u][rind]
@@ -629,10 +629,10 @@ class _PyTorchGradient(Explainer):
 
         # use random seed if no argument given
         if rseed is None:
-            rseed = np.random.randint(0, 1e6)  # type: ignore[call-overload]
+            rseed = int(np.random.default_rng().integers(0, int(1e6)))
 
         for i in range(model_output_ranks.shape[1]):
-            np.random.seed(rseed)  # so we get the same noise patterns for each output class
+            rng = np.random.default_rng(rseed)  # so we get the same noise patterns for each output class
             phis = []
             phi_vars = []
             for k in range(len(self.data)):
@@ -642,8 +642,8 @@ class _PyTorchGradient(Explainer):
             for j in range(X[0].shape[0]):
                 # fill in the samples arrays
                 for k in range(nsamples):
-                    rind = np.random.choice(self.data[0].shape[0])
-                    t = np.random.uniform()
+                    rind = rng.choice(self.data[0].shape[0])
+                    t = rng.uniform()
                     for a in range(len(X)):
                         if self.local_smoothing > 0:
                             # local smoothing is added to the base input, unlike in the TF gradient explainer

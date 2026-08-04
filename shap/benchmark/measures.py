@@ -421,19 +421,14 @@ def to_array(*args):
 
 def const_rand(size, seed=23980):
     """Generate a random array with a fixed seed."""
-    old_seed = np.random.seed()
-    np.random.seed(seed)
-    out = np.random.rand(size)
-    np.random.seed(old_seed)
-    return out
+    rng = np.random.default_rng(seed)
+    return rng.random(size)
 
 
 def const_shuffle(arr, seed=23980):
     """Shuffle an array in-place with a fixed seed."""
-    old_seed = np.random.seed()
-    np.random.seed(seed)
-    np.random.shuffle(arr)
-    np.random.seed(old_seed)
+    rng = np.random.default_rng(seed)
+    rng.shuffle(arr)
 
 
 def strip_list(attrs):
