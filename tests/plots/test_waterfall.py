@@ -118,3 +118,34 @@ def test_waterfall_plot_for_data_with_number_columns():
     explainer = shap.Explainer(f, med)
     shap_values = explainer(X)
     shap.plots.waterfall(shap_values[0], show=False)
+
+
+@pytest.mark.mpl_image_compare(tolerance=3)
+def test_waterfall_with_long_feature_names_savefig():
+    """Test waterfall plot with long feature names to ensure labels don't get cut off (GH #3924)."""
+    # Create model with very long feature names to test label cutoff issue
+    from sklearn.linear_model import LogisticRegression
+
+    X = pd.DataFrame(
+        {
+            "Very Long Feature Name That Should Not Be Cut Off When Saving": [1, 2, 3, 4, 5],
+            "Another Extremely Long Feature Name For Testing": [2, 3, 4, 5, 6],
+            "Short": [3, 4, 5, 6, 7],
+            "Yet Another Very Long Feature Name": [4, 5, 6, 7, 8],
+        }
+    )
+    y = pd.Series([0, 1, 0, 1, 0])
+
+    model = LogisticRegression(max_iter=1000)
+    model.fit(X, y)
+
+    explainer = shap.LinearExplainer(model, X)
+    shap_values = explainer(X)
+
+    # Create figure and plot - without tight_layout labels would be cut off
+    fig = plt.figure()
+    shap.plots.waterfall(shap_values[0], show=False)
+
+    # The fix (plt.tight_layout) is now automatically applied in waterfall()
+    # This ensures labels are visible when saving
+    return fig
