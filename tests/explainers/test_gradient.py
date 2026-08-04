@@ -241,10 +241,17 @@ def test_tf_multi_inputs_multi_outputs():
 def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch"""
     # FIXME: this test should ideally pass with any random seed. See #2960
-    random_seed = 0
 
     torch = pytest.importorskip("torch")
+    random_seed = 0
     torch.manual_seed(random_seed)
+    np.random.seed(random_seed)
+
+    # Ensure deterministic behavior
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
     rs = np.random.RandomState(random_seed)
 
     from torch import nn
