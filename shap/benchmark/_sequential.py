@@ -91,7 +91,7 @@ class SequentialPerturbation:
         explanation,
         *model_args,
         percent=0.01,
-        indices=[],
+        indices=None,
         y=None,
         label=None,
         silent=False,
