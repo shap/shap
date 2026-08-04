@@ -99,6 +99,12 @@ execute_process(
 
 target_include_directories(_cext PUBLIC ${NUMPY_INCLUDE_DIR})
 
+# OpenMP for parallelized interventional TreeSHAP
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+  target_link_libraries(_cext PRIVATE OpenMP::OpenMP_CXX)
+endif()
+
 # Install directive for scikit-build-core
 install(TARGETS _cext LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 
