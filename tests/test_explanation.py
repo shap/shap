@@ -127,6 +127,34 @@ def test_feature_names_slicing_for_square_arrays(random_seed, N):
     assert column_e.feature_names == "e"
 
 
+def test_feature_names_slicing_for_2d_output_names():
+    values = np.array(
+        [
+            [[1, 10], [2, 20], [3, 30]],
+            [[4, 40], [5, 50], [6, 60]],
+        ],
+    )
+    base_values = np.array([[0.1, 0.2], [0.3, 0.4]])
+    data = np.array([[11, 12, 13], [21, 22, 23]])
+    feature_names = ["f0", "f1", "f2"]
+    output_names = np.array([["neg", "pos"], ["neg", "pos"]])
+
+    exp = shap.Explanation(
+        values=values,
+        base_values=base_values,
+        data=data,
+        feature_names=feature_names,
+        output_names=output_names,
+    )
+
+    selected = exp[..., "pos"]
+
+    assert selected.shape == (2, 3)
+    assert selected.feature_names == feature_names
+    assert selected.output_names == "pos"
+    np.testing.assert_array_equal(selected[..., "f1"].values, np.array([20, 50]))
+
+
 def test_populating_op_history():
     """Tests whether the Explanation.op_history attribute is populated properly after operations have been applied."""
     values = np.arange(-18, 17).reshape(7, 5)
