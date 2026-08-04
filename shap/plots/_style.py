@@ -30,8 +30,7 @@ type RGBAColorType = (
 type ColorType = RGBColorType | RGBAColorType | np.ndarray
 
 
-# TODO: Use dataclass(kw_only=True) when we drop Python 3.9
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class StyleConfig:
     """A complete set of configuration options for matplotlib-based shap plots."""
 
