@@ -1,5 +1,5 @@
+from .._cutils import delta_minimization_order
 from ._clustering import (
-    delta_minimization_order,
     hclust,
     hclust_ordering,
     partition_tree,

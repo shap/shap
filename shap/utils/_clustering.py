@@ -10,8 +10,10 @@ import pandas as pd
 import scipy.cluster
 import scipy.spatial
 import sklearn
-from numba import njit
 
+from .._cutils import (
+    pt_shuffle_rec,
+)
 from ..utils._exceptions import DimensionError
 from ._show_progress import show_progress
 
@@ -43,80 +45,7 @@ def partition_tree_shuffle(
 
     """
     M = len(index_mask)
-    # switch = np.random.randn(M) < 0
-    _pt_shuffle_rec(partition_tree.shape[0] - 1, indexes, index_mask, partition_tree, M, 0)
-
-
-@njit
-def _pt_shuffle_rec(
-    i: int,
-    indexes: npt.NDArray[Any],
-    index_mask: npt.NDArray[np.bool_],
-    partition_tree: npt.NDArray[Any],
-    M: int,
-    pos: int,
-) -> int:  # type: ignore[misc]
-    if i < 0:
-        # see if we should include this index in the ordering
-        if index_mask[i + M]:
-            indexes[pos] = i + M
-            return pos + 1
-        else:
-            return pos
-    left = int(partition_tree[i, 0] - M)
-    right = int(partition_tree[i, 1] - M)
-    if np.random.randn() < 0:
-        pos = _pt_shuffle_rec(left, indexes, index_mask, partition_tree, M, pos)
-        pos = _pt_shuffle_rec(right, indexes, index_mask, partition_tree, M, pos)
-    else:
-        pos = _pt_shuffle_rec(right, indexes, index_mask, partition_tree, M, pos)
-        pos = _pt_shuffle_rec(left, indexes, index_mask, partition_tree, M, pos)
-    return pos
-
-
-@njit
-def delta_minimization_order(
-    all_masks: npt.NDArray[Any],
-    max_swap_size: int = 100,
-    num_passes: int = 2,
-) -> npt.NDArray[Any]:  # type: ignore[misc]
-    order = np.arange(len(all_masks))
-    for _ in range(num_passes):
-        for length in list(range(2, max_swap_size)):
-            for i in range(1, len(order) - length):
-                if _reverse_window_score_gain(all_masks, order, i, length) > 0:
-                    _reverse_window(order, i, length)
-    return order
-
-
-@njit
-def _reverse_window(order: npt.NDArray[Any], start: int, length: int) -> None:  # type: ignore[misc]
-    for i in range(length // 2):
-        tmp = order[start + i]
-        order[start + i] = order[start + length - i - 1]
-        order[start + length - i - 1] = tmp
-
-
-@njit
-def _reverse_window_score_gain(
-    masks: npt.NDArray[Any],
-    order: npt.NDArray[Any],
-    start: int,
-    length: int,
-) -> int:  # type: ignore[misc]
-    forward_score = _mask_delta_score(masks[order[start - 1]], masks[order[start]]) + _mask_delta_score(
-        masks[order[start + length - 1]], masks[order[start + length]]
-    )
-    reverse_score = _mask_delta_score(masks[order[start - 1]], masks[order[start + length - 1]]) + _mask_delta_score(
-        masks[order[start]], masks[order[start + length]]
-    )
-
-    return forward_score - reverse_score
-
-
-@njit
-def _mask_delta_score(m1: npt.NDArray[Any], m2: npt.NDArray[Any]) -> int:  # type: ignore[misc]
-    return (m1 ^ m2).sum()
+    pt_shuffle_rec(partition_tree.shape[0] - 1, indexes, index_mask, partition_tree, M, 0)
 
 
 def hclust_ordering(
