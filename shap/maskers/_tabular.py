@@ -1,8 +1,9 @@
 import logging
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from numba import njit
+from numba import njit  # type: ignore
 
 from .. import utils
 from .._serializable import Deserializer, Serializer
@@ -16,7 +17,9 @@ log = logging.getLogger("shap")
 class Tabular(Masker):
     """A common base class for Independent and Partition."""
 
-    def __init__(self, data, max_samples=100, clustering=None, partition=None):
+    def __init__(
+        self, data: Any, max_samples: int = 100, clustering: str | np.ndarray | None = None, partition: Any = None
+    ) -> None:
         """This masks out tabular features by integrating over the given background dataset.
 
         Parameters
@@ -66,7 +69,7 @@ class Tabular(Masker):
             data = utils.sample(data, max_samples)
 
         self.data = data
-        self.clustering = clustering
+        self.clustering = clustering  # type: ignore
         self.partition = partition
         self.max_samples = max_samples
 
@@ -106,7 +109,7 @@ class Tabular(Masker):
         # this is property that allows callers to check what rows actually changed since last time.
         # self.changed_rows = np.ones(self.data.shape[0], dtype=bool)
 
-    def __call__(self, mask, x):
+    def __call__(self, mask: np.ndarray, x: np.ndarray) -> Any:  # type: ignore
         mask = self._standardize_mask(mask, x)
 
         # make sure we are given a single sample
@@ -118,8 +121,8 @@ class Tabular(Masker):
             variants = ~self.invariants(x)
             curr_delta_inds = np.zeros(len(mask), dtype=int)
             num_masks = (mask >= 0).sum()
-            varying_rows_out = np.zeros((num_masks, self.shape[0]), dtype=bool)
-            masked_inputs_out = np.zeros((num_masks * self.shape[0], self.shape[1]))
+            varying_rows_out = np.zeros((num_masks, self.shape[0]), dtype=bool)  # type: ignore
+            masked_inputs_out = np.zeros((num_masks * self.shape[0], self.shape[1]))  # type: ignore
             self._last_mask[:] = False
             self._masked_data[:] = self.data
             _delta_masking(
@@ -156,7 +159,7 @@ class Tabular(Masker):
     #     self._masked_data[:] = self.data
     #     self._last_mask[:] = False
 
-    def invariants(self, x):
+    def invariants(self, x: np.ndarray) -> np.ndarray:
         """This returns a mask of which features change when we mask them.
 
         This optional masking method allows explainers to avoid re-evaluating the model when
@@ -174,7 +177,7 @@ class Tabular(Masker):
 
         return np.isclose(x, self.data)
 
-    def save(self, out_file):
+    def save(self, out_file: Any) -> None:
         """Write a Tabular masker to a file stream."""
         super().save(out_file)
 
@@ -193,7 +196,7 @@ class Tabular(Masker):
             s.save("partition", self.partition)
 
     @classmethod
-    def load(cls, in_file, instantiate=True):
+    def load(cls, in_file: Any, instantiate: bool = True) -> Any:
         """Load a Tabular masker from a file stream."""
         if instantiate:
             return cls._instantiated_load(in_file)
@@ -208,7 +211,7 @@ class Tabular(Masker):
 
 
 @njit
-def _single_delta_mask(dind, masked_inputs, last_mask, data, x, noop_code):
+def _single_delta_mask(dind: int, masked_inputs: Any, last_mask: Any, data: Any, x: Any, noop_code: int) -> None:
     if dind == noop_code:
         pass
     elif last_mask[dind]:
@@ -221,17 +224,17 @@ def _single_delta_mask(dind, masked_inputs, last_mask, data, x, noop_code):
 
 @njit
 def _delta_masking(
-    masks,
-    x,
-    curr_delta_inds,
-    varying_rows_out,
-    masked_inputs_tmp,
-    last_mask,
-    data,
-    variants,
-    masked_inputs_out,
-    noop_code,
-):
+    masks: Any,
+    x: Any,
+    curr_delta_inds: Any,
+    varying_rows_out: Any,
+    masked_inputs_tmp: Any,
+    last_mask: Any,
+    data: Any,
+    variants: Any,
+    masked_inputs_out: Any,
+    noop_code: int,
+) -> None:
     """Implements the special (high speed) delta masking API that only flips the positions we need to.
 
     Note that we attempt to avoid doing any allocation inside this function for speed reasons.
@@ -277,7 +280,7 @@ def _delta_masking(
 class Independent(Tabular):
     """This masks out tabular features by integrating over the given background dataset."""
 
-    def __init__(self, data, max_samples=100):
+    def __init__(self, data: Any, max_samples: int = 100) -> None:
         """Build a Independent masker with the given background data.
 
         Parameters
@@ -302,7 +305,7 @@ class Partition(Tabular):
     Unlike Independent, Partition respects a hierarchical structure of the data.
     """
 
-    def __init__(self, data, max_samples=100, clustering="correlation"):
+    def __init__(self, data: Any, max_samples: int = 100, clustering: str | np.ndarray = "correlation") -> None:
         """Build a Partition masker with the given background data and clustering.
 
         Parameters
@@ -338,7 +341,7 @@ class Impute(Masker):  # we should inherit from Tabular once we add support for 
     Unlike Independent, Gaussian imputes missing values based on correlations with observed data points.
     """
 
-    def __init__(self, data, method="linear"):
+    def __init__(self, data: Any, method: str = "linear") -> None:
         """Build a Partition masker with the given background data and clustering.
 
         Parameters
