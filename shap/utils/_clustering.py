@@ -11,7 +11,9 @@ import scipy.cluster
 import scipy.spatial
 import sklearn
 
-from .._cutils import _pt_shuffle_rec
+# nanobind's stub generator skips underscore-prefixed names, so _cutils.pyi has
+# no declaration for this one even though the binding exists.
+from .._cutils import _pt_shuffle_rec  # type: ignore[attr-defined]
 from .._cutils import delta_minimization_order as delta_minimization_order
 from ..utils._exceptions import DimensionError
 from ._show_progress import show_progress
