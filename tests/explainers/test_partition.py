@@ -2,11 +2,44 @@
 
 import pickle
 
+import numpy as np
 from conftest import compare_numpy_outputs_against_baseline
 
 import shap
+from shap.explainers._partition import lower_credit
 
 from . import common
+
+
+def test_lower_credit_matches_baseline_operation_order():
+    """``lower_credit`` must reproduce the numba baseline's arithmetic exactly.
+
+    The baseline computed the credit handed to a child as
+    ``values[parent] * lsize / group_size`` -- multiply, then divide. The C++
+    version hoists ``lsize / group_size`` into a ``factor`` argument and computes
+    ``factor * values[parent]`` -- divide, then multiply. Floating point is not
+    associative, so the two round differently, and ``lower_credit`` compounds the
+    difference down every level of the clustering tree.
+
+    Here node 3 = {0, 1} and node 4 = {node 3, leaf 2}, so leaf 2 receives a
+    factor of 1/3 -- inexact in binary, which is what exposes the reassociation.
+    """
+    clustering = np.array([[0.0, 1.0, 0.0, 2.0], [3.0, 2.0, 0.0, 3.0]])
+    M = 3
+    values = np.zeros(2 * M - 1, dtype=np.float64)
+    values[-1] = 4.2
+
+    lower_credit(
+        i=len(values) - 1,
+        M=M,
+        prev_i=len(values) - 1,
+        factor=0.0,
+        values=values,
+        clustering=clustering,
+    )
+
+    # leaf 2 is a returned SHAP value: values[:M] is what explain_row hands back
+    assert values[2] == 4.2 * 1 / 3
 
 
 def test_translation(basic_translation_scenario):
