@@ -12,14 +12,11 @@ from . import common
 
 
 def _apply_lower_credit(values, clustering, M):
-    """Call ``lower_credit`` under whichever signature is present.
+    """DUMMY TEST TO CHECK C++ MIGRATION WORKS AS EXPECTED:
+    Call ``lower_credit`` under whichever signature is present.
 
     numba baseline:  ``lower_credit(i, value, M, values, clustering)``
     C++ migration:   ``lower_credit(i, M, prev_i, factor, values, clustering)``
-
-    Speaking both is what makes the test below meaningful: it has to PASS on the
-    baseline and FAIL if the migration changes the arithmetic. A version that
-    only knew the new signature would be red on both sides and prove nothing.
     """
     root = len(values) - 1
     try:
