@@ -4,7 +4,10 @@ import numpy as np
 import pandas as pd
 
 from .. import utils
-from .._cutils import delta_masking as _delta_masking
+
+# nanobind's stub generator skips underscore-prefixed names, so _cutils.pyi has
+# no declaration for this one even though the binding exists.
+from .._cutils import _delta_masking  # type: ignore[attr-defined]
 from .._serializable import Deserializer, Serializer
 from ..utils import MaskedModel
 from ..utils._exceptions import DimensionError, InvalidClusteringError
