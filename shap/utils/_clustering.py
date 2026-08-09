@@ -11,8 +11,8 @@ import scipy.cluster
 import scipy.spatial
 import sklearn
 
+from .._cutils import _pt_shuffle_rec
 from .._cutils import delta_minimization_order as delta_minimization_order
-from .._cutils import pt_shuffle_rec as _pt_shuffle_rec
 from ..utils._exceptions import DimensionError
 from ._show_progress import show_progress
 
