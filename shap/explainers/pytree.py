@@ -3,7 +3,12 @@ It is primarily for illustration since it is slower than the 'tree'
 module which uses a compiled C++ implementation.
 """
 
+from __future__ import annotations
+
+from typing import Any
+
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 # import numba
@@ -140,7 +145,9 @@ from ..utils._exceptions import ExplainerError
 class TreeExplainer:
     """A pure Python (slow) implementation of Tree SHAP."""
 
-    def __init__(self, model, **kwargs):
+    trees: Any
+
+    def __init__(self, model: Any, **kwargs: Any) -> None:
         self.model_type = "internal"
 
         if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
@@ -165,7 +172,9 @@ class TreeExplainer:
             self.one_fractions = np.zeros(s, dtype=np.float64)
             self.pweights = np.zeros(s, dtype=np.float64)
 
-    def shap_values(self, X, tree_limit=-1, **kwargs):
+    def shap_values(
+        self, X: npt.NDArray[Any] | pd.DataFrame | pd.Series, tree_limit: int = -1, **kwargs: Any
+    ) -> npt.NDArray[Any] | list[npt.NDArray[Any]]:
         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
         # these are about 10x faster than the numba jit'd implementation below...
         if self.model_type == "xgboost":
@@ -214,7 +223,9 @@ class TreeExplainer:
             else:
                 return [phi[:, :, i] for i in range(n_outputs)]
 
-    def shap_interaction_values(self, X, tree_limit=-1, **kwargs):
+        raise ValueError("Invalid X shape passed to shap_values")
+
+    def shap_interaction_values(self, X: Any, tree_limit: int = -1, **kwargs: Any) -> npt.NDArray[Any]:
         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
         if self.model_type == "xgboost":
             import xgboost
@@ -227,7 +238,15 @@ class TreeExplainer:
         else:
             raise NotImplementedError("Interaction values not yet supported for model type: " + str(type(X)))
 
-    def tree_shap(self, tree, x, x_missing, phi, condition=0, condition_feature=0):
+    def tree_shap(
+        self,
+        tree: Tree,
+        x: npt.NDArray[Any],
+        x_missing: npt.NDArray[np.bool_],
+        phi: npt.NDArray[Any],
+        condition: int = 0,
+        condition_feature: int = 0,
+    ) -> None:
         # update the bias term, which is the last index in phi
         # (note the paper has this as phi_0 instead of phi_M)
         if condition == 0:
@@ -263,8 +282,15 @@ class TreeExplainer:
 # extend our decision path with a fraction of one and zero extensions
 # @numba.jit(nopython=True, nogil=True)
 def extend_path(
-    feature_indexes, zero_fractions, one_fractions, pweights, unique_depth, zero_fraction, one_fraction, feature_index
-):
+    feature_indexes: npt.NDArray[np.int32],
+    zero_fractions: npt.NDArray[np.float64],
+    one_fractions: npt.NDArray[np.float64],
+    pweights: npt.NDArray[np.float64],
+    unique_depth: int,
+    zero_fraction: float,
+    one_fraction: float,
+    feature_index: int,
+) -> None:
     feature_indexes[unique_depth] = feature_index
     zero_fractions[unique_depth] = zero_fraction
     one_fractions[unique_depth] = one_fraction
@@ -280,7 +306,14 @@ def extend_path(
 
 # undo a previous extension of the decision path
 # @numba.jit(nopython=True, nogil=True)
-def unwind_path(feature_indexes, zero_fractions, one_fractions, pweights, unique_depth, path_index):
+def unwind_path(
+    feature_indexes: npt.NDArray[np.int32],
+    zero_fractions: npt.NDArray[np.float64],
+    one_fractions: npt.NDArray[np.float64],
+    pweights: npt.NDArray[np.float64],
+    unique_depth: int,
+    path_index: int,
+) -> None:
     one_fraction = one_fractions[path_index]
     zero_fraction = zero_fractions[path_index]
     next_one_portion = pweights[unique_depth]
@@ -302,7 +335,14 @@ def unwind_path(feature_indexes, zero_fractions, one_fractions, pweights, unique
 # determine what the total permutation weight would be if
 # we unwound a previous extension in the decision path
 # @numba.jit(nopython=True, nogil=True)
-def unwound_path_sum(feature_indexes, zero_fractions, one_fractions, pweights, unique_depth, path_index):
+def unwound_path_sum(
+    feature_indexes: npt.NDArray[np.int32],
+    zero_fractions: npt.NDArray[np.float64],
+    one_fractions: npt.NDArray[np.float64],
+    pweights: npt.NDArray[np.float64],
+    unique_depth: int,
+    path_index: int,
+) -> float:
     one_fraction = one_fractions[path_index]
     zero_fraction = zero_fractions[path_index]
     next_one_portion = pweights[unique_depth]
@@ -334,7 +374,7 @@ class Tree:
     #         self.values, 0
     #     )
 
-    def __init__(self, tree, normalize=False):
+    def __init__(self, tree: Any, normalize: bool = False) -> None:
         if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)
@@ -357,7 +397,14 @@ class Tree:
 
 
 # @numba.jit(nopython=True)
-def compute_expectations(children_left, children_right, node_sample_weight, values, i, depth=0):
+def compute_expectations(
+    children_left: npt.NDArray[np.int32],
+    children_right: npt.NDArray[np.int32],
+    node_sample_weight: npt.NDArray[np.float64],
+    values: npt.NDArray[np.float64],
+    i: int,
+    depth: int = 0,
+) -> int:
     if children_right[i] == -1:
         values[i, :] = values[i, :]
         return 0
@@ -376,29 +423,29 @@ def compute_expectations(children_left, children_right, node_sample_weight, valu
 # recursive computation of SHAP values for a decision tree
 # @numba.jit(nopython=True, nogil=True)
 def tree_shap_recursive(
-    children_left,
-    children_right,
-    children_default,
-    features,
-    thresholds,
-    values,
-    node_sample_weight,
-    x,
-    x_missing,
-    phi,
-    node_index,
-    unique_depth,
-    parent_feature_indexes,
-    parent_zero_fractions,
-    parent_one_fractions,
-    parent_pweights,
-    parent_zero_fraction,
-    parent_one_fraction,
-    parent_feature_index,
-    condition,
-    condition_feature,
-    condition_fraction,
-):
+    children_left: npt.NDArray[np.int32],
+    children_right: npt.NDArray[np.int32],
+    children_default: npt.NDArray[np.int32],
+    features: npt.NDArray[np.int32],
+    thresholds: npt.NDArray[np.float64],
+    values: npt.NDArray[np.float64],
+    node_sample_weight: npt.NDArray[np.float64],
+    x: npt.NDArray[Any],
+    x_missing: npt.NDArray[np.bool_],
+    phi: npt.NDArray[Any],
+    node_index: int,
+    unique_depth: int,
+    parent_feature_indexes: npt.NDArray[np.int32],
+    parent_zero_fractions: npt.NDArray[np.float64],
+    parent_one_fractions: npt.NDArray[np.float64],
+    parent_pweights: npt.NDArray[np.float64],
+    parent_zero_fraction: float,
+    parent_one_fraction: float,
+    parent_feature_index: int,
+    condition: int,
+    condition_feature: int,
+    condition_fraction: float,
+) -> None:
     # stop if we have no weight coming down to us
     if condition_fraction == 0.0:
         return

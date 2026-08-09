@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 import warnings
+from typing import Any
 
-tf = None
+tf: Any = None
 
 
-def _import_tf():
+def _import_tf() -> None:
     """Tries to import tensorflow."""
     global tf
     if tf is None:
         import tensorflow as tf
 
 
-def _get_session(session):
+def _get_session(session: Any) -> Any:
     """Common utility to get the session for the tensorflow-based explainer.
 
     Parameters
@@ -34,7 +37,7 @@ def _get_session(session):
     return tf.get_default_session() if session is None else session
 
 
-def _get_graph(explainer):
+def _get_graph(explainer: Any) -> Any:
     """Common utility to get the graph for the tensorflow-based explainer.
 
     Parameters
@@ -54,7 +57,7 @@ def _get_graph(explainer):
         return graph
 
 
-def _get_model_inputs(model):
+def _get_model_inputs(model: Any) -> Any:
     """Common utility to determine the model inputs.
 
     Parameters
@@ -79,7 +82,7 @@ def _get_model_inputs(model):
     raise ValueError(emsg)
 
 
-def _get_model_output(model):
+def _get_model_output(model: Any) -> Any:
     """Common utility to determine the model output.
 
     Parameters
