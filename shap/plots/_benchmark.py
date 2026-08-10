@@ -1,8 +1,15 @@
+from typing import TYPE_CHECKING
+
 import matplotlib.patheffects as PathEffects
 import matplotlib.pyplot as plt
 import numpy as np
 
 from . import colors
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from ..benchmark._result import BenchmarkResult
 
 xlabel_names = {
     "remove absolute": "Fraction removed",
@@ -16,7 +23,10 @@ xlabel_names = {
 }
 
 
-def benchmark(benchmark, show=True):
+def benchmark(
+    benchmark: "BenchmarkResult | Iterable[BenchmarkResult]",
+    show: bool = True,
+) -> None:
     """Plot a BenchmarkResult or list of such results."""
     if hasattr(benchmark, "__iter__"):
         benchmark = list(benchmark)
@@ -42,6 +52,7 @@ def benchmark(benchmark, show=True):
             method_color[m] = colors.red_blue_circle(i / len(methods))
 
         # plot a single metric benchmark result
+        assert metric_name is not None
         if single_metric and has_curves:
             benchmark.sort(key=lambda b: -b.value_sign * b.value)
             for i, b in enumerate(benchmark):
@@ -155,15 +166,15 @@ def benchmark(benchmark, show=True):
             xs = [-0.03 * (len(methods) - 1)] + list(range(len(metrics) + 1))
             for i, method in enumerate(methods):
                 scores = [1 - i / (len(methods) - 1), 1 - i / (len(methods) - 1)]
-                values = [None, None]
+                point_values: list[float | None] = [None, None]
                 for metric in metrics:
                     for b in benchmark:
                         if b.method == method and b.metric == metric:
                             scores.append(norm_values[b.full_name])
-                            values.append(b.value)
+                            point_values.append(b.value)
                 plt.plot(xs, scores, color=method_color[method], label=method)
 
-                for x, y, value in zip(xs, scores, values):
+                for x, y, value in zip(xs, scores, point_values):
                     if value is None:
                         continue
                     label = f"{value:.2f}"
