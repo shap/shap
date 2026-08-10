@@ -137,7 +137,9 @@ class ExactExplainer(Explainer):
         if getattr(self.masker, "clustering", None) is None:
             # see which elements we actually need to perturb
             inds = fm.varying_inputs()
-            inds = inds.astype(np.int64)
+            # varying_inputs() returns np.intp, which is int32 on Windows; copy=False
+            # makes this free on platforms where it is already int64
+            inds = inds.astype(np.int64, copy=False)
             if len(inds) == 0:
                 # if nothing varies then we can just return the expected value as the output and be done with it
                 outputs = fm(np.array([MaskedModel.delta_mask_noop_value]), zero_index=0, batch_size=batch_size)
