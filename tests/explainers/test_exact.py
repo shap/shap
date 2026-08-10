@@ -4,6 +4,7 @@ import pickle
 
 import numpy as np
 from conftest import compare_numpy_outputs_against_baseline
+from shap._cutils import compute_grey_code_row_values_st
 
 import shap
 
@@ -35,6 +36,48 @@ def test_tabular_simple_case():
 def test_interactions():
     model, data = common.basic_xgboost_scenario(100)
     return common.test_interactions_additivity(shap.explainers.ExactExplainer, model.predict, data, data)
+
+
+def test_interactions_with_invariant_feature():
+    """Interaction values must stay additive when some features do not vary.
+
+    ``varying_inputs()`` drops invariant features, so ``inds`` is then not
+    ``[0..M-1]``. The Shapley-Taylor loop must index ``mask`` and ``row_values``
+    by the feature id in ``inds``, not by the loop counter -- otherwise it reads
+    mask entries that are never flipped, picks the wrong Shapley coefficient,
+    and writes the values into the wrong cells of the interaction matrix.
+
+    ``test_interactions`` cannot catch this: every feature varies there, so
+    ``inds == [0..M-1]`` and the two indexings coincide.
+    """
+    rng = np.random.RandomState(0)
+    X = rng.randn(20, 4)
+    X[:, 1] = 3.0  # constant -> invariant -> dropped from inds
+
+    def f(x):
+        return (x[:, 0] * 2 + x[:, 2] * x[:, 3]).astype(np.float64)
+
+    explainer = shap.explainers.ExactExplainer(f, shap.maskers.Independent(X, max_samples=20))
+    shap_values = explainer(X[:3], interactions=True)
+
+    np.testing.assert_allclose(shap_values.values.sum(axis=(1, 2)) + shap_values.base_values, f(X[:3]), atol=1e-10)
+    # the invariant feature can have no interactions with anything
+    np.testing.assert_allclose(shap_values.values[:, 1, :], 0, atol=1e-12)
+    np.testing.assert_allclose(shap_values.values[:, :, 1], 0, atol=1e-12)
+
+
+def test_multi_output_interactions():
+    row_values = np.zeros((2, 2, 2))
+    mask = np.zeros(2, dtype=bool)
+    inds = np.array([0, 1], dtype=np.int64)
+    outputs = np.array([[0.0, 10.0], [2.0, 20.0], [8.0, 80.0], [3.0, 30.0]])
+    shapley_coeff = np.array([0.5, 0.5])
+    extended_delta_indexes = np.array([2147483647, 0, 1, 0], dtype=np.int64)
+
+    compute_grey_code_row_values_st(row_values, mask, inds, outputs, shapley_coeff, extended_delta_indexes, 2147483647)
+
+    expected = np.array([[[0.0, 0.0], [1.5, 20.0]], [[1.5, 20.0], [0.0, 0.0]]])
+    np.testing.assert_allclose(row_values, expected)
 
 
 @compare_numpy_outputs_against_baseline(func_file=__file__)
