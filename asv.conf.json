@@ -10,7 +10,8 @@
     ],
     "matrix": {
         "req": {
-            "xgboost": []
+            "xgboost": [],
+            "opencv-python": []
         }
     },
     "show_commit_url": "https://github.com/shap/shap/commit/",
