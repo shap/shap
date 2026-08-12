@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import io
 import json
 import os
@@ -315,11 +316,17 @@ class TreeExplainer(Explainer):
             # to construct trees by hand (e.g. with categorical splits, which the
             # third-party model parsers are needed for otherwise) and explain them
             # without round-tripping through an external model object.
-            self.model = model
+            # Copy first so that setting model_output below doesn't mutate an
+            # instance the caller might reuse elsewhere (e.g. passing the same
+            # hand-built TreeEnsemble to both TreeExplainer and GPUTreeExplainer).
+            self.model = copy.copy(model)
+            self.model.model_output = model_output
         else:
             self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
-        self.model_output = model_output
-        # self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
+        # self.model.model_output may differ from the model_output argument above
+        # (e.g. TreeEnsemble translates "predict_proba" to "probability" for some
+        # model types), so mirror the resolved value rather than the raw argument.
+        self.model_output = self.model.model_output
 
         # check for unsupported combinations of feature_perturbation and model_outputs
         if feature_perturbation == "tree_path_dependent":

@@ -90,6 +90,73 @@ def test_xgboost_predictions():
     assert np.allclose(y_pred, y_pred_tree_ensemble, atol=1e-7)
 
 
+def _hand_built_tree_ensemble(model_output=None):
+    """A minimal hand-built TreeEnsemble, matching the "construct trees by hand"
+    use case TreeExplainer's isinstance(model, TreeEnsemble) branch exists for."""
+    from shap.explainers._tree import TreeEnsemble
+
+    tree_dict = {
+        "objective": "binary_crossentropy",
+        "tree_output": "log_odds",
+        "trees": [
+            {
+                "children_left": np.array([1, -1, -1], dtype=np.int32),
+                "children_right": np.array([2, -1, -1], dtype=np.int32),
+                "children_default": np.array([1, -1, -1], dtype=np.int32),
+                "features": np.array([0, -2, -2], dtype=np.int32),
+                "thresholds": np.array([0.5, -2, -2], dtype=np.float64),
+                "values": np.array([[0.0], [0.2], [0.8]], dtype=np.float64),
+                "node_sample_weight": np.array([100.0, 40.0, 60.0], dtype=np.float64),
+            }
+        ],
+    }
+    ensemble = TreeEnsemble(tree_dict)
+    if model_output is not None:
+        ensemble.model_output = model_output
+    return ensemble
+
+
+def test_treeexplainer_syncs_model_output_for_prebuilt_treeensemble():
+    """Regression test: TreeExplainer(model=<TreeEnsemble>, model_output=...) used to
+    leave self.model.model_output (what computation actually reads) out of sync with
+    self.model_output (the attribute set from the argument), because the
+    isinstance(model, TreeEnsemble) fast path skipped the sync that a freshly
+    constructed TreeEnsemble gets. See GH issue for the three failure modes this
+    caused."""
+    background = np.array([[0.2], [0.7], [0.4]])
+    explainer = shap.TreeExplainer(
+        model=_hand_built_tree_ensemble(),
+        data=background,
+        model_output="probability",
+        feature_perturbation="interventional",
+    )
+    assert explainer.model_output == "probability"
+    assert explainer.model.model_output == "probability"
+
+
+def test_treeexplainer_tree_path_dependent_default_works_for_prebuilt_treeensemble():
+    """The plain default case (model_output="raw", the TreeExplainer default) should
+    just work for a hand-built TreeEnsemble the same as it does for any other model,
+    instead of raising because the pre-built ensemble's model_output was never
+    reconciled with the default."""
+    explainer = shap.TreeExplainer(model=_hand_built_tree_ensemble(), feature_perturbation="tree_path_dependent")
+    assert explainer.model_output == "raw"
+    assert explainer.model.model_output == "raw"
+
+
+def test_treeexplainer_does_not_mutate_shared_prebuilt_treeensemble():
+    """Constructing a TreeExplainer around a pre-built TreeEnsemble must not mutate
+    that TreeEnsemble in place, since callers may reuse the same instance elsewhere
+    (e.g. shap's own GPU/CPU equivalence tests construct both a TreeExplainer and a
+    GPUTreeExplainer from one shared TreeEnsemble)."""
+    shared = _hand_built_tree_ensemble(model_output="raw")
+    background = np.array([[0.2], [0.7], [0.4]])
+
+    shap.TreeExplainer(model=shared, data=background, model_output="probability", feature_perturbation="interventional")
+
+    assert shared.model_output == "raw"
+
+
 def test_front_page_sklearn():
     # load JS visualization code to notebook
     shap.initjs()
