@@ -26,6 +26,17 @@ class GPUTreeExplainer(TreeExplainer):
 
     """
 
+    _UNSUPPORTED_MODEL_OUTPUTS = frozenset({"probability", "probability_doubled", "log_loss"})
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.model.model_output in self._UNSUPPORTED_MODEL_OUTPUTS:
+            raise NotImplementedError(
+                f'GPUTreeExplainer does not yet support model_output="{self.model.model_output}". '
+                'Use model_output="raw" or TreeExplainer on CPU for probability/log_loss explanations. '
+                "See https://github.com/shap/shap/issues/3655"
+            )
+
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True, from_call=False):
         """Estimate the SHAP values for a set of samples.
 
