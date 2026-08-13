@@ -394,7 +394,7 @@ class _TFGradient(Explainer):
                 for a in range(len(X)):
                     samples = grad[a] * samples_delta[a]
                     phis[a][j] = samples.mean(0)
-                    phi_vars[a][j] = samples.var(0) / np.sqrt(samples.shape[0])  # estimate variance of means
+                    phi_vars[a][j] = samples.var(0) / samples.shape[0]  # estimate variance of means
 
                 # TODO: this could be avoided by integrating between endpoints if no local smoothing is used
                 # correct the sum of the values to equal the output of the model using a linear
@@ -684,7 +684,7 @@ class _PyTorchGradient(Explainer):
                 for t in range(len(self.data)):
                     samples = grad[t] * samples_delta[t]
                     phis[t][j] = samples.mean(0)
-                    phi_vars[t][j] = samples.var(0) / np.sqrt(samples.shape[0])  # estimate variance of means
+                    phi_vars[t][j] = samples.var(0) / samples.shape[0]  # estimate variance of means
 
             output_phis.append(phis[0] if len(self.data) == 1 else phis)
             output_phi_vars.append(phi_vars[0] if not self.multi_input else phi_vars)
