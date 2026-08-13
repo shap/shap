@@ -1,0 +1,85 @@
+name: GPU CI Smoke Test
+
+# TEMPORARY workflow. Validates the label -> gate -> start-runner -> job -> stop-runner
+# flow end-to-end on a cheap CPU instance, including teardown-on-failure, before real
+# GPU quota is available. Delete this file once gpu_tests.yml has been proven out on a
+# real GPU instance.
+
+on:
+  pull_request_target:
+    types: [labeled]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  gate:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'CUDA CI'
+    runs-on: ubuntu-latest
+    environment: gpu-ci
+    steps:
+      - run: echo "Approved for GPU CI smoke test"
+
+  start-runner:
+    needs: gate
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GPU_CI_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Start EC2 runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@343a1b2ae682e681c3cec9a235d882da17ff04ef # v2, pinned 2026-08-09
+        with:
+          mode: start
+          github-token: ${{ secrets.GH_RUNNER_TOKEN }}
+          ec2-image-id: ${{ vars.EC2_IMAGE_ID }}
+          ec2-instance-type: t3.large
+          subnet-id: ${{ vars.EC2_SUBNET_ID }}
+          security-group-id: ${{ vars.EC2_SECURITY_GROUP_ID }}
+          aws-resource-tags: >
+            [
+              {"Key": "Project", "Value": "shap-gpu-ci"},
+              {"Key": "RunId", "Value": "${{ github.run_id }}"}
+            ]
+
+  smoke-job:
+    needs: start-runner
+    runs-on: ${{ needs.start-runner.outputs.label }}
+    steps:
+      - name: Basic sanity check
+        run: |
+          echo "Runner is alive: $(hostname)"
+          uname -a
+
+      - name: Deliberate failure
+        run: exit 1
+
+  stop-runner:
+    if: ${{ always() && needs.start-runner.result == 'success' }}
+    needs:
+      - start-runner
+      - smoke-job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GPU_CI_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Stop EC2 runner
+        uses: machulav/ec2-github-runner@343a1b2ae682e681c3cec9a235d882da17ff04ef # v2, pinned 2026-08-09
+        with:
+          mode: stop
+          github-token: ${{ secrets.GH_RUNNER_TOKEN }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
