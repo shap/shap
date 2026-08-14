@@ -527,9 +527,8 @@ def corrgroups60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
         data, target = shap.datasets.corrgroups60()
 
     """
-    # set a constant seed
-    old_seed = np.random.seed()
-    np.random.seed(0)
+    # use a local RNG with a fixed seed to avoid modifying global random state
+    rng = np.random.default_rng(0)
 
     # generate dataset with known correlation
     N, M = n_points, 60
@@ -549,7 +548,7 @@ def corrgroups60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
         return np.matmul(X, beta)
 
     # Make sure the sample correlation is a perfect match
-    X_start = np.random.randn(N, M)
+    X_start = rng.standard_normal((N, M))
     X_centered = X_start - X_start.mean(0)
     Sigma = np.matmul(X_centered.T, X_centered) / X_centered.shape[0]
     W = np.linalg.cholesky(np.linalg.inv(Sigma)).T
@@ -561,10 +560,7 @@ def corrgroups60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
     # create the final data
     X_final = np.matmul(X_white, np.linalg.cholesky(C).T)
     X = X_final
-    y = f(X) + np.random.randn(N) * 1e-2
-
-    # restore the previous numpy random seed
-    np.random.seed(old_seed)
+    y = f(X) + rng.standard_normal(N) * 1e-2
 
     return pd.DataFrame(X), y
 
@@ -598,9 +594,8 @@ def independentlinear60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray
         features, labels = shap.datasets.independentlinear60()
 
     """
-    # set a constant seed
-    old_seed = np.random.seed()
-    np.random.seed(0)
+    # use a local RNG with a fixed seed to avoid modifying global random state
+    rng = np.random.default_rng(0)
 
     # generate dataset with known correlation
     N, M = n_points, 60
@@ -613,12 +608,9 @@ def independentlinear60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray
         return np.matmul(X, beta)
 
     # Make sure the sample correlation is a perfect match
-    X_start = np.random.randn(N, M)
+    X_start = rng.standard_normal((N, M))
     X = X_start - X_start.mean(0)
-    y = f(X) + np.random.randn(N) * 1e-2
-
-    # restore the previous numpy random seed
-    np.random.seed(old_seed)
+    y = f(X) + rng.standard_normal(N) * 1e-2
 
     return pd.DataFrame(X), y
 
