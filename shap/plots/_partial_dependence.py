@@ -7,6 +7,7 @@ import pandas as pd
 from .. import Explanation
 from ..plots.colors import blue_rgb, light_blue_rgb, red_blue_transparent, red_rgb
 from ..utils import convert_name
+from ._show import resolve_show
 
 
 def compute_bounds(xmin, xmax, xv):
@@ -47,9 +48,11 @@ def partial_dependence(
     pd_linewidth=2,
     ace_linewidth="auto",
     ax=None,
-    show=True,
+    show=None,
 ):
     """A basic partial dependence plot function."""
+    show = resolve_show(show, plot_name="partial_dependence")
+
     if isinstance(data, Explanation):
         features = data.data
         shap_values = data
