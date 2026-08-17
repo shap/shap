@@ -2,6 +2,7 @@
 #include <nanobind/nanobind.h>
 #include "grey_code_utils.h"
 #include "kernel_explainer_utils.h"
+#include "partition_explainer_utils.h"
 #include "tabular_utils.h"
 #include "clustering_utils.h"
 
@@ -9,6 +10,10 @@ namespace nb = nanobind;
 
 NB_MODULE(_cutils, m)
 {
+    m.def("compute_grey_code_row_values", &compute_grey_code_row_values_1d, "row_values"_a, "mask"_a, "inds"_a, "outputs"_a, "shapley_coeff"_a, "extended_delta_indexes"_a, "noop_code"_a, "Compute the row values for the grey code algorithm in 1D");
+    m.def("compute_grey_code_row_values", &compute_grey_code_row_values_2d, "row_values"_a, "mask"_a, "inds"_a, "outputs"_a, "shapley_coeff"_a, "extended_delta_indexes"_a, "noop_code"_a, "Compute the row values for the grey code algorithm in 2D");
+    m.def("lower_credit", &partition::lower_credit_1d, "i"_a, "M"_a, "prev_i"_a, "factor"_a, "values"_a, "clustering"_a, "Lower credit for the partition explainer algorithm");
+    m.def("lower_credit", &partition::lower_credit_2d, "i"_a, "M"_a, "prev_i"_a, "factor"_a, "values"_a, "clustering"_a, "Lower credit for the partition explainer algorithm");
     m.def("compute_grey_code_row_values", &compute_grey_code_row_values_1d, "row_values"_a.noconvert(), "mask"_a.noconvert(), "inds"_a, "outputs"_a, "shapley_coeff"_a, "extended_delta_indexes"_a, "noop_code"_a, "Compute the row values for the grey code algorithm in 1D");
     m.def("compute_grey_code_row_values", &compute_grey_code_row_values_2d, "row_values"_a.noconvert(), "mask"_a.noconvert(), "inds"_a, "outputs"_a, "shapley_coeff"_a, "extended_delta_indexes"_a, "noop_code"_a, "Compute the row values for the grey code algorithm in 2D");
     m.def("compute_grey_code_row_values_st", &compute_grey_code_row_values_st_1d, "row_values"_a.noconvert(), "mask"_a.noconvert(), "inds"_a, "outputs"_a, "shapley_coeff"_a, "extended_delta_indexes"_a, "noop_code"_a, "Compute Shapley-Taylor row values for the grey code algorithm in 1D");
