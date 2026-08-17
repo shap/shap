@@ -370,11 +370,26 @@ inline void unwind_path(PathElement *unique_path, unsigned unique_depth, unsigne
             const tfloat tmp = unique_path[i].pweight;
             unique_path[i].pweight = next_one_portion * (unique_depth + 1)
                                      / static_cast<tfloat>((i + 1) * one_fraction);
+
+            // Firebreak: Prevent floating-point noise from turning weights negative
+            if (unique_path[i].pweight < 0) {
+                unique_path[i].pweight = 0;
+            }
+
             next_one_portion = tmp - unique_path[i].pweight * zero_fraction * (unique_depth - i)
                                / static_cast<tfloat>(unique_depth + 1);
+
+            // Firebreak: Prevent catastrophic cancellation explosion
+            if (next_one_portion < 0) {
+                next_one_portion = 0;
+            }
         } else {
             unique_path[i].pweight = (unique_path[i].pweight * (unique_depth + 1))
                                      / static_cast<tfloat>(zero_fraction * (unique_depth - i));
+
+            if (unique_path[i].pweight < 0) {
+                unique_path[i].pweight = 0;
+            }
         }
     }
 
@@ -384,7 +399,6 @@ inline void unwind_path(PathElement *unique_path, unsigned unique_depth, unsigne
         unique_path[i].one_fraction = unique_path[i+1].one_fraction;
     }
 }
-
 // determine what the total permutation weight would be if
 // we unwound a previous extension in the decision path
 inline tfloat unwound_path_sum(const PathElement *unique_path, unsigned unique_depth,
