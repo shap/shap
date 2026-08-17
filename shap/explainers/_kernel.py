@@ -204,6 +204,10 @@ class KernelExplainer(Explainer):
         start_time = time.time()
 
         if isinstance(X, pd.DataFrame):
+            # reindex columns to match background data order if available
+            if hasattr(self, "data_feature_names") and self.data_feature_names is not None:
+                if list(X.columns) != self.data_feature_names:
+                    X = X.reindex(columns=self.data_feature_names)
             feature_names = list(X.columns)
         else:
             feature_names = getattr(self, "data_feature_names", None)  # type: ignore[assignment]
@@ -287,6 +291,10 @@ class KernelExplainer(Explainer):
         if isinstance(X, pd.Series):
             X = X.values
         elif isinstance(X, pd.DataFrame):
+            # reindex columns to match background data order if available
+            if hasattr(self, "data_feature_names") and self.data_feature_names is not None:
+                if list(X.columns) != self.data_feature_names:
+                    X = X.reindex(columns=self.data_feature_names)
             if self.keep_index:
                 index_value = X.index.values
                 index_name = X.index.name
