@@ -16,7 +16,9 @@ if TYPE_CHECKING:  # pragma: no cover
 github_data_url: Final[str] = "https://github.com/shap/shap/raw/master/data/"
 
 
-def imagenet50(resolution: int = 224, n_points: int | None = None) -> tuple[np.ndarray, np.ndarray]:
+def imagenet50(
+    resolution: int = 224, n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[np.ndarray, np.ndarray]:
     """Return a set of 50 images representative of ImageNet images.
 
     Parameters
@@ -25,6 +27,10 @@ def imagenet50(resolution: int = 224, n_points: int | None = None) -> tuple[np.n
         The resolution of the images. At present, the only supported value is 224.
     n_points : int, optional
         Number of data points to sample. If None, the entire dataset is used.
+
+    random_state : int, float, numpy.random.Generator or None, optional
+        Determines random number generation for sampling the dataset. Use an int for reproducibility.
+        Default is 0.
 
     Returns
     -------
@@ -55,13 +61,15 @@ def imagenet50(resolution: int = 224, n_points: int | None = None) -> tuple[np.n
     y: np.ndarray = np.loadtxt(cache(f"{prefix}labels.csv"))
 
     if n_points is not None:
-        X = shap.utils.sample(X, n_points, random_state=0)
-        y = shap.utils.sample(y, n_points, random_state=0)
+        X = shap.utils.sample(X, n_points, random_state=random_state)
+        y = shap.utils.sample(y, n_points, random_state=random_state)
 
     return X, y
 
 
-def california(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
+def california(
+    n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Return the California housing data in a tabular format.
 
     Used in predictive regression tasks.
@@ -70,6 +78,10 @@ def california(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
     ----------
     n_points : int, optional
         Number of data points to sample. If provided, randomly samples the specified number of points.
+
+    random_state : int, float, numpy.random.Generator or None, optional
+        Determines random number generation for sampling the dataset. Use an int for reproducibility.
+        Default is 0.
 
     Returns
     -------
@@ -109,13 +121,15 @@ def california(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
     target: np.ndarray = d.target
 
     if n_points is not None:
-        df = shap.utils.sample(df, n_points, random_state=0)
-        target = shap.utils.sample(target, n_points, random_state=0)
+        df = shap.utils.sample(df, n_points, random_state=random_state)
+        target = shap.utils.sample(target, n_points, random_state=random_state)
 
     return df, target
 
 
-def linnerud(n_points: int | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+def linnerud(
+    n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Return the Linnerud dataset in a convenient package for multi-target regression.
 
     Parameters
@@ -123,6 +137,10 @@ def linnerud(n_points: int | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     n_points : int, optional
         Number of data points to sample. If provided, randomly samples the specified number
         of points.
+
+    random_state : int, float, numpy.random.Generator or None, optional
+        Determines random number generation for sampling the dataset. Use an int for reproducibility.
+        Default is 0.
 
     Returns
     -------
@@ -155,13 +173,15 @@ def linnerud(n_points: int | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     y = pd.DataFrame(d.target, columns=d.target_names)
 
     if n_points is not None:
-        X = shap.utils.sample(X, n_points, random_state=0)
-        y = shap.utils.sample(y, n_points, random_state=0)
+        X = shap.utils.sample(X, n_points, random_state=random_state)
+        y = shap.utils.sample(y, n_points, random_state=random_state)
 
     return X, y
 
 
-def imdb(n_points: int | None = None) -> tuple[list[str], np.ndarray]:
+def imdb(
+    n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[list[str], np.ndarray]:
     """Return the classic IMDB sentiment analysis training data in a nice package.
 
     Used in binary text classification tasks.
@@ -170,6 +190,10 @@ def imdb(n_points: int | None = None) -> tuple[list[str], np.ndarray]:
     ----------
     n_points : int, optional
         Number of data points to sample. If provided, randomly samples the specified number of points.
+
+    random_state : int, float, numpy.random.Generator or None, optional
+        Determines random number generation for sampling the dataset. Use an int for reproducibility.
+        Default is 0.
 
     Returns
     -------
@@ -198,13 +222,15 @@ def imdb(n_points: int | None = None) -> tuple[list[str], np.ndarray]:
     y[:12500] = 0
 
     if n_points is not None:
-        data = shap.utils.sample(data, n_points, random_state=0)
-        y = shap.utils.sample(y, n_points, random_state=0)
+        data = shap.utils.sample(data, n_points, random_state=random_state)
+        y = shap.utils.sample(y, n_points, random_state=random_state)
 
     return data, y
 
 
-def communitiesandcrime(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
+def communitiesandcrime(
+    n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Predict the total number of violent crimes per 100K population.
 
     This dataset is from the classic UCI Machine Learning repository:
@@ -216,6 +242,10 @@ def communitiesandcrime(n_points: int | None = None) -> tuple[pd.DataFrame, np.n
     ----------
     n_points : int, optional
         Number of data points to sample. If provided, randomly samples the specified number of points.
+
+    random_state : int, float, numpy.random.Generator or None, optional
+        Determines random number generation for sampling the dataset. Use an int for reproducibility.
+        Default is 0.
 
     Returns
     -------
@@ -237,7 +267,7 @@ def communitiesandcrime(n_points: int | None = None) -> tuple[pd.DataFrame, np.n
     valid_inds = np.where(np.invert(np.isnan(raw_data.iloc[:, -2])))[0]
 
     if n_points is not None:
-        valid_inds = shap.utils.sample(valid_inds, n_points, random_state=0)
+        valid_inds = shap.utils.sample(valid_inds, n_points, random_state=random_state)
 
     y = np.array(raw_data.iloc[valid_inds, -2], dtype=float)
 
@@ -249,7 +279,9 @@ def communitiesandcrime(n_points: int | None = None) -> tuple[pd.DataFrame, np.n
     return X, y
 
 
-def diabetes(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
+def diabetes(
+    n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Return the diabetes data in a nice package.
 
     Used in predictive regression tasks.
@@ -258,6 +290,10 @@ def diabetes(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
     ----------
     n_points : int, optional
         Number of data points to sample. If provided, randomly samples the specified number of points.
+
+    random_state : int, float, numpy.random.Generator or None, optional
+        Determines random number generation for sampling the dataset. Use an int for reproducibility.
+        Default is 0.
 
     Returns
     -------
@@ -300,19 +336,25 @@ def diabetes(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
     target = d.target
 
     if n_points is not None:
-        df = shap.utils.sample(df, n_points, random_state=0)
-        target = shap.utils.sample(target, n_points, random_state=0)
+        df = shap.utils.sample(df, n_points, random_state=random_state)
+        target = shap.utils.sample(target, n_points, random_state=random_state)
 
     return df, target
 
 
 @overload
-def iris(display: Literal[False] = ..., n_points: int | None = ...) -> tuple[pd.DataFrame, np.ndarray]: ...
+def iris(
+    display: Literal[False] = ..., n_points: int | None = ..., random_state: int | np.random.Generator | None = ...
+) -> tuple[pd.DataFrame, np.ndarray]: ...
 @overload
-def iris(display: Literal[True] = ..., n_points: int | None = ...) -> tuple[pd.DataFrame, list[str]]: ...
+def iris(
+    display: Literal[True] = ..., n_points: int | None = ..., random_state: int | np.random.Generator | None = ...
+) -> tuple[pd.DataFrame, list[str]]: ...
 
 
-def iris(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray | list[str]]:
+def iris(
+    display: bool = False, n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray | list[str]]:
     """Return the classic Iris dataset in a convenient package.
 
     Parameters
@@ -321,6 +363,10 @@ def iris(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFra
         If True, return the original feature matrix along with class labels (as strings). Default is False.
     n_points : int, optional
         Number of data points to sample. If provided, randomly samples the specified number of points.
+
+    random_state : int, float, numpy.random.Generator or None, optional
+        Determines random number generation for sampling the dataset. Use an int for reproducibility.
+        Default is 0.
 
     Returns
     -------
@@ -353,15 +399,17 @@ def iris(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFra
     target: np.ndarray = d.target
 
     if n_points is not None:
-        df = shap.utils.sample(df, n_points, random_state=0)
-        target = shap.utils.sample(target, n_points, random_state=0)
+        df = shap.utils.sample(df, n_points, random_state=random_state)
+        target = shap.utils.sample(target, n_points, random_state=random_state)
 
     if display:
         return df, [str(d.target_names[v]) for v in target]
     return df, target
 
 
-def adult(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
+def adult(
+    display: bool = False, n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Return the Adult census data in a structured format.
 
     Used in binary classification tasks.
@@ -372,6 +420,10 @@ def adult(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFr
         If True, return the raw data without target and redundant columns.
     n_points : int, optional
         Number of data points to sample. If provided, randomly samples the specified number of points.
+
+    random_state : int, float, numpy.random.Generator or None, optional
+        Determines random number generation for sampling the dataset. Use an int for reproducibility.
+        Default is 0.
 
     Returns
     -------
@@ -438,7 +490,7 @@ def adult(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFr
     )
 
     if n_points is not None:
-        raw_data = shap.utils.sample(raw_data, n_points, random_state=0)
+        raw_data = shap.utils.sample(raw_data, n_points, random_state=random_state)
 
     data = raw_data.drop(["Education"], axis=1)  # redundant with Education-Num
     filt_dtypes = list(filter(lambda x: x[0] not in ["Target", "Education"], dtypes))
@@ -456,7 +508,9 @@ def adult(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFr
     return data.drop(["Target", "fnlwgt"], axis=1), data["Target"].values
 
 
-def nhanesi(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
+def nhanesi(
+    display: bool = False, n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Return a nicely packaged version of NHANES I data with survival times as labels.
 
     Used in survival analysis tasks.
@@ -467,6 +521,10 @@ def nhanesi(display: bool = False, n_points: int | None = None) -> tuple[pd.Data
         If True, returns the features with a modified display. Default is False.
     n_points : int, optional
         Number of data points to sample. Default is None (returns the entire dataset).
+
+    random_state : int, float, numpy.random.Generator or None, optional
+        Determines random number generation for sampling the dataset. Use an int for reproducibility.
+        Default is 0.
 
     Returns
     -------
@@ -487,8 +545,8 @@ def nhanesi(display: bool = False, n_points: int | None = None) -> tuple[pd.Data
     y = pd.read_csv(cache(github_data_url + "NHANESI_y.csv"), index_col=0)["y"]
 
     if n_points is not None:
-        X = shap.utils.sample(X, n_points, random_state=0)
-        y = shap.utils.sample(y, n_points, random_state=0)
+        X = shap.utils.sample(X, n_points, random_state=random_state)
+        y = shap.utils.sample(y, n_points, random_state=random_state)
 
     if display:
         X_display = X.copy()
@@ -497,7 +555,9 @@ def nhanesi(display: bool = False, n_points: int | None = None) -> tuple[pd.Data
     return X, np.array(y)
 
 
-def corrgroups60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
+def corrgroups60(
+    n_points: int = 1_000, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Correlated Groups (60 features)
 
     A synthetic dataset consisting of 60 features with tight correlations among distinct groups of features.
@@ -506,6 +566,9 @@ def corrgroups60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
     ----------
     n_points : int, optional
         Number of data points to generate. Default is 1,000.
+    random_state : int or numpy.random.Generator, optional
+        Determines random number generation for creating the dataset. Use an int for reproducibility.
+        Default is 0.
 
     Returns
     -------
@@ -528,8 +591,7 @@ def corrgroups60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
 
     """
     # set a constant seed
-    old_seed = np.random.seed()
-    np.random.seed(0)
+    rng = np.random.default_rng(random_state)
 
     # generate dataset with known correlation
     N, M = n_points, 60
@@ -549,7 +611,7 @@ def corrgroups60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
         return np.matmul(X, beta)
 
     # Make sure the sample correlation is a perfect match
-    X_start = np.random.randn(N, M)
+    X_start = rng.standard_normal((N, M))
     X_centered = X_start - X_start.mean(0)
     Sigma = np.matmul(X_centered.T, X_centered) / X_centered.shape[0]
     W = np.linalg.cholesky(np.linalg.inv(Sigma)).T
@@ -561,15 +623,14 @@ def corrgroups60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
     # create the final data
     X_final = np.matmul(X_white, np.linalg.cholesky(C).T)
     X = X_final
-    y = f(X) + np.random.randn(N) * 1e-2
-
-    # restore the previous numpy random seed
-    np.random.seed(old_seed)
+    y = f(X) + rng.standard_normal(N) * 1e-2
 
     return pd.DataFrame(X), y
 
 
-def independentlinear60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
+def independentlinear60(
+    n_points: int = 1_000, random_state: int | np.random.Generator | None = 0
+) -> tuple[pd.DataFrame, np.ndarray]:
     """Independent Linear (60 features)
 
     A synthetic dataset consisting of 60 features.
@@ -578,6 +639,9 @@ def independentlinear60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray
     ----------
     n_points : int, optional
         Number of data points to generate. Default is 1,000.
+    random_state : int or numpy.random.Generator, optional
+        Determines random number generation for creating the dataset. Use an int for reproducibility.
+        Default is 0.
 
     Returns
     -------
@@ -599,8 +663,7 @@ def independentlinear60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray
 
     """
     # set a constant seed
-    old_seed = np.random.seed()
-    np.random.seed(0)
+    rng = np.random.default_rng(random_state)
 
     # generate dataset with known correlation
     N, M = n_points, 60
@@ -613,17 +676,16 @@ def independentlinear60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray
         return np.matmul(X, beta)
 
     # Make sure the sample correlation is a perfect match
-    X_start = np.random.randn(N, M)
+    X_start = rng.standard_normal((N, M))
     X = X_start - X_start.mean(0)
-    y = f(X) + np.random.randn(N) * 1e-2
-
-    # restore the previous numpy random seed
-    np.random.seed(old_seed)
+    y = f(X) + rng.standard_normal(N) * 1e-2
 
     return pd.DataFrame(X), y
 
 
-def a1a(n_points: int | None = None) -> tuple[ssp.csr_matrix, np.ndarray]:
+def a1a(
+    n_points: int | None = None, random_state: int | np.random.Generator | None = 0
+) -> tuple[ssp.csr_matrix, np.ndarray]:
     """
     Return a sparse dataset in scipy csr matrix format.
 
@@ -633,6 +695,10 @@ def a1a(n_points: int | None = None) -> tuple[ssp.csr_matrix, np.ndarray]:
     ----------
     n_points : int, optional
         Number of data points to sample. If None, returns the entire dataset. Default is None.
+
+    random_state : int, float, numpy.random.Generator or None, optional
+        Determines random number generation for sampling the dataset. Use an int for reproducibility.
+        Default is 0.
 
     Returns
     -------
@@ -653,8 +719,8 @@ def a1a(n_points: int | None = None) -> tuple[ssp.csr_matrix, np.ndarray]:
     data, target = sklearn.datasets.load_svmlight_file(cache(github_data_url + "a1a.svmlight"))
 
     if n_points is not None:
-        data = shap.utils.sample(data, n_points, random_state=0)
-        target = shap.utils.sample(target, n_points, random_state=0)
+        data = shap.utils.sample(data, n_points, random_state=random_state)
+        target = shap.utils.sample(target, n_points, random_state=random_state)
 
     return data, target
 
