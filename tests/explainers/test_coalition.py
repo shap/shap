@@ -86,4 +86,36 @@ def test_tabular_coalition_partition_match():
     binary_winter_values = partition_explainer_b(data)
 
     assert np.allclose(binary_values.values, binary_winter_values.values)  # type: ignore[union-attr]
-    return binary_values
+
+
+@compare_numpy_outputs_against_baseline(func_file=__file__)
+def test_partition_structure_cached_after_init():
+    coalition_tree = {
+        "Demographics": ["Sex", "Age", "Race", "Marital Status", "Education-Num"],
+        "Work": ["Occupation", "Workclass", "Hours per week"],
+        "Finance": ["Capital Gain", "Capital Loss"],
+        "Residence": ["Country"],
+    }
+    model, data = common.basic_xgboost_scenario(20)
+    X, _ = shap.datasets.adult()
+    features = X.columns.tolist()
+    masker = shap.maskers.Partition(data)
+    masker.feature_names = features
+    return common.test_additivity(shap.CoalitionExplainer, model.predict, masker, data, partition_tree=coalition_tree)
+
+
+@compare_numpy_outputs_against_baseline(func_file=__file__)
+def test_batch_evaluation_additivity():
+    # include Relationship so all 12 adult features are covered
+    coalition_tree = {
+        "Demographics": ["Sex", "Age", "Race", "Marital Status", "Education-Num", "Relationship"],
+        "Work": ["Occupation", "Workclass", "Hours per week"],
+        "Finance": ["Capital Gain", "Capital Loss"],
+        "Residence": ["Country"],
+    }
+    model, data = common.basic_xgboost_scenario(30)
+    X, _ = shap.datasets.adult()
+    features = X.columns.tolist()
+    masker = shap.maskers.Partition(data)
+    masker.feature_names = features
+    return common.test_additivity(shap.CoalitionExplainer, model.predict, masker, data, partition_tree=coalition_tree)
