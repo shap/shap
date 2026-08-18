@@ -13,9 +13,10 @@ def test_falcon():
     name = "fxmarty/really-tiny-falcon-testing"
     try:
         tokenizer = transformers.AutoTokenizer.from_pretrained(name)
-        model = transformers.AutoModelForCausalLM.from_pretrained(
-            name, trust_remote_code=True, load_in_8bit=False, low_cpu_mem_usage=False
-        )
+
+        # ✅ FIX: remove deprecated + legacy args
+        model = transformers.AutoModelForCausalLM.from_pretrained(name)
+
     except requests.exceptions.RequestException:
         pytest.xfail(reason="Connection error to transformers model")
 
@@ -58,7 +59,6 @@ def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     )
     target_sentence = np.array(["Testing teacher forcing logits functionality"])
 
-    # call the get teacher forced logits function
     logits = wrapped_model.get_teacher_forced_logits(source_sentence, target_sentence)
 
     assert not np.isnan(np.sum(logits))
@@ -84,7 +84,6 @@ def test_method_get_teacher_forced_logits_for_decoder_model():
     source_sentence = np.array(["This is a test statement for verifying"])
     target_sentence = np.array(["working of teacher forcing logits functionality"])
 
-    # call the get teacher forced logits function
     logits = wrapped_model.get_teacher_forced_logits(source_sentence, target_sentence)
 
     assert not np.isnan(np.sum(logits))
