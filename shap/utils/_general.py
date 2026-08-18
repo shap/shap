@@ -137,6 +137,111 @@ def approximate_interactions(
 
     index = convert_name(index, shap_values, feature_names)  # type: ignore[arg-type, assignment]
 
+    scores = _interaction_scores_for_feature(index=index, shap_values=shap_values, X=X)  # type: ignore[arg-type]
+    return np.argsort(-np.abs(scores))
+
+
+def rank_interactions(
+    shap_values: Any,
+    X: npt.NDArray[Any] | pd.DataFrame | None = None,
+    feature_names: list[str] | npt.NDArray[Any] | pd.Index | None = None,
+    max_pairs: int | None = None,
+    return_matrix: bool = False,
+) -> Any:
+    """Rank pairwise interactions between features.
+
+    This computes a fast, heuristic interaction strength by extending
+    :func:`approximate_interactions` across all feature pairs. The output can
+    be used to identify the strongest pairwise effects for interpretation and
+    visualization.
+
+    Parameters
+    ----------
+    shap_values : Explanation or numpy.ndarray
+        SHAP values with shape ``(n_samples, n_features)``. If an
+        :class:`.Explanation` object is passed, ``X`` defaults to
+        ``shap_values.data``.
+
+    X : numpy.ndarray or pandas.DataFrame, optional
+        Feature matrix with shape ``(n_samples, n_features)``.
+
+    feature_names : list, numpy.ndarray, pandas.Index, optional
+        Optional feature names. This parameter is currently used for
+        compatibility and validation only.
+
+    max_pairs : int, optional
+        Maximum number of returned pairwise interactions. Defaults to all
+        feature pairs.
+
+    return_matrix : bool
+        If ``True``, also return the full symmetric interaction matrix.
+
+    Returns
+    -------
+    pairs : list[tuple[int, int, float]]
+        Ranked list of ``(i, j, score)`` tuples where ``i < j``.
+
+    matrix : numpy.ndarray
+        Returned only when ``return_matrix=True``. Symmetric interaction
+        strength matrix with zeros on the diagonal.
+    """
+    raw_values = shap_values
+    if hasattr(shap_values, "values") and hasattr(shap_values, "data"):
+        raw_values = shap_values.values
+        if X is None:
+            X = shap_values.data
+        if feature_names is None and hasattr(shap_values, "feature_names"):
+            feature_names = shap_values.feature_names
+
+    if X is None:
+        raise ValueError("X must be provided when shap_values is not an Explanation object.")
+
+    if isinstance(X, pd.DataFrame):
+        if feature_names is None:
+            feature_names = X.columns
+        X = X.values
+
+    raw_values = np.asarray(raw_values)
+    X = np.asarray(X)
+
+    if raw_values.ndim != 2:
+        raise ValueError("shap_values must be a 2D array with shape (n_samples, n_features).")
+    if X.ndim != 2:
+        raise ValueError("X must be a 2D array with shape (n_samples, n_features).")
+    if raw_values.shape != X.shape:
+        raise ValueError("shap_values and X must have the same shape.")
+    if feature_names is not None and len(feature_names) != X.shape[1]:
+        raise ValueError("feature_names must have the same length as the number of features.")
+
+    num_features = X.shape[1]
+    interaction_matrix = np.zeros((num_features, num_features), dtype=float)
+
+    for i in range(num_features):
+        scores = _interaction_scores_for_feature(index=i, shap_values=raw_values, X=X)
+        interaction_matrix[i] = scores
+
+    interaction_matrix = 0.5 * (interaction_matrix + interaction_matrix.T)
+    np.fill_diagonal(interaction_matrix, 0.0)
+
+    pairs: list[tuple[int, int, float]] = []
+    for i in range(num_features):
+        for j in range(i + 1, num_features):
+            pairs.append((i, j, float(interaction_matrix[i, j])))
+
+    pairs.sort(key=lambda item: item[2], reverse=True)
+
+    if max_pairs is not None:
+        if max_pairs < 0:
+            raise ValueError("max_pairs must be non-negative.")
+        pairs = pairs[:max_pairs]
+
+    if return_matrix:
+        return pairs, interaction_matrix
+    return pairs
+
+
+def _interaction_scores_for_feature(index: int, shap_values: npt.NDArray[Any], X: npt.NDArray[Any]) -> npt.NDArray[Any]:
+    """Compute interaction scores between one reference feature and all others."""
     if X.shape[0] > 10000:
         a = np.arange(X.shape[0])
         np.random.shuffle(a)
@@ -144,12 +249,13 @@ def approximate_interactions(
     else:
         inds = np.arange(X.shape[0])
 
-    x = X[inds, index]  # type: ignore[index]
+    x = encode_array_if_needed(X[inds, index], dtype=float)
     srt = np.argsort(x)
-    shap_ref = shap_values[inds, index]  # type: ignore[index]
+    shap_ref = shap_values[inds, index]
     shap_ref = shap_ref[srt]
     inc = max(min(int(len(x) / 10.0), 50), 1)
     interactions = []
+
     for i in range(X.shape[1]):
         encoded_val_other = encode_array_if_needed(X[inds, i][srt], dtype=float)
 
@@ -171,7 +277,7 @@ def approximate_interactions(
 
         interactions.append(max(val_v, nan_v))
 
-    return np.argsort(-np.abs(interactions))
+    return np.array(interactions)
 
 
 def encode_array_if_needed(arr: npt.NDArray[Any], dtype: type[Any] = np.float64) -> npt.NDArray[Any]:
