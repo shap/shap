@@ -55,9 +55,7 @@ def test_interventional_preserves_float64_threshold():
         "node_sample_weight": np.array([2.0, 1.0, 1.0]),
     }
     x = np.array([[0.3000000059604645]])
-    explainer = shap.TreeExplainer(
-        {"trees": [stump]}, data=np.array([[1.0]]), feature_perturbation="interventional"
-    )
+    explainer = shap.TreeExplainer({"trees": [stump]}, data=np.array([[1.0]]), feature_perturbation="interventional")
 
     shap_values = explainer.shap_values(x, check_additivity=False)
 
