@@ -44,6 +44,26 @@ def test_large_background_dataset_warning():
         shap.TreeExplainer(model, background, feature_perturbation="interventional")
 
 
+def test_interventional_preserves_float64_threshold():
+    stump = {
+        "children_left": np.array([1, -1, -1], dtype=np.int32),
+        "children_right": np.array([2, -1, -1], dtype=np.int32),
+        "children_default": np.array([1, -1, -1], dtype=np.int32),
+        "feature": np.array([0, -2, -2], dtype=np.int32),
+        "threshold": np.array([0.3, -2.0, -2.0]),
+        "value": np.array([[0.0], [1.0], [2.0]]),
+        "node_sample_weight": np.array([2.0, 1.0, 1.0]),
+    }
+    x = np.array([[0.3000000059604645]])
+    explainer = shap.TreeExplainer(
+        {"trees": [stump]}, data=np.array([[1.0]]), feature_perturbation="interventional"
+    )
+
+    shap_values = explainer.shap_values(x, check_additivity=False)
+
+    assert np.allclose(shap_values[0, 0] + explainer.expected_value, explainer.model.predict(x)[0])
+
+
 def test_front_page_xgboost():
     xgboost = pytest.importorskip("xgboost")
 
