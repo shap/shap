@@ -8,10 +8,10 @@ namespace nb = nanobind;
 
 namespace masks {
     void init_masks(
-        const nb::ndarray<double, nb::ndim<2>>& cluster_matrix,
+        const nb::ndarray<double, nb::ndim<2>, nb::device::cpu>& cluster_matrix,
         const int64_t M,
-        nb::ndarray<int64_t, nb::ndim<1>>& indices_row_pos,
-        nb::ndarray<int64_t, nb::ndim<1>>& indptr
+        nb::ndarray<int64_t, nb::ndim<1>, nb::device::cpu>& indices_row_pos,
+        nb::ndarray<int64_t, nb::ndim<1>, nb::device::cpu>& indptr
     ) {
         int64_t pos = 0;
         auto c = cluster_matrix.view();
@@ -30,9 +30,9 @@ namespace masks {
     }
 
     void rec_fill_masks(
-        const nb::ndarray<double, nb::ndim<2>>& cluster_matrix,
-        const nb::ndarray<int64_t, nb::ndim<1>>& indices_row_pos,
-        nb::ndarray<int64_t, nb::ndim<1>>& indices,
+        const nb::ndarray<double, nb::ndim<2>, nb::device::cpu>& cluster_matrix,
+        const nb::ndarray<int64_t, nb::ndim<1>, nb::device::cpu>& indices_row_pos,
+        nb::ndarray<int64_t, nb::ndim<1>, nb::device::cpu>& indices,
         const int64_t M,
         const int64_t ind
     ) {
