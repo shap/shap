@@ -11,6 +11,15 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
 static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args);
 static PyObject *_cext_compute_expectations(PyObject *self, PyObject *args);
 
+static bool has_categorical_splits(PyArrayObject *threshold_types_array) {
+    const int *threshold_types = (const int*)PyArray_DATA(threshold_types_array);
+    const npy_intp size = PyArray_SIZE(threshold_types_array);
+    for (npy_intp i = 0; i < size; ++i) {
+        if (threshold_types[i] == 1) return true;
+    }
+    return false;
+}
+
 static PyMethodDef module_methods[] = {
     {"dense_tree_shap", _cext_dense_tree_shap, METH_VARARGS, "C implementation of Tree SHAP for dense."},
     {"dense_tree_predict", _cext_dense_tree_predict, METH_VARARGS, "C implementation of tree predictions."},
@@ -118,6 +127,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     PyObject *features_obj;
     PyObject *thresholds_obj;
     PyObject *threshold_types_obj;
+    PyObject *cat_bitsets_obj;
     PyObject *values_obj;
     PyObject *node_sample_weights_obj;
     int max_depth;
@@ -135,8 +145,8 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
 
     /* Parse the input tuple */
     if (!PyArg_ParseTuple(
-        args, "OOOOOOOOiOOOOOiOOiib", &children_left_obj, &children_right_obj, &children_default_obj,
-        &features_obj, &thresholds_obj, &threshold_types_obj, &values_obj, &node_sample_weights_obj,
+        args, "OOOOOOOOOiOOOOOiOOiib", &children_left_obj, &children_right_obj, &children_default_obj,
+        &features_obj, &thresholds_obj, &threshold_types_obj, &cat_bitsets_obj, &values_obj, &node_sample_weights_obj,
         &max_depth, &X_obj, &X_missing_obj, &y_obj, &R_obj, &R_missing_obj, &tree_limit, &base_offset_obj,
         &out_contribs_obj, &feature_dependence, &model_output, &interactions
     )) return NULL;
@@ -148,6 +158,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     PyArrayObject *features_array = (PyArrayObject*)PyArray_FROM_OTF(features_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *thresholds_array = (PyArrayObject*)PyArray_FROM_OTF(thresholds_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *threshold_types_array = (PyArrayObject*)PyArray_FROM_OTF(threshold_types_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *cat_bitsets_array = (PyArrayObject*)PyArray_FROM_OTF(cat_bitsets_obj, NPY_UINT32, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *values_array = (PyArrayObject*)PyArray_FROM_OTF(values_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *node_sample_weights_array = (PyArrayObject*)PyArray_FROM_OTF(node_sample_weights_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *X_array = (PyArrayObject*)PyArray_FROM_OTF(X_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
@@ -164,6 +175,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     /* If that didn't work, throw an exception. Note that R and y are optional. */
     if (children_left_array == NULL || children_right_array == NULL ||
         children_default_array == NULL || features_array == NULL || thresholds_array == NULL || threshold_types_array == NULL ||
+        cat_bitsets_array == NULL ||
         values_array == NULL || node_sample_weights_array == NULL || X_array == NULL ||
         X_missing_array == NULL || out_contribs_array == NULL) {
         Py_XDECREF((PyObject*)children_left_array);
@@ -172,6 +184,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
         Py_XDECREF((PyObject*)features_array);
         Py_XDECREF((PyObject*)thresholds_array);
         Py_XDECREF((PyObject*)threshold_types_array);
+        Py_XDECREF((PyObject*)cat_bitsets_array);
         Py_XDECREF((PyObject*)values_array);
         Py_XDECREF((PyObject*)node_sample_weights_array);
         Py_XDECREF((PyObject*)X_array);
@@ -180,6 +193,31 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
         if (R_array != NULL) Py_XDECREF((PyObject*)R_array);
         if (R_missing_array != NULL) Py_XDECREF((PyObject*)R_missing_array);
         //PyArray_ResolveWritebackIfCopy(out_contribs_array);
+        Py_XDECREF((PyObject*)out_contribs_array);
+        Py_XDECREF((PyObject*)base_offset_array);
+        return NULL;
+    }
+
+    if (feature_dependence == FEATURE_DEPENDENCE::global_path_dependent &&
+        has_categorical_splits(threshold_types_array)) {
+        PyErr_SetString(
+            PyExc_ValueError,
+            "feature_perturbation='global_path_dependent' does not support categorical splits."
+        );
+        Py_XDECREF((PyObject*)children_left_array);
+        Py_XDECREF((PyObject*)children_right_array);
+        Py_XDECREF((PyObject*)children_default_array);
+        Py_XDECREF((PyObject*)features_array);
+        Py_XDECREF((PyObject*)thresholds_array);
+        Py_XDECREF((PyObject*)threshold_types_array);
+        Py_XDECREF((PyObject*)cat_bitsets_array);
+        Py_XDECREF((PyObject*)values_array);
+        Py_XDECREF((PyObject*)node_sample_weights_array);
+        Py_XDECREF((PyObject*)X_array);
+        Py_XDECREF((PyObject*)X_missing_array);
+        Py_XDECREF((PyObject*)y_array);
+        Py_XDECREF((PyObject*)R_array);
+        Py_XDECREF((PyObject*)R_missing_array);
         Py_XDECREF((PyObject*)out_contribs_array);
         Py_XDECREF((PyObject*)base_offset_array);
         return NULL;
@@ -199,6 +237,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     int *features = (int*)PyArray_DATA(features_array);
     tfloat *thresholds = (tfloat*)PyArray_DATA(thresholds_array);
     int *threshold_types = (int*)PyArray_DATA(threshold_types_array);
+    unsigned int *cat_bitsets = (unsigned int*)PyArray_DATA(cat_bitsets_array);
     tfloat *values = (tfloat*)PyArray_DATA(values_array);
     tfloat *node_sample_weights = (tfloat*)PyArray_DATA(node_sample_weights_array);
     tfloat *X = (tfloat*)PyArray_DATA(X_array);
@@ -215,7 +254,8 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     // these are just a wrapper objects for all the pointers and numbers associated with
     // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
-        children_left, children_right, children_default, features, thresholds, threshold_types, values,
+        children_left, children_right, children_default, features, thresholds, threshold_types, cat_bitsets,
+        static_cast<size_t>(PyArray_SIZE(cat_bitsets_array)), values,
         node_sample_weights, max_depth, tree_limit, base_offset,
         max_nodes, num_outputs
     );
@@ -233,6 +273,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     Py_XDECREF((PyObject*)features_array);
     Py_XDECREF((PyObject*)thresholds_array);
     Py_XDECREF((PyObject*)threshold_types_array);
+    Py_XDECREF((PyObject*)cat_bitsets_array);
     Py_XDECREF((PyObject*)values_array);
     Py_XDECREF((PyObject*)node_sample_weights_array);
     Py_XDECREF((PyObject*)X_array);
@@ -258,6 +299,7 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     PyObject *features_obj;
     PyObject *thresholds_obj;
     PyObject *threshold_types_obj;
+    PyObject *cat_bitsets_obj;
     PyObject *values_obj;
     int max_depth;
     int tree_limit;
@@ -270,8 +312,8 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
 
     /* Parse the input tuple */
     if (!PyArg_ParseTuple(
-        args, "OOOOOOOiiOiOOOO", &children_left_obj, &children_right_obj, &children_default_obj,
-        &features_obj, &thresholds_obj, &threshold_types_obj, &values_obj, &max_depth, &tree_limit, &base_offset_obj, &model_output,
+        args, "OOOOOOOOiiOiOOOO", &children_left_obj, &children_right_obj, &children_default_obj,
+        &features_obj, &thresholds_obj, &threshold_types_obj, &cat_bitsets_obj, &values_obj, &max_depth, &tree_limit, &base_offset_obj, &model_output,
         &X_obj, &X_missing_obj, &y_obj, &out_pred_obj
     )) return NULL;
 
@@ -282,6 +324,7 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     PyArrayObject *features_array = (PyArrayObject*)PyArray_FROM_OTF(features_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *thresholds_array = (PyArrayObject*)PyArray_FROM_OTF(thresholds_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *threshold_types_array = (PyArrayObject*)PyArray_FROM_OTF(threshold_types_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *cat_bitsets_array = (PyArrayObject*)PyArray_FROM_OTF(cat_bitsets_obj, NPY_UINT32, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *values_array = (PyArrayObject*)PyArray_FROM_OTF(values_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *base_offset_array = (PyArrayObject*)PyArray_FROM_OTF(base_offset_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *X_array = (PyArrayObject*)PyArray_FROM_OTF(X_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
@@ -293,6 +336,7 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     /* If that didn't work, throw an exception. Note that R and y are optional. */
     if (children_left_array == NULL || children_right_array == NULL ||
         children_default_array == NULL || features_array == NULL || thresholds_array == NULL || threshold_types_array == NULL ||
+        cat_bitsets_array == NULL ||
         values_array == NULL || X_array == NULL ||
         X_missing_array == NULL || out_pred_array == NULL) {
         Py_XDECREF((PyObject*)children_left_array);
@@ -301,6 +345,7 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
         Py_XDECREF((PyObject*)features_array);
         Py_XDECREF((PyObject*)thresholds_array);
         Py_XDECREF((PyObject*)threshold_types_array);
+        Py_XDECREF((PyObject*)cat_bitsets_array);
         Py_XDECREF((PyObject*)values_array);
         Py_XDECREF((PyObject*)base_offset_array);
         Py_XDECREF((PyObject*)X_array);
@@ -329,6 +374,7 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     int *features = (int*)PyArray_DATA(features_array);
     tfloat *thresholds = (tfloat*)PyArray_DATA(thresholds_array);
     int *threshold_types = (int*)PyArray_DATA(threshold_types_array);
+    unsigned int *cat_bitsets = (unsigned int*)PyArray_DATA(cat_bitsets_array);
     tfloat *values = (tfloat*)PyArray_DATA(values_array);
     tfloat *base_offset = (tfloat*)PyArray_DATA(base_offset_array);
     tfloat *X = (tfloat*)PyArray_DATA(X_array);
@@ -340,7 +386,8 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     // these are just wrapper objects for all the pointers and numbers associated with
     // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
-        children_left, children_right, children_default, features, thresholds, threshold_types, values,
+        children_left, children_right, children_default, features, thresholds, threshold_types, cat_bitsets,
+        static_cast<size_t>(PyArray_SIZE(cat_bitsets_array)), values,
         NULL, max_depth, tree_limit, base_offset,
         max_nodes, num_outputs
     );
@@ -355,6 +402,7 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     Py_XDECREF((PyObject*)features_array);
     Py_XDECREF((PyObject*)thresholds_array);
     Py_XDECREF((PyObject*)threshold_types_array);
+    Py_XDECREF((PyObject*)cat_bitsets_array);
     Py_XDECREF((PyObject*)values_array);
     Py_XDECREF((PyObject*)base_offset_array);
     Py_XDECREF((PyObject*)X_array);
@@ -377,6 +425,7 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
     PyObject *features_obj;
     PyObject *thresholds_obj;
     PyObject *threshold_types_obj;
+    PyObject *cat_bitsets_obj;
     PyObject *values_obj;
     int tree_limit;
     PyObject *node_sample_weight_obj;
@@ -385,8 +434,8 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
 
     /* Parse the input tuple */
     if (!PyArg_ParseTuple(
-        args, "OOOOOOOiOOO", &children_left_obj, &children_right_obj, &children_default_obj,
-        &features_obj, &thresholds_obj, &threshold_types_obj, &values_obj, &tree_limit, &node_sample_weight_obj, &X_obj, &X_missing_obj
+        args, "OOOOOOOOiOOO", &children_left_obj, &children_right_obj, &children_default_obj,
+        &features_obj, &thresholds_obj, &threshold_types_obj, &cat_bitsets_obj, &values_obj, &tree_limit, &node_sample_weight_obj, &X_obj, &X_missing_obj
     )) return NULL;
 
     /* Interpret the input objects as numpy arrays. */
@@ -396,6 +445,7 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
     PyArrayObject *features_array = (PyArrayObject*)PyArray_FROM_OTF(features_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *thresholds_array = (PyArrayObject*)PyArray_FROM_OTF(thresholds_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *threshold_types_array = (PyArrayObject*)PyArray_FROM_OTF(threshold_types_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *cat_bitsets_array = (PyArrayObject*)PyArray_FROM_OTF(cat_bitsets_obj, NPY_UINT32, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *values_array = (PyArrayObject*)PyArray_FROM_OTF(values_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *node_sample_weight_array = (PyArrayObject*)PyArray_FROM_OTF(node_sample_weight_obj, NPY_DOUBLE, NPY_ARRAY_INOUT_ARRAY);
     PyArrayObject *X_array = (PyArrayObject*)PyArray_FROM_OTF(X_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
@@ -404,6 +454,7 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
     /* If that didn't work, throw an exception. */
     if (children_left_array == NULL || children_right_array == NULL ||
         children_default_array == NULL || features_array == NULL || thresholds_array == NULL || threshold_types_array == NULL ||
+        cat_bitsets_array == NULL ||
         values_array == NULL || node_sample_weight_array == NULL || X_array == NULL ||
         X_missing_array == NULL) {
         Py_XDECREF((PyObject*)children_left_array);
@@ -412,6 +463,7 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
         Py_XDECREF((PyObject*)features_array);
         Py_XDECREF((PyObject*)thresholds_array);
         Py_XDECREF((PyObject*)threshold_types_array);
+        Py_XDECREF((PyObject*)cat_bitsets_array);
         Py_XDECREF((PyObject*)values_array);
         //PyArray_ResolveWritebackIfCopy(node_sample_weight_array);
         Py_XDECREF((PyObject*)node_sample_weight_array);
@@ -432,6 +484,7 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
     int *features = (int*)PyArray_DATA(features_array);
     tfloat *thresholds = (tfloat*)PyArray_DATA(thresholds_array);
     int *threshold_types = (int*)PyArray_DATA(threshold_types_array);
+    unsigned int *cat_bitsets = (unsigned int*)PyArray_DATA(cat_bitsets_array);
     tfloat *values = (tfloat*)PyArray_DATA(values_array);
     tfloat *node_sample_weight = (tfloat*)PyArray_DATA(node_sample_weight_array);
     tfloat *X = (tfloat*)PyArray_DATA(X_array);
@@ -440,7 +493,8 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
     // these are just wrapper objects for all the pointers and numbers associated with
     // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
-        children_left, children_right, children_default, features, thresholds, threshold_types, values,
+        children_left, children_right, children_default, features, thresholds, threshold_types, cat_bitsets,
+        static_cast<size_t>(PyArray_SIZE(cat_bitsets_array)), values,
         node_sample_weight, 0, tree_limit, 0, max_nodes, 0
     );
     ExplanationDataset data = ExplanationDataset(X, X_missing, NULL, NULL, NULL, num_X, M, 0);
@@ -454,6 +508,7 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
     Py_XDECREF((PyObject*)features_array);
     Py_XDECREF((PyObject*)thresholds_array);
     Py_XDECREF((PyObject*)threshold_types_array);
+    Py_XDECREF((PyObject*)cat_bitsets_array);
     Py_XDECREF((PyObject*)values_array);
     // PyArray_ResolveWritebackIfCopy(node_sample_weight_array);
     Py_XDECREF((PyObject*)node_sample_weight_array);
@@ -474,6 +529,7 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
     PyObject *features_obj;
     PyObject *thresholds_obj;
     PyObject *threshold_types_obj;
+    PyObject *cat_bitsets_obj;
     PyObject *values_obj;
     int max_depth;
     int tree_limit;
@@ -487,8 +543,8 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
 
     /* Parse the input tuple */
     if (!PyArg_ParseTuple(
-        args, "OOOOOOOiiOiOOOO", &children_left_obj, &children_right_obj, &children_default_obj,
-        &features_obj, &thresholds_obj, &threshold_types_obj, &values_obj, &max_depth, &tree_limit, &base_offset_obj, &model_output,
+        args, "OOOOOOOOiiOiOOOO", &children_left_obj, &children_right_obj, &children_default_obj,
+        &features_obj, &thresholds_obj, &threshold_types_obj, &cat_bitsets_obj, &values_obj, &max_depth, &tree_limit, &base_offset_obj, &model_output,
         &X_obj, &X_missing_obj, &y_obj, &out_pred_obj
     )) return NULL;
 
@@ -499,6 +555,7 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
     PyArrayObject *features_array = (PyArrayObject*)PyArray_FROM_OTF(features_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *thresholds_array = (PyArrayObject*)PyArray_FROM_OTF(thresholds_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *threshold_types_array = (PyArrayObject*)PyArray_FROM_OTF(threshold_types_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *cat_bitsets_array = (PyArrayObject*)PyArray_FROM_OTF(cat_bitsets_obj, NPY_UINT32, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *values_array = (PyArrayObject*)PyArray_FROM_OTF(values_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *base_offset_array = (PyArrayObject*)PyArray_FROM_OTF(base_offset_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
     PyArrayObject *X_array = (PyArrayObject*)PyArray_FROM_OTF(X_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
@@ -510,6 +567,7 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
     /* If that didn't work, throw an exception. Note that R and y are optional. */
     if (children_left_array == NULL || children_right_array == NULL ||
         children_default_array == NULL || features_array == NULL || thresholds_array == NULL ||
+        cat_bitsets_array == NULL ||
         values_array == NULL || X_array == NULL ||
         X_missing_array == NULL || out_pred_array == NULL) {
         Py_XDECREF((PyObject*)children_left_array);
@@ -518,6 +576,7 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
         Py_XDECREF((PyObject*)features_array);
         Py_XDECREF((PyObject*)thresholds_array);
         Py_XDECREF((PyObject*)threshold_types_array);
+        Py_XDECREF((PyObject*)cat_bitsets_array);
         Py_XDECREF((PyObject*)values_array);
         Py_XDECREF((PyObject*)base_offset_array);
         Py_XDECREF((PyObject*)X_array);
@@ -540,6 +599,7 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
     int *features = (int*)PyArray_DATA(features_array);
     tfloat *thresholds = (tfloat*)PyArray_DATA(thresholds_array);
     int *threshold_types = (int*)PyArray_DATA(threshold_types_array);
+    unsigned int *cat_bitsets = (unsigned int*)PyArray_DATA(cat_bitsets_array);
     tfloat *values = (tfloat*)PyArray_DATA(values_array);
     tfloat *base_offset = (tfloat*)PyArray_DATA(base_offset_array);
     tfloat *X = (tfloat*)PyArray_DATA(X_array);
@@ -551,7 +611,8 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
     // these are just wrapper objects for all the pointers and numbers associated with
     // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
-        children_left, children_right, children_default, features, thresholds, threshold_types, values,
+        children_left, children_right, children_default, features, thresholds, threshold_types, cat_bitsets,
+        static_cast<size_t>(PyArray_SIZE(cat_bitsets_array)), values,
         NULL, max_depth, tree_limit, base_offset,
         max_nodes, num_outputs
     );
@@ -566,6 +627,7 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
     Py_XDECREF((PyObject*)features_array);
     Py_XDECREF((PyObject*)thresholds_array);
     Py_XDECREF((PyObject*)threshold_types_array);
+    Py_XDECREF((PyObject*)cat_bitsets_array);
     Py_XDECREF((PyObject*)values_array);
     Py_XDECREF((PyObject*)base_offset_array);
     Py_XDECREF((PyObject*)X_array);
