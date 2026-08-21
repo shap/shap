@@ -1,5 +1,5 @@
 import numpy as np
-from shap._cutils import _init_masks
+from shap._cutils import _init_masks  # type: ignore[attr-defined]
 
 from shap.links import identity
 from shap.utils._masked_model import _build_fixed_output

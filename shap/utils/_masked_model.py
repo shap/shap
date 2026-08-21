@@ -6,7 +6,7 @@ import scipy.sparse
 from numba import njit
 
 from .. import links
-from .._cutils import _init_masks, _rec_fill_masks
+from .._cutils import _init_masks, _rec_fill_masks  # type: ignore[attr-defined]
 
 
 class MaskedModel:
