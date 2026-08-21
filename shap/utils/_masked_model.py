@@ -6,7 +6,7 @@ import scipy.sparse
 from numba import njit
 
 from .. import links
-from .._cutils import init_masks, rec_fill_masks
+from .._cutils import _init_masks, _rec_fill_masks
 
 
 class MaskedModel:
@@ -413,8 +413,8 @@ def make_masks(cluster_matrix):
 
     # build an array of index lists in CSR format
     cluster_matrix = cluster_matrix.astype(np.double)
-    init_masks(cluster_matrix, M, indices_row_pos, indptr)
-    rec_fill_masks(cluster_matrix, indices_row_pos, indices, M, cluster_matrix.shape[0] - 1 + M)
+    _init_masks(cluster_matrix, M, indices_row_pos, indptr)
+    _rec_fill_masks(cluster_matrix, indices_row_pos, indices, M, cluster_matrix.shape[0] - 1 + M)
     mask_matrix = scipy.sparse.csr_matrix((np.ones(len(indices), dtype=bool), indices, indptr), shape=(2 * M - 1, M))
 
     return mask_matrix

@@ -1,12 +1,12 @@
 import numpy as np
-from shap._cutils import init_masks
+from shap._cutils import _init_masks
 
 from shap.links import identity
 from shap.utils._masked_model import _build_fixed_output
 
 
 def test_init_masks():
-    """``init_masks`` declares int64 output arrays but does not mark them
+    """``_init_masks`` declares int64 output arrays but does not mark them
     ``.noconvert()``, so nanobind falls back to its implicit-conversion pass: it
     writes into a temporary cast copy and drops it. The caller gets no exception
     and an untouched array.
@@ -24,13 +24,13 @@ def test_init_masks():
     indptr = np.zeros(2 * M, dtype=np.int32)
 
     try:
-        init_masks(cluster_matrix, M, indices_row_pos, indptr)
+        _init_masks(cluster_matrix, M, indices_row_pos, indptr)
     except TypeError:
         return  # rejecting the mismatch outright is a fine outcome
 
     # otherwise the call must have written through to the caller's array
     assert indptr[-1] == int(np.sum(cluster_matrix[:, 3])) + M, (
-        "init_masks accepted int32 arrays, reported success, and wrote nothing"
+        "_init_masks accepted int32 arrays, reported success, and wrote nothing"
     )
 
 
