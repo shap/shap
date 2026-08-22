@@ -76,7 +76,6 @@ class ExplanationError:
         self.num_permutations = num_permutations
         self.link = link
         self.linearize_link = linearize_link
-        self.model_args = model_args
         self.batch_size = batch_size
         self.seed = seed
 
