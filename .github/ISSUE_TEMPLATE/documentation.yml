@@ -1,0 +1,37 @@
+name: Documentation Report
+description: Report errors, typos, or improvements in notebooks, tutorials, or documentation.
+title: "DOCS: "
+labels: ["documentation"]
+
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping us improve the SHAP documentation!
+  - type: textarea
+    id: problem
+    attributes:
+      label: Documentation Issue Description
+      description: Please describe the issue with the documentation or notebooks (e.g. broken link, outdated function call, mathematical typo, etc.).
+    validations:
+      required: true
+  - type: input
+    id: link
+    attributes:
+      label: Location of Documentation / Notebook
+      description: Provide a link to the ReadTheDocs page, GitHub notebook file, or file path in the repository.
+      placeholder: "e.g., https://shap.readthedocs.io/en/latest/example_notebooks/..."
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Fix / Improvement
+      description: Describe the changes you would like to see or your proposed fix.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I have checked that this issue has not already been reported.
+          required: true
+        - label: I'd be interested in making a PR to fix or improve this documentation.
