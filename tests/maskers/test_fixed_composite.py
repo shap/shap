@@ -55,3 +55,26 @@ def test_serialization_fixedcomposite_masker():
     new_masked_output = new_masker(test_input_mask, test_text)
 
     assert original_masked_output == new_masked_output
+
+
+def test_fixed_composite_call_wraps_non_tuple_masker_output():
+    """Test that __call__ wraps non-tuple masker output into a tuple."""
+
+    class NonTupleMasker(shap.maskers.Masker):
+        def __init__(self):
+            self.shape = (None, 0)
+
+        def __call__(self, mask, *args):
+            return args[0]
+
+    masker = NonTupleMasker()
+    fc = shap.maskers.FixedComposite(masker)
+
+    test_input = np.array([1, 2, 3])
+    mask = np.array([], dtype=bool)
+    result = fc(mask, test_input)
+
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+    np.testing.assert_array_equal(result[0], test_input)
+    np.testing.assert_array_equal(result[1], np.array([test_input]))
