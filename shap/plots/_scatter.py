@@ -442,7 +442,12 @@ def _suggest_buffered_limits(ax_min: float | None, ax_max: float | None, values:
 
 def _suggest_x_jitter(values: np.ndarray) -> float:
     """Suggest a suitable x_jitter value based on the unique values in the feature"""
-    unique_vals = np.sort(np.unique(values))
+    try:
+        unique_vals = np.sort(np.unique(values))
+    except TypeError:
+        # Mixed-type arrays (e.g. categorical strings with NaN floats) can't be
+        # sorted directly; convert to str so np.unique can handle them.
+        unique_vals = np.unique(values.astype(str))
     if len(unique_vals) < 2:
         # If there is only one unique value, no jitter is needed
         return 0.0
