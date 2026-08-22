@@ -28,6 +28,7 @@ def bar(
     show_data="auto",
     ax=None,
     show=True,
+    title=None,
 ):
     """Create a bar plot of a set of SHAP values.
 
@@ -63,6 +64,8 @@ def bar(
         Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
+    title : str, optional
+        Title of the plot.
 
     Returns
     -------
@@ -387,6 +390,9 @@ def bar(
                     lines = ax.plot(xv * 0.1 * (xmax - xmin) + xmax, max_display - np.array(yline), color="#999999")
                     for line in lines:
                         line.set_clip_on(False)
+
+    if title is not None:
+        ax.set_title(title)
 
     if show:
         plt.show()
