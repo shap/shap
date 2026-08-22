@@ -527,46 +527,46 @@ def corrgroups60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
         data, target = shap.datasets.corrgroups60()
 
     """
-    # set a constant seed
-    old_seed = np.random.seed()
-    np.random.seed(0)
+    # np.random.seed() returns None — use MT state restore so caller RNG is unchanged.
+    rng_state = np.random.get_state()
+    try:
+        np.random.seed(0)
 
-    # generate dataset with known correlation
-    N, M = n_points, 60
+        # generate dataset with known correlation
+        N, M = n_points, 60
 
-    # set one coefficient from each group of 3 to 1
-    beta = np.zeros(M)
-    beta[0:30:3] = 1
+        # set one coefficient from each group of 3 to 1
+        beta = np.zeros(M)
+        beta[0:30:3] = 1
 
-    # build a correlation matrix with groups of 3 tightly correlated features
-    C = np.eye(M)
-    for i in range(0, 30, 3):
-        C[i, i + 1] = C[i + 1, i] = 0.99
-        C[i, i + 2] = C[i + 2, i] = 0.99
-        C[i + 1, i + 2] = C[i + 2, i + 1] = 0.99
+        # build a correlation matrix with groups of 3 tightly correlated features
+        C = np.eye(M)
+        for i in range(0, 30, 3):
+            C[i, i + 1] = C[i + 1, i] = 0.99
+            C[i, i + 2] = C[i + 2, i] = 0.99
+            C[i + 1, i + 2] = C[i + 2, i + 1] = 0.99
 
-    def f(X):
-        return np.matmul(X, beta)
+        def f(X):
+            return np.matmul(X, beta)
 
-    # Make sure the sample correlation is a perfect match
-    X_start = np.random.randn(N, M)
-    X_centered = X_start - X_start.mean(0)
-    Sigma = np.matmul(X_centered.T, X_centered) / X_centered.shape[0]
-    W = np.linalg.cholesky(np.linalg.inv(Sigma)).T
-    X_white = np.matmul(X_centered, W.T)
-    assert (
-        np.linalg.norm(np.corrcoef(np.matmul(X_centered, W.T).T) - np.eye(M)) < 1e-6
-    )  # ensure this decorrelates the data
+        # Make sure the sample correlation is a perfect match
+        X_start = np.random.randn(N, M)
+        X_centered = X_start - X_start.mean(0)
+        Sigma = np.matmul(X_centered.T, X_centered) / X_centered.shape[0]
+        W = np.linalg.cholesky(np.linalg.inv(Sigma)).T
+        X_white = np.matmul(X_centered, W.T)
+        assert (
+            np.linalg.norm(np.corrcoef(np.matmul(X_centered, W.T).T) - np.eye(M)) < 1e-6
+        )  # ensure this decorrelates the data
 
-    # create the final data
-    X_final = np.matmul(X_white, np.linalg.cholesky(C).T)
-    X = X_final
-    y = f(X) + np.random.randn(N) * 1e-2
+        # create the final data
+        X_final = np.matmul(X_white, np.linalg.cholesky(C).T)
+        X = X_final
+        y = f(X) + np.random.randn(N) * 1e-2
 
-    # restore the previous numpy random seed
-    np.random.seed(old_seed)
-
-    return pd.DataFrame(X), y
+        return pd.DataFrame(X), y
+    finally:
+        np.random.set_state(rng_state)
 
 
 def independentlinear60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
@@ -598,29 +598,28 @@ def independentlinear60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray
         features, labels = shap.datasets.independentlinear60()
 
     """
-    # set a constant seed
-    old_seed = np.random.seed()
-    np.random.seed(0)
+    rng_state = np.random.get_state()
+    try:
+        np.random.seed(0)
 
-    # generate dataset with known correlation
-    N, M = n_points, 60
+        # generate dataset with known correlation
+        N, M = n_points, 60
 
-    # set one coefficient from each group of 3 to 1
-    beta = np.zeros(M)
-    beta[0:30:3] = 1
+        # set one coefficient from each group of 3 to 1
+        beta = np.zeros(M)
+        beta[0:30:3] = 1
 
-    def f(X):
-        return np.matmul(X, beta)
+        def f(X):
+            return np.matmul(X, beta)
 
-    # Make sure the sample correlation is a perfect match
-    X_start = np.random.randn(N, M)
-    X = X_start - X_start.mean(0)
-    y = f(X) + np.random.randn(N) * 1e-2
+        # Make sure the sample correlation is a perfect match
+        X_start = np.random.randn(N, M)
+        X = X_start - X_start.mean(0)
+        y = f(X) + np.random.randn(N) * 1e-2
 
-    # restore the previous numpy random seed
-    np.random.seed(old_seed)
-
-    return pd.DataFrame(X), y
+        return pd.DataFrame(X), y
+    finally:
+        np.random.set_state(rng_state)
 
 
 def a1a(n_points: int | None = None) -> tuple[ssp.csr_matrix, np.ndarray]:
