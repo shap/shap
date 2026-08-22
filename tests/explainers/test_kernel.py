@@ -317,7 +317,8 @@ def test_kernel_explainer_with_tensors():
     X, _ = sklearn.datasets.make_classification(100, 6)
     model = tf.keras.Sequential(
         [
-            tf.keras.layers.Dense(10, input_shape=(6,), activation="relu"),
+            tf.keras.layers.Input(shape=(6,)),
+            tf.keras.layers.Dense(10, activation="relu"),
             tf.keras.layers.Dense(1, activation="sigmoid"),
         ]
     )
