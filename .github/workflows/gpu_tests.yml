@@ -100,7 +100,7 @@ jobs:
         run: uv pip install -e . --no-build-isolation
 
       - name: Install test dependencies
-        run: uv pip install pytest xgboost lightgbm
+        run: uv pip install pytest xgboost lightgbm matplotlib
 
       - name: Report GPU-ML stack versions
         run: |
