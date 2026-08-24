@@ -1,0 +1,126 @@
+name: GPU Tests
+
+# Runs the real GPU test suite on an EC2 GPU runner. Gated behind the "CUDA CI"
+# label (or manual dispatch) since GPU instance time costs money and isn't
+# needed on every push.
+#
+# Uses the same label -> gate -> start-runner -> job -> stop-runner flow
+# proven out by gpu_smoke.yml. Once this workflow is confirmed working on
+# real hardware, gpu_smoke.yml can be deleted.
+
+on:
+  pull_request_target:
+    types: [labeled]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  gate:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'CUDA CI'
+    runs-on: ubuntu-latest
+    environment: gpu-ci
+    steps:
+      - run: echo "Approved for GPU CI"
+
+  start-runner:
+    needs: gate
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GPU_CI_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Start EC2 GPU runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@343a1b2ae682e681c3cec9a235d882da17ff04ef # v2, pinned 2026-08-09
+        with:
+          mode: start
+          github-token: ${{ secrets.GH_RUNNER_TOKEN }}
+          ec2-image-id: ${{ vars.EC2_IMAGE_ID }}
+          ec2-instance-type: g4dn.xlarge
+          subnet-id: ${{ vars.EC2_SUBNET_ID }}
+          security-group-id: ${{ vars.EC2_SECURITY_GROUP_ID }}
+          aws-resource-tags: >
+            [
+              {"Key": "Project", "Value": "shap-gpu-ci"},
+              {"Key": "RunId", "Value": "${{ github.run_id }}"}
+            ]
+
+  gpu-test:
+    needs: start-runner
+    runs-on: ${{ needs.start-runner.outputs.label }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: GPU sanity check
+        run: nvidia-smi
+
+      - name: Ensure CUDA toolkit (nvcc) is present
+        run: |
+          if command -v nvcc >/dev/null 2>&1; then
+            echo "nvcc already present:"
+            nvcc --version
+          else
+            echo "nvcc not found, installing CUDA toolkit..."
+            distro=ubuntu2204
+            arch=x86_64
+            wget -q "https://developer.download.nvidia.com/compute/cuda/repos/${distro}/${arch}/cuda-keyring_1.1-1_all.deb"
+            sudo dpkg -i cuda-keyring_1.1-1_all.deb
+            sudo apt-get update -qq
+            sudo apt-get install -y cuda-toolkit-12-8
+            echo "/usr/local/cuda-12.8/bin" >> "$GITHUB_PATH"
+            echo "LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install build toolchain
+        run: |
+          uv pip install --system scikit-build-core>=0.10.0 setuptools-scm>=8.0 numpy>=2.0 packaging>20.9 nanobind>=2.0.0 cmake ninja
+
+      - name: Build shap with CUDA support
+        env:
+          SHAP_ENABLE_CUDA: "1"
+        run: uv pip install --system -e . --no-build-isolation
+
+      - name: Install test dependencies
+        run: uv pip install --system pytest xgboost lightgbm
+
+      - name: Report GPU-ML stack versions
+        run: |
+          python -c "import xgboost as xgb; print(xgb.build_info())" || true
+
+      - name: Run GPU tests
+        run: pytest tests/explainers/test_gpu_tree.py -v
+
+  stop-runner:
+    if: ${{ always() && needs.start-runner.result == 'success' }}
+    needs:
+      - start-runner
+      - gpu-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GPU_CI_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Stop EC2 GPU runner
+        uses: machulav/ec2-github-runner@343a1b2ae682e681c3cec9a235d882da17ff04ef # v2, pinned 2026-08-09
+        with:
+          mode: stop
+          github-token: ${{ secrets.GH_RUNNER_TOKEN }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
