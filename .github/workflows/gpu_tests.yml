@@ -85,24 +85,29 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
+      - name: Set up Python 3.13 venv
+        run: |
+          uv python install 3.13
+          uv venv --python 3.13
+
       - name: Install build toolchain
         run: |
-          uv pip install --system scikit-build-core>=0.10.0 setuptools-scm>=8.0 numpy>=2.0 packaging>20.9 nanobind>=2.0.0 cmake ninja
+          uv pip install "scikit-build-core>=0.10.0" "setuptools-scm>=8.0" "numpy>=2.0" "packaging>20.9" "nanobind>=2.0.0" cmake ninja
 
       - name: Build shap with CUDA support
         env:
           SHAP_ENABLE_CUDA: "1"
-        run: uv pip install --system -e . --no-build-isolation
+        run: uv pip install -e . --no-build-isolation
 
       - name: Install test dependencies
-        run: uv pip install --system pytest xgboost lightgbm
+        run: uv pip install pytest xgboost lightgbm
 
       - name: Report GPU-ML stack versions
         run: |
-          python -c "import xgboost as xgb; print(xgb.build_info())" || true
+          uv run python -c "import xgboost as xgb; print(xgb.build_info())" || true
 
       - name: Run GPU tests
-        run: pytest tests/explainers/test_gpu_tree.py -v
+        run: uv run pytest tests/explainers/test_gpu_tree.py -v
 
   stop-runner:
     if: ${{ always() && needs.start-runner.result == 'success' }}
