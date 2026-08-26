@@ -74,30 +74,37 @@ install(TARGETS _cutils LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 # Build the Tree Logic extension module (cext)
 # ==============================================================================
 
-# Check if the SABI version is being requested
-if(NOT "${SKBUILD_SABI_VERSION}" STREQUAL "")
-  set(USE_SABI USE_SABI ${SKBUILD_SABI_VERSION})
-endif()
+# Build the CPU Tree SHAP module using nanobind.
+nanobind_add_module(
+  _cext
 
-python_add_library(
-  _cext MODULE
+  # This extension is free-threaded
+  FREE_THREADED
 
   # Target the stable ABI of Python 3.12+, reducing the number of binary wheels
-  ${USE_SABI} WITH_SOABI
+  STABLE_ABI
+
+  # Build libnanobind as a static library and link it into the module
+  NB_STATIC
 
   # Sources for the cext module
   shap/cext/_cext.cc
 )
 
-# Get the include directory for NumPy and add it to the include path
-execute_process(
-    COMMAND "${PYTHON_EXECUTABLE}"
-    -c "import numpy; print(numpy.get_include())"
-    OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE
+nanobind_add_stub(
+  _cext_stub
+  MODULE _cext
+  OUTPUT _cext.pyi
+  PYTHON_PATH $<TARGET_FILE_DIR:_cext>
+  DEPENDS _cext
 )
 
-target_include_directories(_cext PUBLIC ${NUMPY_INCLUDE_DIR})
+add_custom_command(
+  TARGET _cext_stub POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${CMAKE_CURRENT_BINARY_DIR}/_cext.pyi
+    ${CMAKE_CURRENT_SOURCE_DIR}/shap/_cext.pyi
+)
 
 # Install directive for scikit-build-core
 install(TARGETS _cext LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
@@ -106,6 +113,19 @@ install(TARGETS _cext LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 # Optional: Build the GPU Tree SHAP extension module (cext_gpu)
 # Enabled via: SHAP_ENABLE_CUDA=1 pip install .
 # ==============================================================================
+
+# Check if the SABI version is being requested
+if(NOT "${SKBUILD_SABI_VERSION}" STREQUAL "")
+  set(USE_SABI USE_SABI ${SKBUILD_SABI_VERSION})
+endif()
+
+# Get the include directory for NumPy. The GPU extension still uses the NumPy C API.
+execute_process(
+    COMMAND "${PYTHON_EXECUTABLE}"
+    -c "import numpy; print(numpy.get_include())"
+    OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
 if(ENV{SHAP_ENABLE_CUDA})
   message(MESSAGE "SHAP_ENABLE_CUDA is set, attempting to build the GPU extension...")
