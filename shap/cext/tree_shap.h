@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <limits>
 #include <stdio.h>
 #include <cmath>
 #include <ctime>
@@ -36,6 +37,8 @@ struct TreeEnsemble {
     int *features;
     tfloat *thresholds;
     int* threshold_types;
+    unsigned int *cat_bitsets;
+    size_t num_cat_bitsets;
     tfloat *values;
     tfloat *node_sample_weights;
     unsigned max_depth;
@@ -46,12 +49,14 @@ struct TreeEnsemble {
 
     TreeEnsemble() {}
     TreeEnsemble(int *children_left, int *children_right, int *children_default, int *features,
-                 tfloat *thresholds, int *threshold_types, tfloat *values, tfloat *node_sample_weights,
+                 tfloat *thresholds, int *threshold_types, unsigned int *cat_bitsets,
+                 size_t num_cat_bitsets, tfloat *values, tfloat *node_sample_weights,
                  unsigned max_depth, unsigned tree_limit, tfloat *base_offset,
                  unsigned max_nodes, unsigned num_outputs) :
         children_left(children_left), children_right(children_right),
         children_default(children_default), features(features), thresholds(thresholds),
-        threshold_types(threshold_types), values(values), node_sample_weights(node_sample_weights),
+        threshold_types(threshold_types), cat_bitsets(cat_bitsets), num_cat_bitsets(num_cat_bitsets),
+        values(values), node_sample_weights(node_sample_weights),
         max_depth(max_depth), tree_limit(tree_limit),
         base_offset(base_offset), max_nodes(max_nodes), num_outputs(num_outputs) {}
 
@@ -64,6 +69,8 @@ struct TreeEnsemble {
         tree.features = features + d;
         tree.thresholds = thresholds + d;
         tree.threshold_types = threshold_types + d;
+        tree.cat_bitsets = cat_bitsets; // ensemble-global buffer, shared by every per-tree view
+        tree.num_cat_bitsets = num_cat_bitsets;
         tree.values = values + d * num_outputs;
         tree.node_sample_weights = node_sample_weights + d;
         tree.max_depth = max_depth;
@@ -87,6 +94,8 @@ struct TreeEnsemble {
         features = new int[tree_limit * max_nodes];
         thresholds = new tfloat[tree_limit * max_nodes];
         threshold_types = new int[tree_limit * max_nodes];
+        cat_bitsets = NULL;
+        num_cat_bitsets = 0;
         values = new tfloat[tree_limit * max_nodes * num_outputs];
         node_sample_weights = new tfloat[tree_limit * max_nodes];
     }
@@ -178,9 +187,27 @@ inline transform_f get_transform(unsigned model_transform) {
     return transform;
 }
 
-inline bool category_in_threshold(float threshold, float category) {
-    int category_flag = (1 << (int(category) - 1));
-    return (int(threshold) & category_flag) != 0;
+inline bool category_in_threshold(const unsigned int *cat_bitsets, const size_t num_cat_bitsets,
+                                  const tfloat threshold, const tfloat category) {
+    // Invalid model offsets and non-integral category values do not match. In particular,
+    // validate all floating-point values before narrowing them to an array index.
+    if (cat_bitsets == NULL || !std::isfinite(threshold) || threshold < 0 ||
+        std::trunc(threshold) != threshold || threshold >= static_cast<tfloat>(num_cat_bitsets) ||
+        !std::isfinite(category) || category < 0 || std::trunc(category) != category ||
+        category >= static_cast<tfloat>(std::numeric_limits<size_t>::max())) {
+        return false;
+    }
+
+    const size_t start = static_cast<size_t>(threshold);
+    const size_t n_words = cat_bitsets[start];
+    const size_t words_available = num_cat_bitsets - start - 1;
+    if (n_words == 0 || n_words > words_available || category / 32 >= static_cast<tfloat>(n_words)) {
+        return false;
+    }
+
+    const size_t c = static_cast<size_t>(category);
+    const size_t word = c / 32;
+    return (cat_bitsets[start + 1 + word] & (1u << (c % 32))) != 0;
 }
 
 inline tfloat *tree_predict(unsigned i, const TreeEnsemble &trees, const tfloat *x, const bool *x_missing) {
@@ -200,7 +227,9 @@ inline tfloat *tree_predict(unsigned i, const TreeEnsemble &trees, const tfloat 
             node = trees.children_default[pos];
         } else if (trees.threshold_types[pos] == 0 && x[feature] <= trees.thresholds[pos]) {
             node = trees.children_left[pos];
-        } else if (trees.threshold_types[pos] == 1 && category_in_threshold(trees.thresholds[pos], x[feature])) {
+        } else if (trees.threshold_types[pos] == 1 && category_in_threshold(
+            trees.cat_bitsets, trees.num_cat_bitsets, trees.thresholds[pos], x[feature]
+        )) {
             node = trees.children_left[pos];
         } else {
             node = trees.children_right[pos];
@@ -264,7 +293,9 @@ inline void tree_update_weights(unsigned i, TreeEnsemble &trees, const tfloat *x
             node = trees.children_default[pos];
         } else if (trees.threshold_types[pos] == 0 && x[feature] <= trees.thresholds[pos]) {
             node = trees.children_left[pos];
-        } else if (trees.threshold_types[pos] == 1 && category_in_threshold(trees.thresholds[pos], x[feature])) {
+        } else if (trees.threshold_types[pos] == 1 && category_in_threshold(
+            trees.cat_bitsets, trees.num_cat_bitsets, trees.thresholds[pos], x[feature]
+        )) {
             node = trees.children_left[pos];
         }
          else {
@@ -301,7 +332,11 @@ inline void tree_saabas(tfloat *out, const TreeEnsemble &tree, const Explanation
         const unsigned feature = tree.features[curr_node];
         if (data.X_missing[feature]) {
             next_node = tree.children_default[curr_node];
-        } else if (data.X[feature] <= tree.thresholds[curr_node]) {
+        } else if (tree.threshold_types[curr_node] == 1 && category_in_threshold(
+            tree.cat_bitsets, tree.num_cat_bitsets, tree.thresholds[curr_node], data.X[feature]
+        )) {
+            next_node = tree.children_left[curr_node];
+        } else if (tree.threshold_types[curr_node] == 0 && data.X[feature] <= tree.thresholds[curr_node]) {
             next_node = tree.children_left[curr_node];
         } else {
             next_node = tree.children_right[curr_node];
@@ -411,7 +446,9 @@ inline tfloat unwound_path_sum(const PathElement *unique_path, unsigned unique_d
 inline void tree_shap_recursive(const unsigned num_outputs, const int *children_left,
                                 const int *children_right,
                                 const int *children_default, const int *features,
-                                const tfloat *thresholds, const int *threshold_types, const tfloat *values,
+                                const tfloat *thresholds, const int *threshold_types,
+                                const unsigned int *cat_bitsets, const size_t num_cat_bitsets,
+                                const tfloat *values,
                                 const tfloat *node_sample_weight,
                                 const tfloat *x, const bool *x_missing, tfloat *phi,
                                 unsigned node_index, unsigned unique_depth,
@@ -455,7 +492,9 @@ inline void tree_shap_recursive(const unsigned num_outputs, const int *children_
             hot_index = children_default[node_index];
         } else if (type == 0 && x[split_index] <= thresholds[node_index]) {
             hot_index = children_left[node_index];
-        } else if (type == 1 && category_in_threshold(thresholds[node_index], x[split_index])) {
+        } else if (type == 1 && category_in_threshold(
+            cat_bitsets, num_cat_bitsets, thresholds[node_index], x[split_index]
+        )) {
             hot_index = children_left[node_index];
         }
         else {
@@ -495,14 +534,16 @@ inline void tree_shap_recursive(const unsigned num_outputs, const int *children_
         }
 
         tree_shap_recursive(
-            num_outputs, children_left, children_right, children_default, features, thresholds, threshold_types, values,
+            num_outputs, children_left, children_right, children_default, features, thresholds, threshold_types,
+            cat_bitsets, num_cat_bitsets, values,
             node_sample_weight, x, x_missing, phi, hot_index, unique_depth + 1, unique_path,
             hot_zero_fraction * incoming_zero_fraction, incoming_one_fraction,
             split_index, condition, condition_feature, hot_condition_fraction
         );
 
         tree_shap_recursive(
-            num_outputs, children_left, children_right, children_default, features, thresholds, threshold_types, values,
+            num_outputs, children_left, children_right, children_default, features, thresholds, threshold_types,
+            cat_bitsets, num_cat_bitsets, values,
             node_sample_weight, x, x_missing, phi, cold_index, unique_depth + 1, unique_path,
             cold_zero_fraction * incoming_zero_fraction, 0,
             split_index, condition, condition_feature, cold_condition_fraction
@@ -555,7 +596,8 @@ inline void tree_shap(const TreeEnsemble& tree, const ExplanationDataset &data,
 
     tree_shap_recursive(
         tree.num_outputs, tree.children_left, tree.children_right, tree.children_default,
-        tree.features, tree.thresholds, tree.threshold_types, tree.values, tree.node_sample_weights, data.X,
+        tree.features, tree.thresholds, tree.threshold_types, tree.cat_bitsets, tree.num_cat_bitsets,
+        tree.values, tree.node_sample_weights, data.X,
         data.X_missing, out_contribs, 0, 0, unique_path_data, 1, 1, -1, condition,
         condition_feature, 1
     );
@@ -592,6 +634,7 @@ inline unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEn
         out_tree.children_default[pos] = -1;
         out_tree.features[pos] = -1;
         out_tree.thresholds[pos] = 0;
+        out_tree.threshold_types[pos] = -1;
         out_tree.node_sample_weights[pos] = num_background_data_inds;
 
         return pos;
@@ -683,6 +726,7 @@ inline unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEn
 
         out_tree.features[pos] = trees.features[row_offset + i];
         out_tree.thresholds[pos] = trees.thresholds[row_offset + i];
+        out_tree.threshold_types[pos] = trees.threshold_types[row_offset + i];
         out_tree.node_sample_weights[pos] = num_background_data_inds;
 
         // build the right subtree
@@ -1420,7 +1464,6 @@ inline void dense_global_path_dependent(const TreeEnsemble& trees, const Explana
     // allocate space for our new merged tree (we save enough room to totally split all samples if need be)
     TreeEnsemble merged_tree;
     merged_tree.allocate(1, (data.num_X + data.num_R) * 2, trees.num_outputs);
-
     // collapse the ensemble of trees into a single tree that has the same behavior
     // for all the X and R samples in the dataset
     build_merged_tree(merged_tree, data, trees);
