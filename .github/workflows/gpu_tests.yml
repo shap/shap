@@ -99,6 +99,10 @@ jobs:
       - name: Build shap with CUDA support
         env:
           SHAP_ENABLE_CUDA: "1"
+          # Skip `git describe` for the version lookup - on this runner's full
+          # clone (fetch-depth: 0, ~100 tags) it's slow enough to flake past
+          # vcs_versioning's hardcoded 40s subprocess timeout.
+          SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.0"
         run: uv pip install -e . --no-build-isolation
 
       - name: Install test dependencies
