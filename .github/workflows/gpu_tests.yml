@@ -106,11 +106,7 @@ jobs:
         run: uv pip install -e . -v --no-build-isolation
 
       - name: Install test dependencies
-        run: uv pip install pytest pytest-mpl pytest-cov xgboost lightgbm matplotlib
-
-      - name: Report GPU-ML stack versions
-        run: |
-          uv run python -c "import xgboost as xgb; print(xgb.build_info())" || true
+        run: uv pip install pytest pytest-mpl pytest-cov xgboost lightgbm matplotlib ipython
 
       - name: Run GPU tests
         run: uv run pytest tests/explainers/test_gpu_tree.py -v
