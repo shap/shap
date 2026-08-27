@@ -105,12 +105,8 @@ jobs:
           SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.0"
         run: uv pip install -e . -v --no-build-isolation
 
-      - name: tmate session
-        uses: mxschmitt/action-tmate@v4
-        if: ${{ always() && failure() }}
-        with:
-          ssh: true
-          wait-for-ssh: true
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
 
       - name: Install test dependencies
         run: uv pip install pytest pytest-mpl pytest-cov xgboost lightgbm matplotlib
