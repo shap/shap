@@ -57,6 +57,45 @@ jobs:
           path: /tmp/test_data_cache
           retention-days: 1
 
+  # Approve GPU spend and start the EC2 runner up front, in parallel with the
+  # wheel/sdist builds, rather than waiting for the wheel to finish first.
+  gate_gpu_ci:
+    name: Approve GPU CI spend
+    runs-on: ubuntu-latest
+    environment: gpu-ci
+    steps:
+      - run: echo "Approved for GPU CI"
+
+  gpu_test_start_runner:
+    name: Start GPU runner
+    needs: gate_gpu_ci
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GPU_CI_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Start EC2 GPU runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@343a1b2ae682e681c3cec9a235d882da17ff04ef # v2, pinned 2026-08-09
+        with:
+          mode: start
+          github-token: ${{ secrets.GH_RUNNER_TOKEN }}
+          ec2-image-id: ${{ vars.EC2_IMAGE_ID }}
+          ec2-instance-type: g4dn.xlarge
+          subnet-id: ${{ vars.EC2_SUBNET_ID }}
+          security-group-id: ${{ vars.EC2_SECURITY_GROUP_ID }}
+          aws-resource-tags: >
+            [
+              {"Key": "Project", "Value": "shap-gpu-ci"},
+              {"Key": "RunId", "Value": "${{ github.run_id }}"}
+            ]
+
   build_gpu_wheel:
     name: Build CUDA-enabled wheel
     runs-on: ubuntu-latest
@@ -171,47 +210,9 @@ jobs:
           pytest --durations=20 --import-mode=append
           --ignore=tests/explainers/test_gpu_tree.py
 
-  gate_gpu_ci:
-    name: Approve GPU CI spend
-    needs: build_gpu_wheel
-    runs-on: ubuntu-latest
-    environment: gpu-ci
-    steps:
-      - run: echo "Approved for GPU CI"
-
-  gpu_test_start_runner:
-    name: Start GPU runner
-    needs: gate_gpu_ci
-    runs-on: ubuntu-latest
-    outputs:
-      label: ${{ steps.start-ec2-runner.outputs.label }}
-      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_GPU_CI_ROLE }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Start EC2 GPU runner
-        id: start-ec2-runner
-        uses: machulav/ec2-github-runner@343a1b2ae682e681c3cec9a235d882da17ff04ef # v2, pinned 2026-08-09
-        with:
-          mode: start
-          github-token: ${{ secrets.GH_RUNNER_TOKEN }}
-          ec2-image-id: ${{ vars.EC2_IMAGE_ID }}
-          ec2-instance-type: g4dn.xlarge
-          subnet-id: ${{ vars.EC2_SUBNET_ID }}
-          security-group-id: ${{ vars.EC2_SECURITY_GROUP_ID }}
-          aws-resource-tags: >
-            [
-              {"Key": "Project", "Value": "shap-gpu-ci"},
-              {"Key": "RunId", "Value": "${{ github.run_id }}"}
-            ]
-
   gpu_test:
     name: Test built wheel on GPU
-    needs: gpu_test_start_runner
+    needs: [gpu_test_start_runner, build_gpu_wheel]
     runs-on: ${{ needs.gpu_test_start_runner.outputs.label }}
     timeout-minutes: 30
     steps:
