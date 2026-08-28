@@ -72,7 +72,7 @@ jobs:
 
   gpu_test_start_runner:
     name: Start GPU runner
-    needs: gate_gpu_ci
+    needs: [gate_gpu_ci, cpu_test]
     runs-on: ubuntu-latest
     outputs:
       label: ${{ steps.start-ec2-runner.outputs.label }}
