@@ -25,6 +25,10 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   # We need this since we run into 403 errors on MacOS, see GH #4179.
   # Only needed for the CPU test job, but kept as its own job so it can run
