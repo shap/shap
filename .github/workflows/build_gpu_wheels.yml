@@ -80,7 +80,10 @@ jobs:
           # Only manylinux x86_64 - CUDA has no aarch64/macOS/Windows target here.
           CIBW_BUILD: "cp3*-manylinux_x86_64"
           CIBW_ARCHS_LINUX: x86_64
-          CIBW_ENVIRONMENT: "SHAP_ENABLE_CUDA=1"
+          # $GITHUB_PATH doesn't exist inside the cibuildwheel container (it's a
+          # GitHub Actions host-runner mechanism), so nvcc's location must be
+          # added to PATH here instead, for the actual build step to see it.
+          CIBW_ENVIRONMENT: "SHAP_ENABLE_CUDA=1 PATH=/usr/local/cuda-12.8/bin:$PATH"
           # No GPU is present in the build container, so we can't run the real
           # GPU test suite here - that happens in the gpu_test job below,
           # against this exact wheel.
@@ -90,7 +93,6 @@ jobs:
           CIBW_BEFORE_ALL: |
             dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
             dnf install -y cuda-toolkit-12-8
-            echo "/usr/local/cuda-12.8/bin" >> "$GITHUB_PATH"
 
       - uses: actions/upload-artifact@v4
         with:
