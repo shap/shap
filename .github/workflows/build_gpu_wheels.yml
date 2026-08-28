@@ -1,0 +1,310 @@
+name: Build GPU wheels
+
+# Builds real CUDA-enabled "shap-gpu" wheels, tests the SAME built artifact on
+# both a GPU runner (real GPU tests) and a CPU runner (rest of the suite), and
+# only then publishes it. The wheel is built exactly once and passed between
+# jobs via actions/upload-artifact -> actions/download-artifact, so what gets
+# tested is byte-identical to what gets published (no rebuild-per-runner, no
+# hash reconciliation needed).
+#
+# Building CUDA device code (nvcc) does not require a physical GPU - it
+# cross-compiles for the target CUDA_ARCHITECTURES baked into CMakeLists.txt -
+# so the build itself runs on a plain github-hosted CPU runner. A real GPU is
+# only needed to *execute* tests/explainers/test_gpu_tree.py afterwards.
+#
+# NOTE: installing the CUDA toolkit inside the cibuildwheel manylinux
+# container (CIBW_BEFORE_ALL below) has not been validated end-to-end yet -
+# expect to iterate on that step once this workflow is actually run.
+#
+# Requires a trusted-publisher entry on PyPI/TestPyPI for the "shap-gpu"
+# project pointing at THIS workflow filename (build_gpu_wheels.yml). The
+# existing entry for build_gpu.yml does not cover this file.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  # We need this since we run into 403 errors on MacOS, see GH #4179.
+  # Only needed for the CPU test job, but kept as its own job so it can run
+  # concurrently with the (slower) wheel build.
+  prepare_data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Install dependencies for dataset download
+        run: |
+          uv pip install --system . --group download-datasets
+      - name: Pre-download datasets
+        run: python -P tests/datasets_to_cache.py
+      - name: Create unified cache directory
+        run: |
+          mkdir -p /tmp/test_data_cache
+          cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
+          cp -r shap/cached_data /tmp/test_data_cache/ || true
+      - name: Upload cached datasets
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-wheel-test-data-cache
+          path: /tmp/test_data_cache
+          retention-days: 1
+
+  build_gpu_wheel:
+    name: Build CUDA-enabled wheel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Override package name to shap-gpu
+        run: sed -i 's/^name = "shap"/name = "shap-gpu"/' pyproject.toml
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build CUDA wheel
+        uses: pypa/cibuildwheel@v3.2.1
+        env:
+          # Only manylinux x86_64 - CUDA has no aarch64/macOS/Windows target here.
+          CIBW_BUILD: "cp3*-manylinux_x86_64"
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_ENVIRONMENT: "SHAP_ENABLE_CUDA=1"
+          # No GPU is present in the build container, so we can't run the real
+          # GPU test suite here - that happens in the gpu_test job below,
+          # against this exact wheel.
+          CIBW_TEST_SKIP: "*"
+          # NEEDS VALIDATION: installs the CUDA toolkit (nvcc only, no driver/
+          # GPU needed) inside the manylinux_2_28 (AlmaLinux 8-based) container.
+          CIBW_BEFORE_ALL: |
+            dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+            dnf install -y cuda-toolkit-12-8
+            echo "/usr/local/cuda-12.8/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: ./wheelhouse/*.whl
+          name: gpu_wheel_files
+
+  build_gpu_sdist:
+    name: Build GPU source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Override package name to shap-gpu
+        run: sed -i 's/^name = "shap"/name = "shap-gpu"/' pyproject.toml
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build sdist
+        run: uv build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gpu_sdist_files
+          path: dist/*.tar.gz
+
+  cpu_test:
+    name: Run CPU-only test suite against built wheel
+    needs: [prepare_data, build_gpu_wheel]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: gpu_wheel_files
+          path: dist
+
+      - name: Install the built wheel
+        run: uv pip install --system dist/*.whl
+
+      - name: Install test-only dependencies (without rebuilding the project)
+        run: |
+          uv export --only-group test --only-group plots --no-emit-project --no-hashes -o /tmp/test-requirements.txt
+          uv pip install --system -r /tmp/test-requirements.txt
+
+      - name: Download pre-cached datasets
+        uses: actions/download-artifact@v4
+        with:
+          name: gpu-wheel-test-data-cache
+          path: /tmp/test_data_cache
+
+      - name: Restore datasets to installed package location
+        run: |
+          cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+          SHAP_CACHE_DIR=$(python -P -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
+          mkdir -p "$SHAP_CACHE_DIR"
+          cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
+
+      - name: Test with pytest (excluding GPU tests)
+        run: >
+          pytest --durations=20 --import-mode=append
+          --ignore=tests/explainers/test_gpu_tree.py
+
+  gate_gpu_ci:
+    name: Approve GPU CI spend
+    needs: build_gpu_wheel
+    runs-on: ubuntu-latest
+    environment: gpu-ci
+    steps:
+      - run: echo "Approved for GPU CI"
+
+  gpu_test_start_runner:
+    name: Start GPU runner
+    needs: gate_gpu_ci
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GPU_CI_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Start EC2 GPU runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@343a1b2ae682e681c3cec9a235d882da17ff04ef # v2, pinned 2026-08-09
+        with:
+          mode: start
+          github-token: ${{ secrets.GH_RUNNER_TOKEN }}
+          ec2-image-id: ${{ vars.EC2_IMAGE_ID }}
+          ec2-instance-type: g4dn.xlarge
+          subnet-id: ${{ vars.EC2_SUBNET_ID }}
+          security-group-id: ${{ vars.EC2_SECURITY_GROUP_ID }}
+          aws-resource-tags: >
+            [
+              {"Key": "Project", "Value": "shap-gpu-ci"},
+              {"Key": "RunId", "Value": "${{ github.run_id }}"}
+            ]
+
+  gpu_test:
+    name: Test built wheel on GPU
+    needs: gpu_test_start_runner
+    runs-on: ${{ needs.gpu_test_start_runner.outputs.label }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: GPU sanity check
+        run: nvidia-smi
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: gpu_wheel_files
+          path: dist
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python 3.13 venv
+        run: |
+          uv python install 3.13
+          uv venv --python 3.13
+
+      - name: Install the built wheel (same artifact as everywhere else)
+        run: uv pip install dist/*.whl
+
+      - name: Install test dependencies
+        run: uv pip install pytest pytest-mpl pytest-cov xgboost lightgbm matplotlib
+
+      - name: Run GPU tests
+        run: uv run pytest tests/explainers/test_gpu_tree.py -v --import-mode=append
+
+  gpu_test_stop_runner:
+    name: Stop GPU runner
+    if: ${{ always() && needs.gpu_test_start_runner.result == 'success' }}
+    needs:
+      - gpu_test_start_runner
+      - gpu_test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GPU_CI_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Stop EC2 GPU runner
+        uses: machulav/ec2-github-runner@343a1b2ae682e681c3cec9a235d882da17ff04ef # v2, pinned 2026-08-09
+        with:
+          mode: stop
+          github-token: ${{ secrets.GH_RUNNER_TOKEN }}
+          label: ${{ needs.gpu_test_start_runner.outputs.label }}
+          ec2-instance-id: ${{ needs.gpu_test_start_runner.outputs.ec2-instance-id }}
+
+  publish_testpypi:
+    name: Publish shap-gpu to TestPyPI
+    needs: [cpu_test, gpu_test, build_gpu_sdist]
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/shap-gpu
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gpu_wheel_files
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: gpu_sdist_files
+          path: dist
+      - name: Publish package to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
+          repository-url: https://test.pypi.org/legacy/
+
+  publish_pypi:
+    name: Publish shap-gpu to PyPI
+    needs: [cpu_test, gpu_test, build_gpu_sdist]
+    runs-on: ubuntu-latest
+    # Only publish tagged releases to real PyPI
+    if: startsWith(github.ref, 'refs/tags')
+    environment:
+      name: pypi
+      url: https://pypi.org/p/shap-gpu
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gpu_wheel_files
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: gpu_sdist_files
+          path: dist
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
