@@ -188,13 +188,19 @@ jobs:
           name: gpu_wheel_files
           path: dist
 
-      - name: Install the built wheel
-        run: uv pip install --system dist/*.whl
-
       - name: Install test-only dependencies (without rebuilding the project)
         run: |
           uv export --only-group test --only-group plots --no-emit-project --no-hashes -o /tmp/test-requirements.txt
           uv pip install --system -r /tmp/test-requirements.txt
+
+      # Installed *after* test deps - causalml (a test dependency) pulls in the
+      # real PyPI "shap" package, which would otherwise silently overwrite this
+      # locally-built shap-gpu wheel's files in the shared "shap/" import
+      # directory (they're different distribution names to pip/uv, so it
+      # doesn't treat this as a conflict). Installing the wheel last ensures
+      # it's what's actually on disk when the tests run.
+      - name: Install the built wheel
+        run: uv pip install --system dist/*.whl
 
       - name: Download pre-cached datasets
         uses: actions/download-artifact@v4
