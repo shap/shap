@@ -67,8 +67,11 @@ add_custom_command(
     ${CMAKE_CURRENT_SOURCE_DIR}/shap/_cutils.pyi
 )
 
-# Install the module to shap
-install(TARGETS _cutils LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
+# Install the module to shap. Hardcoded to "shap" (not SKBUILD_PROJECT_NAME):
+# the shap-gpu build overrides the project name in pyproject.toml, but the
+# importable Python package is always "shap" regardless of the distribution
+# name, so the compiled extension must land there too.
+install(TARGETS _cutils LIBRARY DESTINATION shap)
 
 # ==============================================================================
 # Build the Tree Logic extension module (cext)
@@ -99,8 +102,9 @@ execute_process(
 
 target_include_directories(_cext PUBLIC ${NUMPY_INCLUDE_DIR})
 
-# Install directive for scikit-build-core
-install(TARGETS _cext LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
+# Install directive for scikit-build-core. Hardcoded to "shap", see the
+# _cutils install() above for why.
+install(TARGETS _cext LIBRARY DESTINATION shap)
 
 # ==============================================================================
 # Optional: Build the GPU Tree SHAP extension module (cext_gpu)
@@ -139,7 +143,8 @@ if(DEFINED ENV{SHAP_ENABLE_CUDA})
     >
   )
 
-  install(TARGETS _cext_gpu LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
+  # Hardcoded to "shap", see the _cutils install() above for why.
+  install(TARGETS _cext_gpu LIBRARY DESTINATION shap)
 else()
   message(MESSAGE "SHAP_ENABLE_CUDA is not set, skipping the GPU extension.")
 endif()
