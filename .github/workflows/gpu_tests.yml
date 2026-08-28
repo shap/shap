@@ -25,6 +25,38 @@ jobs:
     steps:
       - run: echo "Approved for GPU CI"
 
+  # Pre-download and cache datasets on a cheap runner, same approach as run_tests.yml,
+  # so the (costly) GPU runner doesn't spend time/hit rate limits fetching them itself.
+  prepare_data:
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Install dependencies for dataset download
+        run: |
+          uv pip install --system . --group download-datasets
+      - name: Pre-download datasets
+        run: python -P tests/datasets_to_cache.py
+      - name: Create unified cache directory
+        run: |
+          mkdir -p /tmp/test_data_cache
+          cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
+          cp -r shap/cached_data /tmp/test_data_cache/ || true
+          ls -la /tmp/test_data_cache/
+      - name: Upload cached datasets
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-data-cache
+          path: /tmp/test_data_cache
+          retention-days: 1
+
   start-runner:
     needs: gate
     runs-on: ubuntu-latest
@@ -55,7 +87,9 @@ jobs:
             ]
 
   gpu-test:
-    needs: start-runner
+    needs:
+      - start-runner
+      - prepare_data
     runs-on: ${{ needs.start-runner.outputs.label }}
     timeout-minutes: 30
     steps:
@@ -107,6 +141,27 @@ jobs:
 
       - name: Install test dependencies
         run: uv pip install pytest pytest-mpl pytest-cov xgboost lightgbm matplotlib ipython
+
+      - name: Download pre-cached datasets
+        uses: actions/download-artifact@v4
+        with:
+          name: test-data-cache
+          path: /tmp/test_data_cache
+
+      - name: Restore datasets to correct locations
+        run: |
+          # Restore sklearn data
+          cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+
+          # Restore shap cached data to the installed package location
+          SHAP_CACHE_DIR=$(uv run python -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
+          mkdir -p "$SHAP_CACHE_DIR"
+          cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
+
+          echo "Sklearn data:"
+          ls -la ~/scikit_learn_data/ 2>/dev/null || echo "No sklearn data"
+          echo "Shap cache data:"
+          ls -la "$SHAP_CACHE_DIR" 2>/dev/null || echo "No shap data"
 
       - name: Run GPU tests
         run: uv run pytest tests/explainers/test_gpu_tree.py -v
