@@ -59,8 +59,6 @@ jobs:
           path: /tmp/test_data_cache
           retention-days: 1
 
-  # Approve GPU spend and start the EC2 runner up front, in parallel with the
-  # wheel/sdist builds, rather than waiting for the wheel to finish first.
   gate_gpu_ci:
     name: Approve GPU CI spend
     runs-on: ubuntu-latest
@@ -70,7 +68,7 @@ jobs:
 
   gpu_test_start_runner:
     name: Start GPU runner
-    needs: [gate_gpu_ci]
+    needs: [gate_gpu_ci, build_gpu_wheel, build_shap_wheel, prepare_data]
     runs-on: ubuntu-latest
     outputs:
       label: ${{ steps.start-ec2-runner.outputs.label }}
