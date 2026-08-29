@@ -248,7 +248,7 @@ jobs:
         run: uv pip install dist/*.whl
 
       - name: Install test dependencies
-        run: uv pip install pytest pytest-mpl pytest-cov xgboost lightgbm matplotlib
+        run: uv pip install pytest pytest-mpl pytest-cov xgboost lightgbm matplotlib ipython
 
       - name: Run GPU tests
         run: uv run pytest tests/explainers/test_gpu_tree.py -v --import-mode=append
