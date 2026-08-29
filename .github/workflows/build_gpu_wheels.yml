@@ -114,12 +114,21 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
+      # Built via cibuildwheel (manylinux), not a bare `uv build --wheel`: a wheel
+      # compiled directly on this runner links against its recent libstdc++ and
+      # then fails to import on the older EC2 GPU test box (GLIBCXX version
+      # mismatch). manylinux compiles against old glibc/libstdc++ so the wheel
+      # runs on both. One cp312 stable-ABI build covers 3.12+.
       - name: Build shap wheel
-        run: uv build --wheel
+        uses: pypa/cibuildwheel@v3.2.1
+        env:
+          CIBW_BUILD: "cp312-manylinux_x86_64"
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_TEST_SKIP: "*"
 
       - uses: actions/upload-artifact@v4
         with:
-          path: dist/*.whl
+          path: ./wheelhouse/*.whl
           name: shap_wheel_for_gpu_test
 
   build_gpu_wheel:
