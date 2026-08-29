@@ -222,7 +222,7 @@ jobs:
 
   gpu_test:
     name: Test built wheel on GPU
-    needs: [gpu_test_start_runner, build_gpu_wheel]
+    needs: [gpu_test_start_runner, build_gpu_wheel, prepare_data]
     runs-on: ${{ needs.gpu_test_start_runner.outputs.label }}
     timeout-minutes: 30
     steps:
@@ -249,6 +249,19 @@ jobs:
 
       - name: Install test dependencies
         run: uv pip install pytest pytest-mpl pytest-cov xgboost lightgbm matplotlib ipython
+
+      - name: Download pre-cached datasets
+        uses: actions/download-artifact@v4
+        with:
+          name: gpu-wheel-test-data-cache
+          path: /tmp/test_data_cache
+
+      - name: Restore datasets to installed package location
+        run: |
+          cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+          SHAP_CACHE_DIR=$(uv run python -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
+          mkdir -p "$SHAP_CACHE_DIR"
+          cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
 
       - name: Run GPU tests
         run: uv run pytest tests/explainers/test_gpu_tree.py -v --import-mode=append
