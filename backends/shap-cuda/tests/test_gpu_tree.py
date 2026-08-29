@@ -3,9 +3,8 @@
 import numpy as np
 import pandas as pd
 import pytest
-import sklearn
-
 import shap
+import sklearn
 from shap.explainers._tree import SingleTree, TreeEnsemble
 from shap.utils import assert_import
 

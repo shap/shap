@@ -131,12 +131,13 @@ The various dependency groups are defined in [pyproject.toml](pyproject.toml):
 - `plots`: includes matplotlib.
 - `docs`: dependencies for building the docs with Sphinx.
 
-To use the CUDA extension for ``GPUTreeExplainer``, set the ``SHAP_ENABLE_CUDA`` environment variable to `1` when installing:
+To develop ``GPUTreeExplainer`` (the CUDA extension, in `backends/shap-cuda`), install it alongside `shap` itself:
 
 ```bash
-SHAP_ENABLE_CUDA=1 pip install -e . --group test-core --group plots
-# or using uv
-SHAP_ENABLE_CUDA=1 uv sync --group test-core --group plots
+pip install -e . --group test-core --group plots
+pip install -e backends/shap-cuda --no-build-isolation
+# or using uv, which installs both automatically as workspace members
+uv sync --group test-core --group plots
 ```
 
 ### Code checks with precommit

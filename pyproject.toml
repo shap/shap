@@ -48,6 +48,9 @@ classifiers = [
 ]
 dynamic = ["version"]
 
+[project.optional-dependencies]
+cuda = ["shap-cuda"]
+
 
 [dependency-groups]
 plots = ["matplotlib", "ipython"]
@@ -124,12 +127,17 @@ Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
 [tool.uv]
 cache-keys = [
   { file = "shap/cext/*.cc" },
-  { file = "shap/cext/*.cu" },
   { file = "shap/cext/*.h" },
   { file = "shap/cutils/*.cpp" },
   { file = "shap/cutils/*.h" },
   { file = "CMakeLists.txt" },
 ]
+
+[tool.uv.workspace]
+members = ["backends/*"]
+
+[tool.uv.sources]
+shap-cuda = {workspace = true}
 
 [tool.mypy]
 check_untyped_defs = true

@@ -67,10 +67,6 @@ add_custom_command(
     ${CMAKE_CURRENT_SOURCE_DIR}/shap/_cutils.pyi
 )
 
-# Install the module to shap. Hardcoded to "shap" (not SKBUILD_PROJECT_NAME):
-# the shap-gpu build overrides the project name in pyproject.toml, but the
-# importable Python package is always "shap" regardless of the distribution
-# name, so the compiled extension must land there too.
 install(TARGETS _cutils LIBRARY DESTINATION shap)
 
 # ==============================================================================
@@ -102,49 +98,4 @@ execute_process(
 
 target_include_directories(_cext PUBLIC ${NUMPY_INCLUDE_DIR})
 
-# Install directive for scikit-build-core. Hardcoded to "shap", see the
-# _cutils install() above for why.
 install(TARGETS _cext LIBRARY DESTINATION shap)
-
-# ==============================================================================
-# Optional: Build the GPU Tree SHAP extension module (cext_gpu)
-# Enabled via: SHAP_ENABLE_CUDA=1 pip install .
-# ==============================================================================
-
-if(DEFINED ENV{SHAP_ENABLE_CUDA})
-  message(MESSAGE "SHAP_ENABLE_CUDA is set, attempting to build the GPU extension...")
-  enable_language(CUDA)
-  find_package(CUDAToolkit REQUIRED)
-
-  python_add_library(
-    _cext_gpu MODULE
-
-    ${USE_SABI} WITH_SOABI
-
-    # The .cu file is compiled by nvcc, the .cc file by the host compiler
-    shap/cext/_cext_gpu.cu
-    shap/cext/_cext_gpu.cc
-  )
-
-  target_include_directories(_cext_gpu PUBLIC ${NUMPY_INCLUDE_DIR})
-  target_link_libraries(_cext_gpu PRIVATE CUDA::cudart)
-
-  set_target_properties(_cext_gpu PROPERTIES
-    CUDA_ARCHITECTURES "60;70;75;80"
-    CUDA_STANDARD 14
-    CUDA_EXTENSIONS ON
-  )
-
-  # nvcc flags matching the previous setup.py build
-  target_compile_options(_cext_gpu PRIVATE
-    $<$<COMPILE_LANGUAGE:CUDA>:
-      --expt-extended-lambda
-      --expt-relaxed-constexpr
-    >
-  )
-
-  # Hardcoded to "shap", see the _cutils install() above for why.
-  install(TARGETS _cext_gpu LIBRARY DESTINATION shap)
-else()
-  message(MESSAGE "SHAP_ENABLE_CUDA is not set, skipping the GPU extension.")
-endif()
