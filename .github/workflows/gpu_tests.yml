@@ -154,8 +154,10 @@ jobs:
           # Restore sklearn data
           cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
 
-          # Restore shap cached data to the installed package location
-          SHAP_CACHE_DIR=$(uv run python -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
+          # -P: cwd contains a real shap/ source dir, which `python -c` (unlike
+          # the `pytest` entrypoint below) prepends to sys.path, shadowing the
+          # actually-installed package - see project memory on this gotcha.
+          SHAP_CACHE_DIR=$(uv run python -P -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
           mkdir -p "$SHAP_CACHE_DIR"
           cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
 

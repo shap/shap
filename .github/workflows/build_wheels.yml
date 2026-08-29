@@ -27,7 +27,13 @@ jobs:
         uses: astral-sh/setup-uv@v7
       - name: Compute version
         id: version
-        run: echo "version=$(uv run --with setuptools-scm python -m setuptools_scm)" >> "$GITHUB_OUTPUT"
+        run: |
+          VERSION=$(uv run --no-project --with setuptools-scm python -m setuptools_scm)
+          if [ -z "$VERSION" ]; then
+            echo "::error::setuptools_scm produced an empty version"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
   # we need this test since we run into 403 errors on MacOS, see GH #4179
   prepare_data:

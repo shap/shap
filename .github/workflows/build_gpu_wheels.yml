@@ -141,8 +141,13 @@ jobs:
         with:
           package-dir: backends/shap-cuda
         env:
-          # Only manylinux x86_64 - CUDA has no aarch64/macOS/Windows target here.
-          CIBW_BUILD: "cp3*-manylinux_x86_64"
+          # A single explicit build, not a "cp3*" glob: wheel.py-api = "cp312" in
+          # backends/shap-cuda/pyproject.toml already makes this one stable-ABI
+          # wheel installable on 3.12+. A glob also matches cp314t (free-threaded,
+          # not stable-ABI compatible), producing a second shap-cuda wheel file
+          # and making `uv pip install dist/*.whl` fail on conflicting URLs for
+          # the same package name.
+          CIBW_BUILD: "cp312-manylinux_x86_64"
           CIBW_ARCHS_LINUX: x86_64
           # $GITHUB_PATH doesn't exist inside the cibuildwheel container (it's a
           # GitHub Actions host-runner mechanism), so nvcc's location must be
@@ -228,15 +233,22 @@ jobs:
           name: gpu-wheel-test-data-cache
           path: /tmp/test_data_cache
 
+      # --no-project is required on every `uv run` below: without it, a bare `uv run`
+      # discovers this checkout as a uv workspace and implicitly re-syncs/rebuilds
+      # shap (and shap-cuda) from source into .venv, silently discarding the wheels
+      # just installed above - defeating the entire point of testing the exact
+      # published artifact. `-P` on the `python -c` avoids a second, separate issue:
+      # cwd contains a real `shap/` source dir, which `python -c` (unlike the
+      # `pytest` entrypoint) prepends to sys.path, shadowing the installed wheel.
       - name: Restore datasets to installed package location
         run: |
           cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
-          SHAP_CACHE_DIR=$(uv run python -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
+          SHAP_CACHE_DIR=$(uv run --no-project python -P -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
           mkdir -p "$SHAP_CACHE_DIR"
           cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
 
       - name: Run GPU tests
-        run: uv run pytest backends/shap-cuda/tests/test_gpu_tree.py -v --import-mode=append
+        run: uv run --no-project pytest backends/shap-cuda/tests/test_gpu_tree.py -v --import-mode=append
 
   gpu_test_stop_runner:
     name: Stop GPU runner
