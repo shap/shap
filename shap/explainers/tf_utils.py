@@ -16,22 +16,23 @@ def _get_session(session):
     Parameters
     ----------
     explainer : Explainer
-
         One of the tensorflow-based explainers.
-
     session : tf.compat.v1.Session
-
         An optional existing session.
-
     """
     _import_tf()
     # if we are not given a session find a default session
     if session is None:
         try:
             session = tf.compat.v1.keras.backend.get_session()
-        except Exception:
-            session = tf.keras.backend.get_session()
-    return tf.get_default_session() if session is None else session
+        except AttributeError:
+            # get_session was removed from Keras in 2023.
+            # First check for an already-active default session before
+            # creating a new one to avoid discarding the caller's context.
+            session = tf.compat.v1.get_default_session()
+            if session is None:
+                session = tf.compat.v1.Session()
+    return session
 
 
 def _get_graph(explainer):
