@@ -7,6 +7,7 @@ import pandas as pd
 
 from .._explanation import Explanation
 from ..utils._exceptions import ExplainerError
+from ..utils._general import extract_feature_names
 from ..utils._legacy import convert_to_instance, match_instance_to_data
 from ._kernel import KernelExplainer
 
@@ -64,11 +65,9 @@ class SamplingExplainer(KernelExplainer):
         y: Any = None,
         nsamples: int = 2000,
     ) -> Explanation:
+        feature_names = extract_feature_names(X)
         if isinstance(X, pd.DataFrame):
-            feature_names = list(X.columns)
             X = X.values
-        else:
-            feature_names = None  # we can make self.feature_names from background data eventually if we have it
 
         v = self.shap_values(X, nsamples=nsamples)
         if isinstance(v, list):
