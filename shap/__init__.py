@@ -1,4 +1,4 @@
-from typing import Any, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from ._explanation import Cohorts, Explanation
 
@@ -48,7 +48,7 @@ try:
     have_matplotlib = True
 except ImportError:
     have_matplotlib = False
-if have_matplotlib:
+if have_matplotlib or TYPE_CHECKING:
     from . import plots
     from .plots._bar import bar_legacy as bar_plot
     from .plots._beeswarm import summary_legacy as summary_plot
