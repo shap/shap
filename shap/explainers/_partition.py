@@ -264,14 +264,7 @@ class PartitionExplainer(Explainer):
         # drop the interaction terms down onto self.values
         self.values[:] = self.dvalues
 
-        lower_credit(
-            i=len(self.dvalues) - 1,
-            M=M,
-            prev_i=len(self.dvalues) - 1,
-            factor=0.0,
-            values=self.values,
-            clustering=self._clustering,
-        )
+        lower_credit(len(self.dvalues) - 1, 0.0, M, self.values, self._clustering)
 
         return {
             "values": self.values[:M].copy(),
