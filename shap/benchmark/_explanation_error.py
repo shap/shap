@@ -89,7 +89,7 @@ class ExplanationError:
         else:
             self.data_type = "tabular"
 
-    def __call__(self, explanation, name, step_fraction=0.01, indices=[], silent=False):
+    def __call__(self, explanation, name, step_fraction=0.01, indices=None, silent=False):
         """Run this benchmark on the given explanation."""
         if isinstance(explanation, np.ndarray):
             attributions = explanation
