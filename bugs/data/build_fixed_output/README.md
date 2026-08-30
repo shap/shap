@@ -44,21 +44,32 @@ PARITY_MAX_BYTES=200000000 \
 behind it. The capture step needs a longer timeout than the default — the
 baseline replay of 13k fixtures takes several minutes on its own.)
 
-## Result (2026-08-30, branch feature/nanobind-build-output @ 9df9a697)
+## Result (2026-08-30, after the fixes, branch @ fca56149)
 
-43700 calls, 13379 unique inputs, 1406 dim signatures. Self-replay on the
-branch: **13379/13379 exact**. Replay on the numba baseline @ df974a19:
-**13264/13379 exact**; the 115 remaining split into three understood groups:
+Fixtures recaptured on the fixed build: 13379 unique inputs, 1406 dim
+signatures. Self-replay on the branch: **13379/13379 exact**. Replay on the
+numba baseline @ df974a19: **13247/13379 exact**; every one of the 132
+remaining cases is classified:
 
-1. **48 cases: `last_outs` contents only** (weighted + logit) — the branch
-   stores `link(outputs)` in `last_outs` where the baseline stored raw
-   outputs. `averaged_outs` identical; callers treat `last_outs` as scratch.
-2. **67 cases: float32 rounding** — abs diff <= 1.7e-07 (float32 eps),
-   float64 always bit-exact. Numba's float32 reduction rounds differently
-   from the C++ float32-native accumulation. Production callers allocate
-   `averaged_outs`/`last_outs` with `np.zeros` (float64), so the real code
-   path is in the bit-exact group.
-3. **0 raised.**
+1. **54 cases: `last_outs` contents only** (weighted + non-identity link) —
+   the branch stores linked values where the baseline stored raw outputs.
+   `averaged_outs` identical; callers treat `last_outs` as scratch.
+2. **77 cases: float32 rounding** — abs diff <= 1.7e-07 (float32 eps), no
+   inf/nan mismatches; float64 always bit-exact. Numba's float32 reduction
+   rounds differently from the C++ float32-native accumulation. Production
+   callers allocate with `np.zeros` (float64), so the real code path is in
+   the bit-exact group.
+3. **1 case: the pinned empty-first-batch residual** — unweighted logit with
+   an empty first batch links the wraparound-carried value (`-inf`) where
+   the baseline left it raw (`0.0`); see
+   `test_empty_first_batch_wraparound_carry`.
+4. **0 raised.**
+
+A pre-fix cycle (13379 inputs) measured 13264/13379 with the stale-row
+weighted divergence still present; the fixes moved those cases into the
+exact group. Suite status: hypothesis parity file, `tests/utils/`, and the
+partition/exact/coalition/permutation explainer tests all pass on the fixed
+build (69 tests + 380 hypothesis cases per run).
 
 ## Fixes applied (2026-08-30, after the findings below)
 
