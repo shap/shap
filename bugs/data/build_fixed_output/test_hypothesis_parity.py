@@ -13,23 +13,25 @@ properties generate 300+ cases covering single/multi output, weighted and
 unweighted, identity and logit links, float32/float64, varying-row subsets,
 empty batches, and large inputs.
 
-Two intentional semantic differences from the baseline get dedicated tests
+The remaining intentional differences from the baseline get dedicated tests
 instead of polluting the parity properties:
 
 * weighted + non-identity link: the branch stores ``link(outputs)`` values in
   ``last_outs`` (the baseline stored raw outputs). Callers treat ``last_outs``
   as scratch, so only the buffer contents differ, never ``averaged_outs``.
-* weighted + non-identity link + a row never written: the baseline links the
-  *current* ``last_outs`` on every batch, so a stale initial zero contributes
-  ``logit(0) = -inf`` to the mean; the branch links only the gathered outputs,
-  so the stale zero stays 0 and the mean stays finite. The parity properties
-  therefore make the first batch vary every row (which is what real callers
-  do: the first evaluation is the zero mask over all background rows).
-* an empty *first* batch: the baseline carried ``averaged_outs[-1]`` (a
-  wraparound read of the last element's initial value) with no link applied;
-  the branch writes 0 and then applies the link, so logit turns it into -inf.
+  Stale (never-written) rows now match the baseline's averaging exactly: the
+  carried initial state is linked up front, so a stale zero still contributes
+  ``logit(0) = -inf`` to the weighted mean like the numba code did.
+* an empty *first* batch carries via numba's negative-index wraparound
+  (``averaged_outs[-1]``), now replicated literally in the C++; only the
+  unweighted non-identity link still differs there, because the branch
+  applies the link to the carried value at the end while the baseline never
+  linked it.
 * float16 inputs: the baseline upcast into copies and dropped the results
   (``averaged_outs`` stayed untouched); the branch writes real results back.
+* malformed inputs (inconsistent batch_positions/varying_rows/shapes) raise
+  ``ValueError`` from Python-side validation instead of reading out of
+  bounds in the unchecked native code.
 
 Run with:
 
@@ -168,13 +170,13 @@ def _assert_parity(case):
 
 
 @settings(max_examples=120, deadline=None)
-@given(build_fixed_cases(multi=False))
+@given(build_fixed_cases(multi=False, full_first=False))
 def test_single_output_matches_numba_baseline(case):
     _assert_parity(case)
 
 
 @settings(max_examples=120, deadline=None)
-@given(build_fixed_cases(multi=True))
+@given(build_fixed_cases(multi=True, full_first=False))
 def test_multi_output_matches_numba_baseline(case):
     _assert_parity(case)
 
@@ -199,21 +201,21 @@ def test_large_multi_output(case):
 
 
 @settings(max_examples=60, deadline=None)
-@given(st.booleans().flatmap(lambda m: build_fixed_cases(multi=m, full_first=False, allow_weighted=False)))
-def test_stale_rows_unweighted_parity(case):
-    """With partial first batches (never-written rows), the unweighted path
-    still matches the baseline exactly (only weighted non-identity links
-    diverge on stale rows — see the dedicated divergence test).
+@given(st.booleans().flatmap(lambda m: build_fixed_cases(multi=m, full_first=False)))
+def test_stale_rows_parity(case):
+    """Partial first batches (never-written rows) match the baseline in every
+    mode, including weighted logit: the carried initial state is linked up
+    front, so stale zeros contribute logit(0) = -inf exactly like numba did.
     """
     _assert_parity(case)
 
 
-# --- documented divergences from the baseline -------------------------------
+# --- documented divergences from the baseline, and the guards ----------------
 
 
-def test_stale_row_weighted_logit_diverges_from_baseline():
-    """A never-written row + weighted logit: baseline logit(0) = -inf poisons
-    the mean; the branch keeps the stale zero unlinked and stays finite.
+def test_stale_row_weighted_logit_matches_baseline():
+    """A never-written row + weighted logit: logit(0) = -inf poisons the mean
+    exactly like the numba baseline (the carried initial state is linked).
     """
     bp = np.array([0, 1], dtype=np.int64)
     vr = np.array([[True, False]])
@@ -223,22 +225,56 @@ def test_stale_row_weighted_logit_diverges_from_baseline():
     averaged = np.zeros(1)
     last = np.zeros(2)
     _build_fixed_output(averaged, last, outputs, bp, vr, nvr, logit, lw)
-    assert np.isfinite(averaged[0])  # baseline produced -inf here
+    assert averaged[0] == -np.inf  # matches the numba baseline
 
 
-def test_empty_first_batch_diverges_from_baseline_wraparound():
-    """Baseline: averaged_outs[0] = averaged_outs[-1] (wraparound, no link).
-    Branch: writes 0, then the final link turns it into link(0) (-inf for logit).
+def test_empty_first_batch_wraparound_carry():
+    """The carry replicates numba's negative-index wraparound. With identity
+    (and the weighted path) that is bit-exact with the baseline; with an
+    unweighted non-identity link the carried value still gets linked at the
+    end (logit(0) = -inf) where the baseline left it raw.
     """
     bp = np.array([0, 0, 2], dtype=np.int64)
     vr = np.array([[False, False], [True, True]])
     nvr = vr.sum(axis=1).astype(np.int64)
     outputs = np.array([0.25, 0.75])
+
+    averaged = np.zeros(2)
+    last = np.zeros(2)
+    _build_fixed_output(averaged, last, outputs, bp, vr, nvr, identity, None)
+    assert averaged[0] == 0.0  # wraparound read of the initial last element, like numba
+
     averaged = np.zeros(2)
     last = np.zeros(2)
     _build_fixed_output(averaged, last, outputs, bp, vr, nvr, logit, None)
-    assert averaged[0] == -np.inf  # baseline produced 0.0 here
+    assert averaged[0] == -np.inf  # residual divergence: baseline produced raw 0.0
     assert np.isfinite(averaged[1])
+
+
+def test_malformed_inputs_raise_instead_of_reading_out_of_bounds():
+    averaged = np.zeros(4)
+    last = np.zeros(3)
+    outputs = np.array([0.2, 0.4, 0.6])
+    vr = np.ones((4, 3), dtype=bool)
+    nvr = np.array([3, 3, 3, 3], dtype=np.int64)
+
+    bad_bp = np.array([0, 3, 2_000_000, 2_000_003, 2_000_006], dtype=np.int64)
+    with pytest.raises(ValueError):
+        _build_fixed_output(averaged, last, outputs, bad_bp, vr, nvr, identity, None)
+
+    bp = np.array([0, 3, 3, 3, 3], dtype=np.int64)
+    bad_nvr = np.array([3, 0, 1, 0], dtype=np.int64)  # inconsistent with bp diffs
+    with pytest.raises(ValueError):
+        _build_fixed_output(averaged, last, outputs, bp, vr, bad_nvr, identity, None)
+
+    with pytest.raises(ValueError):  # varying_rows shape mismatch
+        _build_fixed_output(averaged, last, outputs, bp, np.ones((4, 2), dtype=bool), nvr, identity, None)
+
+    vr_ok = np.zeros((4, 3), dtype=bool)
+    vr_ok[0] = True
+    nvr_ok = vr_ok.sum(axis=1).astype(np.int64)
+    with pytest.raises(ValueError):  # weights shape mismatch
+        _build_fixed_output(averaged, last, outputs, bp, vr_ok, nvr_ok, logit, np.ones(2))
 
 
 def test_float16_results_are_written_back():

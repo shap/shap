@@ -12,11 +12,11 @@ namespace masked_model {
 
 template <typename T>
 void update_single_output(
-    nb::ndarray<T, nb::ndim<1>>& last_outs,
-    const nb::ndarray<const T, nb::ndim<1>>& outputs,
-    const nb::ndarray<const int64_t, nb::ndim<1>>& batch_positions,
-    const nb::ndarray<const bool, nb::ndim<2>>& varying_rows,
-    const nb::ndarray<const int64_t, nb::ndim<1>>& num_varying_rows,
+    nb::ndarray<T, nb::ndim<1>, nb::device::cpu>& last_outs,
+    const nb::ndarray<const T, nb::ndim<1>, nb::device::cpu>& outputs,
+    const nb::ndarray<const int64_t, nb::ndim<1>, nb::device::cpu>& batch_positions,
+    const nb::ndarray<const bool, nb::ndim<2>, nb::device::cpu>& varying_rows,
+    const nb::ndarray<const int64_t, nb::ndim<1>, nb::device::cpu>& num_varying_rows,
     const size_t output_index
 ) {
     auto last_outs_view = last_outs.view();
@@ -45,12 +45,12 @@ void update_single_output(
 
 template <typename T>
 void build_fixed_single_output(
-    nb::ndarray<T, nb::ndim<1>>& averaged_outs,
-    nb::ndarray<T, nb::ndim<1>>& last_outs,
-    const nb::ndarray<const T, nb::ndim<1>>& outputs,
-    const nb::ndarray<const int64_t, nb::ndim<1>>& batch_positions,
-    const nb::ndarray<const bool, nb::ndim<2>>& varying_rows,
-    const nb::ndarray<const int64_t, nb::ndim<1>>& num_varying_rows
+    nb::ndarray<T, nb::ndim<1>, nb::device::cpu>& averaged_outs,
+    nb::ndarray<T, nb::ndim<1>, nb::device::cpu>& last_outs,
+    const nb::ndarray<const T, nb::ndim<1>, nb::device::cpu>& outputs,
+    const nb::ndarray<const int64_t, nb::ndim<1>, nb::device::cpu>& batch_positions,
+    const nb::ndarray<const bool, nb::ndim<2>, nb::device::cpu>& varying_rows,
+    const nb::ndarray<const int64_t, nb::ndim<1>, nb::device::cpu>& num_varying_rows
 ) {
     auto averaged_outs_view = averaged_outs.view();
     auto last_outs_view = last_outs.view();
@@ -66,20 +66,22 @@ void build_fixed_single_output(
             }
             averaged_outs_view(i) = total / static_cast<T>(sample_count);
         } else {
-            averaged_outs_view(i) = i == 0 ? T(0) : averaged_outs_view(i - 1);
+            // numba: averaged_outs[i] = averaged_outs[i - 1] — at i == 0 the
+            // negative index wraps around to the last element
+            averaged_outs_view(i) = averaged_outs_view(i == 0 ? averaged_outs_view.shape(0) - 1 : i - 1);
         }
     }
 }
 
 template <typename T>
 void build_fixed_single_output_weighted(
-    nb::ndarray<T, nb::ndim<1>>& averaged_outs,
-    nb::ndarray<T, nb::ndim<1>>& last_outs,
-    const nb::ndarray<const T, nb::ndim<1>>& outputs,
-    const nb::ndarray<const int64_t, nb::ndim<1>>& batch_positions,
-    const nb::ndarray<const bool, nb::ndim<2>>& varying_rows,
-    const nb::ndarray<const int64_t, nb::ndim<1>>& num_varying_rows,
-    const nb::ndarray<const T, nb::ndim<1>>& linearizing_weights
+    nb::ndarray<T, nb::ndim<1>, nb::device::cpu>& averaged_outs,
+    nb::ndarray<T, nb::ndim<1>, nb::device::cpu>& last_outs,
+    const nb::ndarray<const T, nb::ndim<1>, nb::device::cpu>& outputs,
+    const nb::ndarray<const int64_t, nb::ndim<1>, nb::device::cpu>& batch_positions,
+    const nb::ndarray<const bool, nb::ndim<2>, nb::device::cpu>& varying_rows,
+    const nb::ndarray<const int64_t, nb::ndim<1>, nb::device::cpu>& num_varying_rows,
+    const nb::ndarray<const T, nb::ndim<1>, nb::device::cpu>& linearizing_weights
 ) {
     auto averaged_outs_view = averaged_outs.view();
     auto last_outs_view = last_outs.view();
@@ -96,18 +98,20 @@ void build_fixed_single_output_weighted(
             }
             averaged_outs_view(i) = total / static_cast<T>(sample_count);
         } else {
-            averaged_outs_view(i) = i == 0 ? T(0) : averaged_outs_view(i - 1);
+            // numba: averaged_outs[i] = averaged_outs[i - 1] — at i == 0 the
+            // negative index wraps around to the last element
+            averaged_outs_view(i) = averaged_outs_view(i == 0 ? averaged_outs_view.shape(0) - 1 : i - 1);
         }
     }
 }
 
 template <typename T>
 void update_multi_output(
-    nb::ndarray<T, nb::ndim<2>>& last_outs,
-    const nb::ndarray<const T, nb::ndim<2>>& outputs,
-    const nb::ndarray<const int64_t, nb::ndim<1>>& batch_positions,
-    const nb::ndarray<const bool, nb::ndim<2>>& varying_rows,
-    const nb::ndarray<const int64_t, nb::ndim<1>>& num_varying_rows,
+    nb::ndarray<T, nb::ndim<2>, nb::device::cpu>& last_outs,
+    const nb::ndarray<const T, nb::ndim<2>, nb::device::cpu>& outputs,
+    const nb::ndarray<const int64_t, nb::ndim<1>, nb::device::cpu>& batch_positions,
+    const nb::ndarray<const bool, nb::ndim<2>, nb::device::cpu>& varying_rows,
+    const nb::ndarray<const int64_t, nb::ndim<1>, nb::device::cpu>& num_varying_rows,
     const size_t output_index
 ) {
     auto last_outs_view = last_outs.view();
@@ -141,12 +145,12 @@ void update_multi_output(
 
 template <typename T>
 void build_fixed_multi_output(
-    nb::ndarray<T, nb::ndim<2>>& averaged_outs,
-    nb::ndarray<T, nb::ndim<2>>& last_outs,
-    const nb::ndarray<const T, nb::ndim<2>>& outputs,
-    const nb::ndarray<const int64_t, nb::ndim<1>>& batch_positions,
-    const nb::ndarray<const bool, nb::ndim<2>>& varying_rows,
-    const nb::ndarray<const int64_t, nb::ndim<1>>& num_varying_rows
+    nb::ndarray<T, nb::ndim<2>, nb::device::cpu>& averaged_outs,
+    nb::ndarray<T, nb::ndim<2>, nb::device::cpu>& last_outs,
+    const nb::ndarray<const T, nb::ndim<2>, nb::device::cpu>& outputs,
+    const nb::ndarray<const int64_t, nb::ndim<1>, nb::device::cpu>& batch_positions,
+    const nb::ndarray<const bool, nb::ndim<2>, nb::device::cpu>& varying_rows,
+    const nb::ndarray<const int64_t, nb::ndim<1>, nb::device::cpu>& num_varying_rows
 ) {
     auto averaged_outs_view = averaged_outs.view();
     auto last_outs_view = last_outs.view();
@@ -165,8 +169,11 @@ void build_fixed_multi_output(
                 averaged_outs_view(i, column) = total / static_cast<T>(sample_count);
             }
         } else {
+            // numba: averaged_outs[i] = averaged_outs[i - 1] — at i == 0 the
+            // negative index wraps around to the last row
+            const size_t carry = i == 0 ? averaged_outs_view.shape(0) - 1 : i - 1;
             for (size_t column = 0; column < output_count; ++column) {
-                averaged_outs_view(i, column) = i == 0 ? T(0) : averaged_outs_view(i - 1, column);
+                averaged_outs_view(i, column) = averaged_outs_view(carry, column);
             }
         }
     }
@@ -174,13 +181,13 @@ void build_fixed_multi_output(
 
 template <typename T>
 void build_fixed_multi_output_weighted(
-    nb::ndarray<T, nb::ndim<2>>& averaged_outs,
-    nb::ndarray<T, nb::ndim<2>>& last_outs,
-    const nb::ndarray<const T, nb::ndim<2>>& outputs,
-    const nb::ndarray<const int64_t, nb::ndim<1>>& batch_positions,
-    const nb::ndarray<const bool, nb::ndim<2>>& varying_rows,
-    const nb::ndarray<const int64_t, nb::ndim<1>>& num_varying_rows,
-    const nb::ndarray<const T, nb::ndim<2>>& linearizing_weights
+    nb::ndarray<T, nb::ndim<2>, nb::device::cpu>& averaged_outs,
+    nb::ndarray<T, nb::ndim<2>, nb::device::cpu>& last_outs,
+    const nb::ndarray<const T, nb::ndim<2>, nb::device::cpu>& outputs,
+    const nb::ndarray<const int64_t, nb::ndim<1>, nb::device::cpu>& batch_positions,
+    const nb::ndarray<const bool, nb::ndim<2>, nb::device::cpu>& varying_rows,
+    const nb::ndarray<const int64_t, nb::ndim<1>, nb::device::cpu>& num_varying_rows,
+    const nb::ndarray<const T, nb::ndim<2>, nb::device::cpu>& linearizing_weights
 ) {
     auto averaged_outs_view = averaged_outs.view();
     auto last_outs_view = last_outs.view();
@@ -200,8 +207,11 @@ void build_fixed_multi_output_weighted(
                 averaged_outs_view(i, column) = total / static_cast<T>(sample_count);
             }
         } else {
+            // numba: averaged_outs[i] = averaged_outs[i - 1] — at i == 0 the
+            // negative index wraps around to the last row
+            const size_t carry = i == 0 ? averaged_outs_view.shape(0) - 1 : i - 1;
             for (size_t column = 0; column < output_count; ++column) {
-                averaged_outs_view(i, column) = i == 0 ? T(0) : averaged_outs_view(i - 1, column);
+                averaged_outs_view(i, column) = averaged_outs_view(carry, column);
             }
         }
     }

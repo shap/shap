@@ -60,39 +60,57 @@ branch: **13379/13379 exact**. Replay on the numba baseline @ df974a19:
    path is in the bit-exact group.
 3. **0 raised.**
 
-## Documented behavior changes vs the baseline (each pinned by a test)
+## Fixes applied (2026-08-30, after the findings below)
 
-- **Stale-row weighted link**: a row never written by any batch contributes
-  `logit(0) = -inf` to the baseline's weighted mean; the branch keeps the
-  stale zero unlinked and stays finite. Real callers populate all rows in the
-  first batch (zero-mask over the full background), but `_delta_masking_call`
-  does not obviously guarantee it — worth confirming.
-- **Empty first batch**: baseline carried `averaged_outs[-1]` (wraparound
-  read, no link); the branch writes 0 then applies the link (`logit` -> -inf).
-- **float16**: the baseline upcast into copies and silently dropped all
-  results (caller buffers untouched); the branch writes results back.
+All review findings were fixed while keeping the C++ a literal translation
+of the numba code:
 
-## Review findings (probed)
+- `.noconvert()` on every argument of all 8 `m.def` overloads, plus
+  docstrings, plus the leading underscore restored
+  (`_build_fixed_single_output`/`_build_fixed_multi_output`). The stub
+  (`shap/_cutils.pyi`, build-generated) omits them like the other
+  underscore-private bindings — nanobind's stubgen skips private names.
+- `nb::device::cpu` on every ndarray in `masked_model_utils.h`.
+- Input validation moved to Python (`_validate_build_fixed_inputs` in
+  `_build_fixed_output`): inconsistent `batch_positions`/`varying_rows`/
+  `num_varying_rows`/shapes raise `ValueError` before the unchecked native
+  code runs (the numba implementation's numpy fancy assignments raised on
+  most of these; the C++ read out of bounds).
+- **Stale-row weighted link restored to baseline semantics**: the carried
+  initial state of `last_outs` is linked up front, so a never-written row
+  contributes `link(0)` (`logit` -> -inf) to the weighted mean exactly like
+  the numba code that linked `last_outs` on every batch. Elementwise
+  identical, including the carried values.
+- **Empty-batch carry is now numba's literal negative-index wraparound**
+  (`averaged_outs[i - 1]` at `i == 0` reads the last element), making the
+  identity-link and weighted paths bit-exact with the baseline even for an
+  empty first batch. Residual divergence: unweighted non-identity link with
+  an empty first batch links the carried value at the end (baseline left it
+  raw) — pinned by `test_empty_first_batch_wraparound_carry`.
+- Weighted-path link applications wrapped in `np.errstate` so `logit(0)`
+  does not emit warnings the silent numba code never emitted.
+
+Not restored: the baseline stored *raw* outputs in `last_outs` for weighted
+links (the branch stores linked values), and float16 results are written
+back (the baseline dropped them) — both pinned by tests as intentional.
+
+## Review findings (probed on the pre-fix code; all fixed above)
 
 1. **No `.noconvert()` on any binding argument**: a dtype-mismatched call via
    the raw binding converts the output arrays to temporaries and silently
    drops every write (probed: float32 `averaged_outs` + float64 `outputs`
-   returns all zeros, no error). The Python entry always passes a consistent
-   working dtype, so this is only reachable through `shap._cutils` directly.
+   returns all zeros, no error).
 2. **No shape/consistency validation anywhere**: `batch_positions` values are
    trusted; a malformed matrix reads far out of bounds (probed through the
    public `_build_fixed_output`: heap garbage returned in `averaged_outs`,
-   no error). Same class as the make_masks findings; validation belongs in
-   `_build_fixed_output` before the native call.
-3. **Missing `nb::device::cpu`** on every ndarray in `masked_model_utils.h`
-   (the directory convention in `grey_code_utils.h` etc. includes it): a CUDA
-   tensor would be dereferenced on the host.
+   no error).
+3. **Missing `nb::device::cpu`** on every ndarray in `masked_model_utils.h`.
 4. **API naming**: the bindings dropped the leading underscore the numba
-   functions had (`build_fixed_single_output` vs `_build_fixed_single_output`)
-   — inconsistent with `_init_masks`/`_rec_fill_masks`/`_delta_masking`.
-5. **m.def has no docstrings** for the 8 overloads (every other binding in
-   `cutils.cpp` documents itself).
-6. Native execution proof: the numba workers are deleted on this branch, so
+   functions had.
+5. **m.def had no docstrings** for the 8 overloads.
+6. **Stale-row weighted link diverged from the baseline** (found by
+   hypothesis): finite mean where the baseline produced -inf.
+7. Native execution proof: the numba workers are deleted on this branch, so
    the bindings are the only implementation; the self-replay compares the
    mutated output buffers, which a silently-dropped conversion would leave
    zeroed (the exact failure mode probed in finding 1). No temporary C++

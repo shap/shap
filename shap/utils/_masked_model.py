@@ -6,8 +6,7 @@ import scipy.sparse
 from numba import njit  # type: ignore[attr-defined]
 
 from .. import links
-from .._cutils import build_fixed_multi_output as _build_fixed_multi_output
-from .._cutils import build_fixed_single_output as _build_fixed_single_output
+from .._cutils import _build_fixed_multi_output, _build_fixed_single_output
 
 
 class MaskedModel:
@@ -307,6 +306,29 @@ def _convert_delta_mask_to_full(masks, full_masks):
         masks_pos += 1
 
 
+def _validate_build_fixed_inputs(
+    averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, linearizing_weights
+):
+    """The native workers index unchecked, so reject the inconsistencies numpy's
+    fancy assignments used to raise on in the numba implementation.
+    """
+    n_batches = len(averaged_outs)
+    sample_count = last_outs.shape[0]
+    if batch_positions.shape != (n_batches + 1,):
+        raise ValueError("batch_positions must have len(averaged_outs) + 1 entries")
+    if varying_rows.shape != (n_batches, sample_count):
+        raise ValueError("varying_rows must have shape (len(averaged_outs), len(last_outs))")
+    counts = np.diff(batch_positions)
+    if batch_positions[0] < 0 or (counts < 0).any() or batch_positions[-1] > outputs.shape[0]:
+        raise ValueError("batch_positions must be non-decreasing and lie within outputs")
+    if not np.array_equal(num_varying_rows, counts) or not np.array_equal(varying_rows.sum(axis=1), counts):
+        raise ValueError("num_varying_rows and varying_rows are inconsistent with batch_positions")
+    if outputs.shape[1:] != last_outs.shape[1:] or averaged_outs.shape[1:] != last_outs.shape[1:]:
+        raise ValueError("averaged_outs, last_outs and outputs must share their output dimensions")
+    if linearizing_weights is not None and linearizing_weights.shape != last_outs.shape:
+        raise ValueError("linearizing_weights must have the same shape as last_outs")
+
+
 def _build_fixed_output(
     averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights
 ):
@@ -318,11 +340,20 @@ def _build_fixed_output(
     batch_positions = np.asarray(batch_positions, dtype=np.int64)
     varying_rows = np.asarray(varying_rows, dtype=bool)
     num_varying_rows = np.asarray(num_varying_rows, dtype=np.int64)
+    _validate_build_fixed_inputs(
+        averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, linearizing_weights
+    )
 
     if linearizing_weights is None:
         outputs_work = np.ascontiguousarray(outputs, dtype=dtype)
     else:
-        outputs_work = np.ascontiguousarray(link(outputs), dtype=dtype)
+        # the numba implementation computed mean(weights * link(last_outs)) on
+        # every batch; linking the gathered outputs and the carried initial
+        # state up front is elementwise-identical, including for rows no batch
+        # ever writes (a stale 0 must still contribute link(0) to the mean)
+        with np.errstate(divide="ignore", invalid="ignore"):  # the numba njit code warned on nothing
+            outputs_work = np.ascontiguousarray(link(outputs), dtype=dtype)
+            last_outs_work = np.ascontiguousarray(link(last_outs_work), dtype=dtype)
         linearizing_weights = np.ascontiguousarray(linearizing_weights, dtype=dtype)
 
     if len(last_outs.shape) == 1:
