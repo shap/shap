@@ -8,6 +8,7 @@ except ImportError:
 from ._bar import bar
 from ._beeswarm import beeswarm
 from ._benchmark import benchmark
+from ._cohort_difference import cohort_difference
 from ._decision import decision
 from ._embedding import embedding
 from ._force import force, initjs
@@ -25,6 +26,7 @@ __all__ = [
     "bar",
     "beeswarm",
     "benchmark",
+    "cohort_difference",
     "decision",
     "embedding",
     "force",

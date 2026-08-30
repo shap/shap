@@ -653,6 +653,75 @@ class Explanation(metaclass=MetaExplanation):
 
         return hclust_ordering(X=values, metric=metric)
 
+    def to_dataframe(self, include_base_values: bool = False) -> pd.DataFrame:
+        """Convert this explanation into a pandas DataFrame.
+
+        The returned DataFrame is a convenient tabular view of the SHAP values.
+        It supports one-dimensional explanations and explanation matrices with
+        shape ``(n_rows, n_features)``.
+
+        Parameters
+        ----------
+        include_base_values : bool
+            If True, add a ``base_value`` column to the left side of the
+            DataFrame. When possible, a scalar base value is broadcast to all
+            rows.
+
+        Returns
+        -------
+        pandas.DataFrame
+            A DataFrame with one column per feature and one row per explanation.
+
+        Raises
+        ------
+        ValueError
+            If the explanation has more than two dimensions, or if the feature
+            names cannot be represented as a flat set of DataFrame columns.
+
+        """
+        values = np.asarray(self.values)
+        if values.ndim == 1:
+            values = values.reshape(1, -1)
+        elif values.ndim != 2:
+            raise ValueError(
+                "Explanation.to_dataframe() only supports one-dimensional explanations or two-dimensional "
+                "explanation matrices."
+            )
+
+        feature_names = self.feature_names
+        if feature_names is None:
+            columns = np.array([f"Feature {i}" for i in range(values.shape[1])], dtype=object)
+        else:
+            columns = np.asarray(feature_names)
+            if columns.ndim != 1:
+                raise ValueError(
+                    "Explanation.to_dataframe() only supports flat feature names. "
+                    "Try slicing a single output or flattening the explanation first."
+                )
+            if len(columns) != values.shape[1]:
+                raise ValueError("The number of feature names does not match the number of columns in the explanation.")
+
+        index = None
+        if self.instance_names is not None:
+            index = np.asarray(self.instance_names)
+            if index.ndim == 0:
+                index = np.asarray([index.item()])
+
+        out = pd.DataFrame(values, columns=columns, index=index)
+
+        if include_base_values and self.base_values is not None:
+            base_values = np.asarray(self.base_values)
+            if base_values.ndim == 0:
+                out.insert(0, "base_value", base_values.item())
+            elif base_values.ndim == 1 and base_values.shape[0] == len(out):
+                out.insert(0, "base_value", base_values)
+            else:
+                raise ValueError(
+                    "Explanation.to_dataframe() can only include base values when they are scalar or one value per row."
+                )
+
+        return out
+
     # =================== Utilities ===================
 
     def hstack(self, other: Explanation) -> Explanation:
