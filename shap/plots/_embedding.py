@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import matplotlib.pyplot as plt
 import sklearn
 
@@ -6,7 +8,15 @@ from . import colors
 from ._labels import labels
 
 
-def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, show=True):
+def embedding(
+    ind,
+    shap_values,
+    feature_names=None,
+    method: str = "pca",
+    alpha: float = 1.0,
+    show: bool = True,
+    ax: plt.Axes | None = None,
+) -> plt.Axes:
     """Use the SHAP values as an embedding which we project to 2D for visualization.
 
     Parameters
@@ -33,7 +43,24 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
         The transparency of the data points (between 0 and 1). This can be useful to
         show the density of the data points when using a large dataset.
 
+    show : bool
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
+        Setting this to ``False`` allows the plot to be customized further after it
+        has been created.
+
+    ax : matplotlib.axes.Axes, optional
+        Axes object to draw the plot onto. If ``None``, uses the current axes via
+        :func:`matplotlib.pyplot.gca`.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+        The axes object containing the plot.
+
     """
+    if ax is None:
+        ax = plt.gca()
+
     if feature_names is None:
         feature_names = [labels["FEATURE"] % str(i) for i in range(shap_values.shape[1])]
 
@@ -54,16 +81,26 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
     else:
         print("Unsupported embedding method:", method)
 
-    plt.scatter(embedding_values[:, 0], embedding_values[:, 1], c=cvals, cmap=colors.red_blue, alpha=alpha, linewidth=0)
-    plt.axis("off")
-    # plt.title(feature_names[ind])
-    cb = plt.colorbar()
+    sc = ax.scatter(
+        embedding_values[:, 0],
+        embedding_values[:, 1],
+        c=cvals,
+        cmap=colors.red_blue,
+        alpha=alpha,
+        linewidth=0,
+    )
+    ax.axis("off")
+    # ax.set_title(feature_names[ind])
+    cb = ax.figure.colorbar(sc, ax=ax)
     cb.set_label("SHAP value for\n" + fname, size=13)
     cb.outline.set_visible(False)  # type: ignore
 
-    plt.gcf().set_size_inches(7.5, 5)
-    bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
+    ax.figure.set_size_inches(7.5, 5)
+    bbox = cb.ax.get_window_extent().transformed(ax.figure.dpi_scale_trans.inverted())
     cb.ax.set_aspect((bbox.height - 0.7) * 10)
     cb.set_alpha(1)
+
     if show:
         plt.show()
+
+    return ax
