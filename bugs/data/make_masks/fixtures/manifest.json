@@ -1,0 +1,96 @@
+{
+  "target": "shap.utils._masked_model:make_masks",
+  "label": "feature/nanobind-masks-2",
+  "git_branch": "feature/nanobind-masks-2",
+  "git_commit": "02d4a2e1",
+  "pytest_exitstatus": 0,
+  "bindings_patched": 5,
+  "total_calls": 10,
+  "tests_that_hit": {
+    "bugs/data/make_masks/test_generate_cases.py::test_make_masks_case[M2]": 1,
+    "bugs/data/make_masks/test_generate_cases.py::test_make_masks_case[M30-linkage]": 1,
+    "bugs/data/make_masks/test_generate_cases.py::test_make_masks_case[M300-linkage]": 1,
+    "bugs/data/make_masks/test_generate_cases.py::test_make_masks_case[M4-balanced]": 1,
+    "bugs/data/make_masks/test_generate_cases.py::test_make_masks_case[M6-chain]": 1,
+    "tests/explainers/test_coalition.py::test_tabular_coalition_single_output": 1,
+    "tests/explainers/test_exact.py::test_tabular_multi_output_partition_masker": 1,
+    "tests/explainers/test_exact.py::test_tabular_single_output_partition_masker": 1,
+    "tests/explainers/test_partition.py::test_tabular_multi_output": 1,
+    "tests/explainers/test_partition.py::test_tabular_single_output": 1
+  },
+  "dim_signatures": [
+    "2d(1, 4):float64",
+    "2d(11, 4):float64",
+    "2d(29, 4):float64",
+    "2d(299, 4):float64",
+    "2d(3, 4):float64",
+    "2d(5, 4):float64"
+  ],
+  "cases": [
+    {
+      "fingerprint": "29bfd3c26a4f5688",
+      "dims": "2d(1, 4):float64",
+      "input_nbytes": 32,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_generate_cases.py::test_make_masks_case[M2]"
+      ],
+      "file": "case_29bfd3c26a4f5688.npz"
+    },
+    {
+      "fingerprint": "691a301697062ea6",
+      "dims": "2d(11, 4):float64",
+      "input_nbytes": 352,
+      "calls": 5,
+      "tests": [
+        "tests/explainers/test_partition.py::test_tabular_single_output",
+        "tests/explainers/test_partition.py::test_tabular_multi_output",
+        "tests/explainers/test_exact.py::test_tabular_single_output_partition_masker",
+        "tests/explainers/test_exact.py::test_tabular_multi_output_partition_masker",
+        "tests/explainers/test_coalition.py::test_tabular_coalition_single_output"
+      ],
+      "file": "case_691a301697062ea6.npz"
+    },
+    {
+      "fingerprint": "2ae234b44eb57819",
+      "dims": "2d(29, 4):float64",
+      "input_nbytes": 928,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_generate_cases.py::test_make_masks_case[M30-linkage]"
+      ],
+      "file": "case_2ae234b44eb57819.npz"
+    },
+    {
+      "fingerprint": "486bde4f852b1971",
+      "dims": "2d(299, 4):float64",
+      "input_nbytes": 9568,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_generate_cases.py::test_make_masks_case[M300-linkage]"
+      ],
+      "file": "case_486bde4f852b1971.npz"
+    },
+    {
+      "fingerprint": "8f1c81029895514e",
+      "dims": "2d(3, 4):float64",
+      "input_nbytes": 96,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_generate_cases.py::test_make_masks_case[M4-balanced]"
+      ],
+      "file": "case_8f1c81029895514e.npz"
+    },
+    {
+      "fingerprint": "b6127dc67ad9208b",
+      "dims": "2d(5, 4):float64",
+      "input_nbytes": 160,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_generate_cases.py::test_make_masks_case[M6-chain]"
+      ],
+      "file": "case_b6127dc67ad9208b.npz"
+    }
+  ],
+  "skipped_large_cases": []
+}

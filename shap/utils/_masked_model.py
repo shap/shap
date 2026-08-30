@@ -407,9 +407,11 @@ def make_masks(cluster_matrix):
     This function is optimized since trees for images can be very large.
     """
     M = cluster_matrix.shape[0] + 1
-    indices_row_pos = np.zeros(2 * M - 1, dtype=int)
-    indptr = np.zeros(2 * M, dtype=int)
-    indices = np.zeros(int(np.sum(cluster_matrix[:, 3])) + M, dtype=int)
+    # np.int64 explicitly, not dtype=int: the _cutils bindings take int64 and
+    # dtype=int is int32 on Windows
+    indices_row_pos = np.zeros(2 * M - 1, dtype=np.int64)
+    indptr = np.zeros(2 * M, dtype=np.int64)
+    indices = np.zeros(int(np.sum(cluster_matrix[:, 3])) + M, dtype=np.int64)
 
     # build an array of index lists in CSR format
     cluster_matrix = cluster_matrix.astype(np.double)
