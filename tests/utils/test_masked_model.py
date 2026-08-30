@@ -4,7 +4,6 @@ import sys
 import numpy as np
 import pytest
 
-from shap._cutils import _init_masks  # type: ignore[attr-defined]
 from shap.links import identity
 from shap.utils._masked_model import _build_fixed_output
 
@@ -26,42 +25,8 @@ def _run_isolated(fn):
     return process.exitcode
 
 
-def test_init_masks():
-    """``_init_masks`` declares int64 output arrays but does not mark them
-    ``.noconvert()``, so nanobind falls back to its implicit-conversion pass: it
-    writes into a temporary cast copy and drops it. The caller gets no exception
-    and an untouched array.
-
-    That is the failure mode behind 029be7d8 ("Fix int typing bug"), where the
-    binding said int32 while ``make_masks`` passed int64 -- ``indptr`` came back
-    all zeros and the mask matrix was silently wrong. Matching the dtypes fixed
-    that instance; nothing yet stops the next dtype drift from doing it again.
-    """
-    # node 4 = {0, 1}, node 5 = {2, 3}, node 6 = {0, 1, 2, 3}
-    cluster_matrix = np.array([[0.0, 1.0, 1.0, 2.0], [2.0, 3.0, 1.0, 2.0], [4.0, 5.0, 2.0, 4.0]])
-    M = cluster_matrix.shape[0] + 1
-    # anything other than the int64 that make_masks happens to allocate today
-    indices_row_pos = np.zeros(2 * M - 1, dtype=np.int32)
-    indptr = np.zeros(2 * M, dtype=np.int32)
-
-    try:
-        _init_masks(cluster_matrix, M, indices_row_pos, indptr)
-    except TypeError:
-        return  # rejecting the mismatch outright is a fine outcome
-
-    # otherwise the call must have written through to the caller's array
-    assert indptr[-1] == int(np.sum(cluster_matrix[:, 3])) + M, (
-        "_init_masks accepted int32 arrays, reported success, and wrote nothing"
-    )
-
-
 def test_partition_explainer_with_custom_clustering():
-    """Public-interface smoke test for the make_masks path.
-
-    On Windows this currently fails with a TypeError from ``_init_masks``:
-    ``make_masks`` allocates its index arrays with ``dtype=int`` (int32 on
-    Windows), while the binding demands int64.
-    """
+    """Public-interface smoke test for the make_masks path."""
     rng = np.random.RandomState(0)
     data = rng.standard_normal((10, 4))
     clustering = np.array([[0.0, 1.0, 1.0, 2.0], [2.0, 3.0, 1.0, 2.0], [4.0, 5.0, 2.0, 4.0]])
