@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from .._explainer import Explainer
@@ -7,9 +9,19 @@ class TreeGain(Explainer):
     """Simply returns the global gain/gini feature importances for tree models.
 
     This is only for benchmark comparisons and is not meant to approximate SHAP values.
+
+    .. deprecated::
+        TreeGain is deprecated and will be removed in a future release.
+        It was only intended for benchmark comparisons and is not a SHAP-based explainer.
     """
 
     def __init__(self, model):
+        warnings.warn(
+            "TreeGain is deprecated and will be removed in a future release. "
+            "It was only intended for benchmark comparisons and is not a SHAP-based explainer.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if str(type(model)).endswith("sklearn.tree.tree.DecisionTreeRegressor'>"):
             pass
         elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeClassifier'>"):
