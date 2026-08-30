@@ -105,13 +105,14 @@ class TFDeep(Explainer):
             self.multi_output = False
 
         if tf.executing_eagerly():
+            from tensorflow import keras
+
             if isinstance(model, (list, tuple)):
                 assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
-                from tensorflow import keras
 
                 self.model = keras.Model(model[0], model[1])
             else:
-                self.model = model
+                self.model = keras.Model(model.inputs, model.layers[-1].output)
 
         # check if we have multiple inputs
         self.multi_input = True
