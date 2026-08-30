@@ -395,3 +395,19 @@ def test_explainer_non_number_dtype(dt):
 def test_serialization():
     model, data = common.basic_sklearn_scenario()
     return common.test_serialization(shap.explainers.KernelExplainer, model.predict, data, data)
+
+
+def test_kernel_explainer_invalid_input_type():
+    import numpy as np
+    from sklearn.linear_model import LinearRegression
+
+    import shap
+
+    X = np.random.rand(10, 3)
+    y = np.random.rand(10)
+
+    model = LinearRegression().fit(X, y)
+    explainer = shap.KernelExplainer(model.predict, X)
+
+    with pytest.raises(TypeError, match="Unknown instance type"):
+        explainer.shap_values("invalid")
