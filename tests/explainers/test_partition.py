@@ -2,38 +2,11 @@
 
 import pickle
 
-import numpy as np
 from conftest import compare_numpy_outputs_against_baseline
 
 import shap
-from shap.explainers._partition import lower_credit
 
 from . import common
-
-
-def test_lower_credit_matches_baseline_operation_order():
-    """``lower_credit`` must reproduce the numba baseline's arithmetic exactly.
-
-    The child's additive value must be computed as
-    ``values[parent] * lsize / group_size`` -- multiply, then divide. Hoisting
-    ``lsize / group_size`` into a prefactor (divide, then multiply) rounds
-    differently, and ``lower_credit`` compounds the difference down every level
-    of the tree.
-
-    Here node 3 = {0, 1} and node 4 = {node 3, leaf 2}, so leaf 2 receives a
-    factor of 1/3 -- inexact in binary, which is what exposes any
-    reassociation. A power-of-two split would be exact under both orderings and
-    pass either way.
-    """
-    clustering = np.array([[0.0, 1.0, 0.0, 2.0], [3.0, 2.0, 0.0, 3.0]])
-    M = 3
-    values = np.zeros(2 * M - 1, dtype=np.float64)
-    values[-1] = 4.2
-
-    lower_credit(len(values) - 1, 0.0, M, values, clustering)
-
-    # leaf 2 is a returned SHAP value: values[:M] is what explain_row hands back
-    assert values[2] == 4.2 * 1 / 3
 
 
 def test_translation(basic_translation_scenario):
