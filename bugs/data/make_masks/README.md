@@ -19,6 +19,33 @@ stale test data.
   uint32, object arrays mixing python ints and floats), fractional child ids,
   nan/inf/huge distance columns, and malformed inputs that must raise. Needs
   `uv pip install hypothesis` (not a project dependency; skips without it).
+- `fixtures_hypothesis/` — manifest and replay reports from running the
+  hypothesis suite in **parity mode**: every `make_masks` call captured and
+  replayed through the real baseline. The `case_*.npz` files (122MB) are not
+  committed; regenerate them with the command below.
+
+## Hypothesis suite in parity mode (2026-08-30)
+
+```bash
+TARGET=shap.utils._masked_model:make_masks \
+OUT=bugs/data/make_masks/fixtures_hypothesis BASELINE=master \
+PARITY_MAX_BYTES=200000000 \
+  .claude/skills/cpp-parity/scripts/run_parity.sh \
+    bugs/data/make_masks/test_hypothesis_parity.py -k "not mixed_int_float_object"
+```
+
+642 calls, 558 unique inputs, 135 dim signatures (up to a (524287, 4) tree).
+Self-replay on the branch: **558/558 exact**. Replay on master's numba
+baseline: **539/539 exact** for every input the baseline can run; the
+remaining 19 are the float16 cases, where master's numba itself raises
+`NotImplementedError: float16` — the migration is strictly more capable
+there because the branch casts to float64 before the bindings. The
+object-dtype test is excluded from capture (object arrays don't round-trip
+through npz); its values are covered by the float64 cases.
+
+Harness notes: `parity_common.compare` now checks CSR internals first and
+only densifies small matrices (a 2^19-leaf result is 512GiB dense), and
+`parity_capture` counts the result's bytes toward `PARITY_MAX_BYTES`.
 - `test_generate_cases.py` — synthetic clusterings fed to the capture run: the
   five production tests that reach `make_masks` all share one xgboost/adult
   scenario (a single (11, 4) cluster matrix), so this adds tiny/balanced/chain/

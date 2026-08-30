@@ -1,0 +1,5741 @@
+{
+  "target": "shap.utils._masked_model:make_masks",
+  "label": "feature/nanobind-masks-2",
+  "git_branch": "feature/nanobind-masks-2",
+  "git_commit": "8986ed22",
+  "pytest_exitstatus": 0,
+  "bindings_patched": 5,
+  "total_calls": 642,
+  "tests_that_hit": {
+    "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_deep_chain_below_depth_limit": 1,
+    "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity": 100,
+    "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_huge_balanced_tree": 1,
+    "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column": 100,
+    "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline": 200,
+    "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large": 40,
+    "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo": 100,
+    "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba": 100
+  },
+  "dim_signatures": [
+    "2d(1, 4):float64",
+    "2d(10, 4):float64",
+    "2d(1006, 4):float64",
+    "2d(103, 4):float16",
+    "2d(103, 4):float64",
+    "2d(103, 4):int16",
+    "2d(1039, 4):float64",
+    "2d(1055, 4):float64",
+    "2d(106, 4):float64",
+    "2d(107, 4):float64",
+    "2d(110, 4):float64",
+    "2d(113, 4):float64",
+    "2d(1133, 4):float64",
+    "2d(114, 4):float64",
+    "2d(1143, 4):float64",
+    "2d(116, 4):float64",
+    "2d(117, 4):float64",
+    "2d(118, 4):float64",
+    "2d(121, 4):float64",
+    "2d(122, 4):float64",
+    "2d(123, 4):float64",
+    "2d(124, 4):float64",
+    "2d(1241, 4):float64",
+    "2d(1254, 4):float64",
+    "2d(126, 4):float64",
+    "2d(127, 4):float64",
+    "2d(13, 4):float64",
+    "2d(1303, 4):float64",
+    "2d(1317, 4):float64",
+    "2d(14, 4):float64",
+    "2d(143, 4):float64",
+    "2d(161, 4):float64",
+    "2d(168, 4):float64",
+    "2d(1774, 4):float64",
+    "2d(1808, 4):float64",
+    "2d(181, 4):float64",
+    "2d(193, 4):float64",
+    "2d(1998, 4):float64",
+    "2d(19999, 4):float64",
+    "2d(2, 4):int32",
+    "2d(20, 4):int16",
+    "2d(200, 4):float64",
+    "2d(20000, 4):float64",
+    "2d(21, 4):float64",
+    "2d(215, 4):float64",
+    "2d(219, 4):float64",
+    "2d(22155, 4):float64",
+    "2d(228, 4):float64",
+    "2d(25, 4):float16",
+    "2d(25, 4):float64",
+    "2d(26, 4):float64",
+    "2d(2641, 4):float64",
+    "2d(273, 4):float64",
+    "2d(27409, 4):float64",
+    "2d(28, 4):float64",
+    "2d(29, 4):float64",
+    "2d(29882, 4):float64",
+    "2d(2999, 4):float64",
+    "2d(31, 4):float64",
+    "2d(31, 4):uint32",
+    "2d(31283, 4):float64",
+    "2d(314, 4):float64",
+    "2d(32316, 4):float64",
+    "2d(329, 4):float64",
+    "2d(338, 4):float64",
+    "2d(34, 4):float64",
+    "2d(34, 4):int32",
+    "2d(34951, 4):float64",
+    "2d(35, 4):float64",
+    "2d(36, 4):float64",
+    "2d(36010, 4):float64",
+    "2d(361, 4):float64",
+    "2d(368, 4):float64",
+    "2d(37, 4):float64",
+    "2d(37216, 4):float64",
+    "2d(388, 4):float64",
+    "2d(39, 4):float16",
+    "2d(39, 4):float64",
+    "2d(4, 4):float64",
+    "2d(425, 4):float64",
+    "2d(42623, 4):float64",
+    "2d(43, 4):float64",
+    "2d(43127, 4):float64",
+    "2d(44357, 4):float64",
+    "2d(446, 4):float64",
+    "2d(45029, 4):float64",
+    "2d(46, 4):float64",
+    "2d(46608, 4):float64",
+    "2d(47736, 4):float64",
+    "2d(47912, 4):float64",
+    "2d(48, 4):float64",
+    "2d(49, 4):float16",
+    "2d(50, 4):float64",
+    "2d(50438, 4):float64",
+    "2d(52, 4):uint32",
+    "2d(524287, 4):float64",
+    "2d(53948, 4):float64",
+    "2d(54, 4):float64",
+    "2d(54142, 4):float64",
+    "2d(549, 4):float64",
+    "2d(553, 4):float64",
+    "2d(55308, 4):float64",
+    "2d(56, 4):float64",
+    "2d(57, 4):float64",
+    "2d(58, 4):float64",
+    "2d(58195, 4):float64",
+    "2d(592, 4):float64",
+    "2d(59313, 4):float64",
+    "2d(60, 4):float64",
+    "2d(61, 4):float64",
+    "2d(63, 4):float64",
+    "2d(63, 4):uint32",
+    "2d(64, 4):float64",
+    "2d(657, 4):float64",
+    "2d(66, 4):float64",
+    "2d(682, 4):float64",
+    "2d(69, 4):int64",
+    "2d(692, 4):float64",
+    "2d(71, 4):float64",
+    "2d(73, 4):float64",
+    "2d(74, 4):float32",
+    "2d(74, 4):float64",
+    "2d(791, 4):float64",
+    "2d(7999, 4):float64",
+    "2d(8, 4):float64",
+    "2d(84, 4):float64",
+    "2d(85, 4):float64",
+    "2d(86, 4):float64",
+    "2d(864, 4):float64",
+    "2d(87, 4):float64",
+    "2d(93, 4):float64",
+    "2d(95, 4):float64",
+    "2d(956, 4):float64",
+    "2d(99, 4):float16",
+    "2d(99, 4):float64"
+  ],
+  "cases": [
+    {
+      "fingerprint": "cf0e9d7eaf705081",
+      "dims": "2d(1, 4):float64",
+      "input_nbytes": 68,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline",
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity",
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_cf0e9d7eaf705081.npz"
+    },
+    {
+      "fingerprint": "0b7baa19a3f22035",
+      "dims": "2d(1, 4):float64",
+      "input_nbytes": 68,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_0b7baa19a3f22035.npz"
+    },
+    {
+      "fingerprint": "18bc12c99b7bfb9b",
+      "dims": "2d(1, 4):float64",
+      "input_nbytes": 68,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_18bc12c99b7bfb9b.npz"
+    },
+    {
+      "fingerprint": "b8d259b5dc7bdf1b",
+      "dims": "2d(1, 4):float64",
+      "input_nbytes": 68,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_b8d259b5dc7bdf1b.npz"
+    },
+    {
+      "fingerprint": "f73bf28b427adde9",
+      "dims": "2d(10, 4):float64",
+      "input_nbytes": 683,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f73bf28b427adde9.npz"
+    },
+    {
+      "fingerprint": "fcf1e1584ed44c55",
+      "dims": "2d(10, 4):float64",
+      "input_nbytes": 683,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_fcf1e1584ed44c55.npz"
+    },
+    {
+      "fingerprint": "5168bb6db8c9a7ab",
+      "dims": "2d(10, 4):float64",
+      "input_nbytes": 673,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_5168bb6db8c9a7ab.npz"
+    },
+    {
+      "fingerprint": "14c6f8053f1fa323",
+      "dims": "2d(10, 4):float64",
+      "input_nbytes": 673,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_14c6f8053f1fa323.npz"
+    },
+    {
+      "fingerprint": "8107f395bf483f5f",
+      "dims": "2d(10, 4):float64",
+      "input_nbytes": 663,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_8107f395bf483f5f.npz"
+    },
+    {
+      "fingerprint": "84115ee8949b5184",
+      "dims": "2d(10, 4):float64",
+      "input_nbytes": 663,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_84115ee8949b5184.npz"
+    },
+    {
+      "fingerprint": "eb4e1ba346322aa3",
+      "dims": "2d(10, 4):float64",
+      "input_nbytes": 663,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_eb4e1ba346322aa3.npz"
+    },
+    {
+      "fingerprint": "d70d16eb579f1865",
+      "dims": "2d(1006, 4):float64",
+      "input_nbytes": 156098,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_d70d16eb579f1865.npz"
+    },
+    {
+      "fingerprint": "6a94d24200dc888f",
+      "dims": "2d(1006, 4):float64",
+      "input_nbytes": 162638,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_6a94d24200dc888f.npz"
+    },
+    {
+      "fingerprint": "417369f43f05b9fc",
+      "dims": "2d(103, 4):float16",
+      "input_nbytes": 6526,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_417369f43f05b9fc.npz"
+    },
+    {
+      "fingerprint": "02024c2a41195e6f",
+      "dims": "2d(103, 4):float16",
+      "input_nbytes": 6531,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_02024c2a41195e6f.npz"
+    },
+    {
+      "fingerprint": "c9033a2352984f7c",
+      "dims": "2d(103, 4):float16",
+      "input_nbytes": 6526,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_c9033a2352984f7c.npz"
+    },
+    {
+      "fingerprint": "e25fc7d40d50fbf8",
+      "dims": "2d(103, 4):float16",
+      "input_nbytes": 6526,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_e25fc7d40d50fbf8.npz"
+    },
+    {
+      "fingerprint": "e0d8a49037f798d3",
+      "dims": "2d(103, 4):float64",
+      "input_nbytes": 8168,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_e0d8a49037f798d3.npz"
+    },
+    {
+      "fingerprint": "d80e2f96fa2119ba",
+      "dims": "2d(103, 4):int16",
+      "input_nbytes": 6551,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_d80e2f96fa2119ba.npz"
+    },
+    {
+      "fingerprint": "c1715ed8537d47c3",
+      "dims": "2d(1039, 4):float64",
+      "input_nbytes": 116463,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_c1715ed8537d47c3.npz"
+    },
+    {
+      "fingerprint": "b91c4b0dc7951bbc",
+      "dims": "2d(1039, 4):float64",
+      "input_nbytes": 115908,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_b91c4b0dc7951bbc.npz"
+    },
+    {
+      "fingerprint": "bb18ffd59635a2c7",
+      "dims": "2d(1055, 4):float64",
+      "input_nbytes": 128378,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_bb18ffd59635a2c7.npz"
+    },
+    {
+      "fingerprint": "f08858d119230d66",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 10138,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f08858d119230d66.npz"
+    },
+    {
+      "fingerprint": "33003d7bf3a191de",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 10138,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_33003d7bf3a191de.npz"
+    },
+    {
+      "fingerprint": "f11aaf7ceaedc7c6",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 10138,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f11aaf7ceaedc7c6.npz"
+    },
+    {
+      "fingerprint": "f0920b9fabe7666d",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 10138,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f0920b9fabe7666d.npz"
+    },
+    {
+      "fingerprint": "fce7f81a575511cf",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 10138,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_fce7f81a575511cf.npz"
+    },
+    {
+      "fingerprint": "7037cd12207e3624",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 10138,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_7037cd12207e3624.npz"
+    },
+    {
+      "fingerprint": "f0f91da5855edc46",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 10138,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f0f91da5855edc46.npz"
+    },
+    {
+      "fingerprint": "5a594c2a90f7992a",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 9698,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_5a594c2a90f7992a.npz"
+    },
+    {
+      "fingerprint": "8c2a6104cd912522",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 9773,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_8c2a6104cd912522.npz"
+    },
+    {
+      "fingerprint": "517e431a98c68a2c",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 9773,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_517e431a98c68a2c.npz"
+    },
+    {
+      "fingerprint": "1e9834279c5c989a",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 9773,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_1e9834279c5c989a.npz"
+    },
+    {
+      "fingerprint": "ca9d635afc5a4dc8",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 9733,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_ca9d635afc5a4dc8.npz"
+    },
+    {
+      "fingerprint": "382409bcfadfb168",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 9733,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_382409bcfadfb168.npz"
+    },
+    {
+      "fingerprint": "72300552ff7194c5",
+      "dims": "2d(106, 4):float64",
+      "input_nbytes": 9733,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_72300552ff7194c5.npz"
+    },
+    {
+      "fingerprint": "feb20fedfb745e19",
+      "dims": "2d(107, 4):float64",
+      "input_nbytes": 9258,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_feb20fedfb745e19.npz"
+    },
+    {
+      "fingerprint": "8ddc9438a466ffd7",
+      "dims": "2d(107, 4):float64",
+      "input_nbytes": 9258,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_8ddc9438a466ffd7.npz"
+    },
+    {
+      "fingerprint": "3ff0e5c1700ec312",
+      "dims": "2d(107, 4):float64",
+      "input_nbytes": 9258,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_3ff0e5c1700ec312.npz"
+    },
+    {
+      "fingerprint": "d8dd146b4b4f5543",
+      "dims": "2d(107, 4):float64",
+      "input_nbytes": 9258,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_d8dd146b4b4f5543.npz"
+    },
+    {
+      "fingerprint": "12d945874e7f6c31",
+      "dims": "2d(107, 4):float64",
+      "input_nbytes": 9258,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_12d945874e7f6c31.npz"
+    },
+    {
+      "fingerprint": "d3289584a15d7632",
+      "dims": "2d(107, 4):float64",
+      "input_nbytes": 9258,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_d3289584a15d7632.npz"
+    },
+    {
+      "fingerprint": "717252a162aa599e",
+      "dims": "2d(107, 4):float64",
+      "input_nbytes": 9258,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_717252a162aa599e.npz"
+    },
+    {
+      "fingerprint": "12c933be441e3e1b",
+      "dims": "2d(107, 4):float64",
+      "input_nbytes": 9223,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_12c933be441e3e1b.npz"
+    },
+    {
+      "fingerprint": "e511763f3474e562",
+      "dims": "2d(107, 4):float64",
+      "input_nbytes": 9173,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_e511763f3474e562.npz"
+    },
+    {
+      "fingerprint": "2bdbfbeab226b003",
+      "dims": "2d(107, 4):float64",
+      "input_nbytes": 9258,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_2bdbfbeab226b003.npz"
+    },
+    {
+      "fingerprint": "9da827fcbbf3c0f2",
+      "dims": "2d(107, 4):float64",
+      "input_nbytes": 9268,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_9da827fcbbf3c0f2.npz"
+    },
+    {
+      "fingerprint": "49534905fc904048",
+      "dims": "2d(107, 4):float64",
+      "input_nbytes": 9488,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_49534905fc904048.npz"
+    },
+    {
+      "fingerprint": "383815acca9f0a62",
+      "dims": "2d(110, 4):float64",
+      "input_nbytes": 9903,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_383815acca9f0a62.npz"
+    },
+    {
+      "fingerprint": "f1aaa646139dfbfa",
+      "dims": "2d(110, 4):float64",
+      "input_nbytes": 9903,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_f1aaa646139dfbfa.npz"
+    },
+    {
+      "fingerprint": "ceeb975d3ebc586f",
+      "dims": "2d(110, 4):float64",
+      "input_nbytes": 9788,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_ceeb975d3ebc586f.npz"
+    },
+    {
+      "fingerprint": "a0e77dab568c164d",
+      "dims": "2d(110, 4):float64",
+      "input_nbytes": 9788,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_a0e77dab568c164d.npz"
+    },
+    {
+      "fingerprint": "f9426c38ed264c19",
+      "dims": "2d(110, 4):float64",
+      "input_nbytes": 9788,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_f9426c38ed264c19.npz"
+    },
+    {
+      "fingerprint": "a5dddebdce28ea84",
+      "dims": "2d(110, 4):float64",
+      "input_nbytes": 9788,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_a5dddebdce28ea84.npz"
+    },
+    {
+      "fingerprint": "f874c3e54e076147",
+      "dims": "2d(110, 4):float64",
+      "input_nbytes": 9788,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_f874c3e54e076147.npz"
+    },
+    {
+      "fingerprint": "de81892c3d47107a",
+      "dims": "2d(110, 4):float64",
+      "input_nbytes": 8763,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_de81892c3d47107a.npz"
+    },
+    {
+      "fingerprint": "55b41ac9b44b4bf4",
+      "dims": "2d(110, 4):float64",
+      "input_nbytes": 9523,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_55b41ac9b44b4bf4.npz"
+    },
+    {
+      "fingerprint": "e661f8a2500b8f7a",
+      "dims": "2d(113, 4):float64",
+      "input_nbytes": 10638,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_e661f8a2500b8f7a.npz"
+    },
+    {
+      "fingerprint": "1268c6d7d85c1e4d",
+      "dims": "2d(113, 4):float64",
+      "input_nbytes": 10513,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_1268c6d7d85c1e4d.npz"
+    },
+    {
+      "fingerprint": "6073360545fd97e2",
+      "dims": "2d(113, 4):float64",
+      "input_nbytes": 10513,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_6073360545fd97e2.npz"
+    },
+    {
+      "fingerprint": "f3d926ef6354f68d",
+      "dims": "2d(113, 4):float64",
+      "input_nbytes": 10513,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f3d926ef6354f68d.npz"
+    },
+    {
+      "fingerprint": "08ae510e70269176",
+      "dims": "2d(113, 4):float64",
+      "input_nbytes": 10503,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_08ae510e70269176.npz"
+    },
+    {
+      "fingerprint": "19a53eaacc826c2b",
+      "dims": "2d(113, 4):float64",
+      "input_nbytes": 10503,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_19a53eaacc826c2b.npz"
+    },
+    {
+      "fingerprint": "434a2c66265524cd",
+      "dims": "2d(113, 4):float64",
+      "input_nbytes": 10503,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_434a2c66265524cd.npz"
+    },
+    {
+      "fingerprint": "946620ece8e5965a",
+      "dims": "2d(1133, 4):float64",
+      "input_nbytes": 125193,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_946620ece8e5965a.npz"
+    },
+    {
+      "fingerprint": "7c24a0d5c1b04843",
+      "dims": "2d(114, 4):float64",
+      "input_nbytes": 9103,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_7c24a0d5c1b04843.npz"
+    },
+    {
+      "fingerprint": "98c1e1ca1cafff50",
+      "dims": "2d(114, 4):float64",
+      "input_nbytes": 10008,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_98c1e1ca1cafff50.npz"
+    },
+    {
+      "fingerprint": "157d052ca05ccd6f",
+      "dims": "2d(114, 4):float64",
+      "input_nbytes": 9103,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_157d052ca05ccd6f.npz"
+    },
+    {
+      "fingerprint": "ec53f1302f84b016",
+      "dims": "2d(114, 4):float64",
+      "input_nbytes": 10358,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_ec53f1302f84b016.npz"
+    },
+    {
+      "fingerprint": "c4e71bfdbc26b603",
+      "dims": "2d(114, 4):float64",
+      "input_nbytes": 10358,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_c4e71bfdbc26b603.npz"
+    },
+    {
+      "fingerprint": "85ab143aff97f86e",
+      "dims": "2d(114, 4):float64",
+      "input_nbytes": 10378,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_85ab143aff97f86e.npz"
+    },
+    {
+      "fingerprint": "09941b90f182f4f8",
+      "dims": "2d(114, 4):float64",
+      "input_nbytes": 10378,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_09941b90f182f4f8.npz"
+    },
+    {
+      "fingerprint": "d8fcbd7196300081",
+      "dims": "2d(114, 4):float64",
+      "input_nbytes": 10378,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_d8fcbd7196300081.npz"
+    },
+    {
+      "fingerprint": "5d64a0b126bd5444",
+      "dims": "2d(114, 4):float64",
+      "input_nbytes": 10378,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_5d64a0b126bd5444.npz"
+    },
+    {
+      "fingerprint": "a96fdcd489bfd5e4",
+      "dims": "2d(114, 4):float64",
+      "input_nbytes": 10313,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_a96fdcd489bfd5e4.npz"
+    },
+    {
+      "fingerprint": "f820b4a0d2c1a7b8",
+      "dims": "2d(1143, 4):float64",
+      "input_nbytes": 160773,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_f820b4a0d2c1a7b8.npz"
+    },
+    {
+      "fingerprint": "bd0f93351c67f188",
+      "dims": "2d(116, 4):float64",
+      "input_nbytes": 9973,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_bd0f93351c67f188.npz"
+    },
+    {
+      "fingerprint": "d423ed5b44176875",
+      "dims": "2d(116, 4):float64",
+      "input_nbytes": 9973,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_d423ed5b44176875.npz"
+    },
+    {
+      "fingerprint": "2c3b28c43bf65c6d",
+      "dims": "2d(116, 4):float64",
+      "input_nbytes": 9973,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_2c3b28c43bf65c6d.npz"
+    },
+    {
+      "fingerprint": "94e8acd7dc281fdf",
+      "dims": "2d(116, 4):float64",
+      "input_nbytes": 9988,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_94e8acd7dc281fdf.npz"
+    },
+    {
+      "fingerprint": "e95ed54ff40071fb",
+      "dims": "2d(116, 4):float64",
+      "input_nbytes": 9988,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_e95ed54ff40071fb.npz"
+    },
+    {
+      "fingerprint": "a85185d5b93059be",
+      "dims": "2d(116, 4):float64",
+      "input_nbytes": 9988,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_a85185d5b93059be.npz"
+    },
+    {
+      "fingerprint": "d47814ffda5462c8",
+      "dims": "2d(116, 4):float64",
+      "input_nbytes": 9988,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_d47814ffda5462c8.npz"
+    },
+    {
+      "fingerprint": "74717e09cb592da1",
+      "dims": "2d(117, 4):float64",
+      "input_nbytes": 10623,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_74717e09cb592da1.npz"
+    },
+    {
+      "fingerprint": "555b7942bbf676b6",
+      "dims": "2d(117, 4):float64",
+      "input_nbytes": 10623,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_555b7942bbf676b6.npz"
+    },
+    {
+      "fingerprint": "008ffb9ad28d1c73",
+      "dims": "2d(117, 4):float64",
+      "input_nbytes": 10553,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_008ffb9ad28d1c73.npz"
+    },
+    {
+      "fingerprint": "4006419a7a08a0c9",
+      "dims": "2d(117, 4):float64",
+      "input_nbytes": 10293,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_4006419a7a08a0c9.npz"
+    },
+    {
+      "fingerprint": "844ae636d87ba70a",
+      "dims": "2d(117, 4):float64",
+      "input_nbytes": 10293,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_844ae636d87ba70a.npz"
+    },
+    {
+      "fingerprint": "69c7558b0e8f78f2",
+      "dims": "2d(117, 4):float64",
+      "input_nbytes": 10323,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_69c7558b0e8f78f2.npz"
+    },
+    {
+      "fingerprint": "a01ea87efe28f0a0",
+      "dims": "2d(117, 4):float64",
+      "input_nbytes": 10323,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_a01ea87efe28f0a0.npz"
+    },
+    {
+      "fingerprint": "1b6a78e389bd926d",
+      "dims": "2d(118, 4):float64",
+      "input_nbytes": 10478,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_1b6a78e389bd926d.npz"
+    },
+    {
+      "fingerprint": "5c2a4708799dd374",
+      "dims": "2d(118, 4):float64",
+      "input_nbytes": 10478,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_5c2a4708799dd374.npz"
+    },
+    {
+      "fingerprint": "c048bc06bdadf3d5",
+      "dims": "2d(118, 4):float64",
+      "input_nbytes": 10473,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_c048bc06bdadf3d5.npz"
+    },
+    {
+      "fingerprint": "b6aa91a5538ba35b",
+      "dims": "2d(118, 4):float64",
+      "input_nbytes": 10223,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_b6aa91a5538ba35b.npz"
+    },
+    {
+      "fingerprint": "cd3d69dddbf3a2f9",
+      "dims": "2d(118, 4):float64",
+      "input_nbytes": 10228,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_cd3d69dddbf3a2f9.npz"
+    },
+    {
+      "fingerprint": "f422cc2b39d69635",
+      "dims": "2d(118, 4):float64",
+      "input_nbytes": 10368,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_f422cc2b39d69635.npz"
+    },
+    {
+      "fingerprint": "2348241d4eb051c7",
+      "dims": "2d(121, 4):float64",
+      "input_nbytes": 10463,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_2348241d4eb051c7.npz"
+    },
+    {
+      "fingerprint": "f61016a75cacbbd6",
+      "dims": "2d(121, 4):float64",
+      "input_nbytes": 10433,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f61016a75cacbbd6.npz"
+    },
+    {
+      "fingerprint": "7b74ddee5a8bbd8c",
+      "dims": "2d(121, 4):float64",
+      "input_nbytes": 10433,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_7b74ddee5a8bbd8c.npz"
+    },
+    {
+      "fingerprint": "28707a51b7354a2f",
+      "dims": "2d(121, 4):float64",
+      "input_nbytes": 10433,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_28707a51b7354a2f.npz"
+    },
+    {
+      "fingerprint": "f10d6f0ac50051c5",
+      "dims": "2d(121, 4):float64",
+      "input_nbytes": 10353,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f10d6f0ac50051c5.npz"
+    },
+    {
+      "fingerprint": "1a401e55ee4df809",
+      "dims": "2d(121, 4):float64",
+      "input_nbytes": 10353,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_1a401e55ee4df809.npz"
+    },
+    {
+      "fingerprint": "d26e131bc5995be8",
+      "dims": "2d(121, 4):float64",
+      "input_nbytes": 10353,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_d26e131bc5995be8.npz"
+    },
+    {
+      "fingerprint": "9f89adfb98d59a56",
+      "dims": "2d(121, 4):float64",
+      "input_nbytes": 9698,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_9f89adfb98d59a56.npz"
+    },
+    {
+      "fingerprint": "238801aa474403ef",
+      "dims": "2d(121, 4):float64",
+      "input_nbytes": 10773,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_238801aa474403ef.npz"
+    },
+    {
+      "fingerprint": "a87e3239e525c75f",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 11348,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_a87e3239e525c75f.npz"
+    },
+    {
+      "fingerprint": "cfadc77f94ebd163",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 11348,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_cfadc77f94ebd163.npz"
+    },
+    {
+      "fingerprint": "bd9a629b0b93a2f5",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 11348,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_bd9a629b0b93a2f5.npz"
+    },
+    {
+      "fingerprint": "a0cba10283cd285b",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 11433,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_a0cba10283cd285b.npz"
+    },
+    {
+      "fingerprint": "010998a02124c795",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 11433,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_010998a02124c795.npz"
+    },
+    {
+      "fingerprint": "5f79ed73d0d1a057",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 11433,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_5f79ed73d0d1a057.npz"
+    },
+    {
+      "fingerprint": "1b579944205777b6",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 11433,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_1b579944205777b6.npz"
+    },
+    {
+      "fingerprint": "35ae9b5f6ffedd6e",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 10833,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_35ae9b5f6ffedd6e.npz"
+    },
+    {
+      "fingerprint": "fb29a188a9c66f65",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 10833,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_fb29a188a9c66f65.npz"
+    },
+    {
+      "fingerprint": "bdbc9831207380d1",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 10833,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_bdbc9831207380d1.npz"
+    },
+    {
+      "fingerprint": "695da675eb352ab3",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 10888,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_695da675eb352ab3.npz"
+    },
+    {
+      "fingerprint": "98d12a28c961d2ee",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 10888,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_98d12a28c961d2ee.npz"
+    },
+    {
+      "fingerprint": "749dcd175a3469db",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 10888,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_749dcd175a3469db.npz"
+    },
+    {
+      "fingerprint": "0e5a9c15cc60baf3",
+      "dims": "2d(122, 4):float64",
+      "input_nbytes": 10888,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_0e5a9c15cc60baf3.npz"
+    },
+    {
+      "fingerprint": "470f882a772d2099",
+      "dims": "2d(123, 4):float64",
+      "input_nbytes": 11388,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_470f882a772d2099.npz"
+    },
+    {
+      "fingerprint": "4f8847afff4a4f04",
+      "dims": "2d(123, 4):float64",
+      "input_nbytes": 11408,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_4f8847afff4a4f04.npz"
+    },
+    {
+      "fingerprint": "679e71c912905d85",
+      "dims": "2d(123, 4):float64",
+      "input_nbytes": 11408,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_679e71c912905d85.npz"
+    },
+    {
+      "fingerprint": "5120682dfe214660",
+      "dims": "2d(123, 4):float64",
+      "input_nbytes": 11538,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_5120682dfe214660.npz"
+    },
+    {
+      "fingerprint": "9728eed77b5ad0de",
+      "dims": "2d(123, 4):float64",
+      "input_nbytes": 25573,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_9728eed77b5ad0de.npz"
+    },
+    {
+      "fingerprint": "df1dc4a0b704ce8b",
+      "dims": "2d(123, 4):float64",
+      "input_nbytes": 15868,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_df1dc4a0b704ce8b.npz"
+    },
+    {
+      "fingerprint": "d894b997bc7b9106",
+      "dims": "2d(124, 4):float64",
+      "input_nbytes": 11738,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_d894b997bc7b9106.npz"
+    },
+    {
+      "fingerprint": "3a349dd3a52b89c0",
+      "dims": "2d(124, 4):float64",
+      "input_nbytes": 11738,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_3a349dd3a52b89c0.npz"
+    },
+    {
+      "fingerprint": "3f798d5eb4487253",
+      "dims": "2d(124, 4):float64",
+      "input_nbytes": 11738,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_3f798d5eb4487253.npz"
+    },
+    {
+      "fingerprint": "647586cc46d42607",
+      "dims": "2d(124, 4):float64",
+      "input_nbytes": 11548,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_647586cc46d42607.npz"
+    },
+    {
+      "fingerprint": "b1f04d6c17b6ffd6",
+      "dims": "2d(124, 4):float64",
+      "input_nbytes": 11548,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_b1f04d6c17b6ffd6.npz"
+    },
+    {
+      "fingerprint": "c77a8ef31f105d21",
+      "dims": "2d(124, 4):float64",
+      "input_nbytes": 11783,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_c77a8ef31f105d21.npz"
+    },
+    {
+      "fingerprint": "522ef3e0bbcb34ab",
+      "dims": "2d(124, 4):float64",
+      "input_nbytes": 11783,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_522ef3e0bbcb34ab.npz"
+    },
+    {
+      "fingerprint": "d75ec84b446482fd",
+      "dims": "2d(124, 4):float64",
+      "input_nbytes": 11783,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_d75ec84b446482fd.npz"
+    },
+    {
+      "fingerprint": "bc1921a933ed8e9c",
+      "dims": "2d(124, 4):float64",
+      "input_nbytes": 11783,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_bc1921a933ed8e9c.npz"
+    },
+    {
+      "fingerprint": "0fb8ef551eea014c",
+      "dims": "2d(124, 4):float64",
+      "input_nbytes": 11878,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_0fb8ef551eea014c.npz"
+    },
+    {
+      "fingerprint": "142dde88fedfd053",
+      "dims": "2d(124, 4):float64",
+      "input_nbytes": 11878,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_142dde88fedfd053.npz"
+    },
+    {
+      "fingerprint": "f4bbc0ee142fe1b5",
+      "dims": "2d(124, 4):float64",
+      "input_nbytes": 11878,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f4bbc0ee142fe1b5.npz"
+    },
+    {
+      "fingerprint": "2d32900862cee2d1",
+      "dims": "2d(1241, 4):float64",
+      "input_nbytes": 150048,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_2d32900862cee2d1.npz"
+    },
+    {
+      "fingerprint": "36986d27804ace7c",
+      "dims": "2d(1254, 4):float64",
+      "input_nbytes": 145353,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_36986d27804ace7c.npz"
+    },
+    {
+      "fingerprint": "d07995f850c47d86",
+      "dims": "2d(126, 4):float64",
+      "input_nbytes": 10123,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_d07995f850c47d86.npz"
+    },
+    {
+      "fingerprint": "1b6457114e4f1835",
+      "dims": "2d(126, 4):float64",
+      "input_nbytes": 10818,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_1b6457114e4f1835.npz"
+    },
+    {
+      "fingerprint": "03d408dbd8b3409f",
+      "dims": "2d(127, 4):float64",
+      "input_nbytes": 10768,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_03d408dbd8b3409f.npz"
+    },
+    {
+      "fingerprint": "2339b2ccd3e9b6e6",
+      "dims": "2d(127, 4):float64",
+      "input_nbytes": 10768,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_2339b2ccd3e9b6e6.npz"
+    },
+    {
+      "fingerprint": "8781a40bd02cd5ac",
+      "dims": "2d(127, 4):float64",
+      "input_nbytes": 10713,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_8781a40bd02cd5ac.npz"
+    },
+    {
+      "fingerprint": "0ff7fecf08e99aac",
+      "dims": "2d(127, 4):float64",
+      "input_nbytes": 10713,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_0ff7fecf08e99aac.npz"
+    },
+    {
+      "fingerprint": "8dee70dacf7dfa22",
+      "dims": "2d(127, 4):float64",
+      "input_nbytes": 10713,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_8dee70dacf7dfa22.npz"
+    },
+    {
+      "fingerprint": "0ce2d2c00d75aeb1",
+      "dims": "2d(127, 4):float64",
+      "input_nbytes": 10713,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_0ce2d2c00d75aeb1.npz"
+    },
+    {
+      "fingerprint": "b602ca4f87757165",
+      "dims": "2d(127, 4):float64",
+      "input_nbytes": 10713,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_b602ca4f87757165.npz"
+    },
+    {
+      "fingerprint": "cad6db52798c37f9",
+      "dims": "2d(13, 4):float64",
+      "input_nbytes": 913,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_cad6db52798c37f9.npz"
+    },
+    {
+      "fingerprint": "54ff4388789f6fe8",
+      "dims": "2d(13, 4):float64",
+      "input_nbytes": 913,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_54ff4388789f6fe8.npz"
+    },
+    {
+      "fingerprint": "e0bb4be7a144511b",
+      "dims": "2d(13, 4):float64",
+      "input_nbytes": 913,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_e0bb4be7a144511b.npz"
+    },
+    {
+      "fingerprint": "46486445feb6d6b8",
+      "dims": "2d(13, 4):float64",
+      "input_nbytes": 913,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_46486445feb6d6b8.npz"
+    },
+    {
+      "fingerprint": "549996da23b05ae3",
+      "dims": "2d(13, 4):float64",
+      "input_nbytes": 913,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_549996da23b05ae3.npz"
+    },
+    {
+      "fingerprint": "dfc16611cf0c5d44",
+      "dims": "2d(13, 4):float64",
+      "input_nbytes": 913,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_dfc16611cf0c5d44.npz"
+    },
+    {
+      "fingerprint": "0e240b93d51e94d8",
+      "dims": "2d(13, 4):float64",
+      "input_nbytes": 913,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_0e240b93d51e94d8.npz"
+    },
+    {
+      "fingerprint": "f459119f4c12bd42",
+      "dims": "2d(1303, 4):float64",
+      "input_nbytes": 183328,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_f459119f4c12bd42.npz"
+    },
+    {
+      "fingerprint": "528f2cdd9742d5e2",
+      "dims": "2d(1317, 4):float64",
+      "input_nbytes": 151213,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_528f2cdd9742d5e2.npz"
+    },
+    {
+      "fingerprint": "df5942bcd2a3afb9",
+      "dims": "2d(1317, 4):float64",
+      "input_nbytes": 150818,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_df5942bcd2a3afb9.npz"
+    },
+    {
+      "fingerprint": "35afe8826b62356c",
+      "dims": "2d(14, 4):float64",
+      "input_nbytes": 938,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_35afe8826b62356c.npz"
+    },
+    {
+      "fingerprint": "5ca166fe31bfcc2d",
+      "dims": "2d(14, 4):float64",
+      "input_nbytes": 1003,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_5ca166fe31bfcc2d.npz"
+    },
+    {
+      "fingerprint": "f28f13c8557d6619",
+      "dims": "2d(143, 4):float64",
+      "input_nbytes": 12503,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_f28f13c8557d6619.npz"
+    },
+    {
+      "fingerprint": "27ba96819eebba2f",
+      "dims": "2d(161, 4):float64",
+      "input_nbytes": 22083,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_27ba96819eebba2f.npz"
+    },
+    {
+      "fingerprint": "d3ba61ad2fb3c293",
+      "dims": "2d(168, 4):float64",
+      "input_nbytes": 18843,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_d3ba61ad2fb3c293.npz"
+    },
+    {
+      "fingerprint": "811e93205134b824",
+      "dims": "2d(1774, 4):float64",
+      "input_nbytes": 304653,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_811e93205134b824.npz"
+    },
+    {
+      "fingerprint": "4ad95a482db8b151",
+      "dims": "2d(1774, 4):float64",
+      "input_nbytes": 387933,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_4ad95a482db8b151.npz"
+    },
+    {
+      "fingerprint": "7acd95187b8cabca",
+      "dims": "2d(1808, 4):float64",
+      "input_nbytes": 331978,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_7acd95187b8cabca.npz"
+    },
+    {
+      "fingerprint": "6d319c8039eb9ff8",
+      "dims": "2d(1808, 4):float64",
+      "input_nbytes": 255213,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_6d319c8039eb9ff8.npz"
+    },
+    {
+      "fingerprint": "c48227ee2b3695b6",
+      "dims": "2d(181, 4):float64",
+      "input_nbytes": 20343,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_c48227ee2b3695b6.npz"
+    },
+    {
+      "fingerprint": "7bc3daf568f53649",
+      "dims": "2d(193, 4):float64",
+      "input_nbytes": 17878,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_7bc3daf568f53649.npz"
+    },
+    {
+      "fingerprint": "2a5e8db1937709dd",
+      "dims": "2d(1998, 4):float64",
+      "input_nbytes": 280943,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_2a5e8db1937709dd.npz"
+    },
+    {
+      "fingerprint": "1545cab4494a03a5",
+      "dims": "2d(19999, 4):float64",
+      "input_nbytes": 2953948,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_1545cab4494a03a5.npz"
+    },
+    {
+      "fingerprint": "97dd329e52bfb397",
+      "dims": "2d(19999, 4):float64",
+      "input_nbytes": 2950388,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_97dd329e52bfb397.npz"
+    },
+    {
+      "fingerprint": "ff5ca5c3397de8d5",
+      "dims": "2d(19999, 4):float64",
+      "input_nbytes": 2752848,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_ff5ca5c3397de8d5.npz"
+    },
+    {
+      "fingerprint": "8f35e473282f3162",
+      "dims": "2d(19999, 4):float64",
+      "input_nbytes": 2805538,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_8f35e473282f3162.npz"
+    },
+    {
+      "fingerprint": "40d456712e765c03",
+      "dims": "2d(19999, 4):float64",
+      "input_nbytes": 2877298,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_40d456712e765c03.npz"
+    },
+    {
+      "fingerprint": "6ad477fe1e337ba4",
+      "dims": "2d(19999, 4):float64",
+      "input_nbytes": 2708753,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_6ad477fe1e337ba4.npz"
+    },
+    {
+      "fingerprint": "4dfa4d156dd8240c",
+      "dims": "2d(19999, 4):float64",
+      "input_nbytes": 2963043,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_4dfa4d156dd8240c.npz"
+    },
+    {
+      "fingerprint": "42faad52d75aa951",
+      "dims": "2d(2, 4):int32",
+      "input_nbytes": 96,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_42faad52d75aa951.npz"
+    },
+    {
+      "fingerprint": "7f8c7544c2beeb2d",
+      "dims": "2d(2, 4):int32",
+      "input_nbytes": 96,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_7f8c7544c2beeb2d.npz"
+    },
+    {
+      "fingerprint": "639a185b98d6475d",
+      "dims": "2d(2, 4):int32",
+      "input_nbytes": 96,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_639a185b98d6475d.npz"
+    },
+    {
+      "fingerprint": "d21287b2ad385643",
+      "dims": "2d(20, 4):int16",
+      "input_nbytes": 993,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_d21287b2ad385643.npz"
+    },
+    {
+      "fingerprint": "68a1e06e12dc5be9",
+      "dims": "2d(20, 4):int16",
+      "input_nbytes": 993,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_68a1e06e12dc5be9.npz"
+    },
+    {
+      "fingerprint": "22ed4dd26a5acf00",
+      "dims": "2d(20, 4):int16",
+      "input_nbytes": 993,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_22ed4dd26a5acf00.npz"
+    },
+    {
+      "fingerprint": "13661678464c6bc7",
+      "dims": "2d(20, 4):int16",
+      "input_nbytes": 1023,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_13661678464c6bc7.npz"
+    },
+    {
+      "fingerprint": "57a348f0a791bc21",
+      "dims": "2d(200, 4):float64",
+      "input_nbytes": 20398,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_57a348f0a791bc21.npz"
+    },
+    {
+      "fingerprint": "8b997d024eca7459",
+      "dims": "2d(20000, 4):float64",
+      "input_nbytes": 2864688,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_8b997d024eca7459.npz"
+    },
+    {
+      "fingerprint": "b741eb041fb178ef",
+      "dims": "2d(21, 4):float64",
+      "input_nbytes": 1468,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_b741eb041fb178ef.npz"
+    },
+    {
+      "fingerprint": "6b62a634c8ef0bec",
+      "dims": "2d(21, 4):float64",
+      "input_nbytes": 1468,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_6b62a634c8ef0bec.npz"
+    },
+    {
+      "fingerprint": "4ffc857e5eeeb51a",
+      "dims": "2d(21, 4):float64",
+      "input_nbytes": 1468,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_4ffc857e5eeeb51a.npz"
+    },
+    {
+      "fingerprint": "df44d45d60222f7c",
+      "dims": "2d(21, 4):float64",
+      "input_nbytes": 1468,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_df44d45d60222f7c.npz"
+    },
+    {
+      "fingerprint": "e1a54735a8fed0a1",
+      "dims": "2d(21, 4):float64",
+      "input_nbytes": 1468,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_e1a54735a8fed0a1.npz"
+    },
+    {
+      "fingerprint": "9bc6554ff16a8c72",
+      "dims": "2d(21, 4):float64",
+      "input_nbytes": 1468,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_9bc6554ff16a8c72.npz"
+    },
+    {
+      "fingerprint": "47202067c372fdb1",
+      "dims": "2d(215, 4):float64",
+      "input_nbytes": 34033,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_47202067c372fdb1.npz"
+    },
+    {
+      "fingerprint": "adcc9bebcd6f6915",
+      "dims": "2d(215, 4):float64",
+      "input_nbytes": 31418,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_adcc9bebcd6f6915.npz"
+    },
+    {
+      "fingerprint": "1a8a3346c4dcb7b3",
+      "dims": "2d(219, 4):float64",
+      "input_nbytes": 24323,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_1a8a3346c4dcb7b3.npz"
+    },
+    {
+      "fingerprint": "bd6741c92abcab92",
+      "dims": "2d(219, 4):float64",
+      "input_nbytes": 24103,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_bd6741c92abcab92.npz"
+    },
+    {
+      "fingerprint": "69b192094e68a39a",
+      "dims": "2d(22155, 4):float64",
+      "input_nbytes": 3091478,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_69b192094e68a39a.npz"
+    },
+    {
+      "fingerprint": "25ede72ccb676cb9",
+      "dims": "2d(228, 4):float64",
+      "input_nbytes": 25878,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_25ede72ccb676cb9.npz"
+    },
+    {
+      "fingerprint": "c9a6d64eb85096ca",
+      "dims": "2d(25, 4):float16",
+      "input_nbytes": 1303,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_c9a6d64eb85096ca.npz"
+    },
+    {
+      "fingerprint": "019ab09bcadbf7d1",
+      "dims": "2d(25, 4):float16",
+      "input_nbytes": 1303,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_019ab09bcadbf7d1.npz"
+    },
+    {
+      "fingerprint": "da7c23df073cd6b6",
+      "dims": "2d(25, 4):float16",
+      "input_nbytes": 1308,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_da7c23df073cd6b6.npz"
+    },
+    {
+      "fingerprint": "3376892927066edd",
+      "dims": "2d(25, 4):float16",
+      "input_nbytes": 1308,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_3376892927066edd.npz"
+    },
+    {
+      "fingerprint": "ce9f36cc1790fc04",
+      "dims": "2d(25, 4):float64",
+      "input_nbytes": 1768,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_ce9f36cc1790fc04.npz"
+    },
+    {
+      "fingerprint": "3a5d357e705ab94d",
+      "dims": "2d(25, 4):float64",
+      "input_nbytes": 1768,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_3a5d357e705ab94d.npz"
+    },
+    {
+      "fingerprint": "3eac05781f5431b3",
+      "dims": "2d(25, 4):float64",
+      "input_nbytes": 1758,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_3eac05781f5431b3.npz"
+    },
+    {
+      "fingerprint": "f40f790bf727a312",
+      "dims": "2d(26, 4):float64",
+      "input_nbytes": 2053,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_f40f790bf727a312.npz"
+    },
+    {
+      "fingerprint": "2b5dd5693958d9c9",
+      "dims": "2d(26, 4):float64",
+      "input_nbytes": 2078,
+      "calls": 4,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_2b5dd5693958d9c9.npz"
+    },
+    {
+      "fingerprint": "b0a25756f2765306",
+      "dims": "2d(26, 4):float64",
+      "input_nbytes": 2078,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_b0a25756f2765306.npz"
+    },
+    {
+      "fingerprint": "acfc09cd44bc87c1",
+      "dims": "2d(2641, 4):float64",
+      "input_nbytes": 535508,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_acfc09cd44bc87c1.npz"
+    },
+    {
+      "fingerprint": "338a3333e8416081",
+      "dims": "2d(2641, 4):float64",
+      "input_nbytes": 435443,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_338a3333e8416081.npz"
+    },
+    {
+      "fingerprint": "2f683e11e809e77f",
+      "dims": "2d(273, 4):float64",
+      "input_nbytes": 31813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_2f683e11e809e77f.npz"
+    },
+    {
+      "fingerprint": "bf8a1ba8e75ccf40",
+      "dims": "2d(27409, 4):float64",
+      "input_nbytes": 3977233,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_bf8a1ba8e75ccf40.npz"
+    },
+    {
+      "fingerprint": "4883de7c40c284ad",
+      "dims": "2d(27409, 4):float64",
+      "input_nbytes": 3945643,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_4883de7c40c284ad.npz"
+    },
+    {
+      "fingerprint": "508981bf9956b281",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2078,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_508981bf9956b281.npz"
+    },
+    {
+      "fingerprint": "cdf5d866c384fafb",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2078,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_cdf5d866c384fafb.npz"
+    },
+    {
+      "fingerprint": "fff9495f826014e8",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2078,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_fff9495f826014e8.npz"
+    },
+    {
+      "fingerprint": "d3a42734a9688aa2",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2128,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_d3a42734a9688aa2.npz"
+    },
+    {
+      "fingerprint": "1f85bb34062f9edb",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2128,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_1f85bb34062f9edb.npz"
+    },
+    {
+      "fingerprint": "6f953b6567ce5ad3",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2078,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_6f953b6567ce5ad3.npz"
+    },
+    {
+      "fingerprint": "cd1c03836e1be4e0",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2078,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_cd1c03836e1be4e0.npz"
+    },
+    {
+      "fingerprint": "fae814aae4ef5c4f",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2253,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_fae814aae4ef5c4f.npz"
+    },
+    {
+      "fingerprint": "5774ed519206b96f",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2253,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_5774ed519206b96f.npz"
+    },
+    {
+      "fingerprint": "e6b144f69d419260",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2253,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_e6b144f69d419260.npz"
+    },
+    {
+      "fingerprint": "f0bb0a39f667a052",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2213,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f0bb0a39f667a052.npz"
+    },
+    {
+      "fingerprint": "2c6ed209b842eee3",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2213,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_2c6ed209b842eee3.npz"
+    },
+    {
+      "fingerprint": "47da5f720c3700e7",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2213,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_47da5f720c3700e7.npz"
+    },
+    {
+      "fingerprint": "2b3b164c699c1f13",
+      "dims": "2d(28, 4):float64",
+      "input_nbytes": 2213,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_2b3b164c699c1f13.npz"
+    },
+    {
+      "fingerprint": "e1a29c56a906a3f1",
+      "dims": "2d(29, 4):float64",
+      "input_nbytes": 2153,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_e1a29c56a906a3f1.npz"
+    },
+    {
+      "fingerprint": "7088bd09c994225e",
+      "dims": "2d(29, 4):float64",
+      "input_nbytes": 2153,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_7088bd09c994225e.npz"
+    },
+    {
+      "fingerprint": "c640c2aad39821b5",
+      "dims": "2d(29, 4):float64",
+      "input_nbytes": 2153,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_c640c2aad39821b5.npz"
+    },
+    {
+      "fingerprint": "055095cbd3fa5e51",
+      "dims": "2d(29, 4):float64",
+      "input_nbytes": 2153,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_055095cbd3fa5e51.npz"
+    },
+    {
+      "fingerprint": "587d36756ef6ff48",
+      "dims": "2d(29, 4):float64",
+      "input_nbytes": 2153,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_587d36756ef6ff48.npz"
+    },
+    {
+      "fingerprint": "895befa63cc17c3b",
+      "dims": "2d(29, 4):float64",
+      "input_nbytes": 2158,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_895befa63cc17c3b.npz"
+    },
+    {
+      "fingerprint": "aa881deb4859c282",
+      "dims": "2d(29, 4):float64",
+      "input_nbytes": 2158,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_aa881deb4859c282.npz"
+    },
+    {
+      "fingerprint": "ce295a58d8b935ec",
+      "dims": "2d(29882, 4):float64",
+      "input_nbytes": 4194278,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_ce295a58d8b935ec.npz"
+    },
+    {
+      "fingerprint": "60f7acdfb6e3a18e",
+      "dims": "2d(29882, 4):float64",
+      "input_nbytes": 4260063,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_60f7acdfb6e3a18e.npz"
+    },
+    {
+      "fingerprint": "f9f5a46e502a18eb",
+      "dims": "2d(2999, 4):float64",
+      "input_nbytes": 379598,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_f9f5a46e502a18eb.npz"
+    },
+    {
+      "fingerprint": "59a62339da86ddfd",
+      "dims": "2d(2999, 4):float64",
+      "input_nbytes": 389053,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_59a62339da86ddfd.npz"
+    },
+    {
+      "fingerprint": "44a86e49c2076e06",
+      "dims": "2d(31, 4):float64",
+      "input_nbytes": 2363,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_44a86e49c2076e06.npz"
+    },
+    {
+      "fingerprint": "88ebf3b8dbe07808",
+      "dims": "2d(31, 4):float64",
+      "input_nbytes": 2363,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_88ebf3b8dbe07808.npz"
+    },
+    {
+      "fingerprint": "7936a795142452a2",
+      "dims": "2d(31, 4):float64",
+      "input_nbytes": 2343,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_7936a795142452a2.npz"
+    },
+    {
+      "fingerprint": "1b283a49305614b6",
+      "dims": "2d(31, 4):float64",
+      "input_nbytes": 2318,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_1b283a49305614b6.npz"
+    },
+    {
+      "fingerprint": "3e44f23525220b93",
+      "dims": "2d(31, 4):float64",
+      "input_nbytes": 2318,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_3e44f23525220b93.npz"
+    },
+    {
+      "fingerprint": "33c366ebe747ed0b",
+      "dims": "2d(31, 4):float64",
+      "input_nbytes": 2318,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_33c366ebe747ed0b.npz"
+    },
+    {
+      "fingerprint": "fa12838b6f3ca1b3",
+      "dims": "2d(31, 4):float64",
+      "input_nbytes": 2318,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_fa12838b6f3ca1b3.npz"
+    },
+    {
+      "fingerprint": "c3abc50247e1b75a",
+      "dims": "2d(31, 4):float64",
+      "input_nbytes": 2208,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_c3abc50247e1b75a.npz"
+    },
+    {
+      "fingerprint": "3dba5d9a649d5e59",
+      "dims": "2d(31, 4):float64",
+      "input_nbytes": 2508,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_3dba5d9a649d5e59.npz"
+    },
+    {
+      "fingerprint": "56c7fed8faee41ee",
+      "dims": "2d(31, 4):uint32",
+      "input_nbytes": 1907,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_56c7fed8faee41ee.npz"
+    },
+    {
+      "fingerprint": "82d2d02a0e50c45f",
+      "dims": "2d(31, 4):uint32",
+      "input_nbytes": 1907,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_82d2d02a0e50c45f.npz"
+    },
+    {
+      "fingerprint": "276547648d7e6b79",
+      "dims": "2d(31, 4):uint32",
+      "input_nbytes": 1907,
+      "calls": 4,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_276547648d7e6b79.npz"
+    },
+    {
+      "fingerprint": "33024cfc892e84cf",
+      "dims": "2d(31283, 4):float64",
+      "input_nbytes": 4504173,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_33024cfc892e84cf.npz"
+    },
+    {
+      "fingerprint": "389b8f18a02d3b6a",
+      "dims": "2d(314, 4):float64",
+      "input_nbytes": 30473,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_389b8f18a02d3b6a.npz"
+    },
+    {
+      "fingerprint": "07dc500c6b4c549a",
+      "dims": "2d(314, 4):float64",
+      "input_nbytes": 31423,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_07dc500c6b4c549a.npz"
+    },
+    {
+      "fingerprint": "04eb1da89f825dd7",
+      "dims": "2d(32316, 4):float64",
+      "input_nbytes": 4708393,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_04eb1da89f825dd7.npz"
+    },
+    {
+      "fingerprint": "796925c335313c1d",
+      "dims": "2d(329, 4):float64",
+      "input_nbytes": 37038,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_796925c335313c1d.npz"
+    },
+    {
+      "fingerprint": "1b2ad47a973e1cb0",
+      "dims": "2d(338, 4):float64",
+      "input_nbytes": 140408,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_1b2ad47a973e1cb0.npz"
+    },
+    {
+      "fingerprint": "9311c075e8f83764",
+      "dims": "2d(338, 4):float64",
+      "input_nbytes": 121673,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_9311c075e8f83764.npz"
+    },
+    {
+      "fingerprint": "8be6b642081aab9f",
+      "dims": "2d(34, 4):float64",
+      "input_nbytes": 2593,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_8be6b642081aab9f.npz"
+    },
+    {
+      "fingerprint": "715cd58e8aaa7be8",
+      "dims": "2d(34, 4):float64",
+      "input_nbytes": 2593,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_715cd58e8aaa7be8.npz"
+    },
+    {
+      "fingerprint": "387d48d468cae1cc",
+      "dims": "2d(34, 4):float64",
+      "input_nbytes": 2593,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_387d48d468cae1cc.npz"
+    },
+    {
+      "fingerprint": "8a2acb9e9069ef36",
+      "dims": "2d(34, 4):float64",
+      "input_nbytes": 2643,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_8a2acb9e9069ef36.npz"
+    },
+    {
+      "fingerprint": "a01555ea06a80445",
+      "dims": "2d(34, 4):float64",
+      "input_nbytes": 2643,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_a01555ea06a80445.npz"
+    },
+    {
+      "fingerprint": "56ce579b14491165",
+      "dims": "2d(34, 4):float64",
+      "input_nbytes": 2643,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_56ce579b14491165.npz"
+    },
+    {
+      "fingerprint": "94588fd947a2f6b4",
+      "dims": "2d(34, 4):float64",
+      "input_nbytes": 2643,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_94588fd947a2f6b4.npz"
+    },
+    {
+      "fingerprint": "7a58b6c004b53466",
+      "dims": "2d(34, 4):int32",
+      "input_nbytes": 2149,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_7a58b6c004b53466.npz"
+    },
+    {
+      "fingerprint": "2a084ff5c2cd4a0c",
+      "dims": "2d(34, 4):int32",
+      "input_nbytes": 2149,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_2a084ff5c2cd4a0c.npz"
+    },
+    {
+      "fingerprint": "6b02b59c61e3f508",
+      "dims": "2d(34, 4):int32",
+      "input_nbytes": 2149,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_6b02b59c61e3f508.npz"
+    },
+    {
+      "fingerprint": "f99a79ba8b129c67",
+      "dims": "2d(34951, 4):float64",
+      "input_nbytes": 5126033,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_f99a79ba8b129c67.npz"
+    },
+    {
+      "fingerprint": "21c4f5ec0d220fa2",
+      "dims": "2d(34951, 4):float64",
+      "input_nbytes": 4971113,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_21c4f5ec0d220fa2.npz"
+    },
+    {
+      "fingerprint": "0743929529bdb9e5",
+      "dims": "2d(35, 4):float64",
+      "input_nbytes": 2868,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_0743929529bdb9e5.npz"
+    },
+    {
+      "fingerprint": "e46dd2048d9c7b49",
+      "dims": "2d(35, 4):float64",
+      "input_nbytes": 2863,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_e46dd2048d9c7b49.npz"
+    },
+    {
+      "fingerprint": "13f45615baa76789",
+      "dims": "2d(35, 4):float64",
+      "input_nbytes": 2618,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_13f45615baa76789.npz"
+    },
+    {
+      "fingerprint": "bf1aec0a5273e893",
+      "dims": "2d(35, 4):float64",
+      "input_nbytes": 2618,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_bf1aec0a5273e893.npz"
+    },
+    {
+      "fingerprint": "ca5df83f4ae878e9",
+      "dims": "2d(36, 4):float64",
+      "input_nbytes": 2848,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_ca5df83f4ae878e9.npz"
+    },
+    {
+      "fingerprint": "1eb673927b7b4740",
+      "dims": "2d(36, 4):float64",
+      "input_nbytes": 2873,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_1eb673927b7b4740.npz"
+    },
+    {
+      "fingerprint": "a492f0eee51b89ab",
+      "dims": "2d(36, 4):float64",
+      "input_nbytes": 2873,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_a492f0eee51b89ab.npz"
+    },
+    {
+      "fingerprint": "1b1a1a2127d5ab0c",
+      "dims": "2d(36, 4):float64",
+      "input_nbytes": 2873,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_1b1a1a2127d5ab0c.npz"
+    },
+    {
+      "fingerprint": "bdb165b9a8661273",
+      "dims": "2d(36, 4):float64",
+      "input_nbytes": 2863,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_bdb165b9a8661273.npz"
+    },
+    {
+      "fingerprint": "a4e2dc9e3a267270",
+      "dims": "2d(36, 4):float64",
+      "input_nbytes": 2888,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_a4e2dc9e3a267270.npz"
+    },
+    {
+      "fingerprint": "5505f253231def4c",
+      "dims": "2d(36, 4):float64",
+      "input_nbytes": 2858,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_5505f253231def4c.npz"
+    },
+    {
+      "fingerprint": "8aee2fb4234749d1",
+      "dims": "2d(36010, 4):float64",
+      "input_nbytes": 5215303,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_8aee2fb4234749d1.npz"
+    },
+    {
+      "fingerprint": "70831d7d83c6db9e",
+      "dims": "2d(361, 4):float64",
+      "input_nbytes": 36033,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_70831d7d83c6db9e.npz"
+    },
+    {
+      "fingerprint": "40464acc637aea18",
+      "dims": "2d(368, 4):float64",
+      "input_nbytes": 37978,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_40464acc637aea18.npz"
+    },
+    {
+      "fingerprint": "54e95f59389b3bd7",
+      "dims": "2d(37, 4):float64",
+      "input_nbytes": 2918,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_54e95f59389b3bd7.npz"
+    },
+    {
+      "fingerprint": "62595f22fbb5a09f",
+      "dims": "2d(37, 4):float64",
+      "input_nbytes": 2918,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_62595f22fbb5a09f.npz"
+    },
+    {
+      "fingerprint": "0e479101f8a38849",
+      "dims": "2d(37, 4):float64",
+      "input_nbytes": 2918,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_0e479101f8a38849.npz"
+    },
+    {
+      "fingerprint": "d0c19e99cc13dddb",
+      "dims": "2d(37, 4):float64",
+      "input_nbytes": 2918,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_d0c19e99cc13dddb.npz"
+    },
+    {
+      "fingerprint": "70db50f8f792efcb",
+      "dims": "2d(37, 4):float64",
+      "input_nbytes": 2918,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_70db50f8f792efcb.npz"
+    },
+    {
+      "fingerprint": "98a89402c47810af",
+      "dims": "2d(37, 4):float64",
+      "input_nbytes": 2943,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_98a89402c47810af.npz"
+    },
+    {
+      "fingerprint": "72dc3550a5b8ad7c",
+      "dims": "2d(37216, 4):float64",
+      "input_nbytes": 5367973,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_72dc3550a5b8ad7c.npz"
+    },
+    {
+      "fingerprint": "926a416ba302c54e",
+      "dims": "2d(37216, 4):float64",
+      "input_nbytes": 5480103,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_926a416ba302c54e.npz"
+    },
+    {
+      "fingerprint": "01db1d1df5a56c9c",
+      "dims": "2d(388, 4):float64",
+      "input_nbytes": 42723,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_01db1d1df5a56c9c.npz"
+    },
+    {
+      "fingerprint": "d4573aa13e50a789",
+      "dims": "2d(39, 4):float16",
+      "input_nbytes": 2042,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_d4573aa13e50a789.npz"
+    },
+    {
+      "fingerprint": "4fa222c673b9b1da",
+      "dims": "2d(39, 4):float64",
+      "input_nbytes": 2848,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_4fa222c673b9b1da.npz"
+    },
+    {
+      "fingerprint": "980659f1ef7d8eba",
+      "dims": "2d(39, 4):float64",
+      "input_nbytes": 3033,
+      "calls": 7,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_980659f1ef7d8eba.npz"
+    },
+    {
+      "fingerprint": "79f009c752580d96",
+      "dims": "2d(39, 4):float64",
+      "input_nbytes": 3108,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_79f009c752580d96.npz"
+    },
+    {
+      "fingerprint": "47aa0046adec69f0",
+      "dims": "2d(39, 4):float64",
+      "input_nbytes": 3108,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_47aa0046adec69f0.npz"
+    },
+    {
+      "fingerprint": "d63c1a4f0873c914",
+      "dims": "2d(39, 4):float64",
+      "input_nbytes": 3108,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_d63c1a4f0873c914.npz"
+    },
+    {
+      "fingerprint": "a758e254ccd2119d",
+      "dims": "2d(39, 4):float64",
+      "input_nbytes": 3098,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_a758e254ccd2119d.npz"
+    },
+    {
+      "fingerprint": "fd9a2de3b3db7fc5",
+      "dims": "2d(39, 4):float64",
+      "input_nbytes": 3098,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_fd9a2de3b3db7fc5.npz"
+    },
+    {
+      "fingerprint": "cab8babf64f01914",
+      "dims": "2d(4, 4):float64",
+      "input_nbytes": 263,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_cab8babf64f01914.npz"
+    },
+    {
+      "fingerprint": "5dec6bbff134a46e",
+      "dims": "2d(4, 4):float64",
+      "input_nbytes": 253,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_5dec6bbff134a46e.npz"
+    },
+    {
+      "fingerprint": "555c9a4119f0be56",
+      "dims": "2d(4, 4):float64",
+      "input_nbytes": 253,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_555c9a4119f0be56.npz"
+    },
+    {
+      "fingerprint": "86891c51e28de418",
+      "dims": "2d(4, 4):float64",
+      "input_nbytes": 253,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_86891c51e28de418.npz"
+    },
+    {
+      "fingerprint": "b01e09010da6e238",
+      "dims": "2d(4, 4):float64",
+      "input_nbytes": 253,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_b01e09010da6e238.npz"
+    },
+    {
+      "fingerprint": "ada2d0b10b584540",
+      "dims": "2d(4, 4):float64",
+      "input_nbytes": 253,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_ada2d0b10b584540.npz"
+    },
+    {
+      "fingerprint": "af8648eeb8ce9a1f",
+      "dims": "2d(4, 4):float64",
+      "input_nbytes": 253,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_af8648eeb8ce9a1f.npz"
+    },
+    {
+      "fingerprint": "41bb68582cf9e0d7",
+      "dims": "2d(4, 4):float64",
+      "input_nbytes": 263,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_41bb68582cf9e0d7.npz"
+    },
+    {
+      "fingerprint": "a384523a275729b9",
+      "dims": "2d(425, 4):float64",
+      "input_nbytes": 48133,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_a384523a275729b9.npz"
+    },
+    {
+      "fingerprint": "f27eb75e675ac078",
+      "dims": "2d(42623, 4):float64",
+      "input_nbytes": 6084238,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_f27eb75e675ac078.npz"
+    },
+    {
+      "fingerprint": "2a06ff6b9706f0b1",
+      "dims": "2d(42623, 4):float64",
+      "input_nbytes": 6283523,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_2a06ff6b9706f0b1.npz"
+    },
+    {
+      "fingerprint": "3a20961d1d02512f",
+      "dims": "2d(43, 4):float64",
+      "input_nbytes": 3443,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_3a20961d1d02512f.npz"
+    },
+    {
+      "fingerprint": "8a9ba37034eedbca",
+      "dims": "2d(43, 4):float64",
+      "input_nbytes": 3458,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_8a9ba37034eedbca.npz"
+    },
+    {
+      "fingerprint": "3beeca139db9830e",
+      "dims": "2d(43, 4):float64",
+      "input_nbytes": 3443,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_3beeca139db9830e.npz"
+    },
+    {
+      "fingerprint": "2351dc68184aa4d4",
+      "dims": "2d(43, 4):float64",
+      "input_nbytes": 3443,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_2351dc68184aa4d4.npz"
+    },
+    {
+      "fingerprint": "92e758df66ad51b6",
+      "dims": "2d(43, 4):float64",
+      "input_nbytes": 3433,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_92e758df66ad51b6.npz"
+    },
+    {
+      "fingerprint": "bca7d34550da8b03",
+      "dims": "2d(43, 4):float64",
+      "input_nbytes": 3433,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_bca7d34550da8b03.npz"
+    },
+    {
+      "fingerprint": "dbdc028a2726687e",
+      "dims": "2d(43, 4):float64",
+      "input_nbytes": 3433,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_dbdc028a2726687e.npz"
+    },
+    {
+      "fingerprint": "3a1b0b0dbdabbd5b",
+      "dims": "2d(43127, 4):float64",
+      "input_nbytes": 6169723,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_3a1b0b0dbdabbd5b.npz"
+    },
+    {
+      "fingerprint": "02b9f34af574c623",
+      "dims": "2d(44357, 4):float64",
+      "input_nbytes": 6436178,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_02b9f34af574c623.npz"
+    },
+    {
+      "fingerprint": "7d899d818831d2bc",
+      "dims": "2d(446, 4):float64",
+      "input_nbytes": 48683,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_7d899d818831d2bc.npz"
+    },
+    {
+      "fingerprint": "04734477e7bfdb8c",
+      "dims": "2d(446, 4):float64",
+      "input_nbytes": 48783,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_04734477e7bfdb8c.npz"
+    },
+    {
+      "fingerprint": "8ef031ee829f64e6",
+      "dims": "2d(45029, 4):float64",
+      "input_nbytes": 6572453,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_8ef031ee829f64e6.npz"
+    },
+    {
+      "fingerprint": "a48acc98a90991ac",
+      "dims": "2d(45029, 4):float64",
+      "input_nbytes": 6640818,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_a48acc98a90991ac.npz"
+    },
+    {
+      "fingerprint": "fc978ebefc0ad930",
+      "dims": "2d(46, 4):float64",
+      "input_nbytes": 3628,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_fc978ebefc0ad930.npz"
+    },
+    {
+      "fingerprint": "440c118f8241b580",
+      "dims": "2d(46, 4):float64",
+      "input_nbytes": 3628,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_440c118f8241b580.npz"
+    },
+    {
+      "fingerprint": "764e913943f85377",
+      "dims": "2d(46, 4):float64",
+      "input_nbytes": 3628,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_764e913943f85377.npz"
+    },
+    {
+      "fingerprint": "f0f411df47e4509f",
+      "dims": "2d(46, 4):float64",
+      "input_nbytes": 3628,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f0f411df47e4509f.npz"
+    },
+    {
+      "fingerprint": "a96287d74491e2ff",
+      "dims": "2d(46, 4):float64",
+      "input_nbytes": 3628,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_a96287d74491e2ff.npz"
+    },
+    {
+      "fingerprint": "7c8a710a89a26f19",
+      "dims": "2d(46, 4):float64",
+      "input_nbytes": 3628,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_7c8a710a89a26f19.npz"
+    },
+    {
+      "fingerprint": "675648bc124b178c",
+      "dims": "2d(46, 4):float64",
+      "input_nbytes": 3623,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_675648bc124b178c.npz"
+    },
+    {
+      "fingerprint": "9d212b385a93091d",
+      "dims": "2d(46608, 4):float64",
+      "input_nbytes": 7295703,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_9d212b385a93091d.npz"
+    },
+    {
+      "fingerprint": "28a4d511657c5871",
+      "dims": "2d(47736, 4):float64",
+      "input_nbytes": 7087658,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_28a4d511657c5871.npz"
+    },
+    {
+      "fingerprint": "49cf199c7ab3d5ed",
+      "dims": "2d(47736, 4):float64",
+      "input_nbytes": 7049318,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_49cf199c7ab3d5ed.npz"
+    },
+    {
+      "fingerprint": "ac43873dd67e5b94",
+      "dims": "2d(47912, 4):float64",
+      "input_nbytes": 7245108,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_ac43873dd67e5b94.npz"
+    },
+    {
+      "fingerprint": "354db3306f57fbb3",
+      "dims": "2d(48, 4):float64",
+      "input_nbytes": 3853,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_354db3306f57fbb3.npz"
+    },
+    {
+      "fingerprint": "cb6d8bdb7ffca874",
+      "dims": "2d(48, 4):float64",
+      "input_nbytes": 3853,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_cb6d8bdb7ffca874.npz"
+    },
+    {
+      "fingerprint": "fdcf55f9084049ab",
+      "dims": "2d(48, 4):float64",
+      "input_nbytes": 3988,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_fdcf55f9084049ab.npz"
+    },
+    {
+      "fingerprint": "4b12270c8702c621",
+      "dims": "2d(48, 4):float64",
+      "input_nbytes": 3988,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_4b12270c8702c621.npz"
+    },
+    {
+      "fingerprint": "d551ad9dd444435e",
+      "dims": "2d(48, 4):float64",
+      "input_nbytes": 3988,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_d551ad9dd444435e.npz"
+    },
+    {
+      "fingerprint": "1fc99153a9a1bacd",
+      "dims": "2d(48, 4):float64",
+      "input_nbytes": 3988,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_1fc99153a9a1bacd.npz"
+    },
+    {
+      "fingerprint": "38f5458c97e540a9",
+      "dims": "2d(48, 4):float64",
+      "input_nbytes": 3988,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_38f5458c97e540a9.npz"
+    },
+    {
+      "fingerprint": "a3ccc700a44407cc",
+      "dims": "2d(49, 4):float16",
+      "input_nbytes": 2987,
+      "calls": 6,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_a3ccc700a44407cc.npz"
+    },
+    {
+      "fingerprint": "9bf211f0912e3360",
+      "dims": "2d(49, 4):float16",
+      "input_nbytes": 2987,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_9bf211f0912e3360.npz"
+    },
+    {
+      "fingerprint": "f855bcf629d673ae",
+      "dims": "2d(50, 4):float64",
+      "input_nbytes": 3993,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f855bcf629d673ae.npz"
+    },
+    {
+      "fingerprint": "0bad9e2d03c43006",
+      "dims": "2d(50, 4):float64",
+      "input_nbytes": 3983,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_0bad9e2d03c43006.npz"
+    },
+    {
+      "fingerprint": "2685cfa2cfb10317",
+      "dims": "2d(50, 4):float64",
+      "input_nbytes": 3983,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_2685cfa2cfb10317.npz"
+    },
+    {
+      "fingerprint": "4e286ebccd59cb60",
+      "dims": "2d(50, 4):float64",
+      "input_nbytes": 3983,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_4e286ebccd59cb60.npz"
+    },
+    {
+      "fingerprint": "58644d2f7c4cdb50",
+      "dims": "2d(50, 4):float64",
+      "input_nbytes": 3958,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_58644d2f7c4cdb50.npz"
+    },
+    {
+      "fingerprint": "708f2238372455bc",
+      "dims": "2d(50, 4):float64",
+      "input_nbytes": 3938,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_708f2238372455bc.npz"
+    },
+    {
+      "fingerprint": "17ad4b166e6b15c9",
+      "dims": "2d(50, 4):float64",
+      "input_nbytes": 3938,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_17ad4b166e6b15c9.npz"
+    },
+    {
+      "fingerprint": "985c84c3c86e18ef",
+      "dims": "2d(50, 4):float64",
+      "input_nbytes": 3953,
+      "calls": 5,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_985c84c3c86e18ef.npz"
+    },
+    {
+      "fingerprint": "b845373340515242",
+      "dims": "2d(50, 4):float64",
+      "input_nbytes": 3953,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_b845373340515242.npz"
+    },
+    {
+      "fingerprint": "77e675f5c49475c0",
+      "dims": "2d(50, 4):float64",
+      "input_nbytes": 3953,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_77e675f5c49475c0.npz"
+    },
+    {
+      "fingerprint": "ea6cbe3ac223091b",
+      "dims": "2d(50438, 4):float64",
+      "input_nbytes": 7359898,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_ea6cbe3ac223091b.npz"
+    },
+    {
+      "fingerprint": "0ea20477cd8c46a8",
+      "dims": "2d(50438, 4):float64",
+      "input_nbytes": 7485098,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_0ea20477cd8c46a8.npz"
+    },
+    {
+      "fingerprint": "1f4820ab91ffaabd",
+      "dims": "2d(52, 4):uint32",
+      "input_nbytes": 3516,
+      "calls": 4,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_1f4820ab91ffaabd.npz"
+    },
+    {
+      "fingerprint": "3fe835106c6f02b1",
+      "dims": "2d(52, 4):uint32",
+      "input_nbytes": 3351,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_3fe835106c6f02b1.npz"
+    },
+    {
+      "fingerprint": "1caf739336b7ed84",
+      "dims": "2d(52, 4):uint32",
+      "input_nbytes": 3351,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_1caf739336b7ed84.npz"
+    },
+    {
+      "fingerprint": "da4653e41c141846",
+      "dims": "2d(524287, 4):float64",
+      "input_nbytes": 73400288,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_huge_balanced_tree"
+      ],
+      "file": "case_da4653e41c141846.npz"
+    },
+    {
+      "fingerprint": "7831ad8517fa37fa",
+      "dims": "2d(53948, 4):float64",
+      "input_nbytes": 7800963,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_7831ad8517fa37fa.npz"
+    },
+    {
+      "fingerprint": "6043c146e6dcd965",
+      "dims": "2d(53948, 4):float64",
+      "input_nbytes": 8130983,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_6043c146e6dcd965.npz"
+    },
+    {
+      "fingerprint": "a3eafeff18a1a142",
+      "dims": "2d(54, 4):float64",
+      "input_nbytes": 4048,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_a3eafeff18a1a142.npz"
+    },
+    {
+      "fingerprint": "117c72bb417191e4",
+      "dims": "2d(54, 4):float64",
+      "input_nbytes": 4448,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_117c72bb417191e4.npz"
+    },
+    {
+      "fingerprint": "acb154c86b4405b5",
+      "dims": "2d(54142, 4):float64",
+      "input_nbytes": 8587748,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_acb154c86b4405b5.npz"
+    },
+    {
+      "fingerprint": "532144c1292482fa",
+      "dims": "2d(549, 4):float64",
+      "input_nbytes": 59938,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_532144c1292482fa.npz"
+    },
+    {
+      "fingerprint": "57096153952f3399",
+      "dims": "2d(553, 4):float64",
+      "input_nbytes": 61383,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_57096153952f3399.npz"
+    },
+    {
+      "fingerprint": "6a3cc5d330a15b4b",
+      "dims": "2d(55308, 4):float64",
+      "input_nbytes": 8295593,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_6a3cc5d330a15b4b.npz"
+    },
+    {
+      "fingerprint": "e2eb419f6d729e0f",
+      "dims": "2d(55308, 4):float64",
+      "input_nbytes": 8273923,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_e2eb419f6d729e0f.npz"
+    },
+    {
+      "fingerprint": "2075a9861e9a3c4f",
+      "dims": "2d(56, 4):float64",
+      "input_nbytes": 4483,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_2075a9861e9a3c4f.npz"
+    },
+    {
+      "fingerprint": "2d8ddc52221f8c33",
+      "dims": "2d(56, 4):float64",
+      "input_nbytes": 4483,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_2d8ddc52221f8c33.npz"
+    },
+    {
+      "fingerprint": "57d313df44316ca6",
+      "dims": "2d(56, 4):float64",
+      "input_nbytes": 4483,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_57d313df44316ca6.npz"
+    },
+    {
+      "fingerprint": "2bfb8115114983bc",
+      "dims": "2d(56, 4):float64",
+      "input_nbytes": 4473,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_2bfb8115114983bc.npz"
+    },
+    {
+      "fingerprint": "e955fa0109cf15eb",
+      "dims": "2d(56, 4):float64",
+      "input_nbytes": 4418,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_e955fa0109cf15eb.npz"
+    },
+    {
+      "fingerprint": "e45ecc9233e54cdf",
+      "dims": "2d(56, 4):float64",
+      "input_nbytes": 4418,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_e45ecc9233e54cdf.npz"
+    },
+    {
+      "fingerprint": "c6acd6bdf6795a7e",
+      "dims": "2d(56, 4):float64",
+      "input_nbytes": 4393,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_c6acd6bdf6795a7e.npz"
+    },
+    {
+      "fingerprint": "3069c2743a58318c",
+      "dims": "2d(56, 4):float64",
+      "input_nbytes": 4393,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_3069c2743a58318c.npz"
+    },
+    {
+      "fingerprint": "5d2b05e20b193252",
+      "dims": "2d(56, 4):float64",
+      "input_nbytes": 4383,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_5d2b05e20b193252.npz"
+    },
+    {
+      "fingerprint": "53428d54fc55b5a9",
+      "dims": "2d(56, 4):float64",
+      "input_nbytes": 4383,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_53428d54fc55b5a9.npz"
+    },
+    {
+      "fingerprint": "df93ef7c57562091",
+      "dims": "2d(57, 4):float64",
+      "input_nbytes": 4588,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_df93ef7c57562091.npz"
+    },
+    {
+      "fingerprint": "6b3c89771504adf3",
+      "dims": "2d(57, 4):float64",
+      "input_nbytes": 4588,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_6b3c89771504adf3.npz"
+    },
+    {
+      "fingerprint": "686106f83498364f",
+      "dims": "2d(57, 4):float64",
+      "input_nbytes": 4588,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_686106f83498364f.npz"
+    },
+    {
+      "fingerprint": "b4755c48e6215fc7",
+      "dims": "2d(57, 4):float64",
+      "input_nbytes": 4578,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_b4755c48e6215fc7.npz"
+    },
+    {
+      "fingerprint": "b006e4ada93532fd",
+      "dims": "2d(57, 4):float64",
+      "input_nbytes": 4573,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_b006e4ada93532fd.npz"
+    },
+    {
+      "fingerprint": "82407f252cba5c67",
+      "dims": "2d(57, 4):float64",
+      "input_nbytes": 4573,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_82407f252cba5c67.npz"
+    },
+    {
+      "fingerprint": "275a8de1412f5c10",
+      "dims": "2d(57, 4):float64",
+      "input_nbytes": 4573,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_275a8de1412f5c10.npz"
+    },
+    {
+      "fingerprint": "23bd6cd051ef2d00",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_23bd6cd051ef2d00.npz"
+    },
+    {
+      "fingerprint": "b300dc429620f300",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_b300dc429620f300.npz"
+    },
+    {
+      "fingerprint": "b9935cd6f409fc79",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_b9935cd6f409fc79.npz"
+    },
+    {
+      "fingerprint": "8b71538cdd48589c",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_8b71538cdd48589c.npz"
+    },
+    {
+      "fingerprint": "78c9c4aabd85b002",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_78c9c4aabd85b002.npz"
+    },
+    {
+      "fingerprint": "a2a793a7d4cf9066",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_a2a793a7d4cf9066.npz"
+    },
+    {
+      "fingerprint": "c1f3845902acac74",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4663,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_c1f3845902acac74.npz"
+    },
+    {
+      "fingerprint": "fba66fd1d40519bf",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4553,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_fba66fd1d40519bf.npz"
+    },
+    {
+      "fingerprint": "cd8c31fa5f7595f9",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4553,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_cd8c31fa5f7595f9.npz"
+    },
+    {
+      "fingerprint": "ddbba56705fb66ae",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4553,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_ddbba56705fb66ae.npz"
+    },
+    {
+      "fingerprint": "02dc4c823106b0fc",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4553,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_02dc4c823106b0fc.npz"
+    },
+    {
+      "fingerprint": "f92040555136bec1",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4553,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_f92040555136bec1.npz"
+    },
+    {
+      "fingerprint": "11718c0eaba49549",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4563,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_11718c0eaba49549.npz"
+    },
+    {
+      "fingerprint": "f76c31902b56cf4d",
+      "dims": "2d(58, 4):float64",
+      "input_nbytes": 4568,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_f76c31902b56cf4d.npz"
+    },
+    {
+      "fingerprint": "fed862ec318aef18",
+      "dims": "2d(58195, 4):float64",
+      "input_nbytes": 8970098,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_fed862ec318aef18.npz"
+    },
+    {
+      "fingerprint": "17fd4f7e7603d8f8",
+      "dims": "2d(592, 4):float64",
+      "input_nbytes": 61753,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_17fd4f7e7603d8f8.npz"
+    },
+    {
+      "fingerprint": "93ad21686a930f2f",
+      "dims": "2d(59313, 4):float64",
+      "input_nbytes": 8766978,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_93ad21686a930f2f.npz"
+    },
+    {
+      "fingerprint": "f5b11d5b1f3c050a",
+      "dims": "2d(59313, 4):float64",
+      "input_nbytes": 8927618,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline_large"
+      ],
+      "file": "case_f5b11d5b1f3c050a.npz"
+    },
+    {
+      "fingerprint": "819d825f41ad8b9f",
+      "dims": "2d(60, 4):float64",
+      "input_nbytes": 4883,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_819d825f41ad8b9f.npz"
+    },
+    {
+      "fingerprint": "27fa3a7e0fef2cf2",
+      "dims": "2d(60, 4):float64",
+      "input_nbytes": 4743,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_27fa3a7e0fef2cf2.npz"
+    },
+    {
+      "fingerprint": "95bb31cbce3ff41a",
+      "dims": "2d(60, 4):float64",
+      "input_nbytes": 4743,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_95bb31cbce3ff41a.npz"
+    },
+    {
+      "fingerprint": "d8c4ae5c992d3127",
+      "dims": "2d(60, 4):float64",
+      "input_nbytes": 4743,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_d8c4ae5c992d3127.npz"
+    },
+    {
+      "fingerprint": "0b861011a48a2e2d",
+      "dims": "2d(60, 4):float64",
+      "input_nbytes": 4743,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_0b861011a48a2e2d.npz"
+    },
+    {
+      "fingerprint": "cf320f03e9c2c570",
+      "dims": "2d(60, 4):float64",
+      "input_nbytes": 4713,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_cf320f03e9c2c570.npz"
+    },
+    {
+      "fingerprint": "12f0e0543f717018",
+      "dims": "2d(60, 4):float64",
+      "input_nbytes": 4713,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_12f0e0543f717018.npz"
+    },
+    {
+      "fingerprint": "7dd18b91f18e2cf1",
+      "dims": "2d(61, 4):float64",
+      "input_nbytes": 4608,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_7dd18b91f18e2cf1.npz"
+    },
+    {
+      "fingerprint": "9f304b0150292455",
+      "dims": "2d(61, 4):float64",
+      "input_nbytes": 5183,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_9f304b0150292455.npz"
+    },
+    {
+      "fingerprint": "0946ed7756bca9a9",
+      "dims": "2d(63, 4):float64",
+      "input_nbytes": 4768,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_0946ed7756bca9a9.npz"
+    },
+    {
+      "fingerprint": "58c2c4ec8abdd7e9",
+      "dims": "2d(63, 4):uint32",
+      "input_nbytes": 4175,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_58c2c4ec8abdd7e9.npz"
+    },
+    {
+      "fingerprint": "4ced7741627063ce",
+      "dims": "2d(64, 4):float64",
+      "input_nbytes": 4853,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_4ced7741627063ce.npz"
+    },
+    {
+      "fingerprint": "43c9c0f0a5dabd92",
+      "dims": "2d(64, 4):float64",
+      "input_nbytes": 5443,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_43c9c0f0a5dabd92.npz"
+    },
+    {
+      "fingerprint": "0bdf410614a0bea6",
+      "dims": "2d(657, 4):float64",
+      "input_nbytes": 576963,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_0bdf410614a0bea6.npz"
+    },
+    {
+      "fingerprint": "477630250c94be05",
+      "dims": "2d(657, 4):float64",
+      "input_nbytes": 596558,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_477630250c94be05.npz"
+    },
+    {
+      "fingerprint": "4c0c1d8b64143e1a",
+      "dims": "2d(66, 4):float64",
+      "input_nbytes": 5658,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_4c0c1d8b64143e1a.npz"
+    },
+    {
+      "fingerprint": "f3324481cec3cdcd",
+      "dims": "2d(66, 4):float64",
+      "input_nbytes": 5638,
+      "calls": 5,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_f3324481cec3cdcd.npz"
+    },
+    {
+      "fingerprint": "2a08d1d26523599e",
+      "dims": "2d(682, 4):float64",
+      "input_nbytes": 108558,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_2a08d1d26523599e.npz"
+    },
+    {
+      "fingerprint": "61a71bad49beaa45",
+      "dims": "2d(69, 4):int64",
+      "input_nbytes": 5623,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_61a71bad49beaa45.npz"
+    },
+    {
+      "fingerprint": "36c510a74d6c5498",
+      "dims": "2d(69, 4):int64",
+      "input_nbytes": 5623,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_36c510a74d6c5498.npz"
+    },
+    {
+      "fingerprint": "2beb265dfc5797f7",
+      "dims": "2d(69, 4):int64",
+      "input_nbytes": 5628,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_2beb265dfc5797f7.npz"
+    },
+    {
+      "fingerprint": "092b0ba350c8ae03",
+      "dims": "2d(69, 4):int64",
+      "input_nbytes": 5678,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_092b0ba350c8ae03.npz"
+    },
+    {
+      "fingerprint": "3763010c045e8065",
+      "dims": "2d(69, 4):int64",
+      "input_nbytes": 5663,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_3763010c045e8065.npz"
+    },
+    {
+      "fingerprint": "0d0eb3d9bd6f973d",
+      "dims": "2d(692, 4):float64",
+      "input_nbytes": 154368,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_0d0eb3d9bd6f973d.npz"
+    },
+    {
+      "fingerprint": "cea0c133b9dfae4f",
+      "dims": "2d(692, 4):float64",
+      "input_nbytes": 151463,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_cea0c133b9dfae4f.npz"
+    },
+    {
+      "fingerprint": "f1048cf178889b13",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 5448,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f1048cf178889b13.npz"
+    },
+    {
+      "fingerprint": "5a3ae99db11c8362",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 6108,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_5a3ae99db11c8362.npz"
+    },
+    {
+      "fingerprint": "5f6a2e2e2717fcaf",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 5993,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_5f6a2e2e2717fcaf.npz"
+    },
+    {
+      "fingerprint": "b576cfd99bbde641",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 5993,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_b576cfd99bbde641.npz"
+    },
+    {
+      "fingerprint": "24037278c0691ef4",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 5993,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_24037278c0691ef4.npz"
+    },
+    {
+      "fingerprint": "23c42f638569bccf",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 5993,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_23c42f638569bccf.npz"
+    },
+    {
+      "fingerprint": "206e5b29988de427",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 5993,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_206e5b29988de427.npz"
+    },
+    {
+      "fingerprint": "63d005274d091f81",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 5993,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_63d005274d091f81.npz"
+    },
+    {
+      "fingerprint": "ddfe933022b75b32",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 5993,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_ddfe933022b75b32.npz"
+    },
+    {
+      "fingerprint": "9ededc73739351e8",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 6148,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_9ededc73739351e8.npz"
+    },
+    {
+      "fingerprint": "bd60920f571a48e3",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 6118,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_bd60920f571a48e3.npz"
+    },
+    {
+      "fingerprint": "c7079b74f26572c9",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 6078,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_c7079b74f26572c9.npz"
+    },
+    {
+      "fingerprint": "c7e95cea3513c9f4",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 5893,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_c7e95cea3513c9f4.npz"
+    },
+    {
+      "fingerprint": "e4342ffe81a6e06e",
+      "dims": "2d(71, 4):float64",
+      "input_nbytes": 5883,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_e4342ffe81a6e06e.npz"
+    },
+    {
+      "fingerprint": "deebb30e9b58f41b",
+      "dims": "2d(73, 4):float64",
+      "input_nbytes": 5618,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_deebb30e9b58f41b.npz"
+    },
+    {
+      "fingerprint": "464fcafd2f0165b8",
+      "dims": "2d(73, 4):float64",
+      "input_nbytes": 6373,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_464fcafd2f0165b8.npz"
+    },
+    {
+      "fingerprint": "1a95de5f1865c80a",
+      "dims": "2d(73, 4):float64",
+      "input_nbytes": 6473,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_1a95de5f1865c80a.npz"
+    },
+    {
+      "fingerprint": "776886fd5b146c3d",
+      "dims": "2d(73, 4):float64",
+      "input_nbytes": 6473,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_776886fd5b146c3d.npz"
+    },
+    {
+      "fingerprint": "d1c30ac7c5d590c0",
+      "dims": "2d(73, 4):float64",
+      "input_nbytes": 6108,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_d1c30ac7c5d590c0.npz"
+    },
+    {
+      "fingerprint": "3951c84566b4ef8b",
+      "dims": "2d(74, 4):float32",
+      "input_nbytes": 4924,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_3951c84566b4ef8b.npz"
+    },
+    {
+      "fingerprint": "3569a4a0ee8af0bd",
+      "dims": "2d(74, 4):float32",
+      "input_nbytes": 4924,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_3569a4a0ee8af0bd.npz"
+    },
+    {
+      "fingerprint": "9119175d661d27b1",
+      "dims": "2d(74, 4):float32",
+      "input_nbytes": 4929,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_9119175d661d27b1.npz"
+    },
+    {
+      "fingerprint": "5faab454cd818076",
+      "dims": "2d(74, 4):float64",
+      "input_nbytes": 6113,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_5faab454cd818076.npz"
+    },
+    {
+      "fingerprint": "574fb39f9f917482",
+      "dims": "2d(74, 4):float64",
+      "input_nbytes": 6113,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_574fb39f9f917482.npz"
+    },
+    {
+      "fingerprint": "b7b414c55bd6a6ae",
+      "dims": "2d(74, 4):float64",
+      "input_nbytes": 6113,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_b7b414c55bd6a6ae.npz"
+    },
+    {
+      "fingerprint": "013c0430e1524c6f",
+      "dims": "2d(74, 4):float64",
+      "input_nbytes": 6113,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_013c0430e1524c6f.npz"
+    },
+    {
+      "fingerprint": "1d087b56677b683b",
+      "dims": "2d(74, 4):float64",
+      "input_nbytes": 6113,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_1d087b56677b683b.npz"
+    },
+    {
+      "fingerprint": "61454533c80b87ff",
+      "dims": "2d(74, 4):float64",
+      "input_nbytes": 6093,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_61454533c80b87ff.npz"
+    },
+    {
+      "fingerprint": "cb84a0ca534d1932",
+      "dims": "2d(74, 4):float64",
+      "input_nbytes": 6093,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_cb84a0ca534d1932.npz"
+    },
+    {
+      "fingerprint": "ea9d96e43a2ac68c",
+      "dims": "2d(791, 4):float64",
+      "input_nbytes": 86208,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_ea9d96e43a2ac68c.npz"
+    },
+    {
+      "fingerprint": "ece233d6b64f6234",
+      "dims": "2d(791, 4):float64",
+      "input_nbytes": 83478,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_ece233d6b64f6234.npz"
+    },
+    {
+      "fingerprint": "9721a1dca1cb9814",
+      "dims": "2d(7999, 4):float64",
+      "input_nbytes": 160379963,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_deep_chain_below_depth_limit"
+      ],
+      "file": "case_9721a1dca1cb9814.npz"
+    },
+    {
+      "fingerprint": "b3fc892ce23e0f44",
+      "dims": "2d(8, 4):float64",
+      "input_nbytes": 518,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_b3fc892ce23e0f44.npz"
+    },
+    {
+      "fingerprint": "090741bf2c74961e",
+      "dims": "2d(8, 4):float64",
+      "input_nbytes": 533,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_ignores_distance_column"
+      ],
+      "file": "case_090741bf2c74961e.npz"
+    },
+    {
+      "fingerprint": "d9d7179dd0114539",
+      "dims": "2d(84, 4):float64",
+      "input_nbytes": 6813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_d9d7179dd0114539.npz"
+    },
+    {
+      "fingerprint": "9de0e672c8b7b9f4",
+      "dims": "2d(84, 4):float64",
+      "input_nbytes": 6813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_9de0e672c8b7b9f4.npz"
+    },
+    {
+      "fingerprint": "7892b7eef604bed2",
+      "dims": "2d(84, 4):float64",
+      "input_nbytes": 6813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_7892b7eef604bed2.npz"
+    },
+    {
+      "fingerprint": "0d729f9bbad06bde",
+      "dims": "2d(84, 4):float64",
+      "input_nbytes": 6813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_0d729f9bbad06bde.npz"
+    },
+    {
+      "fingerprint": "0c5054ee9165dac1",
+      "dims": "2d(84, 4):float64",
+      "input_nbytes": 6813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_0c5054ee9165dac1.npz"
+    },
+    {
+      "fingerprint": "4a1227a11ae853b1",
+      "dims": "2d(84, 4):float64",
+      "input_nbytes": 6813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_4a1227a11ae853b1.npz"
+    },
+    {
+      "fingerprint": "a4a47c48775fe9cd",
+      "dims": "2d(84, 4):float64",
+      "input_nbytes": 6813,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_a4a47c48775fe9cd.npz"
+    },
+    {
+      "fingerprint": "3058a4ac2b096463",
+      "dims": "2d(85, 4):float64",
+      "input_nbytes": 6638,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_3058a4ac2b096463.npz"
+    },
+    {
+      "fingerprint": "597ca1cc3ed696e6",
+      "dims": "2d(85, 4):float64",
+      "input_nbytes": 7098,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_597ca1cc3ed696e6.npz"
+    },
+    {
+      "fingerprint": "bbd7defb3e55abc8",
+      "dims": "2d(85, 4):float64",
+      "input_nbytes": 7098,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_bbd7defb3e55abc8.npz"
+    },
+    {
+      "fingerprint": "464680d3a65042d4",
+      "dims": "2d(85, 4):float64",
+      "input_nbytes": 7053,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_464680d3a65042d4.npz"
+    },
+    {
+      "fingerprint": "8e817ac655ed84cb",
+      "dims": "2d(85, 4):float64",
+      "input_nbytes": 7018,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_8e817ac655ed84cb.npz"
+    },
+    {
+      "fingerprint": "56499597c269f271",
+      "dims": "2d(85, 4):float64",
+      "input_nbytes": 7018,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_56499597c269f271.npz"
+    },
+    {
+      "fingerprint": "084e0a6613ca2e3d",
+      "dims": "2d(85, 4):float64",
+      "input_nbytes": 7018,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_084e0a6613ca2e3d.npz"
+    },
+    {
+      "fingerprint": "4979c9a56917800a",
+      "dims": "2d(85, 4):float64",
+      "input_nbytes": 7023,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_4979c9a56917800a.npz"
+    },
+    {
+      "fingerprint": "9e4f5932a2c3392c",
+      "dims": "2d(86, 4):float64",
+      "input_nbytes": 7513,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_9e4f5932a2c3392c.npz"
+    },
+    {
+      "fingerprint": "8426e3cc02ca28cd",
+      "dims": "2d(86, 4):float64",
+      "input_nbytes": 7468,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_8426e3cc02ca28cd.npz"
+    },
+    {
+      "fingerprint": "2c6a80c95d6de1b6",
+      "dims": "2d(86, 4):float64",
+      "input_nbytes": 7468,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_2c6a80c95d6de1b6.npz"
+    },
+    {
+      "fingerprint": "45ceee2877a9171f",
+      "dims": "2d(86, 4):float64",
+      "input_nbytes": 7408,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_45ceee2877a9171f.npz"
+    },
+    {
+      "fingerprint": "92ae9526c5298566",
+      "dims": "2d(86, 4):float64",
+      "input_nbytes": 7418,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_92ae9526c5298566.npz"
+    },
+    {
+      "fingerprint": "f1681a7444d93dec",
+      "dims": "2d(86, 4):float64",
+      "input_nbytes": 7418,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_f1681a7444d93dec.npz"
+    },
+    {
+      "fingerprint": "d7d921a53447f5c0",
+      "dims": "2d(86, 4):float64",
+      "input_nbytes": 7418,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_d7d921a53447f5c0.npz"
+    },
+    {
+      "fingerprint": "69324808ce3b4a46",
+      "dims": "2d(864, 4):float64",
+      "input_nbytes": 109503,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_69324808ce3b4a46.npz"
+    },
+    {
+      "fingerprint": "15750131af734b62",
+      "dims": "2d(864, 4):float64",
+      "input_nbytes": 99448,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_15750131af734b62.npz"
+    },
+    {
+      "fingerprint": "aa39816fe4f2284a",
+      "dims": "2d(87, 4):float64",
+      "input_nbytes": 6808,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_aa39816fe4f2284a.npz"
+    },
+    {
+      "fingerprint": "d3f319379ce2e5c1",
+      "dims": "2d(87, 4):float64",
+      "input_nbytes": 7583,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_d3f319379ce2e5c1.npz"
+    },
+    {
+      "fingerprint": "c0dfb0b66ac44366",
+      "dims": "2d(93, 4):float64",
+      "input_nbytes": 8048,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_c0dfb0b66ac44366.npz"
+    },
+    {
+      "fingerprint": "474096a3dca945b4",
+      "dims": "2d(93, 4):float64",
+      "input_nbytes": 8048,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_474096a3dca945b4.npz"
+    },
+    {
+      "fingerprint": "e7bc20ec662157a3",
+      "dims": "2d(93, 4):float64",
+      "input_nbytes": 8048,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_e7bc20ec662157a3.npz"
+    },
+    {
+      "fingerprint": "0b9eb4d09446485d",
+      "dims": "2d(93, 4):float64",
+      "input_nbytes": 8068,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_0b9eb4d09446485d.npz"
+    },
+    {
+      "fingerprint": "6e745884cbc2bd3a",
+      "dims": "2d(93, 4):float64",
+      "input_nbytes": 8068,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_6e745884cbc2bd3a.npz"
+    },
+    {
+      "fingerprint": "7af1812a8bf50f26",
+      "dims": "2d(93, 4):float64",
+      "input_nbytes": 7993,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_7af1812a8bf50f26.npz"
+    },
+    {
+      "fingerprint": "c6234446e2147057",
+      "dims": "2d(93, 4):float64",
+      "input_nbytes": 7993,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_matches_numba_baseline"
+      ],
+      "file": "case_c6234446e2147057.npz"
+    },
+    {
+      "fingerprint": "862510e3c1846224",
+      "dims": "2d(95, 4):float64",
+      "input_nbytes": 7488,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_862510e3c1846224.npz"
+    },
+    {
+      "fingerprint": "87f4b3f48fb62d42",
+      "dims": "2d(95, 4):float64",
+      "input_nbytes": 8263,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_87f4b3f48fb62d42.npz"
+    },
+    {
+      "fingerprint": "7220cf119686002c",
+      "dims": "2d(95, 4):float64",
+      "input_nbytes": 8188,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_7220cf119686002c.npz"
+    },
+    {
+      "fingerprint": "28c2deb94f4cd787",
+      "dims": "2d(95, 4):float64",
+      "input_nbytes": 8188,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_28c2deb94f4cd787.npz"
+    },
+    {
+      "fingerprint": "6a9b27a4c268106a",
+      "dims": "2d(95, 4):float64",
+      "input_nbytes": 8188,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_6a9b27a4c268106a.npz"
+    },
+    {
+      "fingerprint": "1a27abb7a0dd05e2",
+      "dims": "2d(95, 4):float64",
+      "input_nbytes": 8188,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_1a27abb7a0dd05e2.npz"
+    },
+    {
+      "fingerprint": "22f2745d1781ce2d",
+      "dims": "2d(95, 4):float64",
+      "input_nbytes": 8188,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_22f2745d1781ce2d.npz"
+    },
+    {
+      "fingerprint": "64c3875fe673f8fe",
+      "dims": "2d(95, 4):float64",
+      "input_nbytes": 8188,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_64c3875fe673f8fe.npz"
+    },
+    {
+      "fingerprint": "cc14f6e1413183d7",
+      "dims": "2d(956, 4):float64",
+      "input_nbytes": 246908,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_cc14f6e1413183d7.npz"
+    },
+    {
+      "fingerprint": "4fc25af85b802fb6",
+      "dims": "2d(99, 4):float16",
+      "input_nbytes": 6412,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_4fc25af85b802fb6.npz"
+    },
+    {
+      "fingerprint": "ce1ff38116d7f01f",
+      "dims": "2d(99, 4):float16",
+      "input_nbytes": 6317,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_ce1ff38116d7f01f.npz"
+    },
+    {
+      "fingerprint": "f8cbd313260831b5",
+      "dims": "2d(99, 4):float16",
+      "input_nbytes": 6362,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_f8cbd313260831b5.npz"
+    },
+    {
+      "fingerprint": "7ea3c53be7b37f1e",
+      "dims": "2d(99, 4):float16",
+      "input_nbytes": 6362,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_7ea3c53be7b37f1e.npz"
+    },
+    {
+      "fingerprint": "c62a802772867577",
+      "dims": "2d(99, 4):float16",
+      "input_nbytes": 5992,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_c62a802772867577.npz"
+    },
+    {
+      "fingerprint": "9d10fa545d5b6a75",
+      "dims": "2d(99, 4):float16",
+      "input_nbytes": 6862,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_9d10fa545d5b6a75.npz"
+    },
+    {
+      "fingerprint": "464def773412d650",
+      "dims": "2d(99, 4):float16",
+      "input_nbytes": 6907,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_464def773412d650.npz"
+    },
+    {
+      "fingerprint": "0ac6a491d7b670eb",
+      "dims": "2d(99, 4):float16",
+      "input_nbytes": 6907,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_dtype_parity"
+      ],
+      "file": "case_0ac6a491d7b670eb.npz"
+    },
+    {
+      "fingerprint": "9f729bcc1aa9ff86",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8608,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_9f729bcc1aa9ff86.npz"
+    },
+    {
+      "fingerprint": "072fa813db13dbb3",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8578,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_072fa813db13dbb3.npz"
+    },
+    {
+      "fingerprint": "6b4b2e33284e87ae",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8578,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_6b4b2e33284e87ae.npz"
+    },
+    {
+      "fingerprint": "2636c8c634057fea",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8543,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_2636c8c634057fea.npz"
+    },
+    {
+      "fingerprint": "2d8247ea0b56ccac",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8543,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_2d8247ea0b56ccac.npz"
+    },
+    {
+      "fingerprint": "c03a6f928a58f1f9",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8543,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_c03a6f928a58f1f9.npz"
+    },
+    {
+      "fingerprint": "c24b314c3c4a87dc",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8543,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_truncates_fractional_child_ids_like_numba"
+      ],
+      "file": "case_c24b314c3c4a87dc.npz"
+    },
+    {
+      "fingerprint": "64ca219b18ecafad",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8633,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_64ca219b18ecafad.npz"
+    },
+    {
+      "fingerprint": "6bf6c178a4e3148d",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8518,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_6bf6c178a4e3148d.npz"
+    },
+    {
+      "fingerprint": "07b52b173faa1bb0",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8708,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_07b52b173faa1bb0.npz"
+    },
+    {
+      "fingerprint": "169bdaa056d1f9e0",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8293,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_169bdaa056d1f9e0.npz"
+    },
+    {
+      "fingerprint": "3d4d4557be76359e",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8673,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_3d4d4557be76359e.npz"
+    },
+    {
+      "fingerprint": "11f196783fdde5dd",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8703,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_11f196783fdde5dd.npz"
+    },
+    {
+      "fingerprint": "38a40cd3ecc9453c",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8298,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_38a40cd3ecc9453c.npz"
+    },
+    {
+      "fingerprint": "4e597d3df968765e",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8608,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_4e597d3df968765e.npz"
+    },
+    {
+      "fingerprint": "7d53e40abb27a068",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 9118,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_7d53e40abb27a068.npz"
+    },
+    {
+      "fingerprint": "8d9d32a902671d57",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 9673,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_8d9d32a902671d57.npz"
+    },
+    {
+      "fingerprint": "8225e5328d78c071",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8948,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_8225e5328d78c071.npz"
+    },
+    {
+      "fingerprint": "58ea3d86897b2f3a",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8788,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_58ea3d86897b2f3a.npz"
+    },
+    {
+      "fingerprint": "cac04643474fce9b",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8688,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_cac04643474fce9b.npz"
+    },
+    {
+      "fingerprint": "359a2853a2746618",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8938,
+      "calls": 3,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_359a2853a2746618.npz"
+    },
+    {
+      "fingerprint": "77fb7be5fba6228a",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 9188,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_77fb7be5fba6228a.npz"
+    },
+    {
+      "fingerprint": "ca02502c1bb59e47",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 9058,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_ca02502c1bb59e47.npz"
+    },
+    {
+      "fingerprint": "255f3aa37d49e71a",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 11843,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_255f3aa37d49e71a.npz"
+    },
+    {
+      "fingerprint": "8ba3f10e5ff9fa0f",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 10828,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_8ba3f10e5ff9fa0f.npz"
+    },
+    {
+      "fingerprint": "7fb701f694bde2b2",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8723,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_7fb701f694bde2b2.npz"
+    },
+    {
+      "fingerprint": "09cfe6c8bf53c2d5",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 9003,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_09cfe6c8bf53c2d5.npz"
+    },
+    {
+      "fingerprint": "1e4c267207f9c703",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8523,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_1e4c267207f9c703.npz"
+    },
+    {
+      "fingerprint": "ef10c30cb78f7f3e",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8793,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_ef10c30cb78f7f3e.npz"
+    },
+    {
+      "fingerprint": "4217d10af6178cd8",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8938,
+      "calls": 2,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_4217d10af6178cd8.npz"
+    },
+    {
+      "fingerprint": "76640ae9a8d3c7fd",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 9468,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_76640ae9a8d3c7fd.npz"
+    },
+    {
+      "fingerprint": "11987cee35a66b4b",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 9608,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_11987cee35a66b4b.npz"
+    },
+    {
+      "fingerprint": "c6555cc94097ad9e",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8483,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_c6555cc94097ad9e.npz"
+    },
+    {
+      "fingerprint": "34c8c8ab732226bd",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8768,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_34c8c8ab732226bd.npz"
+    },
+    {
+      "fingerprint": "38e41659e247b053",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8963,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_38e41659e247b053.npz"
+    },
+    {
+      "fingerprint": "d048bd1d8f275c1e",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8488,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_d048bd1d8f275c1e.npz"
+    },
+    {
+      "fingerprint": "88397e0f6697051d",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8753,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_88397e0f6697051d.npz"
+    },
+    {
+      "fingerprint": "3e47d7d10dd8f164",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 11143,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_3e47d7d10dd8f164.npz"
+    },
+    {
+      "fingerprint": "2c225666cbb5fee9",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 12203,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_2c225666cbb5fee9.npz"
+    },
+    {
+      "fingerprint": "2eec4ebdf08189a2",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 19993,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_2eec4ebdf08189a2.npz"
+    },
+    {
+      "fingerprint": "848590d300c13711",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 19178,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_848590d300c13711.npz"
+    },
+    {
+      "fingerprint": "cf4848bee48d34bc",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 10828,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_cf4848bee48d34bc.npz"
+    },
+    {
+      "fingerprint": "bf8a9206831a9391",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 8863,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_bf8a9206831a9391.npz"
+    },
+    {
+      "fingerprint": "ff7d79cf34b631aa",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 9033,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_ff7d79cf34b631aa.npz"
+    },
+    {
+      "fingerprint": "2b6fcad25979e604",
+      "dims": "2d(99, 4):float64",
+      "input_nbytes": 9778,
+      "calls": 1,
+      "tests": [
+        "bugs/data/make_masks/test_hypothesis_parity.py::test_make_masks_shape_zoo"
+      ],
+      "file": "case_2b6fcad25979e604.npz"
+    }
+  ],
+  "skipped_large_cases": []
+}
