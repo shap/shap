@@ -41,13 +41,19 @@ OUT=bugs/data/make_masks/fixtures BASELINE=master \
 `indices` all identical) on both the branch self-replay and the numba baseline
 replay on master @ f290d210.
 
-Re-confirmed 2026-08-30 after `_rec_fill_masks` was rewritten as a plain
-recursion (`detail::fill_node`/`fill_left_block`/`fill_right_block` with a
-non-recursive validating coordinator): 6/6 exact on a fresh capture and on
-these fixtures, and on the master baseline. Findings 2 and 3 below are now
-fixed — malformed clusterings raise `IndexError` from an upfront validation
-pass, and clusterings deeper than 30000 raise `ValueError` instead of
-overflowing the native stack (probed: chain M=50000 raises cleanly).
+Re-confirmed 2026-08-30 after the C++ was aligned to the literal numba
+mapping proposed in PR #5082 (direct recursion, no checks in the native
+code; the only deviation kept is `nb::shape<-1, 4>` on `cluster_matrix`
+instead of `ndim<2>`): 6/6 exact on these fixtures. Findings 2 and 3 below
+are fixed on the Python side instead — `_validate_clustering` in
+`make_masks` rejects out-of-range/forward-referencing children with
+`IndexError` and clusterings deeper than `_MAX_CLUSTERING_DEPTH` (30000)
+with `ValueError`. The raw bindings stay unguarded like the numba baseline:
+probed via `_rec_fill_masks` directly, a degenerate chain is fine at
+M=60000 and segfaults at M=80000, so the 30000 limit keeps a 2x margin.
+The hypothesis suite also gained large cases: 40 random linkages with
+M=20000..60000, a balanced tree with 2^19 leaves, and chains on both sides
+of the depth limit (~13s for the large property alone).
 
 ## Findings (review + probes)
 

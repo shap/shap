@@ -401,12 +401,36 @@ def _build_fixed_multi_output(
             averaged_outs[i] = averaged_outs[i - 1]
 
 
+# maximum clustering tree depth the native recursion in _rec_fill_masks can
+# handle before overflowing the C++ stack (probed with degenerate chains)
+_MAX_CLUSTERING_DEPTH = 30_000
+
+
+def _validate_clustering(cluster_matrix, M):
+    """Reject clusterings the unchecked native recursion cannot traverse safely."""
+    if M < 2:
+        return
+    children = cluster_matrix[:, :2]
+    # row k merges two of the nodes 0..M+k-1, so anything else (negative ids,
+    # ids past the node count, forward references) is not a clustering tree
+    if children.min() < 0 or (children.T >= np.arange(M, 2 * M - 1)).any():
+        raise IndexError("cluster_matrix row k must merge nodes with ids below M + k")
+    lefts = children[:, 0].astype(np.int64).tolist()
+    rights = children[:, 1].astype(np.int64).tolist()
+    heights = [1] * (2 * M - 1)
+    for k in range(M - 1):
+        heights[M + k] = 1 + max(heights[lefts[k]], heights[rights[k]])
+    if heights[2 * M - 2] > _MAX_CLUSTERING_DEPTH:
+        raise ValueError(f"cluster_matrix is too deep to fill recursively (depth {heights[2 * M - 2]})")
+
+
 def make_masks(cluster_matrix):
     """Builds a sparse CSR mask matrix from the given clustering.
 
     This function is optimized since trees for images can be very large.
     """
     M = cluster_matrix.shape[0] + 1
+    _validate_clustering(cluster_matrix, M)
     # np.int64 explicitly, not dtype=int: the _cutils bindings take int64 and
     # dtype=int is int32 on Windows
     indices_row_pos = np.zeros(2 * M - 1, dtype=np.int64)

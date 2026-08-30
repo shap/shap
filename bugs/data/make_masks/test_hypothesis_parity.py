@@ -17,6 +17,8 @@ Run with:
 ``uv pip install hypothesis``); the module skips cleanly without it.
 """
 
+import sys
+
 import numpy as np
 import pytest
 import scipy.sparse
@@ -25,7 +27,7 @@ pytest.importorskip("hypothesis")
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from shap.utils._masked_model import make_masks
+from shap.utils._masked_model import _MAX_CLUSTERING_DEPTH, make_masks
 
 # --- pure-Python port of the numba baseline (master @ f290d210) -------------
 
@@ -116,3 +118,86 @@ def test_make_masks_rejects_out_of_range_children(cluster_matrix, data):
     cluster_matrix[row, col] = data.draw(st.sampled_from([-1, 2 * M - 1, 2 * M + 5]))
     with pytest.raises(IndexError):
         make_masks(cluster_matrix)
+
+
+# --- larger matrices --------------------------------------------------------
+#
+# Hypothesis drawing every merge choice is too slow at this scale, so it draws
+# a seed and M instead and numpy builds the merge order. The reference needs a
+# raised interpreter recursion limit; dense comparison is skipped (a dense
+# (2M-1, M) matrix at M=20000 is ~800MB) — CSR internals plus the all-ones
+# data array pin the result completely.
+
+
+def _random_linkage(rng, M):
+    active = list(range(M))
+    sizes = [1] * (2 * M - 1)
+    rows = np.zeros((M - 1, 4))
+    for k in range(M - 1):
+        merged = []
+        for _ in range(2):
+            i = int(rng.integers(len(active)))
+            active[i], active[-1] = active[-1], active[i]
+            merged.append(active.pop())
+        sizes[M + k] = sizes[merged[0]] + sizes[merged[1]]
+        rows[k] = [merged[0], merged[1], float(rng.random()), sizes[M + k]]
+        active.append(M + k)
+    return rows
+
+
+def _chain_linkage(M):
+    rows = np.zeros((M - 1, 4))
+    rows[0] = [0, 1, 0.0, 2]
+    for k in range(1, M - 1):
+        rows[k] = [M + k - 1, k + 1, 0.0, k + 2]
+    return rows
+
+
+def _balanced_linkage(M):
+    """M must be a power of two: merge consecutive pairs level by level."""
+    rows = np.zeros((M - 1, 4))
+    level = list(range(M))
+    sizes = [1] * (2 * M - 1)
+    k = 0
+    while len(level) > 1:
+        next_level = []
+        for j in range(0, len(level), 2):
+            left, right = level[j], level[j + 1]
+            sizes[M + k] = sizes[left] + sizes[right]
+            rows[k] = [left, right, 0.0, sizes[M + k]]
+            next_level.append(M + k)
+            k += 1
+        level = next_level
+    return rows
+
+
+def _assert_csr_parity(cluster_matrix, recursion_limit=120_000):
+    got = make_masks(cluster_matrix)
+    old_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(recursion_limit)
+    try:
+        expected = make_masks_ref(cluster_matrix)
+    finally:
+        sys.setrecursionlimit(old_limit)
+    assert np.array_equal(got.indptr, expected.indptr)
+    assert np.array_equal(got.indices, expected.indices)
+    assert np.array_equal(got.data, expected.data)
+
+
+@settings(max_examples=40, deadline=None)
+@given(st.integers(0, 2**32 - 1), st.integers(20_000, 60_000))
+def test_make_masks_matches_numba_baseline_large(seed, M):
+    _assert_csr_parity(_random_linkage(np.random.default_rng(seed), M))
+
+
+def test_make_masks_huge_balanced_tree():
+    _assert_csr_parity(_balanced_linkage(2**19))
+
+
+def test_make_masks_deep_chain_below_depth_limit():
+    _assert_csr_parity(_chain_linkage(8_000))
+
+
+def test_make_masks_rejects_chain_past_depth_limit():
+    with pytest.raises(ValueError, match="too deep"):
+        make_masks(_chain_linkage(_MAX_CLUSTERING_DEPTH + 1))
