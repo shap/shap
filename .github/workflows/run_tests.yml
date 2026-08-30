@@ -170,6 +170,70 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  run_tests_nightly:
+    # Run the test suite against nightly / pre-release builds of select
+    # dependencies (currently LightGBM). See GH #5013.
+    name: run tests (nightly dependencies)
+    needs: prepare_data
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Install dependencies
+        # Do regular install NOT editable install: see GH #3020
+        run: |
+          uv pip install --system '.[test,plots]'
+      - name: Install nightly pre-release packages
+        run: |
+          # LightGBM nightly wheels (see GH #5013).
+          uv pip install --system --reinstall-package lightgbm --pre \
+            --extra-index-url https://pypi.anaconda.org/lightgbm-packages/simple \
+            --index-strategy unsafe-best-match \
+            lightgbm
+      - name: Show installed nightly versions
+        run: python -c "import lightgbm; print('lightgbm', lightgbm.__version__)"
+      - name: Download pre-cached datasets
+        uses: actions/download-artifact@v4
+        with:
+          name: test-data-cache
+          path: /tmp/test_data_cache
+      - name: Restore datasets to correct locations
+        shell: bash
+        run: |
+          # Restore sklearn data
+          cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+
+          # Restore shap cached data to the installed package location
+          SHAP_CACHE_DIR=$(python -P -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
+          mkdir -p "$SHAP_CACHE_DIR"
+          cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
+
+          echo "Sklearn data:"
+          ls -la ~/scikit_learn_data/ 2>/dev/null || echo "No sklearn data"
+          echo "Shap cache data:"
+          ls -la "$SHAP_CACHE_DIR" 2>/dev/null || echo "No shap data"
+      - name: Test with pytest
+        # Run the full suite: a nightly dependency can break anything that
+        # touches it, not just dedicated lightgbm tests. No coverage upload
+        # here to avoid affecting codecov.yml `after_n_builds`.
+        run: >
+          pytest --durations=20
+          --mpl-generate-summary=html --mpl-results-path=./mpl-results
+          --import-mode=append
+      - name: Upload mpl test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpl-results-nightly
+          path: mpl-results/
+          if-no-files-found: ignore
+
   test_oldest_supported_numpy:
     # Package is built with numpy 2.X
     # This job is recommended by https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-0-specific-advice
