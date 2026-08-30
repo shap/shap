@@ -1,9 +1,58 @@
 """This file contains tests for the Composite masker using only public API."""
 
+from typing import Any
+
 import numpy as np
 import pytest
 
 import shap
+from shap.utils._exceptions import InvalidMaskerError
+
+
+class MockClusteringMasker(shap.maskers.Masker):
+    def __init__(self):
+        self.clustering = np.array([[0, 1, 0.5, 2]])
+
+    def __call__(self, mask: Any, x: Any) -> Any:  # type: ignore[override]
+        return np.array([x])
+
+    def shape(self, x):
+        return (1, 1)
+
+
+class NoClusteringMasker(shap.maskers.Masker):
+    def __call__(self, mask: Any, x: Any) -> Any:  # type: ignore[override]
+        return np.array([x])
+
+    def shape(self, x):
+        return (1, 1)
+
+
+class TextMasker(shap.maskers.Masker):
+    def __init__(self):
+        self.text_data = True
+
+    def __call__(self, mask: Any, x: Any) -> Any:  # type: ignore[override]
+        pass
+
+
+class ImageMasker(shap.maskers.Masker):
+    def __init__(self):
+        self.image_data = True
+
+    def __call__(self, mask: Any, x: Any) -> Any:  # type: ignore[override]
+        pass
+
+
+class TransformMasker(shap.maskers.Masker):
+    def __call__(self, mask: Any, x: Any) -> Any:  # type: ignore[override]
+        pass
+
+    def shape(self, x):
+        return (1, 1)
+
+    def data_transform(self, x):
+        return [str(x) + "_transformed"]
 
 
 def test_composite_masker_init():
@@ -237,3 +286,87 @@ def test_composite_masker_with_kwargs():
 
     # arg_counts should handle kwargs correctly
     assert len(composite.arg_counts) == 2
+
+
+def test_composite_masker_incompatible_rows_shape():
+    """Test Composite masker shape method raises error for mismatched rows."""
+    data1 = np.random.randn(5, 2)
+    data2 = np.random.randn(10, 3)
+
+    masker1 = shap.maskers.Independent(data1)
+    masker2 = shap.maskers.Independent(data2)
+    composite = shap.maskers.Composite(masker1, masker2)
+
+    with pytest.raises(
+        AssertionError, match="All submaskers of a Composite masker must return the same number of rows!"
+    ):
+        composite.shape(data1[0], data2[0])
+
+
+def test_composite_masker_incompatible_rows_call():
+    """Test Composite masker __call__ raises error for mismatched rows."""
+    data1 = np.random.randn(5, 2)
+    data2 = np.random.randn(10, 3)
+
+    masker1 = shap.maskers.Independent(data1)
+    masker2 = shap.maskers.Independent(data2)
+    composite = shap.maskers.Composite(masker1, masker2)
+    mask = np.array([True, True, True, True, True])
+
+    with pytest.raises(
+        InvalidMaskerError,
+        match="The composite masker can only join together maskers with a compatible number of background rows!",
+    ):
+        composite(mask, data1[0], data2[0])
+
+
+def test_composite_masker_joint_clustering_exception():
+    """Test that joining two non-trivial clusterings raises NotImplementedError."""
+
+    masker1 = MockClusteringMasker()
+    masker2 = MockClusteringMasker()
+
+    composite = shap.maskers.Composite(masker1, masker2)
+
+    with pytest.raises(NotImplementedError, match="Joining two non-trivial clusterings is not yet implemented"):
+        _ = composite.clustering()  # type: ignore[operator, misc]
+
+
+def test_composite_masker_missing_clustering():
+    """Test that clustering attribute is absent if any submasker lacks it."""
+
+    masker1 = shap.maskers.Fixed()
+    masker2 = NoClusteringMasker()
+
+    composite = shap.maskers.Composite(masker1, masker2)
+    assert not hasattr(composite, "clustering")
+
+
+def test_composite_masker_text_and_image_flags_true():
+    """Test Composite masker sets text_data or image_data to True if any submasker has them."""
+
+    masker1 = shap.maskers.Fixed()
+    text_masker = TextMasker()
+    image_masker = ImageMasker()
+
+    composite_text = shap.maskers.Composite(masker1, text_masker)
+    assert composite_text.text_data is True
+    assert composite_text.image_data is False
+
+    composite_image = shap.maskers.Composite(masker1, image_masker)
+    assert composite_image.text_data is False
+    assert composite_image.image_data is True
+
+
+def test_composite_masker_actual_data_transform():
+    """Test Composite masker using submaskers that have a data_transform method."""
+
+    masker1 = TransformMasker()
+    masker2 = shap.maskers.Fixed()
+
+    composite = shap.maskers.Composite(masker1, masker2)
+    result = composite.data_transform("arg1", "arg2")
+
+    assert len(result) == 2
+    assert result[0] == "arg1_transformed"
+    assert result[1] == "arg2"
