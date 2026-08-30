@@ -93,6 +93,21 @@ def test_waterfall_plot_for_decision_tree_explanation():
     shap.plots.waterfall(explanation[0], show=False)
 
 
+def test_waterfall_ax_parameter(explainer):
+    """Test that waterfall accepts an explicit ax and draws into it without resizing the figure."""
+    explanation = explainer(explainer.data)
+    fig, axes = plt.subplots(1, 2, figsize=(16, 5))
+    returned_ax = shap.plots.waterfall(explanation[0], ax=axes[0], show=False)
+    shap.plots.waterfall(explanation[1], ax=axes[1], show=False)
+    # the returned axes should be the one we passed in
+    assert returned_ax is axes[0]
+    # the figure should not have been resized from the original (16, 5)
+    size = fig.get_size_inches()
+    assert size[0] == pytest.approx(16.0)
+    assert size[1] == pytest.approx(5.0)
+    plt.close(fig)
+
+
 def test_waterfall_plot_for_data_with_number_columns():
     # GH 4150
     model = KNeighborsClassifier()
