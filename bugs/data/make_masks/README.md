@@ -11,10 +11,13 @@ stale test data.
 - `fixtures/case_*.npz` + `fixtures/manifest.json` — 6 unique inputs (M = 2, 4,
   6, 12, 30, 300) with the CSR result each produced; provenance per case.
 - `fixtures/replay_*.json` — per-branch replay reports from the confirming run.
-- `test_hypothesis_parity.py` — property-based parity: 200 hypothesis-generated
-  linkage matrices (random merge orders, M = 2..128) each compared exactly
-  (dense + CSR internals) against a verbatim pure-Python port of the numba
-  baseline, plus 50 corrupted-clustering cases asserting `IndexError`. Needs
+- `test_hypothesis_parity.py` — property-based parity: 700+ hypothesis-generated
+  cases per run, each compared exactly (dense and/or CSR internals) against a
+  verbatim pure-Python port of the numba baseline. Covers sizes M = 2..60000
+  plus a fixed 2^19-leaf tree, shapes from balanced through caterpillars to
+  chains in both orientations, input dtypes (float64/32/16, int64/32/16,
+  uint32, object arrays mixing python ints and floats), fractional child ids,
+  nan/inf/huge distance columns, and malformed inputs that must raise. Needs
   `uv pip install hypothesis` (not a project dependency; skips without it).
 - `test_generate_cases.py` — synthetic clusterings fed to the capture run: the
   five production tests that reach `make_masks` all share one xgboost/adult
