@@ -476,12 +476,14 @@ class KernelExplainer(Explainer):
             samples_left = self.nsamples - self.nsamplesAdded
             log.debug(f"{samples_left = }")
             if num_full_subsets != num_subset_sizes:
+                # For even M, the middle subset size (M/2) can also be complement-paired.
+                num_random_paired_subset_sizes = num_paired_subset_sizes + int(self.M % 2 == 0)
                 remaining_weight_vector = copy.copy(weight_vector)
-                remaining_weight_vector[:num_paired_subset_sizes] /= 2  # because we draw two samples each below
+                remaining_weight_vector[:num_random_paired_subset_sizes] /= 2  # because we draw two samples each below
                 remaining_weight_vector = remaining_weight_vector[num_full_subsets:]
                 remaining_weight_vector /= np.sum(remaining_weight_vector)
                 log.info(f"{remaining_weight_vector = }")
-                log.info(f"{num_paired_subset_sizes = }")
+                log.info(f"{num_random_paired_subset_sizes = }")
                 ind_set = np.random.choice(len(remaining_weight_vector), 4 * samples_left, p=remaining_weight_vector)
                 ind_set_pos = 0
                 used_masks = {}
@@ -495,9 +497,7 @@ class KernelExplainer(Explainer):
                     # only add the sample if we have not seen it before, otherwise just
                     # increment a previous sample's weight
                     mask_tuple = tuple(mask)
-                    new_sample = False
                     if mask_tuple not in used_masks:
-                        new_sample = True
                         used_masks[mask_tuple] = self.nsamplesAdded
                         samples_left -= 1
                         self.addsample(instance.x, mask, 1.0)
@@ -505,17 +505,18 @@ class KernelExplainer(Explainer):
                         self.kernelWeights[used_masks[mask_tuple]] += 1.0
 
                     # add the compliment sample
-                    if samples_left > 0 and subset_size <= num_paired_subset_sizes:
+                    if samples_left > 0 and subset_size <= num_random_paired_subset_sizes:
                         mask[:] = np.abs(mask - 1)
+                        complement_mask_tuple = tuple(mask)
 
                         # only add the sample if we have not seen it before, otherwise just
                         # increment a previous sample's weight
-                        if new_sample:
+                        if complement_mask_tuple not in used_masks:
                             samples_left -= 1
+                            used_masks[complement_mask_tuple] = self.nsamplesAdded
                             self.addsample(instance.x, mask, 1.0)
                         else:
-                            # we know the compliment sample is the next one after the original sample, so + 1
-                            self.kernelWeights[used_masks[mask_tuple] + 1] += 1.0
+                            self.kernelWeights[used_masks[complement_mask_tuple]] += 1.0
 
                 # normalize the kernel weights for the random samples to equal the weight left after
                 # the fixed enumerated samples have been already counted
