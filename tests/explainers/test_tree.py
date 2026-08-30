@@ -626,6 +626,7 @@ def test_isolation_forest():
         iso.fit(X)
 
         explainer = shap.TreeExplainer(iso)
+        assert explainer.model.input_dtype is np.float32
 
         explanation = explainer(X)
         # check the properties of Explanation object
@@ -648,6 +649,7 @@ def test_pyod_isolation_forest():
         iso.fit(X)
 
         explainer = shap.TreeExplainer(iso)
+        assert explainer.model.input_dtype is np.float32
 
         explanation = explainer(X)
         # check the properties of Explanation object
