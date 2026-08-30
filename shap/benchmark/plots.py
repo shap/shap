@@ -424,7 +424,7 @@ def make_grid(scores, dataset, model, normalize=True, transform=True):
     if normalize:
         data = (data - data.min(0)) / (data.max(0) - data.min(0) + 1e-8)
 
-    # sort by performans
+    # sort by performance
     inds = np.argsort(-data.mean(1))
     row_keys = [row_keys[i] for i in inds]
     data = data[inds, :]
