@@ -3,10 +3,14 @@ from typing import Any
 
 import numpy as np
 import scipy.sparse
-from numba import njit  # type: ignore[attr-defined]
 
 from .. import links
-from .._cutils import _build_fixed_multi_output, _build_fixed_single_output
+from .._cutils import (  # type: ignore[attr-defined]
+    _build_fixed_multi_output,
+    _build_fixed_single_output,
+    _init_masks,
+    _rec_fill_masks,
+)
 
 
 class MaskedModel:
@@ -389,57 +393,49 @@ def _build_fixed_output(
     last_outs[:] = last_outs_work
 
 
+# maximum clustering tree depth the native recursion in _rec_fill_masks can
+# handle before overflowing the C++ stack (probed with degenerate chains)
+_MAX_CLUSTERING_DEPTH = 30_000
+
+
+def _validate_clustering(cluster_matrix, M):
+    """Reject clusterings the unchecked native recursion cannot traverse safely."""
+    if M < 2:
+        return
+    children = cluster_matrix[:, :2]
+    # row k merges two of the nodes 0..M+k-1, so anything else (negative ids,
+    # ids past the node count, forward references) is not a clustering tree
+    if children.min() < 0 or (children.T >= np.arange(M, 2 * M - 1)).any():
+        raise IndexError("cluster_matrix row k must merge nodes with ids below M + k")
+    lefts = children[:, 0].astype(np.int64).tolist()
+    rights = children[:, 1].astype(np.int64).tolist()
+    heights = [1] * (2 * M - 1)
+    for k in range(M - 1):
+        heights[M + k] = 1 + max(heights[lefts[k]], heights[rights[k]])
+    if heights[2 * M - 2] > _MAX_CLUSTERING_DEPTH:
+        raise ValueError(f"cluster_matrix is too deep to fill recursively (depth {heights[2 * M - 2]})")
+
+
 def make_masks(cluster_matrix):
     """Builds a sparse CSR mask matrix from the given clustering.
 
     This function is optimized since trees for images can be very large.
     """
     M = cluster_matrix.shape[0] + 1
-    indices_row_pos = np.zeros(2 * M - 1, dtype=int)
-    indptr = np.zeros(2 * M, dtype=int)
-    indices = np.zeros(int(np.sum(cluster_matrix[:, 3])) + M, dtype=int)
+    _validate_clustering(cluster_matrix, M)
+    # np.int64 explicitly, not dtype=int: the _cutils bindings take int64 and
+    # dtype=int is int32 on Windows
+    indices_row_pos = np.zeros(2 * M - 1, dtype=np.int64)
+    indptr = np.zeros(2 * M, dtype=np.int64)
+    indices = np.zeros(int(np.sum(cluster_matrix[:, 3])) + M, dtype=np.int64)
 
     # build an array of index lists in CSR format
+    cluster_matrix = cluster_matrix.astype(np.double)
     _init_masks(cluster_matrix, M, indices_row_pos, indptr)
-    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, cluster_matrix.shape[0] - 1 + M)
+    _rec_fill_masks(cluster_matrix, indices_row_pos, indices, M, cluster_matrix.shape[0] - 1 + M)
     mask_matrix = scipy.sparse.csr_matrix((np.ones(len(indices), dtype=bool), indices, indptr), shape=(2 * M - 1, M))
 
     return mask_matrix
-
-
-@njit
-def _init_masks(cluster_matrix, M, indices_row_pos, indptr):
-    pos = 0
-    for i in range(2 * M - 1):
-        if i < M:
-            pos += 1
-        else:
-            pos += int(cluster_matrix[i - M, 3])
-        indptr[i + 1] = pos
-        indices_row_pos[i] = indptr[i]
-
-
-@njit
-def _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, ind):
-    pos = indices_row_pos[ind]
-
-    if ind < M:
-        indices[pos] = ind
-        return
-
-    lind = int(cluster_matrix[ind - M, 0])
-    rind = int(cluster_matrix[ind - M, 1])
-    lind_size = int(cluster_matrix[lind - M, 3]) if lind >= M else 1
-    rind_size = int(cluster_matrix[rind - M, 3]) if rind >= M else 1
-
-    lpos = indices_row_pos[lind]
-    rpos = indices_row_pos[rind]
-
-    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, lind)
-    indices[pos : pos + lind_size] = indices[lpos : lpos + lind_size]
-
-    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, rind)
-    indices[pos + lind_size : pos + lind_size + rind_size] = indices[rpos : rpos + rind_size]
 
 
 def link_reweighting(p, link):

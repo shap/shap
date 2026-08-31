@@ -27,18 +27,22 @@ void update_single_output(
 
     const size_t sample_count = last_outs_view.shape(0);
     const size_t output_start = batch_positions_view(output_index);
+    const size_t output_end = batch_positions_view(output_index + 1);
 
     if (num_varying_rows_view(output_index) == static_cast<int64_t>(sample_count)) {
-        for (size_t row = 0; row < sample_count; ++row) {
-            last_outs_view(row) = outputs_view(output_start + row);
+        // last_outs[:] = outputs[batch_positions[i] : batch_positions[i + 1]]
+        for (size_t pos = output_start; pos < output_end; ++pos) {
+            last_outs_view(pos - output_start) = outputs_view(pos);
         }
     } else {
-        size_t output_offset = 0;
-        for (size_t row = 0; row < sample_count; ++row) {
-            if (varying_rows_view(output_index, row)) {
-                last_outs_view(row) = outputs_view(output_start + output_offset);
-                ++output_offset;
+        // last_outs[varying_rows[i]] = outputs[batch_positions[i] : batch_positions[i + 1]]
+        size_t row = 0;
+        for (size_t pos = output_start; pos < output_end; ++pos) {
+            while (!varying_rows_view(output_index, row)) {
+                ++row;
             }
+            last_outs_view(row) = outputs_view(pos);
+            ++row;
         }
     }
 }
@@ -123,22 +127,26 @@ void update_multi_output(
     const size_t sample_count = last_outs_view.shape(0);
     const size_t output_count = last_outs_view.shape(1);
     const size_t output_start = batch_positions_view(output_index);
+    const size_t output_end = batch_positions_view(output_index + 1);
 
     if (num_varying_rows_view(output_index) == static_cast<int64_t>(sample_count)) {
-        for (size_t row = 0; row < sample_count; ++row) {
+        // last_outs[:] = outputs[batch_positions[i] : batch_positions[i + 1]]
+        for (size_t pos = output_start; pos < output_end; ++pos) {
             for (size_t column = 0; column < output_count; ++column) {
-                last_outs_view(row, column) = outputs_view(output_start + row, column);
+                last_outs_view(pos - output_start, column) = outputs_view(pos, column);
             }
         }
     } else {
-        size_t output_offset = 0;
-        for (size_t row = 0; row < sample_count; ++row) {
-            if (varying_rows_view(output_index, row)) {
-                for (size_t column = 0; column < output_count; ++column) {
-                    last_outs_view(row, column) = outputs_view(output_start + output_offset, column);
-                }
-                ++output_offset;
+        // last_outs[varying_rows[i]] = outputs[batch_positions[i] : batch_positions[i + 1]]
+        size_t row = 0;
+        for (size_t pos = output_start; pos < output_end; ++pos) {
+            while (!varying_rows_view(output_index, row)) {
+                ++row;
             }
+            for (size_t column = 0; column < output_count; ++column) {
+                last_outs_view(row, column) = outputs_view(pos, column);
+            }
+            ++row;
         }
     }
 }

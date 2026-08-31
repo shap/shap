@@ -12,6 +12,26 @@ takes a link *function* argument — the harness gained pre-call snapshots,
 post-call mutated-array comparison, and callable-by-reference encoding for
 this migration.
 
+## Standalone capture/replay flow (lower_credit style)
+
+`run_parity.sh` in this directory runs the whole check with no branch switch
+and no rebuild: it captures 245+ hypothesis-generated calls
+(`test_parity_driver.py`, recorded by the `parity_capture_build_fixed_output`
+pytest plugin into `fixtures_hypothesis/`, gitignored), self-replays them on
+the current C++ build (must be bitwise), then replays them through the numba
+baseline extracted from `git show master:shap/utils/_masked_model.py` and
+jitted in isolation (`parity_replay_build_fixed_output.py`). Baseline results
+must be bitwise-exact or fall into the documented divergence classes below
+(`last-outs-linked`, `empty-first-carry`, `float32-rounding`); anything
+unclassified fails the run. Requires `hypothesis` and `numba` in the env.
+
+    ./bugs/data/build_fixed_output/run_parity.sh          # BASELINE=master
+    BASELINE=df974a19 ./bugs/data/build_fixed_output/run_parity.sh
+
+Latest run (2026-08-31): 245 unique cases; self-replay 245/245 exact;
+baseline replay 165 exact + 50 last-outs-linked + 43 float32-rounding +
+2 empty-first-carry, 0 broken.
+
 ## Files
 
 - `test_hypothesis_parity.py` — 380+ hypothesis cases per run (single/multi,
@@ -22,6 +42,13 @@ this migration.
   deterministic tests pinning each documented divergence below.
 - `fixtures/` (gitignored, 757MB, regenerable) — 13379 unique captured calls
   + manifest + replay reports.
+- `test_parity_driver.py`, `parity_capture_build_fixed_output.py`,
+  `parity_replay_build_fixed_output.py`, `run_parity.sh` — the standalone
+  capture/replay flow above; `fixtures_hypothesis/` (gitignored, regenerable)
+  holds its captured cases.
+- `test_link_runtime_warnings.py` — pins the link boundary behavior
+  (RuntimeWarning emission and the baseline's scalar `ZeroDivisionError`)
+  against the numba implementation extracted from git.
 
 ## How to run
 
@@ -104,6 +131,20 @@ of the numba code:
 Not restored: the baseline stored *raw* outputs in `last_outs` for weighted
 links (the branch stores linked values), and float16 results are written
 back (the baseline dropped them) — both pinned by tests as intentional.
+
+Link boundary behavior (probed 2026-09-01, pinned by
+`test_link_runtime_warnings.py` against the real numba baseline from git):
+
+- unweighted logit, batch mean exactly 0.0: baseline silently produced
+  `-inf` (numba scalar `np.log(0.0)`); the branch produces the bitwise-same
+  `-inf` but now emits `RuntimeWarning: divide by zero encountered in log`
+  from the unwrapped trailing link application.
+- unweighted logit, batch mean exactly 1.0: the baseline RAISED
+  `ZeroDivisionError` — inside `@njit` the scalar `x / (1 - x)` follows
+  Python semantics, not numpy's. The branch returns `+inf` (with the same
+  RuntimeWarning). The migration turned a crash into a value here.
+- weighted paths apply the link to arrays on both stacks (numpy semantics in
+  numba too): silent on both sides, `averaged_outs` bitwise identical.
 
 ## Review findings (probed on the pre-fix code; all fixed above)
 

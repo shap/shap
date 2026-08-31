@@ -1,0 +1,188 @@
+name: GPU Tests
+
+# Runs the real GPU test suite on an EC2 GPU runner. Gated behind the "CUDA CI"
+# label (or manual dispatch) since GPU instance time costs money and isn't
+# needed on every push.
+#
+# Uses the same label -> gate -> start-runner -> job -> stop-runner flow
+# proven out by gpu_smoke.yml. Once this workflow is confirmed working on
+# real hardware, gpu_smoke.yml can be deleted.
+
+on:
+  pull_request_target:
+    types: [labeled]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  gate:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'CUDA CI'
+    runs-on: ubuntu-latest
+    environment: gpu-ci
+    steps:
+      - run: echo "Approved for GPU CI"
+
+  # Pre-download and cache datasets on a cheap runner, same approach as run_tests.yml,
+  # so the (costly) GPU runner doesn't spend time/hit rate limits fetching them itself.
+  prepare_data:
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Install dependencies for dataset download
+        run: |
+          uv pip install --system . --group download-datasets
+      - name: Pre-download datasets
+        run: python -P tests/datasets_to_cache.py
+      - name: Create unified cache directory
+        run: |
+          mkdir -p /tmp/test_data_cache
+          cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
+          cp -r shap/cached_data /tmp/test_data_cache/ || true
+          ls -la /tmp/test_data_cache/
+      - name: Upload cached datasets
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-data-cache
+          path: /tmp/test_data_cache
+          retention-days: 1
+
+  start-runner:
+    needs: gate
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GPU_CI_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Start EC2 GPU runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@343a1b2ae682e681c3cec9a235d882da17ff04ef # v2, pinned 2026-08-09
+        with:
+          mode: start
+          github-token: ${{ secrets.GH_RUNNER_TOKEN }}
+          ec2-image-id: ${{ vars.EC2_IMAGE_ID }}
+          ec2-instance-type: g4dn.xlarge
+          subnet-id: ${{ vars.EC2_SUBNET_ID }}
+          security-group-id: ${{ vars.EC2_SECURITY_GROUP_ID }}
+          aws-resource-tags: >
+            [
+              {"Key": "Project", "Value": "shap-gpu-ci"},
+              {"Key": "RunId", "Value": "${{ github.run_id }}"}
+            ]
+
+  gpu-test:
+    needs:
+      - start-runner
+      - prepare_data
+    runs-on: ${{ needs.start-runner.outputs.label }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: GPU sanity check
+        run: nvidia-smi
+
+      - name: Ensure CUDA toolkit (nvcc) is present
+        run: |
+          if command -v nvcc >/dev/null 2>&1; then
+            echo "nvcc already present:"
+            nvcc --version
+          else
+            echo "nvcc not found, installing CUDA toolkit..."
+            distro=ubuntu2204
+            arch=x86_64
+            wget -q "https://developer.download.nvidia.com/compute/cuda/repos/${distro}/${arch}/cuda-keyring_1.1-1_all.deb"
+            sudo dpkg -i cuda-keyring_1.1-1_all.deb
+            sudo apt-get update -qq
+            sudo apt-get install -y cuda-toolkit-12-8
+            echo "/usr/local/cuda-12.8/bin" >> "$GITHUB_PATH"
+            echo "LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python 3.13 venv
+        run: |
+          uv python install 3.13
+          uv venv --python 3.13
+
+      - name: Install build toolchain
+        run: |
+          uv pip install "scikit-build-core>=0.10.0" "setuptools-scm>=8.0" "numpy>=2.0" "packaging>20.9" "nanobind>=2.0.0" cmake ninja
+
+      - name: Build shap with CUDA support
+        env:
+          SHAP_ENABLE_CUDA: "1"
+          # Skip `git describe` for the version lookup - on this runner's full
+          # clone (fetch-depth: 0, ~100 tags) it's slow enough to flake past
+          # vcs_versioning's hardcoded 40s subprocess timeout.
+          SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.0"
+        run: uv pip install -e . -v --no-build-isolation
+
+      - name: Install test dependencies
+        run: uv pip install pytest pytest-mpl pytest-cov xgboost lightgbm matplotlib ipython
+
+      - name: Download pre-cached datasets
+        uses: actions/download-artifact@v4
+        with:
+          name: test-data-cache
+          path: /tmp/test_data_cache
+
+      - name: Restore datasets to correct locations
+        run: |
+          # Restore sklearn data
+          cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+
+          # Restore shap cached data to the installed package location
+          SHAP_CACHE_DIR=$(uv run python -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
+          mkdir -p "$SHAP_CACHE_DIR"
+          cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
+
+          echo "Sklearn data:"
+          ls -la ~/scikit_learn_data/ 2>/dev/null || echo "No sklearn data"
+          echo "Shap cache data:"
+          ls -la "$SHAP_CACHE_DIR" 2>/dev/null || echo "No shap data"
+
+      - name: Run GPU tests
+        run: uv run pytest tests/explainers/test_gpu_tree.py -v
+
+  stop-runner:
+    if: ${{ always() && needs.start-runner.result == 'success' }}
+    needs:
+      - start-runner
+      - gpu-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GPU_CI_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Stop EC2 GPU runner
+        uses: machulav/ec2-github-runner@343a1b2ae682e681c3cec9a235d882da17ff04ef # v2, pinned 2026-08-09
+        with:
+          mode: stop
+          github-token: ${{ secrets.GH_RUNNER_TOKEN }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}

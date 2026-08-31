@@ -3,6 +3,8 @@
 #include "grey_code_utils.h"
 #include "kernel_explainer_utils.h"
 #include "masked_model_utils.h"
+#include "make_masks_utils.h"
+#include "partition_explainer_utils.h"
 #include "tabular_utils.h"
 #include "clustering_utils.h"
 
@@ -10,6 +12,8 @@ namespace nb = nanobind;
 
 NB_MODULE(_cutils, m)
 {
+    m.def("lower_credit", &partition::lower_credit_1d, "i"_a, "value"_a, "M"_a, "values"_a.noconvert(), "clustering"_a, "Lower credit for the partition explainer algorithm");
+    m.def("lower_credit", &partition::lower_credit_2d, "i"_a, "value"_a, "M"_a, "values"_a.noconvert(), "clustering"_a, "Lower credit for the partition explainer algorithm");
     m.def("compute_grey_code_row_values", &compute_grey_code_row_values_1d, "row_values"_a.noconvert(), "mask"_a.noconvert(), "inds"_a, "outputs"_a, "shapley_coeff"_a, "extended_delta_indexes"_a, "noop_code"_a, "Compute the row values for the grey code algorithm in 1D");
     m.def("compute_grey_code_row_values", &compute_grey_code_row_values_2d, "row_values"_a.noconvert(), "mask"_a.noconvert(), "inds"_a, "outputs"_a, "shapley_coeff"_a, "extended_delta_indexes"_a, "noop_code"_a, "Compute the row values for the grey code algorithm in 2D");
     m.def("compute_grey_code_row_values_st", &compute_grey_code_row_values_st_1d, "row_values"_a.noconvert(), "mask"_a.noconvert(), "inds"_a, "outputs"_a, "shapley_coeff"_a, "extended_delta_indexes"_a, "noop_code"_a, "Compute Shapley-Taylor row values for the grey code algorithm in 1D");
@@ -23,6 +27,8 @@ NB_MODULE(_cutils, m)
     m.def("_build_fixed_multi_output", &masked_model::build_fixed_multi_output<float>, "averaged_outs"_a.noconvert(), "last_outs"_a.noconvert(), "outputs"_a.noconvert(), "batch_positions"_a.noconvert(), "varying_rows"_a.noconvert(), "num_varying_rows"_a.noconvert(), "Average fixed-size masked-model outputs per batch, carrying rows through last_outs");
     m.def("_build_fixed_multi_output", &masked_model::build_fixed_multi_output_weighted<double>, "averaged_outs"_a.noconvert(), "last_outs"_a.noconvert(), "outputs"_a.noconvert(), "batch_positions"_a.noconvert(), "varying_rows"_a.noconvert(), "num_varying_rows"_a.noconvert(), "linearizing_weights"_a.noconvert(), "Average fixed-size masked-model outputs per batch with linearizing weights, carrying rows through last_outs");
     m.def("_build_fixed_multi_output", &masked_model::build_fixed_multi_output_weighted<float>, "averaged_outs"_a.noconvert(), "last_outs"_a.noconvert(), "outputs"_a.noconvert(), "batch_positions"_a.noconvert(), "varying_rows"_a.noconvert(), "num_varying_rows"_a.noconvert(), "linearizing_weights"_a.noconvert(), "Average fixed-size masked-model outputs per batch with linearizing weights, carrying rows through last_outs");
+    m.def("_init_masks", &masks::init_masks, "cluster_matrix"_a.noconvert(), "M"_a, "indices_row_pos"_a.noconvert(), "indptr"_a.noconvert(), "Initialize the masks for the kernel explainer algorithm");
+    m.def("_rec_fill_masks", &masks::rec_fill_masks, "cluster_matrix"_a.noconvert(), "indices_row_pos"_a.noconvert(), "indices"_a.noconvert(), "M"_a, "ind"_a, "Fill the masks for the partition explainer algorithm");
     m.def("_delta_masking", &tabular::delta_masking<double>, "masks"_a.noconvert(), "x"_a.noconvert(), "curr_delta_inds"_a.noconvert(), "varying_rows_out"_a.noconvert(), "masked_inputs_tmp"_a.noconvert(), "last_mask"_a.noconvert(), "data"_a.noconvert(), "variants"_a.noconvert(), "masked_inputs_out"_a.noconvert(), "noop_code"_a, "Apply delta masks to tabular data");
     m.def("_delta_masking", &tabular::delta_masking<float>, "masks"_a.noconvert(), "x"_a.noconvert(), "curr_delta_inds"_a.noconvert(), "varying_rows_out"_a.noconvert(), "masked_inputs_tmp"_a.noconvert(), "last_mask"_a.noconvert(), "data"_a.noconvert(), "variants"_a.noconvert(), "masked_inputs_out"_a.noconvert(), "noop_code"_a, "Apply delta masks to tabular data");
     m.def("_delta_masking", &tabular::delta_masking<int64_t>, "masks"_a.noconvert(), "x"_a.noconvert(), "curr_delta_inds"_a.noconvert(), "varying_rows_out"_a.noconvert(), "masked_inputs_tmp"_a.noconvert(), "last_mask"_a.noconvert(), "data"_a.noconvert(), "variants"_a.noconvert(), "masked_inputs_out"_a.noconvert(), "noop_code"_a, "Apply delta masks to tabular data");
