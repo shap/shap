@@ -339,6 +339,13 @@ build-verbosity = 2
 # Change import-mode to ensure we test against installed package, not local project
 test-command = "pytest -v {project}/tests --import-mode=append"
 test-groups = ["test-core", "plots"]
+# scikit-learn ships no cp315 or musllinux wheels yet; its sdist build pins
+# scipy<1.18, which has no wheels there either and needs Fortran+OpenBLAS.
+# Un-skip when the upstream wheels ship:
+#   https://github.com/scikit-learn/scikit-learn/issues/34652 (Python 3.15 support)
+#   https://github.com/pandas-dev/pandas/issues/66740 (Python 3.15 tracker)
+#   https://github.com/scikit-learn/scikit-learn/issues/27004 (musllinux wheels)
+test-skip = "cp315* *-musllinux*"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
