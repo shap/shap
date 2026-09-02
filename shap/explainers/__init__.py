@@ -18,9 +18,7 @@ _TREE_BACKEND_PRIORITY = ["cuda", "rocm"]
 def _load_tree_backend(name: str):
     backends = {ep.name: ep for ep in entry_points(group="shap.tree_backends")}
     if not backends:
-        raise ImportError(
-            f"{name} requires an accelerator backend to be installed, e.g. `pip install shap[cuda]`."
-        )
+        raise ImportError(f"{name} requires an accelerator backend to be installed, e.g. `pip install shap[cuda]`.")
     chosen = next((b for b in _TREE_BACKEND_PRIORITY if b in backends), next(iter(backends)))
     return backends[chosen].load()
 
