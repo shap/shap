@@ -131,15 +131,11 @@ cache-keys = [
   { file = "CMakeLists.txt" },
 ]
 
-<<<<<<< HEAD
 [tool.uv.workspace]
 members = ["backends/*"]
 
 [tool.uv.sources]
 shap-cuda = {workspace = true}
-=======
-
->>>>>>> e6b6b36fdf4a0ad5d8de8327cc61c8e4d2eceb9c
 
 [tool.mypy]
 check_untyped_defs = true
