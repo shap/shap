@@ -351,8 +351,7 @@ test-skip = "cp315* *-musllinux*"
 archs = ["x86_64", "aarch64"]
 
 [tool.cibuildwheel.windows]
-# TODO: Should we support Windows ARM64 too?
-archs = ["AMD64"]
+archs = ["AMD64", "ARM64"]
 
 [tool.cibuildwheel.macos]
 # TODO: Should we build universal2 wheels for macOS to reduce wheel count?
