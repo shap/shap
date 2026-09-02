@@ -537,7 +537,8 @@ class _PyTorchGradient(Explainer):
         else:
             self.gradients = [None for _ in range(outputs.shape[1])]
 
-    def gradient(self, idx: int, inputs: list[Any]) -> list[npt.NDArray[Any]]:
+    # todo: idx could also be tensor but we haven't imported this globally
+    def gradient(self, idx: int | Any, inputs: list[Any]) -> list[npt.NDArray[Any]]:
         import torch
 
         self.model.zero_grad()

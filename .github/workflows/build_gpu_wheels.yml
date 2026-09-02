@@ -75,7 +75,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Build CUDA wheel
-        uses: pypa/cibuildwheel@v3.2.1
+        uses: pypa/cibuildwheel@v4.2.0
         env:
           # Only manylinux x86_64 - CUDA has no aarch64/macOS/Windows target here.
           CIBW_BUILD: "cp3*-manylinux_x86_64"
