@@ -4,6 +4,11 @@ on:
   release:
     types: [published]
 
+  # Nightly wheels, uploaded to https://anaconda.org/scientific-python-nightly-wheels/shap
+  # following SPEC 4: https://scientific-python.org/specs/spec-0004/
+  schedule:
+    - cron: "12 4 * * *"
+
   # Enable manual run
   workflow_dispatch:
 
@@ -116,7 +121,7 @@ jobs:
           ))
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.2.1
+        uses: pypa/cibuildwheel@v4.2.0
         env:
           CIBW_ARCHS_LINUX: ${{ contains(matrix.os, '-arm') && 'aarch64' || 'x86_64' }}
           CIBW_ARCHS_MACOS: ${{ matrix.os == 'macos-14' && 'arm64' || 'x86_64' }}
@@ -186,6 +191,7 @@ jobs:
     name: Publish wheels to TestPyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
     environment:
       name: testpypi
       url: https://test.pypi.org/p/shap
@@ -234,3 +240,27 @@ jobs:
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  upload_nightly:
+    name: Upload nightly wheels to Anaconda.org
+    needs: [build_wheels]
+    runs-on: ubuntu-latest
+    # Only upload nightlies from the scheduled run on the main repository, never from forks
+    if: github.event_name == 'schedule' && github.repository == 'shap/shap'
+    steps:
+      # The upload action only handles *.whl, so the sdist is not downloaded here
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: bdist_files_*
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la dist
+
+      # Pinned to the SHA of release 0.6.4, as recommended by the action's README
+      - name: Upload wheels to scientific-python-nightly-wheels
+        uses: scientific-python/upload-nightly-action@e76cfec8a4611fd02808a801b0ff5a7d7c1b2d99
+        with:
+          artifacts_path: dist
+          anaconda_nightly_upload_token: ${{ secrets.SHAP_NIGHTLY_BUILD_UPLOAD_TOKEN }}
