@@ -13,8 +13,47 @@ on:
   workflow_dispatch:
 
 jobs:
+  # For the nightly schedule, skip the whole build if master has not changed since
+  # the last successful nightly run. Release and manual runs always build.
+  check_changes:
+    name: Check for new commits
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+    steps:
+      - name: Compare HEAD with last successful nightly run
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Not a scheduled run, building."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          last_sha=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow "${{ github.workflow }}" \
+            --event schedule \
+            --status success \
+            --branch "${{ github.ref_name }}" \
+            --limit 1 \
+            --json headSha \
+            --jq '.[0].headSha // ""')
+          echo "Current HEAD:          ${{ github.sha }}"
+          echo "Last successful build: ${last_sha:-<none>}"
+          if [ "$last_sha" = "${{ github.sha }}" ]; then
+            echo "No new commits since the last successful nightly build, skipping."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
   # we need this test since we run into 403 errors on MacOS, see GH #4179
   prepare_data:
+    needs: [check_changes]
+    if: needs.check_changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -107,6 +146,8 @@ jobs:
 
   build_sdist:
     name: Build source distribution
+    needs: [check_changes]
+    if: needs.check_changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     steps:
       # Ensure all git tags are present so version number is extracted.
