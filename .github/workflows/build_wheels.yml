@@ -13,6 +13,33 @@ on:
   workflow_dispatch:
 
 jobs:
+  # shap-cuda (backends/shap-cuda) reaches directly into shap-core internals,
+  # so the two must always be installed as an exact matching pair. Computed
+  # once here and pinned into the "cuda" extra below, rather than left
+  # unconstrained, so `pip install shap[cuda]==X.Y.Z` can't silently resolve
+  # to a shap-cuda from a different release.
+  compute_version:
+    name: Compute release version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git fetch --tags
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Compute version
+        id: version
+        run: |
+          VERSION=$(uv run --no-project --with setuptools-scm python -m setuptools_scm)
+          if [ -z "$VERSION" ]; then
+            echo "::error::setuptools_scm produced an empty version"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
   # For the nightly schedule, skip the whole build if master has not changed since
   # the last successful nightly run. Release and manual runs always build.
   check_changes:
@@ -50,6 +77,7 @@ jobs:
             echo "should_build=true" >> "$GITHUB_OUTPUT"
           fi
 
+
   # we need this test since we run into 403 errors on MacOS, see GH #4179
   prepare_data:
     needs: [check_changes]
@@ -84,7 +112,7 @@ jobs:
 
   build_wheels:
     name: Build ${{ matrix.os }} wheels
-    needs: [prepare_data]
+    needs: [prepare_data, compute_version]
     strategy:
       fail-fast: false
       matrix:
@@ -122,6 +150,16 @@ jobs:
       - name: "Install uv"
         uses: astral-sh/setup-uv@v7
 
+      - name: Pin the cuda extra to this exact release
+        shell: python
+        run: |
+          import pathlib
+          path = pathlib.Path("pyproject.toml")
+          path.write_text(path.read_text().replace(
+              'cuda = ["shap-cuda"]',
+              'cuda = ["shap-cuda==${{ needs.compute_version.outputs.version }}"]',
+          ))
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v4.2.0
         env:
@@ -146,7 +184,7 @@ jobs:
 
   build_sdist:
     name: Build source distribution
-    needs: [check_changes]
+    needs: [check_changes, compute_version]
     if: needs.check_changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -169,6 +207,16 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
+
+      - name: Pin the cuda extra to this exact release
+        shell: python
+        run: |
+          import pathlib
+          path = pathlib.Path("pyproject.toml")
+          path.write_text(path.read_text().replace(
+              'cuda = ["shap-cuda"]',
+              'cuda = ["shap-cuda==${{ needs.compute_version.outputs.version }}"]',
+          ))
 
       - name: Build sdist (pep517)
         run: |
