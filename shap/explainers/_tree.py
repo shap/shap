@@ -2693,9 +2693,9 @@ class TreeliteModelLoader:
         is_internal = ~is_leaf
 
         # Normalise to SHAP convention (<=): operators that invert left/right
-        # cmp=3 (>) and cmp=4 (>=) mean cleft is taken when feature > threshold,
+        # cmp=4 (>) and cmp=5 (>=) mean cleft is taken when feature > threshold,
         # which is SHAP's right direction — so we swap cleft and cright.
-        swap_mask = is_internal & ((cmp == 3) | (cmp == 4))
+        swap_mask = is_internal & ((cmp == 4) | (cmp == 5))
         children_left = np.where(swap_mask, cright, cleft).astype(np.int32)
         children_right = np.where(swap_mask, cleft, cright).astype(np.int32)
 
