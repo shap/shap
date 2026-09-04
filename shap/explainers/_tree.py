@@ -2660,10 +2660,10 @@ class TreeliteModelLoader:
         when the split condition is TRUE.  SHAP always uses ``feature <= threshold``
         to mean *go left*, so we must normalise any other operator:
 
-        * cmp=1 (<)  : cleft is the left child; shift threshold down by 1 ULP
-        * cmp=2 (<=) : cleft is the left child; no adjustment needed
-        * cmp=3 (>)  : condition is inverted → swap cleft/cright for SHAP
-        * cmp=4 (>=) : swap cleft/cright and shift threshold up by 1 ULP
+        * cmp=2 (<)  : cleft is the left child; shift threshold down by 1 ULP
+        * cmp=3 (<=) : cleft is the left child; no adjustment needed
+        * cmp=4 (>)  : condition is inverted → swap cleft/cright for SHAP
+        * cmp=5 (>=) : swap cleft/cright and shift threshold up by 1 ULP
         """
         ta = treelite_model.get_tree_accessor(tree_id)
 
