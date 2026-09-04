@@ -2700,24 +2700,15 @@ class TreeliteModelLoader:
         children_right = np.where(swap_mask, cleft, cright).astype(np.int32)
 
         # Adjust threshold for strict inequalities so SHAP's <= is equivalent
-        # cmp=1 (<)  → threshold = nextafter(threshold, -inf)  (left when feature < T)
-        # cmp=4 (>=) → threshold = nextafter(threshold, +inf)  (left when feature >= T, after swap)
+        # cmp=2 (<)  → threshold = nextafter(threshold, -inf)  (left when feature < T)
+        # cmp=5 (>=) → threshold = nextafter(threshold, +inf)  (left when feature >= T, after swap)
         threshold = np.where(
-            is_internal & (cmp == 1),
+            is_internal & (cmp == 2),
             np.nextafter(threshold, -np.inf),
             threshold,
         )
-        # cmp=2 (<=) with float32 source (XGBoost): treelite keeps the original
-        # threshold but XGBoost's real operator is <. Apply the same 1-ULP shift
-        # that SHAP's XGBoost loader uses so thresholds match for parity.
-        if threshold_is_float32:
-            threshold = np.where(
-                is_internal & (cmp == 2),
-                np.nextafter(threshold_raw, -np.float32(np.inf)).astype(np.float64),
-                threshold,
-            )
         threshold = np.where(
-            is_internal & (cmp == 4),
+            is_internal & (cmp == 5),
             np.nextafter(threshold, np.inf),
             threshold,
         )
