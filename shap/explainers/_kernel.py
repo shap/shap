@@ -550,9 +550,18 @@ class KernelExplainer(Explainer):
                 return 0 if np.allclose(i, j, equal_nan=True) else 1
             if np.issubdtype(i.dtype, np.bool_) and np.issubdtype(j.dtype, np.bool_):
                 return 0 if np.allclose(i, j, equal_nan=True) else 1
+            if np.issubdtype(i.dtype, np.object_) or np.issubdtype(j.dtype, np.object_):
+                # object arrays may hold arrays as elements (GH #3899), where `==`
+                # yields elementwise arrays whose truth value is ambiguous
+                i_b, j_b = np.broadcast_arrays(i, j)
+                return 0 if all(np.array_equal(a, b) for a, b in zip(i_b.flat, j_b.flat)) else 1
             return 0 if all(i == j) else 1
         else:
-            return 0 if i == j else 1
+            try:
+                return 0 if i == j else 1
+            except ValueError:
+                # arrays: the truth value of an elementwise comparison is ambiguous
+                return 0 if np.array_equal(i, j) else 1
 
     def varying_groups(self, x: npt.NDArray[Any] | scipy.sparse.spmatrix) -> npt.NDArray[np.intp]:
         if not scipy.sparse.issparse(x):
