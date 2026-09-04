@@ -3033,6 +3033,51 @@ def test_treelite_regressor():
     assert sv.values.shape == (len(X), X.shape[1])
 
 
+def test_treelite_xgboost_float32_threshold_precision():
+    """Converting float32 split thresholds must preserve SHAP values at the boundary."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    xgboost = pytest.importorskip("xgboost")
+
+    # A single split at x < 4, with leaf values 0 and 1 and equal sample weights.
+    X = np.array([[3.0], [4.0]], dtype=np.float32)
+    model = xgboost.train(
+        {
+            "objective": "reg:squarederror",
+            "max_depth": 1,
+            "eta": 1,
+            "min_child_weight": 0,
+            "lambda": 0,
+            "base_score": 0,
+            "tree_method": "hist",
+        },
+        xgboost.DMatrix(X, label=[0.0, 1.0]),
+        num_boost_round=1,
+    )
+    tl_model = treelite.frontend.from_xgboost(model)
+    thresholds = tl_model.get_tree_accessor(0).get_field("threshold")
+    assert thresholds.dtype == np.float32
+    assert thresholds[0] == 4.0
+
+    # SHAP implements < as <= nextafter(threshold, -inf). Moving one float32
+    # step before converting to float64 gives a different boundary than moving
+    # one float64 step afterwards. This input lies strictly between the two.
+    lower = float(np.nextafter(np.float32(4.0), np.float32(-np.inf)))
+    upper = np.nextafter(np.float64(4.0), -np.inf)
+    midpoint = (lower + 4.0) / 2
+    assert lower < midpoint < upper
+    assert np.float32(midpoint) == 4.0
+    X_test = np.array([[3.0], [midpoint], [4.0]], dtype=np.float64)
+
+    expected = shap.TreeExplainer(model)(X_test)
+    actual = shap.TreeExplainer(tl_model)(X_test)
+
+    # XGBoost rounds the midpoint to 4 in float32 and takes the right leaf.
+    np.testing.assert_array_equal(model.predict(xgboost.DMatrix(X_test)), [0.0, 1.0, 1.0])
+    np.testing.assert_allclose(expected.values, [[-0.5], [0.5], [0.5]])
+    np.testing.assert_allclose(actual.base_values, expected.base_values)
+    np.testing.assert_allclose(actual.values, expected.values)
+
+
 def test_treelite_binary_classifier():
     treelite = pytest.importorskip("treelite")
     xgboost = pytest.importorskip("xgboost")
