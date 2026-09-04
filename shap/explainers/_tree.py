@@ -2663,7 +2663,7 @@ class TreeliteModelLoader:
         * cmp=2 (<)  : cleft is the left child; shift threshold down by 1 ULP
         * cmp=3 (<=) : cleft is the left child; no adjustment needed
         * cmp=4 (>)  : condition is inverted → swap cleft/cright for SHAP
-        * cmp=5 (>=) : swap cleft/cright and shift threshold up by 1 ULP
+        * cmp=5 (>=) : swap cleft/cright and shift threshold down by 1 ULP
         """
         ta = treelite_model.get_tree_accessor(tree_id)
 
@@ -2674,9 +2674,7 @@ class TreeliteModelLoader:
         split_index = ta.get_field("split_index").astype(np.int32)
         default_left = ta.get_field("default_left")
         leaf_value = ta.get_field("leaf_value").astype(np.float64)
-        threshold_raw = ta.get_field("threshold")
-        threshold_is_float32 = threshold_raw.dtype == np.float32
-        threshold = threshold_raw.astype(np.float64)
+        threshold = ta.get_field("threshold").copy()
         cmp = ta.get_field("cmp")
 
         # Node sample weight: prefer sum_hess (XGBoost), fall back to data_count (LightGBM)
@@ -2693,25 +2691,21 @@ class TreeliteModelLoader:
         is_internal = ~is_leaf
 
         # Normalise to SHAP convention (<=): operators that invert left/right
-        # cmp=4 (>) and cmp=5 (>=) mean cleft is taken when feature > threshold,
-        # which is SHAP's right direction — so we swap cleft and cright.
+        # cmp=4 (>) and cmp=5 (>=) send larger values to cleft,
+        # so we swap cleft and cright for SHAP.
         swap_mask = is_internal & ((cmp == 4) | (cmp == 5))
         children_left = np.where(swap_mask, cright, cleft).astype(np.int32)
         children_right = np.where(swap_mask, cleft, cright).astype(np.int32)
 
-        # Adjust threshold for strict inequalities so SHAP's <= is equivalent
-        # cmp=2 (<)  → threshold = nextafter(threshold, -inf)  (left when feature < T)
-        # cmp=5 (>=) → threshold = nextafter(threshold, +inf)  (left when feature >= T, after swap)
-        threshold = np.where(
-            is_internal & (cmp == 2),
-            np.nextafter(threshold, -np.inf),
-            threshold,
+        # Both < and >= (after swapping children) require SHAP's left branch
+        # to represent feature < threshold. Shift down in the original dtype
+        # before converting to float64, matching the source threshold precision.
+        shift_down = is_internal & ((cmp == 2) | (cmp == 5))
+        threshold[shift_down] = np.nextafter(
+            threshold[shift_down],
+            np.array(-np.inf, dtype=threshold.dtype),
         )
-        threshold = np.where(
-            is_internal & (cmp == 5),
-            np.nextafter(threshold, np.inf),
-            threshold,
-        )
+        threshold = threshold.astype(np.float64)
 
         # children_default: swapping cleft/cright also swaps the default direction
         effective_default_left = np.logical_xor(default_left.astype(bool), swap_mask)
