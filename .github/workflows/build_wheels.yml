@@ -4,12 +4,56 @@ on:
   release:
     types: [published]
 
+  # Nightly wheels, uploaded to https://anaconda.org/scientific-python-nightly-wheels/shap
+  # following SPEC 4: https://scientific-python.org/specs/spec-0004/
+  schedule:
+    - cron: "12 4 * * *"
+
   # Enable manual run
   workflow_dispatch:
 
 jobs:
+  # For the nightly schedule, skip the whole build if master has not changed since
+  # the last successful nightly run. Release and manual runs always build.
+  check_changes:
+    name: Check for new commits
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+    steps:
+      - name: Compare HEAD with last successful nightly run
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Not a scheduled run, building."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          last_sha=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow "${{ github.workflow }}" \
+            --event schedule \
+            --status success \
+            --branch "${{ github.ref_name }}" \
+            --limit 1 \
+            --json headSha \
+            --jq '.[0].headSha // ""')
+          echo "Current HEAD:          ${{ github.sha }}"
+          echo "Last successful build: ${last_sha:-<none>}"
+          if [ "$last_sha" = "${{ github.sha }}" ]; then
+            echo "No new commits since the last successful nightly build, skipping."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
   # we need this test since we run into 403 errors on MacOS, see GH #4179
   prepare_data:
+    needs: [check_changes]
+    if: needs.check_changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -79,7 +123,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.2.1
+        uses: pypa/cibuildwheel@v4.2.0
         env:
           CIBW_ARCHS_LINUX: ${{ contains(matrix.os, '-arm') && 'aarch64' || 'x86_64' }}
           CIBW_ARCHS_MACOS: ${{ matrix.os == 'macos-14' && 'arm64' || 'x86_64' }}
@@ -102,6 +146,8 @@ jobs:
 
   build_sdist:
     name: Build source distribution
+    needs: [check_changes]
+    if: needs.check_changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     steps:
       # Ensure all git tags are present so version number is extracted.
@@ -138,6 +184,7 @@ jobs:
     name: Publish wheels to TestPyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
     environment:
       name: testpypi
       url: https://test.pypi.org/p/shap
@@ -186,3 +233,27 @@ jobs:
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  upload_nightly:
+    name: Upload nightly wheels to Anaconda.org
+    needs: [build_wheels]
+    runs-on: ubuntu-latest
+    # Only upload nightlies from the scheduled run on the main repository, never from forks
+    if: github.event_name == 'schedule' && github.repository == 'shap/shap'
+    steps:
+      # The upload action only handles *.whl, so the sdist is not downloaded here
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: bdist_files_*
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la dist
+
+      # Pinned to the SHA of release 0.6.4, as recommended by the action's README
+      - name: Upload wheels to scientific-python-nightly-wheels
+        uses: scientific-python/upload-nightly-action@e76cfec8a4611fd02808a801b0ff5a7d7c1b2d99
+        with:
+          artifacts_path: dist
+          anaconda_nightly_upload_token: ${{ secrets.SHAP_NIGHTLY_BUILD_UPLOAD_TOKEN }}

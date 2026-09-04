@@ -87,14 +87,6 @@ class TFDeep(Explainer):
             have a value of False during predictions (and hence explanations).
 
         """
-        if version.parse(tf.__version__) < version.parse("1.4.0"):
-            warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
-
-        if version.parse(tf.__version__) >= version.parse("2.4.0"):
-            warnings.warn(
-                "Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion."
-            )
-
         # determine the model inputs and outputs
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
