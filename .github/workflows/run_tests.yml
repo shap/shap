@@ -65,6 +65,10 @@ jobs:
                          ]
         extras: ["test"]
         include:
+          # Use core dependencies until the optional test stack supports 3.15.
+          - os: ubuntu-latest
+            python-version: "3.15"
+            extras: "test-core"
           # Test on windows/mac, just one job each
           - os: windows-latest
             python-version: "3.13"
@@ -92,6 +96,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          allow-prereleases: ${{ matrix.python-version == '3.15' }}
       # Build JavaScript bundle if JS files have changed
       - name: Set up Node.js
         if: steps.filter.outputs.js == 'true'
@@ -116,6 +121,14 @@ jobs:
           unset _libomp_path
       - name: Install uv
         uses: astral-sh/setup-uv@v7
+      # Released pandas/scikit-learn do not yet ship cp315 wheels. In particular,
+      # scikit-learn's isolated build pulls in scipy<1.18, which has no cp315 wheels.
+      - name: Install Python 3.15 dependency nightlies
+        if: matrix.python-version == '3.15'
+        run: >
+          uv pip install --system --pre --only-binary=:all:
+          --index https://pypi.anaconda.org/scientific-python-nightly-wheels/simple
+          pandas scikit-learn
       - name: Install dependencies
         # Do regular install NOT editable install: see GH #3020
         run: |
