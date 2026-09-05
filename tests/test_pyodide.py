@@ -1,6 +1,6 @@
 r"""Smoke tests for the Pyodide/JupyterLite build.
 
-These tests are deliberately lightweight – they verify that:
+These tests are deliberately lightweight - they verify that:
   1. shap can be imported after installation via micropip.
   2. ExactExplainer, KernelExplainer, PartitionExplainer, and
      TreeExplainer (scikit-learn RandomForest) all produce outputs of
@@ -17,13 +17,13 @@ To run locally inside Pyodide Node (after building the wheel):
       (async () => {
         const py = await loadPyodide();
         await py.loadPackage('micropip');
-        await py.runPythonAsync(\`
+        await py.runPythonAsync(`
           import micropip
           await micropip.install('file:///path/to/shap-*.whl')
           import subprocess, sys
           subprocess.run([sys.executable, '-m', 'pytest',
                          'tests/test_pyodide.py', '-v'], check=True)
-        \`);
+        `);
       })();
     "
 """
@@ -38,7 +38,7 @@ import pytest
 # Skip the entire module on non-Emscripten platforms.
 pytestmark = pytest.mark.skipif(
     sys.platform != "emscripten",
-    reason="Pyodide-only tests – skipped on non-Emscripten platforms.",
+    reason="Pyodide-only tests - skipped on non-Emscripten platforms.",
 )
 
 
@@ -58,7 +58,7 @@ def simple_tabular_data() -> tuple[np.ndarray, np.ndarray]:
 
 def test_import_shap() -> None:
     """shap must import without error on Pyodide."""
-    import shap  # noqa: F401 – presence is the test
+    import shap  # noqa: F401 - presence is the test
 
     assert hasattr(shap, "__version__"), "shap.__version__ not found"
 
@@ -69,16 +69,17 @@ def test_import_shap() -> None:
 
 
 def test_exact_explainer(simple_tabular_data: tuple[np.ndarray, np.ndarray]) -> None:
-    """ExactExplainer uses _cutils (grey-code kernel) – core CPU path."""
+    """ExactExplainer uses _cutils (grey-code kernel) - core CPU path."""
+    from sklearn.linear_model import LogisticRegression
+
     import shap
 
     X, y = simple_tabular_data
-    from sklearn.linear_model import LogisticRegression
-
     model = LogisticRegression(random_state=0).fit(X, y)
     masker = shap.maskers.Independent(X, max_samples=10)
     explainer = shap.ExactExplainer(model.predict_proba, masker)
     sv = explainer(X[:5])
+    assert isinstance(sv, shap.Explanation)
     assert sv.values.shape[:2] == (5, 4), f"unexpected shape {sv.values.shape}"
 
 
@@ -88,12 +89,12 @@ def test_exact_explainer(simple_tabular_data: tuple[np.ndarray, np.ndarray]) -> 
 
 
 def test_kernel_explainer(simple_tabular_data: tuple[np.ndarray, np.ndarray]) -> None:
-    """KernelExplainer uses _cutils (compute_exp_val) – core CPU path."""
+    """KernelExplainer uses _cutils (compute_exp_val) - core CPU path."""
+    from sklearn.linear_model import LogisticRegression
+
     import shap
 
     X, y = simple_tabular_data
-    from sklearn.linear_model import LogisticRegression
-
     model = LogisticRegression(random_state=0).fit(X, y)
     explainer = shap.KernelExplainer(model.predict_proba, X[:10])
     sv = explainer.shap_values(X[:3], nsamples=32)
@@ -109,37 +110,39 @@ def test_kernel_explainer(simple_tabular_data: tuple[np.ndarray, np.ndarray]) ->
 def test_partition_explainer(
     simple_tabular_data: tuple[np.ndarray, np.ndarray],
 ) -> None:
-    """PartitionExplainer uses _cutils (lower_credit, delta_masking) – CPU path."""
+    """PartitionExplainer uses _cutils (lower_credit, delta_masking) - CPU path."""
+    from sklearn.linear_model import LogisticRegression
+
     import shap
 
     X, y = simple_tabular_data
-    from sklearn.linear_model import LogisticRegression
-
     model = LogisticRegression(random_state=0).fit(X, y)
     masker = shap.maskers.Partition(X)
     explainer = shap.PartitionExplainer(model.predict_proba, masker)
     sv = explainer(X[:3])
+    assert isinstance(sv, shap.Explanation)
     assert sv.values.shape[:2] == (3, 4), f"unexpected shape {sv.values.shape}"
 
 
 # ---------------------------------------------------------------------------
-# TreeExplainer (scikit-learn) – uses _cext Tree SHAP
+# TreeExplainer (scikit-learn) - uses _cext Tree SHAP
 # ---------------------------------------------------------------------------
 
 
 def test_tree_explainer_sklearn(
     simple_tabular_data: tuple[np.ndarray, np.ndarray],
 ) -> None:
-    """TreeExplainer uses _cext (Tree SHAP C++ extension) – core CPU path."""
+    """TreeExplainer uses _cext (Tree SHAP C++ extension) - core CPU path."""
+    from sklearn.ensemble import RandomForestClassifier
+
     import shap
 
     X, y = simple_tabular_data
-    from sklearn.ensemble import RandomForestClassifier
-
     model = RandomForestClassifier(n_estimators=5, random_state=0).fit(X, y)
     explainer = shap.TreeExplainer(model)
     sv = explainer(X[:5])
-    # RandomForest binary classification → shape (n_samples, n_features, n_classes)
+    assert isinstance(sv, shap.Explanation)
+    # RandomForest binary classification -> shape (n_samples, n_features, n_classes)
     assert sv.values.shape == (5, 4, 2), f"unexpected shape {sv.values.shape}"
 
 
