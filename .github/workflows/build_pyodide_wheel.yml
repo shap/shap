@@ -1,0 +1,158 @@
+name: Build Pyodide wheel
+
+# Builds a PyEmscripten wheel (per PEP 783) that can be installed into
+# Pyodide / JupyterLite via micropip.
+#
+# The wheel is published to PyPI alongside the regular wheels when a release
+# tag is pushed.  It is also uploaded as a workflow artifact on every run so
+# it can be smoke-tested in a browser or Node-backed Pyodide environment.
+
+on:
+  release:
+    types: [published]
+
+  # Nightly, aligned with the regular build_wheels schedule
+  schedule:
+    - cron: "30 4 * * *"
+
+  # Enable manual triggering for development / debugging
+  workflow_dispatch:
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Skip nightly builds when there are no new commits (mirrors build_wheels.yml)
+  # ---------------------------------------------------------------------------
+  check_changes:
+    name: Check for new commits
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+    steps:
+      - name: Compare HEAD with last successful nightly run
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Not a scheduled run, building."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          last_sha=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow "${{ github.workflow }}" \
+            --event schedule \
+            --status success \
+            --branch "${{ github.ref_name }}" \
+            --limit 1 \
+            --json headSha \
+            --jq '.[0].headSha // ""')
+          echo "Current HEAD:          ${{ github.sha }}"
+          echo "Last successful build: ${last_sha:-<none>}"
+          if [ "$last_sha" = "${{ github.sha }}" ]; then
+            echo "No new commits since last nightly, skipping."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Build the Pyodide / PyEmscripten wheel
+  # ---------------------------------------------------------------------------
+  build_pyodide_wheel:
+    name: Build Pyodide wheel
+    needs: [check_changes]
+    if: needs.check_changes.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      # Fetch full history so setuptools-scm can derive the version from tags.
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      # cibuildwheel 4.x ships Pyodide support out of the box.
+      # Pin versions for reproducibility; bump intentionally.
+      - name: Build Pyodide wheel via cibuildwheel
+        uses: pypa/cibuildwheel@v4.2.0
+        env:
+          # ---- target platform ----
+          CIBW_PLATFORM: pyodide
+
+          # ---- verbosity ----
+          CIBW_BUILD_VERBOSITY: 2
+
+          # ---- Emscripten workaround: nanobind ≤ 3.0.0 uses bare `stderr`
+          # without including <cstdio>; inject the header for the cross build.
+          # This flag is only passed to the C++ compiler (clang/em++) via
+          # scikit-build-core's CMAKE_CXX_FLAGS forwarding.
+          CIBW_ENVIRONMENT: >-
+            CXXFLAGS="-include cstdio"
+
+          # ---- skip stub generation that needs host-Python import of WASM .so
+          # The pre-committed _cutils.pyi is used instead (see CMakeLists.txt).
+          CIBW_ENVIRONMENT_PASS_LINUX: SHAP_SKIP_STUB_GEN
+
+          # ---- Pyodide smoke-test (runs inside Node-backed Pyodide)
+          # Only test the CPU explainers that Pyodide can support.
+          CIBW_TEST_COMMAND: >-
+            python -c "
+            import pyodide_js, asyncio, micropip, pathlib, sys
+            # micropip is the micro-installer used inside Pyodide
+            wheel = str(pathlib.Path('{wheel}').resolve())
+            async def _run():
+                await micropip.install('file://' + wheel)
+                import shap
+                import numpy as np
+                from sklearn.ensemble import RandomForestClassifier
+                X = np.random.randn(20, 4)
+                y = (X[:, 0] > 0).astype(int)
+                model = RandomForestClassifier(n_estimators=5, random_state=0).fit(X, y)
+                explainer = shap.TreeExplainer(model)
+                sv = explainer(X[:5])
+                assert sv.values.shape == (5, 4, 2), f'unexpected shape {sv.values.shape}'
+                print('Pyodide smoke-test passed')
+            asyncio.run(_run())
+            "
+
+      - name: Upload Pyodide wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyodide_wheel
+          path: ./wheelhouse/*.whl
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Publish to PyPI on tagged releases (PEP 783 – pyemscripten wheels allowed)
+  # ---------------------------------------------------------------------------
+  publish_pypi:
+    name: Publish Pyodide wheel to PyPI
+    needs: [build_pyodide_wheel]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags')
+    environment:
+      name: pypi
+      url: https://pypi.org/p/shap
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pyodide_wheel
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

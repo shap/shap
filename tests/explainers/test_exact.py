@@ -4,9 +4,9 @@ import pickle
 
 import numpy as np
 from conftest import compare_numpy_outputs_against_baseline
-from shap._cutils import compute_grey_code_row_values_st
 
 import shap
+from shap._cutils import compute_grey_code_row_values_st
 
 from . import common
 

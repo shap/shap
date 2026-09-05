@@ -34,6 +34,8 @@ classifiers = [
   "Operating System :: POSIX",
   "Operating System :: Unix",
   "Operating System :: MacOS",
+  # Pyodide / WebAssembly support (PEP 783)
+  "Operating System :: Other :: WebAssembly",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
@@ -241,7 +243,9 @@ minimum-version = "build-system.requires"
 # Setuptools-style build caching in a local directory
 build-dir = "build/{wheel_tag}"
 
-# Exclude C/C++/CUDA source files from the wheel (compiled .so is sufficient)
+# Exclude C/C++/CUDA source files from the wheel (compiled .so is sufficient).
+# Explicitly keep the pre-committed typing stubs and py.typed so that every
+# wheel – including the Pyodide/PyEmscripten wheel – ships them.
 wheel.exclude = ["**/*.cc", "**/*.cpp", "**/*.h", "**/*.cu"]
 
 # Build stable ABI wheels for CPython 3.12+
@@ -361,3 +365,27 @@ archs = ["x86_64", "arm64"]
 [tool.cibuildwheel.macos.environment]
 # Needed for C++17 support
 MACOSX_DEPLOYMENT_TARGET = "10.13"
+
+# ==============================================================================
+# Pyodide / PyEmscripten wheel (PEP 783)
+# ==============================================================================
+# cibuildwheel 4.x supports `pyodide` as a first-class platform.
+# Run via: CIBW_PLATFORM=pyodide cibuildwheel
+# Or via the dedicated build_pyodide_wheel.yml GitHub Actions workflow.
+#
+# Key differences from regular builds:
+#   * CXXFLAGS=-include cstdio  fixes a missing standard-I/O declaration in
+#     nanobind ≤ 3.0.0 when compiled with Emscripten.
+#   * SHAP_SKIP_STUB_GEN=1      prevents nanobind_add_stub() from trying to
+#     import the WebAssembly .so into the host Python for stub generation;
+#     the pre-committed shap/_cutils.pyi is used instead.
+#   * NUMPY_INCLUDE_DIR         lets CMake find NumPy headers without running
+#     the host Python (which would return wrong host paths).
+#   * Test command is intentionally empty; smoke-testing happens in the
+#     build_pyodide_wheel.yml workflow using Node-backed Pyodide.
+
+[tool.cibuildwheel.pyodide]
+# Pass the Emscripten workaround and stub-skip flag into the build environment.
+environment = { CXXFLAGS = "-include cstdio", SHAP_SKIP_STUB_GEN = "1" }
+# Pyodide smoke-test runs in the CI workflow; skip the heavy pytest suite here.
+test-command = ""
