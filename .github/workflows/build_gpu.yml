@@ -14,7 +14,7 @@ jobs:
     permissions:
       id-token: write   # for PyPI trusted publishing
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0          # setuptools_scm needs full history/tags
       - name: Install uv
@@ -34,7 +34,7 @@ jobs:
     permissions:
       id-token: write   # for TestPyPI trusted publishing
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0          # setuptools_scm needs full history/tags
       - name: Install uv

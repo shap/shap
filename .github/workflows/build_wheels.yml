@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
@@ -98,7 +98,7 @@ jobs:
       # when the workflow is triggered by a tag!
       # https://github.com/actions/checkout/issues/1467
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Fetch all tags
@@ -156,7 +156,7 @@ jobs:
       # when the workflow is triggered by a tag!
       # https://github.com/actions/checkout/issues/1467
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Fetch all tags
