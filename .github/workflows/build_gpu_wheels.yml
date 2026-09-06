@@ -51,7 +51,7 @@ jobs:
           cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
           cp -r shap/cached_data /tmp/test_data_cache/ || true
       - name: Upload cached datasets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gpu-wheel-test-data-cache
           path: /tmp/test_data_cache
@@ -92,7 +92,7 @@ jobs:
             dnf install -y cuda-toolkit-12-8
             echo "/usr/local/cuda-12.8/bin" >> "$GITHUB_PATH"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           path: ./wheelhouse/*.whl
           name: gpu_wheel_files
@@ -117,7 +117,7 @@ jobs:
       - name: Build sdist
         run: uv build --sdist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: gpu_sdist_files
           path: dist/*.tar.gz
