@@ -179,7 +179,10 @@ class TreeExplainer(Explainer):
         model : model object
             The tree based machine learning model that we want to explain.
             XGBoost, LightGBM, CatBoost, Pyspark and most tree-based
-            scikit-learn models are supported.
+            scikit-learn models are supported. Notably, models with native categorical splits
+            only work with ``feature_perturbation="tree_path_dependent"`` and no background data.
+            Therefore, such models cannot be used with ``model_output="log_loss"``, which requires
+            ``feature_perturbation="interventional"`` and therefore a background dataset.
 
         data : numpy.array or pandas.DataFrame
             The background dataset to use for integrating out features.
@@ -207,6 +210,10 @@ class TreeExplainer(Explainer):
             - if ``"auto"``, the "interventional" approach will be used when a
               background is provided, otherwise the "tree_path_dependent" approach will
               be used.
+
+            Models with native categorical splits (e.g. LightGBM trained on pandas ``category`` dtype columns)
+            are only supported with ``feature_perturbation="tree_path_dependent"``. Passing a background dataset
+            with such a model is not currently supported.
 
             .. versionadded:: 0.47
                The `"auto"` option was added.
