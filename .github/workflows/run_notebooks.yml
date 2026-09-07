@@ -3,10 +3,10 @@ name: notebooks
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
     paths:
       - "shap/**"
       - "notebooks/**"

@@ -13,7 +13,10 @@ import shap
 if TYPE_CHECKING:  # pragma: no cover
     import scipy.sparse as ssp
 
-github_data_url: Final[str] = "https://github.com/shap/shap/raw/master/data/"
+# Pin bundled datasets so downloads do not depend on the default branch name.
+github_data_url: Final[str] = (
+    "https://raw.githubusercontent.com/shap/shap/fc3e290e97ce12f76d1175d24c6e3023b4ca7d69/data/"
+)
 
 
 def imagenet50(resolution: int = 224, n_points: int | None = None) -> tuple[np.ndarray, np.ndarray]:

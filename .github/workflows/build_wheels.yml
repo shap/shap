@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # For the nightly schedule, skip the whole build if master has not changed since
+  # For the nightly schedule, skip the whole build if main has not changed since
   # the last successful nightly run. Release and manual runs always build.
   check_changes:
     name: Check for new commits
