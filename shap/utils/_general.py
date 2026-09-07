@@ -4,7 +4,6 @@ import copy
 import os
 import re
 import sys
-from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
