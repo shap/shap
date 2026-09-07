@@ -76,7 +76,7 @@ jobs:
           cp -r shap/cached_data /tmp/test_data_cache/ || true
           ls -la /tmp/test_data_cache/
       - name: Upload cached datasets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
@@ -140,7 +140,7 @@ jobs:
           CIBW_TEST_COMMAND_WINDOWS: |
             python -c "import shap, os, shutil; cache_path = r'${{ runner.temp }}\test_data_cache'; shap_cache = os.path.join(os.path.dirname(shap.__file__), 'cached_data'); os.makedirs(shap_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'cached_data'), shap_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'cached_data')) else None" && pytest -v {project}/tests --import-mode=append
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           path: ./wheelhouse/*.whl
           name: bdist_files_${{ matrix.os }}
@@ -176,7 +176,7 @@ jobs:
           uv build --sdist
 
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sdist_files
           path: dist/*.tar.gz
