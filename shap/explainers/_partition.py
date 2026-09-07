@@ -5,10 +5,10 @@ from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
-from numba import njit  # type: ignore[attr-defined]
 from tqdm.auto import tqdm
 
 from .. import Explanation, links
+from .._cutils import lower_credit
 from ..models import Model
 from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
 from ._explainer import Explainer
@@ -250,8 +250,8 @@ class PartitionExplainer(Explainer):
         if max_evals == "auto":
             max_evals = 500
 
-        self.values = np.zeros(out_shape)
-        self.dvalues = np.zeros(out_shape)
+        self.values = np.zeros(out_shape, dtype=np.float64)
+        self.dvalues = np.zeros(out_shape, dtype=np.float64)
 
         self.owen(fm, self._curr_base_value, f11, max_evals - 2, outputs, fixed_context, batch_size, silent)  # type: ignore[arg-type]
 
@@ -264,7 +264,7 @@ class PartitionExplainer(Explainer):
         # drop the interaction terms down onto self.values
         self.values[:] = self.dvalues
 
-        lower_credit(len(self.dvalues) - 1, 0, M, self.values, self._clustering)
+        lower_credit(len(self.dvalues) - 1, 0.0, M, self.values, self._clustering)
 
         return {
             "values": self.values[:M].copy(),
@@ -763,25 +763,3 @@ def output_indexes_len(output_indexes: str | npt.NDArray[Any]) -> int | None:
     else:
         return len(output_indexes)
     return None
-
-
-@njit
-def lower_credit(
-    i: int,
-    value: float,
-    M: int,
-    values: npt.NDArray[Any],
-    clustering: npt.NDArray[Any],
-) -> None:
-    if i < M:
-        values[i] += value
-        return
-    li = int(clustering[i - M, 0])
-    ri = int(clustering[i - M, 1])
-    group_size = int(clustering[i - M, 3])
-    lsize = int(clustering[li - M, 3]) if li >= M else 1
-    rsize = int(clustering[ri - M, 3]) if ri >= M else 1
-    assert lsize + rsize == group_size
-    values[i] += value
-    lower_credit(li, values[i] * lsize / group_size, M, values, clustering)
-    lower_credit(ri, values[i] * rsize / group_size, M, values, clustering)

@@ -107,7 +107,7 @@ install(TARGETS _cext LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 # Enabled via: SHAP_ENABLE_CUDA=1 pip install .
 # ==============================================================================
 
-if(ENV{SHAP_ENABLE_CUDA})
+if(DEFINED ENV{SHAP_ENABLE_CUDA})
   message(MESSAGE "SHAP_ENABLE_CUDA is set, attempting to build the GPU extension...")
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED)
