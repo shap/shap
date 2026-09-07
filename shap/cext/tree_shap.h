@@ -178,9 +178,36 @@ inline transform_f get_transform(unsigned model_transform) {
     return transform;
 }
 
-inline bool category_in_threshold(float threshold, float category) {
+// LightGBM-style categorical splits (threshold_types == 1): 1-based category levels.
+inline bool category_in_threshold(tfloat threshold, tfloat category) {
     int category_flag = (1 << (int(category) - 1));
     return (int(threshold) & category_flag) != 0;
+}
+
+// XGBoost-style categorical splits (threshold_types == 2): 0-based category codes.
+inline bool category_in_threshold_xgb(tfloat threshold, tfloat category) {
+    const int category_int = static_cast<int>(category);
+    if (category_int < 0) {
+        return false;
+    }
+    const int category_flag = 1 << category_int;
+    return (static_cast<int>(threshold) & category_flag) != 0;
+}
+
+inline unsigned tree_split_child(
+    int split_type, tfloat threshold, tfloat feature_value, unsigned left_child, unsigned right_child
+) {
+    if (split_type == 0) {
+        return feature_value <= threshold ? left_child : right_child;
+    }
+    if (split_type == 1) {
+        return category_in_threshold(threshold, feature_value) ? left_child : right_child;
+    }
+    if (split_type == 2) {
+        // XGBoost: categories in the bitmask go right; missing/other categories go left.
+        return category_in_threshold_xgb(threshold, feature_value) ? right_child : left_child;
+    }
+    return right_child;
 }
 
 inline tfloat *tree_predict(unsigned i, const TreeEnsemble &trees, const tfloat *x, const bool *x_missing) {
@@ -198,12 +225,11 @@ inline tfloat *tree_predict(unsigned i, const TreeEnsemble &trees, const tfloat 
         // otherwise we are at an internal node and need to recurse
         if (x_missing[feature]) {
             node = trees.children_default[pos];
-        } else if (trees.threshold_types[pos] == 0 && x[feature] <= trees.thresholds[pos]) {
-            node = trees.children_left[pos];
-        } else if (trees.threshold_types[pos] == 1 && category_in_threshold(trees.thresholds[pos], x[feature])) {
-            node = trees.children_left[pos];
         } else {
-            node = trees.children_right[pos];
+            node = tree_split_child(
+                trees.threshold_types[pos], trees.thresholds[pos], x[feature],
+                trees.children_left[pos], trees.children_right[pos]
+            );
         }
     }
 }
@@ -262,13 +288,11 @@ inline void tree_update_weights(unsigned i, TreeEnsemble &trees, const tfloat *x
         // otherwise we are at an internal node and need to recurse
         if (x_missing[feature]) {
             node = trees.children_default[pos];
-        } else if (trees.threshold_types[pos] == 0 && x[feature] <= trees.thresholds[pos]) {
-            node = trees.children_left[pos];
-        } else if (trees.threshold_types[pos] == 1 && category_in_threshold(trees.thresholds[pos], x[feature])) {
-            node = trees.children_left[pos];
-        }
-         else {
-            node = trees.children_right[pos];
+        } else {
+            node = tree_split_child(
+                trees.threshold_types[pos], trees.thresholds[pos], x[feature],
+                trees.children_left[pos], trees.children_right[pos]
+            );
         }
     }
 }
@@ -453,13 +477,11 @@ inline void tree_shap_recursive(const unsigned num_outputs, const int *children_
         int type = threshold_types[node_index];
         if (x_missing[split_index]) {
             hot_index = children_default[node_index];
-        } else if (type == 0 && x[split_index] <= thresholds[node_index]) {
-            hot_index = children_left[node_index];
-        } else if (type == 1 && category_in_threshold(thresholds[node_index], x[split_index])) {
-            hot_index = children_left[node_index];
-        }
-        else {
-            hot_index = children_right[node_index];
+        } else {
+            hot_index = tree_split_child(
+                type, thresholds[node_index], x[split_index],
+                children_left[node_index], children_right[node_index]
+            );
         }
         const unsigned cold_index = (static_cast<int>(hot_index) == children_left[node_index] ?
                                         children_right[node_index] : children_left[node_index]);
