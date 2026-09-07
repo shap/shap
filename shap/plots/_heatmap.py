@@ -18,6 +18,7 @@ def heatmap(
     show=True,
     plot_width=8,
     ax=None,
+    title=None,
 ):
     """Create a heatmap plot of a set of SHAP values.
 
@@ -59,6 +60,9 @@ def heatmap(
 
     ax : matplotlib Axes
         Axes object to draw the plot onto, otherwise uses the current Axes.
+
+    title : str, optional
+        Title of the plot.
 
     Returns
     -------
@@ -199,6 +203,9 @@ def heatmap(
     # bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
     # cb.ax.set_aspect((bbox.height - 0.9) * 15)
     # cb.draw_all()
+
+    if title is not None:
+        ax.set_title(title)
 
     if show:
         plt.show()

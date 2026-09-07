@@ -38,6 +38,7 @@ def scatter(
     ax: plt.Axes | None = None,
     ylabel: str = "SHAP value",
     show: bool = True,
+    rng: np.random.Generator | None = None,
 ):
     """Create a SHAP dependence scatter plot, optionally colored by an interaction feature.
 
@@ -127,7 +128,27 @@ def scatter(
     --------
     See `scatter plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/scatter.html>`_.
 
+    rng : `numpy.random.Generator`, optional
+        Pseudorandom number generator state. When `rng` is None,
+        the legacy behavior of using global NumPy random state will be
+        used. Types other than `numpy.random.Generator` are
+        passed to `numpy.random.default_rng` to instantiate a ``Generator``.
+
     """
+    # handle randomization machinery in conformance with SPEC 7
+    if rng is not None:
+        rng = np.random.default_rng(rng)
+    else:
+        global_seed_set = np.random.mtrand._rand._bit_generator._seed_seq is None  # type: ignore
+        if global_seed_set:
+            msg = (
+                "The NumPy global RNG was seeded by calling `np.random.seed`. "
+                "In a future version this function will no longer use the global RNG. "
+                "Pass `rng` explicitly to opt-in to the new behaviour and silence this warning."
+            )
+            warnings.warn(msg, FutureWarning, stacklevel=2)
+        rng = np.random.default_rng()
+
     if not isinstance(shap_values, Explanation):
         raise TypeError("The shap_values parameter must be a shap.Explanation object!")
 
@@ -236,7 +257,7 @@ def scatter(
 
     # guess what other feature as the strongest interaction with the plotted feature
     if interaction_index == "auto":
-        interaction_index = approximate_interactions(ind, shap_values_arr, features)[0]
+        interaction_index = approximate_interactions(ind, shap_values_arr, features, random_state=rng)[0]
     interaction_index = convert_name(interaction_index, shap_values_arr, feature_names)
     categorical_interaction = False
 
@@ -256,7 +277,7 @@ def scatter(
     oinds = np.arange(
         shap_values_arr.shape[0]
     )  # we randomize the ordering so plotting overlaps are not related to data ordering
-    np.random.shuffle(oinds)
+    rng.shuffle(oinds)
     xv = encode_array_if_needed(features[oinds, ind])
     xd = display_features[oinds, ind]
 
@@ -312,7 +333,7 @@ def scatter(
         if len(xvals) >= 2:
             smallest_diff = np.min(np.diff(xvals))
             jitter_amount = x_jitter * smallest_diff
-            xv += (np.random.random_sample(size=len(xv)) * jitter_amount) - (jitter_amount / 2)
+            xv += (rng.random(size=len(xv)) * jitter_amount) - (jitter_amount / 2)
 
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     xv_nan = np.isnan(xv)
@@ -534,6 +555,7 @@ def dependence_legacy(
     show=True,
     ymin=None,
     ymax=None,
+    rng: np.random.Generator | None = None,
 ):
     """Create a SHAP dependence plot, colored by an interaction feature.
 
@@ -595,7 +617,27 @@ def dependence_legacy(
     ymax : float
         Represents the upper bound of the plot's y-axis.
 
+    rng : `numpy.random.Generator`, optional
+        Pseudorandom number generator state. When `rng` is None,
+        the legacy behavior of using global NumPy random state will be
+        used. Types other than `numpy.random.Generator` are
+        passed to `numpy.random.default_rng` to instantiate a ``Generator``.
+
     """
+    # handle randomization machinery in conformance with SPEC 7
+    if rng is not None:
+        rng = np.random.default_rng(rng)
+    else:
+        global_seed_set = np.random.mtrand._rand._bit_generator._seed_seq is None  # type: ignore
+        if global_seed_set:
+            msg = (
+                "The NumPy global RNG was seeded by calling `np.random.seed`. "
+                "In a future version this function will no longer use the global RNG. "
+                "Pass `rng` explicitly to opt-in to the new behaviour and silence this warning."
+            )
+            warnings.warn(msg, FutureWarning, stacklevel=2)
+        rng = np.random.default_rng()
+
     if cmap is None:
         cmap = colors.red_blue
 
@@ -631,7 +673,7 @@ def dependence_legacy(
     # guess what other feature as the strongest interaction with the plotted feature
     if not hasattr(ind, "__len__"):
         if interaction_index == "auto":
-            interaction_index = approximate_interactions(ind, shap_values, features)[0]
+            interaction_index = approximate_interactions(ind, shap_values, features, random_state=rng)[0]
         interaction_index = convert_name(interaction_index, shap_values, feature_names)
     categorical_interaction = False
 
@@ -691,7 +733,7 @@ def dependence_legacy(
     oinds = np.arange(
         shap_values.shape[0]
     )  # we randomize the ordering so plotting overlaps are not related to data ordering
-    np.random.shuffle(oinds)
+    rng.shuffle(oinds)
 
     xv = encode_array_if_needed(features[oinds, ind])
 
@@ -747,7 +789,7 @@ def dependence_legacy(
         if len(xvals) >= 2:
             smallest_diff = np.min(np.diff(xvals))
             jitter_amount = x_jitter * smallest_diff
-            xv += (np.random.random_sample(size=len(xv)) * jitter_amount) - (jitter_amount / 2)
+            xv += (rng.random(size=len(xv)) * jitter_amount) - (jitter_amount / 2)
 
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     xv_nan = np.isnan(xv)
