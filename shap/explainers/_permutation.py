@@ -269,13 +269,20 @@ class PermutationExplainer(Explainer):
         ----------
         X : numpy.array or pandas.DataFrame or any scipy.sparse matrix
             A matrix of samples (# samples x # features) on which to explain the model's output.
-
         npermutations : int
             Number of times to cycle through all the features, re-evaluating the model at each step.
             Each cycle evaluates the model function 2 * (# features + 1) times on a data matrix of
             (# background data samples) rows. An exception to this is when PermutationExplainer can
             avoid evaluating the model because a feature's value is the same in X and the background
             dataset (which is common for example with sparse features).
+        main_effects : bool
+            If True, computes the main effects for each feature.
+        error_bounds : bool
+            If True, computes error bounds for the SHAP value estimates.
+        batch_evals : bool
+            If True, evaluates the model in batches for efficiency.
+        silent : bool
+            If True, suppresses progress output.
 
         Returns
         -------
@@ -285,7 +292,6 @@ class PermutationExplainer(Explainer):
             sample and the expected value of the model output (which is stored as expected_value
             attribute of the explainer). For models with vector outputs this returns a list
             of such matrices, one for each output.
-
         """
         explanation = self(X, max_evals=npermutations * (2 * X.shape[1] + 1), main_effects=main_effects)
         return explanation.values  # type: ignore[union-attr]
