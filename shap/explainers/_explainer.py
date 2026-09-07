@@ -330,6 +330,8 @@ class Explainer(Serializable):
         # parse our incoming arguments
         num_rows = None
         args = list(args)  # type: ignore[assignment]
+        if hasattr(args[0], "shape") and args[0].shape[0] == 0:
+            raise ValueError("Input data must contain at least one sample.")
         if self.feature_names is None:
             feature_names = [None for _ in range(len(args))]
         elif issubclass(type(self.feature_names[0]), (list, tuple)):
