@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
-from shap._cutils import _init_masks  # type: ignore[attr-defined]
 
+from shap._cutils import _init_masks  # type: ignore[attr-defined]
 from shap.links import identity, logit
 from shap.utils._masked_model import _build_fixed_output
 
