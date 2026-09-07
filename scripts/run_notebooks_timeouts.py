@@ -1,8 +1,8 @@
+import os
 import time
 from pathlib import Path
 
 import nbformat
-from jupyter_client import kernelspec
 from jupyter_client.manager import KernelManager
 from nbconvert.preprocessors import CellExecutionError, ExecutePreprocessor
 
@@ -76,7 +76,7 @@ def main():
     )
 
     ep = ExecutePreprocessor(timeout=TIMEOUT, log_level=40)
-    kernel_name = list(kernelspec.find_kernel_specs())[0]
+    kernel_name = os.environ.get("SHAP_KERNEL", "python3")
     km = KernelManager(kernel_name=kernel_name)
 
     encountered_failure = False
