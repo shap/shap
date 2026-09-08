@@ -118,3 +118,81 @@ def test_waterfall_plot_for_data_with_number_columns():
     explainer = shap.Explainer(f, med)
     shap_values = explainer(X)
     shap.plots.waterfall(shap_values[0], show=False)
+
+
+@pytest.mark.mpl_image_compare(tolerance=3)
+def test_waterfall_accepts_ax_argument(explainer):
+    explanation = explainer(explainer.data)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    returned_ax = shap.plots.waterfall(explanation[0], show=False, ax=ax)
+
+    assert returned_ax is ax
+    assert ax.figure is fig
+    plt.tight_layout()
+    return returned_ax.figure
+
+
+@pytest.mark.parametrize(
+    ("show", "pass_ax"),
+    [(False, False), (False, True), (True, False), (True, True)],
+)
+def test_waterfall_show_and_ax_combinations(explainer, monkeypatch, show, pass_ax):
+    explanation = explainer(explainer.data)
+    show_calls = []
+
+    def _mock_show():
+        show_calls.append(True)
+
+    monkeypatch.setattr(plt, "show", _mock_show)
+
+    if pass_ax:
+        fig, ax = plt.subplots()
+    else:
+        fig = plt.figure()
+        ax = None
+
+    try:
+        result = shap.plots.waterfall(explanation[0], show=show, ax=ax)
+
+        if show:
+            assert result is None
+            assert len(show_calls) == 1
+        else:
+            assert len(show_calls) == 0
+            assert result is not None
+            if pass_ax:
+                assert result is ax
+            assert result.figure is fig
+    finally:
+        plt.close(fig)
+
+
+def test_waterfall_returns_main_axis_not_last_twin_when_ax_none(explainer):
+    explanation = explainer(explainer.data)
+    fig = plt.figure()
+
+    try:
+        returned_ax = shap.plots.waterfall(explanation[0], show=False)
+
+        assert len(fig.axes) == 3
+        assert returned_ax is fig.axes[0]
+        assert plt.gca() is fig.axes[-1]
+        assert returned_ax is not plt.gca()
+    finally:
+        plt.close(fig)
+
+
+def test_waterfall_returns_provided_main_axis_not_last_twin(explainer):
+    explanation = explainer(explainer.data)
+    fig, ax = plt.subplots()
+
+    try:
+        returned_ax = shap.plots.waterfall(explanation[0], show=False, ax=ax)
+
+        assert len(fig.axes) == 3
+        assert returned_ax is ax
+        assert returned_ax is fig.axes[0]
+        assert plt.gca() is fig.axes[-1]
+        assert returned_ax is not plt.gca()
+    finally:
+        plt.close(fig)
