@@ -266,10 +266,16 @@ def safe_isinstance(obj: Any, class_path_str: str | list[str]) -> bool:
 
         module = sys.modules[module_name]
 
-        # Get class
-        _class = getattr(module, class_name, None)
+        # Avoid triggering module-level __getattr__ (for example transformers lazy
+        # imports) since safe_isinstance must not import optional dependencies.
+        _class = getattr(module, "__dict__", {}).get(class_name, None)
 
         if _class is None:
+            # Some packages expose classes lazily at top-level modules. In that
+            # case, match by class name in the MRO without importing anything.
+            for parent in type(obj).mro():
+                if parent.__name__ == class_name and parent.__module__.startswith(module_name):
+                    return True
             continue
 
         if isinstance(obj, _class):
