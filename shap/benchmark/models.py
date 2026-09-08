@@ -203,7 +203,6 @@ def human__decision_tree():
     N = 1000000
     M = 3
     X = np.zeros((N, M))
-    X.shape
     y = np.zeros(N)
     X[0, 0] = 1
     y[0] = 8
