@@ -20,14 +20,15 @@ class KerasWrap:
         else:
             self.model.set_weights(self.init_weights)
         self.scaler.fit(X)
-        return self.model.fit(X, y, epochs=self.epochs, verbose=verbose)
+        X_scaled = self.scaler.transform(X)
+        return self.model.fit(X_scaled, y, epochs=self.epochs, verbose=verbose)
 
     def predict(self, X):
-        X = self.scaler.transform(X)
+        X_scaled = self.scaler.transform(X)
         if self.flatten_output:
-            return self.model.predict(X).flatten()
+            return self.model.predict(X_scaled).flatten()
         else:
-            return self.model.predict(X)
+            return self.model.predict(X_scaled)
 
 
 # This models are all tuned for the corrgroups60 dataset
