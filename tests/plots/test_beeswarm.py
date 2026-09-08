@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+from sklearn.ensemble import RandomForestClassifier
 
 import shap
 from shap.plots.colors import (
@@ -95,6 +96,34 @@ def test_beeswarm_no_group_remaining(explainer):
     fig = plt.figure()
     shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values, show=False, group_remaining_features=False)
+    plt.tight_layout()
+    return fig
+
+
+@pytest.fixture()
+def binary_clf_explainer():
+    # A binary classifier explainer that returns shap values of shape (n_samples, n_features, 2)    # get a dataset on income prediction
+    X, y = shap.datasets.adult()
+    X = X.iloc[:100]
+    y = y[:100]
+
+    model = RandomForestClassifier(n_estimators=3, random_state=0)
+    model.fit(X, y)
+    return shap.TreeExplainer(model, X)
+
+
+@pytest.mark.filterwarnings("ignore:The passed Explanation object has two classes")
+@pytest.mark.mpl_image_compare
+def test_beeswarm_binary_classifier(binary_clf_explainer):
+    # GH 3951
+    # Ensure the plot works for explanations of shape (n_samples, n_features, 2)
+    fig = plt.figure()
+    explanation = binary_clf_explainer(binary_clf_explainer.data)
+
+    sv_shape = explanation.values.shape
+    assert len(sv_shape) == 3
+    assert sv_shape[2] == 2
+    shap.plots.beeswarm(explanation, show=False)
     plt.tight_layout()
     return fig
 
