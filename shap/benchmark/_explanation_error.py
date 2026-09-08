@@ -104,7 +104,7 @@ class ExplanationError:
 
         # it is important that we choose the same permutations for the different explanations we are comparing
         # so as to avoid needless noise
-        old_seed = np.random.seed()
+        state = np.random.get_state()
         np.random.seed(self.seed)
 
         pbar = None
@@ -186,6 +186,6 @@ class ExplanationError:
         svals = np.array(svals)
 
         # reset the random seed so we don't mess up the caller
-        np.random.seed(old_seed)
+        np.random.set_state(state)
 
         return BenchmarkResult("explanation error", name, value=np.sqrt(np.sum(total_values) / len(total_values)))
