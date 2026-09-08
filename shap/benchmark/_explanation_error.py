@@ -103,89 +103,90 @@ class ExplanationError:
             raise DimensionError(emsg)
 
         # it is important that we choose the same permutations for the different explanations we are comparing
-        # so as to avoid needless noise
-        old_seed = np.random.seed()
-        np.random.seed(self.seed)
+        # so as to avoid needless noise (restore full MT state — np.random.seed() does not return the old seed).
+        rng_state = np.random.get_state()
+        try:
+            np.random.seed(self.seed)
 
-        pbar = None
-        start_time = time.time()
-        svals = []
-        mask_vals = []
+            pbar = None
+            start_time = time.time()
+            svals = []
+            mask_vals = []
 
-        for i, args in enumerate(zip(*self.model_args)):
-            if len(args[0].shape) != len(attributions[i].shape):
-                raise ValueError(
-                    "The passed explanation must have the same dim as the model_args and must not have a vector output!"
-                )
-
-            feature_size = np.prod(attributions[i].shape)
-            sample_attributions = attributions[i].flatten()
-
-            # compute any custom clustering for this row
-            row_clustering = None
-            if getattr(self.masker, "clustering", None) is not None:
-                if isinstance(self.masker.clustering, np.ndarray):
-                    row_clustering = self.masker.clustering
-                elif callable(self.masker.clustering):
-                    row_clustering = self.masker.clustering(*args)
-                else:
-                    raise NotImplementedError(
-                        "The masker passed has a .clustering attribute that is not yet supported by the ExplanationError benchmark!"
+            for i, args in enumerate(zip(*self.model_args)):
+                if len(args[0].shape) != len(attributions[i].shape):
+                    raise ValueError(
+                        "The passed explanation must have the same dim as the model_args and must not have a vector output!"
                     )
 
-            masked_model = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *args)
+                feature_size = np.prod(attributions[i].shape)
+                sample_attributions = attributions[i].flatten()
 
-            total_values = None
-            for _ in range(self.num_permutations):
-                masks = []
-                mask = np.zeros(feature_size, dtype=bool)
-                masks.append(mask.copy())
-                ordered_inds = np.arange(feature_size)
+                # compute any custom clustering for this row
+                row_clustering = None
+                if getattr(self.masker, "clustering", None) is not None:
+                    if isinstance(self.masker.clustering, np.ndarray):
+                        row_clustering = self.masker.clustering
+                    elif callable(self.masker.clustering):
+                        row_clustering = self.masker.clustering(*args)
+                    else:
+                        raise NotImplementedError(
+                            "The masker passed has a .clustering attribute that is not yet supported by the ExplanationError benchmark!"
+                        )
 
-                # shuffle the indexes so we get a random permutation ordering
-                if row_clustering is not None:
-                    inds_mask = np.ones(feature_size, dtype=bool)
-                    partition_tree_shuffle(ordered_inds, inds_mask, row_clustering)
-                else:
-                    np.random.shuffle(ordered_inds)
+                masked_model = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *args)
 
-                increment = max(1, int(feature_size * step_fraction))
-                for j in range(0, feature_size, increment):
-                    mask[ordered_inds[np.arange(j, min(feature_size, j + increment))]] = True
+                total_values = None
+                for _ in range(self.num_permutations):
+                    masks = []
+                    mask = np.zeros(feature_size, dtype=bool)
                     masks.append(mask.copy())
-                mask_vals.append(masks)
+                    ordered_inds = np.arange(feature_size)
 
-                values = []
-                masks_arr = np.array(masks)
-                for j in range(0, len(masks_arr), self.batch_size):
-                    values.append(masked_model(masks_arr[j : j + self.batch_size]))
-                values = np.concatenate(values)
-                base_value = values[0]
-                for j, v in enumerate(values):
-                    values[j] = (v - (base_value + np.sum(sample_attributions[masks_arr[j]]))) ** 2
+                    # shuffle the indexes so we get a random permutation ordering
+                    if row_clustering is not None:
+                        inds_mask = np.ones(feature_size, dtype=bool)
+                        partition_tree_shuffle(ordered_inds, inds_mask, row_clustering)
+                    else:
+                        np.random.shuffle(ordered_inds)
 
-                if total_values is None:
-                    total_values = values
-                else:
-                    total_values += values
-            total_values /= self.num_permutations
+                    increment = max(1, int(feature_size * step_fraction))
+                    for j in range(0, feature_size, increment):
+                        mask[ordered_inds[np.arange(j, min(feature_size, j + increment))]] = True
+                        masks.append(mask.copy())
+                    mask_vals.append(masks)
 
-            svals.append(total_values)
+                    values = []
+                    masks_arr = np.array(masks)
+                    for j in range(0, len(masks_arr), self.batch_size):
+                        values.append(masked_model(masks_arr[j : j + self.batch_size]))
+                    values = np.concatenate(values)
+                    base_value = values[0]
+                    for j, v in enumerate(values):
+                        values[j] = (v - (base_value + np.sum(sample_attributions[masks_arr[j]]))) ** 2
 
-            if pbar is None and time.time() - start_time > 5:
-                pbar = tqdm(
-                    total=len(self.model_args[0]), disable=silent, leave=False, desc=f"ExplanationError for {name}"
-                )
-                pbar.update(i + 1)
+                    if total_values is None:
+                        total_values = values
+                    else:
+                        total_values += values
+                total_values /= self.num_permutations
+
+                svals.append(total_values)
+
+                if pbar is None and time.time() - start_time > 5:
+                    pbar = tqdm(
+                        total=len(self.model_args[0]), disable=silent, leave=False, desc=f"ExplanationError for {name}"
+                    )
+                    pbar.update(i + 1)
+                if pbar is not None:
+                    pbar.update(1)
+
             if pbar is not None:
-                pbar.update(1)
+                pbar.close()
 
-        if pbar is not None:
-            pbar.close()
+            svals = np.array(svals)
 
-        svals = np.array(svals)
-
-        # reset the random seed so we don't mess up the caller
-        np.random.seed(old_seed)
+        finally:
+            np.random.set_state(rng_state)
 
         return BenchmarkResult("explanation error", name, value=np.sqrt(np.sum(total_values) / len(total_values)))
