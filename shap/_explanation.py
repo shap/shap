@@ -322,6 +322,7 @@ class Explanation(metaclass=MetaExplanation):
 
         # convert any OpChains or magic strings
         pos = -1
+        manually_handled_indices = set()
         for t in item:
             pos += 1
 
@@ -367,7 +368,7 @@ class Explanation(metaclass=MetaExplanation):
                             data=np.array(new_data),
                             display_data=self.display_data,
                             instance_names=self.instance_names,
-                            feature_names=np.array(new_data),  # FIXME: this is probably a bug
+                            feature_names=self.feature_names,
                             output_names=t,
                             output_indexes=self.output_indexes,
                             lower_bounds=self.lower_bounds,
@@ -378,6 +379,7 @@ class Explanation(metaclass=MetaExplanation):
                             clustering=self.clustering,
                         )
                         new_self.op_history = copy.copy(self.op_history)
+                        manually_handled_indices.add(pos)
                         # new_self = copy.deepcopy(self)
                         # new_self.values = np.array(new_values)
                         # new_self.base_values = np.array(new_base_values)
@@ -404,6 +406,7 @@ class Explanation(metaclass=MetaExplanation):
                     new_self.feature_names = t
                     new_self.clustering = None
                     # return new_self
+                    manually_handled_indices.add(pos)
 
             if isinstance(t, (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)
@@ -414,7 +417,7 @@ class Explanation(metaclass=MetaExplanation):
                 item = tuple(tmp)
 
         # call slicer for the real work
-        item = tuple(v for v in item)  # SML I cut out: `if not isinstance(v, str)`
+        item = tuple(v for idx, v in enumerate(item) if idx not in manually_handled_indices)
         if len(item) == 0:
             return new_self  # type: ignore
         if new_self is None:
