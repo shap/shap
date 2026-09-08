@@ -314,11 +314,101 @@ class Explanation(metaclass=MetaExplanation):
             out += f"\n\n.data =\n{self.data!r}"
         return out
 
+    # =================== Helper Methods for __getitem__ ===================
+
+    def _ensure_item_is_tuple(self, item):
+        """Convert item to tuple if it isn't already."""
+        if not isinstance(item, tuple):
+            return (item,)
+        return item
+
+    def _convert_numpy_index(self, index):
+        """Convert numpy integer types to Python int for slicing compatibility."""
+        if isinstance(index, (np.int64, np.int32)):
+            return int(index)
+        elif isinstance(index, np.ndarray):
+            return [int(v) for v in index]
+        return index
+
+    def _get_output_names_dims(self):
+        """Get the dimensions of output_names from slicer objects or aliases."""
+        output_names_dims = []
+        has_output_names_in_objects = "output_names" in self._s._objects
+        has_output_names_in_aliases = "output_names" in self._s._aliases
+
+        if has_output_names_in_objects:
+            output_names_dims = self._s._objects["output_names"].dim
+        elif has_output_names_in_aliases:
+            output_names_dims = self._s._aliases["output_names"].dim
+
+        return output_names_dims
+
+    def _get_feature_names_dims(self):
+        """Get the dimensions of feature_names from slicer objects."""
+        feature_names_dims = []
+        has_feature_names_in_objects = "feature_names" in self._s._objects
+
+        if has_feature_names_in_objects:
+            feature_names_dims = self._s._objects["feature_names"].dim
+
+        return feature_names_dims
+
+    def _handle_2d_output_names_indexing(self, target_name):
+        """Handle string indexing for 2D output_names arrays."""
+        new_values = []
+        new_base_values = []
+        new_data = []
+
+        for i, v in enumerate(self.values):
+            for j, s in enumerate(self.output_names[i]):
+                if s == target_name:
+                    new_values.append(np.array(v[:, j]))
+                    new_data.append(np.array(self.data[i]))
+                    new_base_values.append(self.base_values[i][j])
+
+        new_self = Explanation(
+            np.array(new_values),
+            base_values=np.array(new_base_values),
+            data=np.array(new_data),
+            display_data=self.display_data,
+            instance_names=self.instance_names,
+            feature_names=np.array(new_data),  # FIXME: this is probably a bug
+            output_names=target_name,
+            output_indexes=self.output_indexes,
+            lower_bounds=self.lower_bounds,
+            upper_bounds=self.upper_bounds,
+            error_std=self.error_std,
+            main_effects=self.main_effects,
+            hierarchical_values=self.hierarchical_values,
+            clustering=self.clustering,
+        )
+        new_self.op_history = copy.copy(self.op_history)
+        return new_self
+
+    def _handle_2d_feature_names_indexing(self, target_name):
+        """Handle string indexing for 2D feature_names arrays."""
+        new_values = []
+        new_data = []
+
+        for i, val_i in enumerate(self.values):
+            for s, v, d in zip(self.feature_names[i], val_i, self.data[i]):
+                if s == target_name:
+                    new_values.append(v)
+                    new_data.append(d)
+
+        new_self = copy.deepcopy(self)
+        new_self.values = new_values
+        new_self.data = new_data
+        new_self.feature_names = target_name
+        new_self.clustering = None
+        return new_self
+
+    # =================== Main Indexing Method ===================
+
     def __getitem__(self, item) -> Explanation:
         """This adds support for OpChain indexing."""
         new_self = None
-        if not isinstance(item, tuple):
-            item = (item,)
+        item = self._ensure_item_is_tuple(item)
 
         # convert any OpChains or magic strings
         pos = -1
@@ -333,77 +423,28 @@ class Explanation(metaclass=MetaExplanation):
             orig_t = t
             if isinstance(t, OpChain):
                 t = t.apply(self)
-                if isinstance(t, (np.int64, np.int32)):  # because slicer does not like numpy indexes
-                    t = int(t)
-                elif isinstance(t, np.ndarray):
-                    t = [int(v) for v in t]  # slicer wants lists not numpy arrays for indexing
+                t = self._convert_numpy_index(t)
             elif isinstance(t, Explanation):
                 t = t.values
             elif isinstance(t, str):
                 # work around for 2D output_names since they are not yet slicer supported
-                output_names_dims = []
-                if "output_names" in self._s._objects:
-                    output_names_dims = self._s._objects["output_names"].dim
-                elif "output_names" in self._s._aliases:
-                    output_names_dims = self._s._aliases["output_names"].dim
-                if pos != 0 and pos in output_names_dims:
+                output_names_dims = self._get_output_names_dims()
+
+                is_valid_position = pos != 0 and pos in output_names_dims
+
+                if is_valid_position:
                     if len(output_names_dims) == 1:
                         t = np.argwhere(np.array(self.output_names) == t)[0][0]
                     elif len(output_names_dims) == 2:
-                        new_values = []
-                        new_base_values = []
-                        new_data = []
-                        new_self = copy.deepcopy(self)
-                        for i, v in enumerate(self.values):
-                            for j, s in enumerate(self.output_names[i]):
-                                if s == t:
-                                    new_values.append(np.array(v[:, j]))
-                                    new_data.append(np.array(self.data[i]))
-                                    new_base_values.append(self.base_values[i][j])
-
-                        new_self = Explanation(
-                            np.array(new_values),
-                            base_values=np.array(new_base_values),
-                            data=np.array(new_data),
-                            display_data=self.display_data,
-                            instance_names=self.instance_names,
-                            feature_names=np.array(new_data),  # FIXME: this is probably a bug
-                            output_names=t,
-                            output_indexes=self.output_indexes,
-                            lower_bounds=self.lower_bounds,
-                            upper_bounds=self.upper_bounds,
-                            error_std=self.error_std,
-                            main_effects=self.main_effects,
-                            hierarchical_values=self.hierarchical_values,
-                            clustering=self.clustering,
-                        )
-                        new_self.op_history = copy.copy(self.op_history)
-                        # new_self = copy.deepcopy(self)
-                        # new_self.values = np.array(new_values)
-                        # new_self.base_values = np.array(new_base_values)
-                        # new_self.data = np.array(new_data)
-                        # new_self.output_names = t
-                        # new_self.feature_names = np.array(new_data)
-                        # new_self.clustering = None
+                        new_self = self._handle_2d_output_names_indexing(t)
 
                 # work around for 2D feature_names since they are not yet slicer supported
-                feature_names_dims = []
-                if "feature_names" in self._s._objects:
-                    feature_names_dims = self._s._objects["feature_names"].dim
-                if pos != 0 and pos in feature_names_dims and len(feature_names_dims) == 2:
-                    new_values = []
-                    new_data = []
-                    for i, val_i in enumerate(self.values):
-                        for s, v, d in zip(self.feature_names[i], val_i, self.data[i]):
-                            if s == t:
-                                new_values.append(v)
-                                new_data.append(d)
-                    new_self = copy.deepcopy(self)
-                    new_self.values = new_values
-                    new_self.data = new_data
-                    new_self.feature_names = t
-                    new_self.clustering = None
-                    # return new_self
+                feature_names_dims = self._get_feature_names_dims()
+
+                is_2d_feature_name = pos != 0 and pos in feature_names_dims and len(feature_names_dims) == 2
+
+                if is_2d_feature_name:
+                    new_self = self._handle_2d_feature_names_indexing(t)
 
             if isinstance(t, (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)
@@ -414,7 +455,7 @@ class Explanation(metaclass=MetaExplanation):
                 item = tuple(tmp)
 
         # call slicer for the real work
-        item = tuple(v for v in item)  # SML I cut out: `if not isinstance(v, str)`
+        item = tuple(v for v in item)
         if len(item) == 0:
             return new_self  # type: ignore
         if new_self is None:
