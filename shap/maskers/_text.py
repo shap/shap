@@ -183,7 +183,7 @@ class Text(Masker):
             parts = [s[offsets[i][0] : max(offsets[i][1], offsets[i + 1][0])] for i in range(len(offsets) - 1)]
             parts.append(s[offsets[len(offsets) - 1][0] : offsets[len(offsets) - 1][1]])
             return parts, token_data["input_ids"]
-        except (NotImplementedError, TypeError):  # catch lack of support for return_offsets_mapping
+        except (NotImplementedError, TypeError, KeyError):
             token_ids = self.tokenizer(s)["input_ids"]
             if hasattr(self.tokenizer, "convert_ids_to_tokens"):
                 tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
