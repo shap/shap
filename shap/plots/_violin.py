@@ -13,14 +13,12 @@ from ..utils._exceptions import DimensionError
 from . import colors
 from ._labels import labels
 
-# TODO: simplify this when we drop support for matplotlib 3.9
 if version.parse(matplotlib.__version__) >= version.parse("3.10"):
     ORIENTATION_KWARG = dict(orientation="horizontal")
 else:
     ORIENTATION_KWARG = dict(vert=False)  # type: ignore[dict-item]
 
 
-# TODO: remove unused title argument / use title argument
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
 def violin(
     shap_values,
@@ -45,6 +43,7 @@ def violin(
     color_bar_tick_size=11,
     axhline_lw=0.5,
     use_log_scale=False,
+    ax=None,
 ):
     """Create a SHAP violin plot, colored by feature values when they are provided.
 
@@ -97,6 +96,10 @@ def violin(
         Line width for horizontal lines in the plot.
     use_log_scale : bool, optional
         Whether to use a symmetric log scale for the x-axis.
+    ax : matplotlib.axes.Axes, optional
+        An existing :external+mpl:class:`~matplotlib.axes.Axes` object to draw the plot into.
+        When provided, the plot is drawn into this axes and figure resizing is skipped.
+        When ``None`` (default), the current axes is used, which preserves existing behaviour.
 
     Examples
     --------
@@ -113,8 +116,6 @@ def violin(
             features = shap_exp.data
         if feature_names is None:
             feature_names = shap_exp.feature_names
-        # if out_names is None: # TODO: waiting for slicer support of this
-        #     out_names = shap_exp.output_names
 
     if isinstance(shap_values, list):
         emsg = "Violin plots don't support multi-output explanations! Use 'shap.plots.bar` instead."
@@ -135,7 +136,6 @@ def violin(
         else:
             color = colors.blue_rgb
 
-    # convert from a DataFrame or other types
     if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
@@ -164,8 +164,18 @@ def violin(
     if feature_names is None:
         feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
 
+    # Resolve the target axes.  If the caller did not supply one, fall back to
+    # the current axes (plt.gca()), which exactly preserves the historical
+    # behaviour.  We then make it the "current" axes so that every subsequent
+    # plt.* call is automatically routed to the correct object, whether the
+    # caller supplied an external axes or not.
+    _ax_provided = ax is not None
+    if not _ax_provided:
+        ax = plt.gca()
+    plt.sca(ax)  # make ax current for all plt.* drawing calls below
+
     if use_log_scale:
-        plt.xscale("symlog")
+        ax.set_xscale("symlog")
 
     if max_display is None:
         max_display = 20
@@ -178,12 +188,16 @@ def violin(
         feature_order = np.flip(np.arange(min(max_display, num_features)), 0)
 
     row_height = 0.4
-    if plot_size == "auto":
-        plt.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
-    elif type(plot_size) in (list, tuple):
-        plt.gcf().set_size_inches(plot_size[0], plot_size[1])
-    elif plot_size is not None:
-        plt.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
+    # Only resize the figure when we own the axes (i.e. the caller did not
+    # supply an external one).  Resizing a figure that the caller already laid
+    # out would be surprising and break subplot grids.
+    if not _ax_provided:
+        if plot_size == "auto":
+            plt.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
+        elif type(plot_size) in (list, tuple):
+            plt.gcf().set_size_inches(plot_size[0], plot_size[1])
+        elif plot_size is not None:
+            plt.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
     plt.axvline(x=0, color="#999999", zorder=-1)
 
     if plot_type == "violin":
@@ -205,7 +219,7 @@ def violin(
                 ds /= np.max(ds) * 3
 
                 values = features[:, i]
-                # window_size = max(10, len(values) // 20)
+
                 smooth_values = np.zeros(len(xs) - 1)
                 sort_inds = np.argsort(shaps)
                 trailing_pos = 0
@@ -226,7 +240,6 @@ def violin(
                     else:
                         back_fill += 1
 
-                # Get nan values:
                 nan_mask = np.isnan(values)
 
                 # Trim the value and color range to percentiles
@@ -255,8 +268,7 @@ def violin(
                     linewidth=0,
                     zorder=1,
                 )
-                # smooth_values -= nxp.nanpercentile(smooth_values, 5)
-                # smooth_values /= np.nanpercentile(smooth_values, 95)
+
                 smooth_values -= vmin
                 if vmax - vmin > 0:
                     smooth_values /= vmax - vmin
@@ -295,7 +307,6 @@ def violin(
         shap_min, shap_max = np.min(shap_values), np.max(shap_values)
         x_points = np.linspace(shap_min, shap_max, num_x_points)
 
-        # loop through each feature and plot:
         for pos, ind in enumerate(feature_order):
             # decide how to handle: if #unique < layered_violin_max_num_bins then split by unique value, otherwise use bins/percentiles.
             # to keep simpler code, in the case of uniques, we just adjust the bins to align with the unique counts.
@@ -308,11 +319,10 @@ def violin(
             else:
                 thesebins = bins
             nbins = thesebins.shape[0] - 1
-            # order the feature data so we can apply percentiling
+
             order = np.argsort(feature)
             # x axis is located at y0 = pos, with pos being there for offset
-            # y0 = np.ones(num_x_points) * pos
-            # calculate kdes:
+
             ys = np.zeros((nbins, num_x_points))
             for i in range(nbins):
                 # get shap values in this bin:
@@ -345,13 +355,10 @@ def violin(
             scale = ys.max() * 2 / width  # 2 is here as we plot both sides of x axis
             for i in range(nbins - 1, -1, -1):
                 y = ys[i, :] / scale
-                c = (
-                    plt.get_cmap(color)(i / (nbins - 1)) if color in plt.colormaps else color
-                )  # if color is a cmap, use it, otherwise use a color
+                c = plt.get_cmap(color)(i / (nbins - 1)) if color in plt.colormaps else color
                 plt.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
         plt.xlim(shap_min, shap_max)
 
-    # draw the color bar
     if (
         color_bar
         and features is not None
@@ -362,30 +369,35 @@ def violin(
 
         m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else plt.get_cmap(color))
         m.set_array([0, 1])
-        cb = plt.colorbar(m, ax=plt.gca(), ticks=[0, 1], aspect=80)
+        cb = plt.colorbar(m, ax=ax, ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
         cb.set_label(color_bar_label, size=color_bar_label_size, labelpad=0)
         cb.ax.tick_params(labelsize=color_bar_tick_size, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)  # type: ignore
-        # bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
-        # cb.ax.set_aspect((bbox.height - 0.9) * 20)
-        # cb.draw_all()
 
-    plt.gca().xaxis.set_ticks_position("bottom")
-    plt.gca().yaxis.set_ticks_position("none")
-    plt.gca().spines["right"].set_visible(False)
-    plt.gca().spines["top"].set_visible(False)
-    plt.gca().spines["left"].set_visible(False)
-    plt.gca().tick_params(color=axis_color, labelcolor=axis_color)
-    plt.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=13)
-    plt.gca().tick_params("y", length=20, width=0.5, which="major")
-    plt.gca().tick_params("x", labelsize=11)
-    plt.ylim(-1, len(feature_order))
-    plt.xlabel(labels["VALUE"], fontsize=13)
+    # Use `ax` directly rather than plt.gca().  plt.colorbar() (above) creates
+    # a new inset axes and leaves it as the pyplot "current" axes, so plt.gca()
+    # would style the colorbar axes rather than our plot axes.  Referencing `ax`
+    # explicitly is immune to that side-effect regardless of whether a colorbar
+    # was drawn — and is correct even when no ax was supplied by the caller.
+    ax.xaxis.set_ticks_position("bottom")
+    ax.yaxis.set_ticks_position("none")
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(color=axis_color, labelcolor=axis_color)
+    ax.set_yticks(range(len(feature_order)))
+    ax.set_yticklabels([feature_names[i] for i in feature_order], fontsize=13)
+    ax.tick_params("y", length=20, width=0.5, which="major")
+    ax.tick_params("x", labelsize=11)
+    ax.set_ylim(-1, len(feature_order))
+    ax.set_xlabel(labels["VALUE"], fontsize=13)
 
     if show:
         plt.show()
+    else:
+        return ax
 
 
 def _trim_crange(values, nan_mask):
