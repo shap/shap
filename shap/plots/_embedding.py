@@ -51,8 +51,17 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
         embedding_values = pca.fit_transform(shap_values)
     elif hasattr(method, "shape") and method.shape[1] == 2:
         embedding_values = method
+    elif isinstance(method, str):
+        raise ValueError(
+            f"Unsupported embedding method: '{method}'. "
+            "Valid string options are: 'pca'. "
+            "Alternatively, pass a numpy array of shape (n_samples, 2) as a pre-computed embedding."
+        )
     else:
-        print("Unsupported embedding method:", method)
+        raise ValueError(
+            f"Unsupported embedding method: {method!r}. "
+            "Valid options are the string 'pca' or a numpy array of shape (n_samples, 2)."
+        )
 
     plt.scatter(embedding_values[:, 0], embedding_values[:, 1], c=cvals, cmap=colors.red_blue, alpha=alpha, linewidth=0)
     plt.axis("off")
