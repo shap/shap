@@ -5,6 +5,7 @@ from .. import Explanation
 from ..utils import OpChain
 from . import colors
 from ._labels import labels
+from ._show import resolve_show
 from ._utils import convert_ordering
 
 
@@ -15,7 +16,7 @@ def heatmap(
     feature_order=None,
     max_display=10,
     cmap=colors.red_white_blue,
-    show=True,
+    show=None,
     plot_width=8,
     ax=None,
 ):
@@ -70,6 +71,8 @@ def heatmap(
     See `heatmap plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/heatmap.html>`_.
 
     """
+    show = resolve_show(show, plot_name="heatmap")
+
     # sort the SHAP values matrix by rows and columns
     values = shap_values.values
     if issubclass(type(feature_values), OpChain):

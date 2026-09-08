@@ -5,6 +5,7 @@ import scipy.stats
 
 from . import colors
 from ._labels import labels
+from ._show import resolve_show
 
 
 def truncate_text(text, max_len):
@@ -14,7 +15,7 @@ def truncate_text(text, max_len):
         return text
 
 
-def monitoring(ind, shap_values, features, feature_names=None, show=True):
+def monitoring(ind, shap_values, features, feature_names=None, show=None):
     """Create a SHAP monitoring plot.
 
     (Note this function is preliminary and subject to change!!)
@@ -38,6 +39,8 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
         Names of the features (length # features)
 
     """
+    show = resolve_show(show, plot_name="monitoring")
+
     if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns

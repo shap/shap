@@ -21,6 +21,7 @@ from ..utils import safe_isinstance
 from ..utils._exceptions import DimensionError
 from . import colors
 from ._labels import labels
+from ._show import resolve_show
 from ._utils import (
     convert_color,
     convert_ordering,
@@ -47,7 +48,7 @@ def beeswarm(
     axis_color="#333333",
     alpha: float = 1.0,
     ax: plt.Axes | None = None,
-    show: bool = True,
+    show: bool | None = None,
     log_scale: bool = False,
     color_bar: bool = True,
     s: float = 16,
@@ -106,6 +107,8 @@ def beeswarm(
     See `beeswarm plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/beeswarm.html>`_.
 
     """
+    show = resolve_show(show, plot_name="beeswarm")
+
     if not isinstance(shap_values, Explanation):
         emsg = "The beeswarm plot requires an `Explanation` object as the `shap_values` argument."
         raise TypeError(emsg)
@@ -725,7 +728,7 @@ def summary_legacy(
             features[:, sort_inds] if features is not None else None,
             feature_names=np.array(feature_names)[sort_inds].tolist(),
             sort=False,
-            show=False,
+            show=None,
             color_bar=False,
             plot_size=None,
             max_display=max_display,
@@ -745,7 +748,7 @@ def summary_legacy(
                 features[:, sort_inds] if features is not None else None,
                 sort=False,
                 feature_names=["" for i in range(len(feature_names))],
-                show=False,
+                show=None,
                 color_bar=False,
                 plot_size=None,
                 max_display=max_display,

@@ -16,6 +16,7 @@ from ..utils._exceptions import DimensionError
 from ..utils._general import encode_array_if_needed
 from . import colors
 from ._labels import labels
+from ._show import resolve_show
 from ._utils import AxisLimitSpec, parse_axis_limit
 
 
@@ -37,7 +38,7 @@ def scatter(
     overlay: dict[str, Any] | None = None,
     ax: plt.Axes | None = None,
     ylabel: str = "SHAP value",
-    show: bool = True,
+    show: bool | None = None,
 ):
     """Create a SHAP dependence scatter plot, optionally colored by an interaction feature.
 
@@ -128,6 +129,8 @@ def scatter(
     See `scatter plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/scatter.html>`_.
 
     """
+    show = resolve_show(show, plot_name="scatter")
+
     if not isinstance(shap_values, Explanation):
         raise TypeError("The shap_values parameter must be a shap.Explanation object!")
 
@@ -143,7 +146,7 @@ def scatter(
         _ = plt.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
         for i in inds:
             ax = plt.subplot(1, len(inds), i + 1)
-            scatter(shap_values[:, i], color=color, show=False, ax=ax, ymin=ymin, ymax=ymax)
+            scatter(shap_values[:, i], color=color, show=None, ax=ax, ymin=ymin, ymax=ymax)
             if overlay is not None:
                 line_styles = ["solid", "dotted", "dashed"]
                 for j, name in enumerate(overlay):
@@ -665,7 +668,7 @@ def dependence_legacy(
             interaction_index=(None if ind1 == ind2 else ind2),
             display_features=display_features,
             ax=ax,
-            show=False,
+            show=None,
             xmin=xmin,
             xmax=xmax,
             x_jitter=x_jitter,
