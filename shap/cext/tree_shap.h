@@ -1448,6 +1448,269 @@ inline void dense_global_path_dependent(const TreeEnsemble& trees, const Explana
 }
 
 
+// ===========================================================================
+// INTERVENTIONAL (marginal) order-2 tree interaction values.
+//
+// This is the previously-missing path: FEATURE_DEPENDENCE::independent with
+// interactions == true.  It is a direct C++ port of the Zern, Broelemann &
+// Kasneci (2023, AAAI) algorithm that shapiq implements — a paired E/R
+// depth-first traversal of the explained point x and each background reference
+// r, with a closed-form per-leaf Shapley-interaction weight.  No 2^n coalition
+// enumeration; polynomial and linear in |R|.
+//
+// For each explained point x and reference r, one DFS of each tree splits the
+// features that route x and r to different children into two disjoint sets:
+//   E = features whose divergent split followed x's branch,
+//   R = features whose divergent split followed r's branch.
+// A reached leaf with value v contributes to the interaction of feature set U
+// (|U cap E| = s_cap_e, |U cap R| = s_cap_r) the amount v * lambda(...) iff
+// U subset (E cup R).  Summing over all reached leaves / references / trees and
+// dividing by |R| yields the exact interventional Shapley Interaction (SII)
+// values.  For order 2 that is: n main effects phi_i (= interventional single
+// SHAP) and C(n,2) pair values SII_ij.
+//
+// We then assemble shap's CLASSIC interaction matrix convention (Lundberg 2020,
+// the same one dense_tree_interactions_path_dependent produces):
+//   off-diagonal  Phi_ij = Phi_ji = SII_ij / 2
+//   diagonal      Phi_ii = phi_i - sum_{j!=i} Phi_ij
+//   bias cell     Phi[M][M] = baseline = E_{r~R}[f(r)]
+// so that every row sums to the interventional single SHAP value phi_i, the
+// whole M x M block sums to f(x) - E_R[f], and the full (M+1)x(M+1) sums to f(x).
+//
+// Scope: model_output == "raw" (transform == NULL) only, which is what
+// shap_interaction_values already asserts.
+// ===========================================================================
+
+// C(n, k) as a double (n bounded by tree depth, so this is exact and cheap).
+inline tfloat interv_binom(int n, int k) {
+    if (k < 0 || k > n) return 0.0;
+    if (k == 0 || k == n) return 1.0;
+    if (k > n - k) k = n - k;
+    tfloat result = 1.0;
+    for (int i = 0; i < k; ++i) {
+        result = result * static_cast<tfloat>(n - i) / static_cast<tfloat>(i + 1);
+    }
+    return result;
+}
+
+// SII leaf weight  lambda(e, r, s_cap_e, s_cap_r)
+//   w1 = e - s_cap_e; w2 = r - s_cap_r
+//   sign = (-1)^{s_cap_r}
+//   lambda = sign / ((w1 + w2 + 1) * C(w1 + w2, w1))
+// (Zern et al. 2023, Prop.1 / Cor.1; == shapiq weights.cpp shapley_weight.)
+inline tfloat interv_sii_weight(int e, int r, int s_cap_e, int s_cap_r) {
+    const int w1 = e - s_cap_e;
+    const int w2 = r - s_cap_r;
+    const tfloat sign = (s_cap_r % 2 == 0) ? 1.0 : -1.0;
+    return sign / (static_cast<tfloat>(w1 + w2 + 1) * interv_binom(w1 + w2, w1));
+}
+
+// Accumulate one reached leaf's contribution into the (order-1) phi_single and
+// (order-2, canonical upper-triangle a<b) phi_pair buffers.
+inline void interv_second_order_leaf_update(
+        const int *Elist, int e, const int *Rlist, int r,
+        const tfloat *leaf_values, unsigned num_outputs, unsigned M,
+        tfloat *phi_single, tfloat *phi_pair) {
+
+    // weights are independent of which specific features are in E/R, so compute
+    // them once per leaf (guarded so we never evaluate an unused degenerate one).
+    const tfloat wE  = (e >= 1)            ? interv_sii_weight(e, r, 1, 0) : 0.0;
+    const tfloat wR  = (r >= 1)            ? interv_sii_weight(e, r, 0, 1) : 0.0;
+    const tfloat wEE = (e >= 2)            ? interv_sii_weight(e, r, 2, 0) : 0.0;
+    const tfloat wRR = (r >= 2)            ? interv_sii_weight(e, r, 0, 2) : 0.0;
+    const tfloat wER = (e >= 1 && r >= 1)  ? interv_sii_weight(e, r, 1, 1) : 0.0;
+
+    for (unsigned o = 0; o < num_outputs; ++o) {
+        const tfloat v = leaf_values[o];
+        if (v == 0.0) continue;
+
+        // main effects (diagonal of SII == interventional single SHAP)
+        for (int a = 0; a < e; ++a) phi_single[Elist[a] * num_outputs + o] += v * wE;
+        for (int a = 0; a < r; ++a) phi_single[Rlist[a] * num_outputs + o] += v * wR;
+
+        // pairwise, both endpoints in E
+        for (int a = 0; a < e; ++a) {
+            for (int b = a + 1; b < e; ++b) {
+                int i = Elist[a], j = Elist[b];
+                if (i > j) { int t = i; i = j; j = t; }
+                phi_pair[(static_cast<unsigned>(i) * M + j) * num_outputs + o] += v * wEE;
+            }
+        }
+        // pairwise, both endpoints in R
+        for (int a = 0; a < r; ++a) {
+            for (int b = a + 1; b < r; ++b) {
+                int i = Rlist[a], j = Rlist[b];
+                if (i > j) { int t = i; i = j; j = t; }
+                phi_pair[(static_cast<unsigned>(i) * M + j) * num_outputs + o] += v * wRR;
+            }
+        }
+        // pairwise, one endpoint in E and one in R (E and R are disjoint by
+        // construction; the i==j guard is defensive)
+        for (int a = 0; a < e; ++a) {
+            for (int b = 0; b < r; ++b) {
+                int i = Elist[a], j = Rlist[b];
+                if (i == j) continue;
+                if (i > j) { int t = i; i = j; j = t; }
+                phi_pair[(static_cast<unsigned>(i) * M + j) * num_outputs + o] += v * wER;
+            }
+        }
+    }
+}
+
+// Paired DFS of x and r through a single tree, collecting per-leaf (E, R, value)
+// and folding them into phi_single / phi_pair via the order-2 update above.
+// Elist/Rlist are shared scratch buffers (sized >= max_depth+1); the standard
+// "write at index count, recurse with count+1" pattern keeps sibling branches
+// independent.
+inline void interv_er_dfs(
+        const TreeEnsemble &tree,
+        const tfloat *x, const bool *x_missing,
+        const tfloat *r, const bool *r_missing,
+        unsigned node, int *Elist, int en, int *Rlist, int rn,
+        unsigned M, unsigned num_outputs,
+        tfloat *phi_single, tfloat *phi_pair) {
+
+    // leaf
+    if (tree.children_right[node] < 0) {
+        interv_second_order_leaf_update(Elist, en, Rlist, rn,
+                                        tree.values + node * num_outputs,
+                                        num_outputs, M, phi_single, phi_pair);
+        return;
+    }
+
+    const unsigned feat = tree.features[node];
+    const int type = tree.threshold_types[node];
+    const tfloat thr = tree.thresholds[node];
+
+    // branch x would take
+    unsigned child_x;
+    if (x_missing[feat]) child_x = tree.children_default[node];
+    else if (type == 0 && x[feat] <= thr) child_x = tree.children_left[node];
+    else if (type == 1 && category_in_threshold(thr, x[feat])) child_x = tree.children_left[node];
+    else child_x = tree.children_right[node];
+
+    // branch r would take
+    unsigned child_r;
+    if (r_missing[feat]) child_r = tree.children_default[node];
+    else if (type == 0 && r[feat] <= thr) child_r = tree.children_left[node];
+    else if (type == 1 && category_in_threshold(thr, r[feat])) child_r = tree.children_left[node];
+    else child_r = tree.children_right[node];
+
+    if (child_x == child_r) {
+        // split does not separate x and r: sets unchanged, single continuation
+        interv_er_dfs(tree, x, x_missing, r, r_missing, child_x,
+                      Elist, en, Rlist, rn, M, num_outputs, phi_single, phi_pair);
+    } else {
+        // Divergent split. E and R are treated as SETS (shapiq uses
+        // e_set | {feature}); a feature split multiple times along the path must
+        // be counted ONCE. Descend x's branch iff the feature isn't already
+        // committed to R; grow E only if the feature isn't already in E.
+        // Symmetrically for r's branch. (A feature already committed to one side
+        // can't be claimed by the other -> Zern et al. guards i in B / i not in A.)
+        bool in_R = false;
+        for (int i = 0; i < rn; ++i) { if (Rlist[i] == static_cast<int>(feat)) { in_R = true; break; } }
+        bool in_E = false;
+        for (int i = 0; i < en; ++i) { if (Elist[i] == static_cast<int>(feat)) { in_E = true; break; } }
+
+        if (!in_R) {  // follow x -> feature belongs to E
+            int next_en = en;
+            if (!in_E) { Elist[en] = static_cast<int>(feat); next_en = en + 1; }
+            interv_er_dfs(tree, x, x_missing, r, r_missing, child_x,
+                          Elist, next_en, Rlist, rn, M, num_outputs, phi_single, phi_pair);
+        }
+        if (!in_E) {  // follow r -> feature belongs to R
+            int next_rn = rn;
+            if (!in_R) { Rlist[rn] = static_cast<int>(feat); next_rn = rn + 1; }
+            interv_er_dfs(tree, x, x_missing, r, r_missing, child_r,
+                          Elist, en, Rlist, next_rn, M, num_outputs, phi_single, phi_pair);
+        }
+    }
+}
+
+inline void dense_tree_interactions_independent(const TreeEnsemble& trees, const ExplanationDataset &data,
+                                                tfloat *out_contribs, transform_f transform) {
+    if (transform != NULL) {
+        // Non-raw model_output would need the per-reference rescale that
+        // dense_independent applies; shap_interaction_values asserts raw, so we
+        // never expect to get here. Warn and proceed with the raw computation.
+        std::cerr << "dense_tree_interactions_independent: only model_output=\"raw\" is supported; "
+                     "computing raw interaction values.\n";
+    }
+
+    const unsigned M  = data.M;
+    const unsigned no = trees.num_outputs;
+    const unsigned long long matrix_stride =
+        static_cast<unsigned long long>(M + 1) * (M + 1) * no;
+    const unsigned row_stride = (M + 1) * no;  // = contrib_row_size
+
+    tfloat *phi_single = new tfloat[static_cast<size_t>(M) * no];
+    tfloat *phi_pair   = new tfloat[static_cast<size_t>(M) * M * no];
+    tfloat *baseline   = new tfloat[no];
+    int *Elist = new int[trees.max_depth + 2];
+    int *Rlist = new int[trees.max_depth + 2];
+
+    for (unsigned i = 0; i < data.num_X; ++i) {
+        const tfloat *x = data.X + static_cast<size_t>(i) * M;
+        const bool  *x_missing = data.X_missing + static_cast<size_t>(i) * M;
+        tfloat *inst = out_contribs + static_cast<unsigned long long>(i) * matrix_stride;
+
+        std::fill(inst, inst + matrix_stride, static_cast<tfloat>(0));
+        std::fill(phi_single, phi_single + static_cast<size_t>(M) * no, static_cast<tfloat>(0));
+        std::fill(phi_pair, phi_pair + static_cast<size_t>(M) * M * no, static_cast<tfloat>(0));
+        std::fill(baseline, baseline + no, static_cast<tfloat>(0));
+
+        for (unsigned j = 0; j < data.num_R; ++j) {
+            const tfloat *r = data.R + static_cast<size_t>(j) * M;
+            const bool  *r_missing = data.R_missing + static_cast<size_t>(j) * M;
+            for (unsigned t = 0; t < trees.tree_limit; ++t) {
+                TreeEnsemble tree;
+                trees.get_tree(tree, t);
+                // baseline contribution: this tree's prediction for r
+                const tfloat *rleaf = tree_predict(0, tree, r, r_missing);
+                for (unsigned o = 0; o < no; ++o) baseline[o] += rleaf[o];
+                // interaction contribution
+                interv_er_dfs(tree, x, x_missing, r, r_missing, 0,
+                              Elist, 0, Rlist, 0, M, no, phi_single, phi_pair);
+            }
+        }
+
+        const tfloat invR = static_cast<tfloat>(1) / static_cast<tfloat>(data.num_R);
+        for (size_t k = 0; k < static_cast<size_t>(M) * no; ++k) phi_single[k] *= invR;
+        for (size_t k = 0; k < static_cast<size_t>(M) * M * no; ++k) phi_pair[k] *= invR;
+        for (unsigned o = 0; o < no; ++o) baseline[o] = baseline[o] * invR + trees.base_offset[o];
+
+        // assemble shap's classic (M+1)x(M+1) interaction matrix
+        for (unsigned o = 0; o < no; ++o) {
+            // off-diagonals = SII_pair / 2, written symmetrically
+            for (unsigned a = 0; a < M; ++a) {
+                for (unsigned b = a + 1; b < M; ++b) {
+                    const tfloat half = phi_pair[(static_cast<size_t>(a) * M + b) * no + o] * static_cast<tfloat>(0.5);
+                    inst[(static_cast<size_t>(a) * (M + 1) + b) * no + o] = half;
+                    inst[(static_cast<size_t>(b) * (M + 1) + a) * no + o] = half;
+                }
+            }
+            // diagonal = phi_i - sum_{j!=i} Phi_ij (so each row sums to phi_i)
+            for (unsigned a = 0; a < M; ++a) {
+                tfloat off_sum = 0.0;
+                for (unsigned b = 0; b < M; ++b) {
+                    if (b != a) off_sum += inst[(static_cast<size_t>(a) * (M + 1) + b) * no + o];
+                }
+                inst[(static_cast<size_t>(a) * (M + 1) + a) * no + o] = phi_single[a * no + o] - off_sum;
+            }
+            // bias cell [M][M] = baseline (bias row/col already zeroed above)
+            inst[(static_cast<size_t>(M) * (M + 1) + M) * no + o] = baseline[o];
+        }
+    }
+
+    delete[] phi_single;
+    delete[] phi_pair;
+    delete[] baseline;
+    delete[] Elist;
+    delete[] Rlist;
+    (void)row_stride;
+}
+
+
 /**
  * The main method for computing Tree SHAP on models using dense data.
  */
@@ -1461,7 +1724,7 @@ inline void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset 
     switch (feature_dependence) {
         case FEATURE_DEPENDENCE::independent:
             if (interactions) {
-                std::cerr << "FEATURE_DEPENDENCE::independent does not support interactions!\n";
+                dense_tree_interactions_independent(trees, data, out_contribs, transform);
             } else dense_independent(trees, data, out_contribs, transform);
             return;
 
