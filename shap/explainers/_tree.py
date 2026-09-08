@@ -354,6 +354,12 @@ class TreeExplainer(Explainer):
 
         # compute the expected value if we have a parsed tree for the cext
         if self.model.model_output == "log_loss":
+            if self.model.trees is None:
+                raise ExplainerError(
+                    "Currently TreeExplainer can only handle models with categorical splits when "
+                    'feature_perturbation="tree_path_dependent" and no background data is passed. Please try again using '
+                    'shap.TreeExplainer(model, feature_perturbation="tree_path_dependent").'
+                )
             self.expected_value = self.__dynamic_expected_value
         elif data is not None:
             try:
