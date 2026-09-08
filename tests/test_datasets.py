@@ -146,3 +146,21 @@ def test_rank():
     assert y2.shape == (768,)
     assert q1.shape == (201,)
     assert q2.shape == (50,)
+
+
+def test_cache_custom_filename(tmp_path, monkeypatch):
+    """Test the cache function with a custom file_name parameter."""
+    from unittest.mock import patch
+
+    import shap.datasets as ds
+
+    # create a fake file so the cache function skips the download
+    fake_dir = tmp_path / "cached_data"
+    fake_dir.mkdir()
+    (fake_dir / "test_file.csv").write_text("dummy")
+
+    with patch.object(ds.os.path, "dirname", return_value=str(tmp_path)):
+        path = ds.cache("https://example.com/test.csv", file_name="test_file.csv")
+
+    assert path.endswith("test_file.csv")
+    assert ds.os.path.isfile(path)
