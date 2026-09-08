@@ -517,6 +517,8 @@ class AdditiveForceVisualizer(BaseVisualizer):
 
     def matplotlib(self, figsize, show, text_rotation, min_perc=0.05):
         fig = draw_additive_plot(self.data, figsize=figsize, show=show, text_rotation=text_rotation, min_perc=min_perc)
+        if fig is not None and show:
+            fig.tight_layout()
 
         return fig
 
