@@ -78,6 +78,7 @@ test = [
   {include-group = "test-core"},
   "xgboost",
   "lightgbm",
+  "treelite>=4.0",
   'catboost; python_version < "3.14"',  # TODO: pending 3.14 support
   'gpboost',
   "ngboost",
@@ -204,6 +205,7 @@ module = [
   "torch.*",
   "tqdm.*",
   "xgboost.*",
+  "treelite.*",
   "causalml.*",
   "selenium.*",
 ]

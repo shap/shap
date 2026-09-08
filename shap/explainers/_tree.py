@@ -87,7 +87,8 @@ def _safe_check_tree_instance_experimental(tree_instance: Any) -> None:
             )
     else:
         warnings.warn(
-            f"Unable to check experimental integration status for {tree_instance} object", ExperimentalWarning
+            f"Unable to check experimental integration status for {tree_instance} object",
+            ExperimentalWarning,
         )
 
 
@@ -419,7 +420,13 @@ class TreeExplainer(Explainer):
             feature_names = getattr(self, "data_feature_names", None)
 
         if not interactions:
-            v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity, approximate=approximate)
+            v = self.shap_values(
+                X,
+                y=y,
+                from_call=True,
+                check_additivity=check_additivity,
+                approximate=approximate,
+            )
             if isinstance(v, list):
                 v = np.stack(v, axis=-1)  # put outputs at the end
         else:
@@ -479,7 +486,14 @@ class TreeExplainer(Explainer):
         y: npt.NDArray[Any] | pd.Series | None,
         tree_limit: int | None,
         check_additivity: bool,
-    ) -> tuple[npt.NDArray[Any], npt.NDArray[Any] | pd.Series | None, npt.NDArray[np.bool_], bool, int, bool]:
+    ) -> tuple[
+        npt.NDArray[Any],
+        npt.NDArray[Any] | pd.Series | None,
+        npt.NDArray[np.bool_],
+        bool,
+        int,
+        bool,
+    ]:
         # see if we have a default tree_limit in place.
         if tree_limit is None:
             tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
@@ -564,7 +578,10 @@ class TreeExplainer(Explainer):
             )
             if check_additivity and self.model.model_output == "raw":
                 model_output_vals = self.model.original_model.predict(
-                    X, iteration_range=(0, n_iterations), output_margin=True, validate_features=False
+                    X,
+                    iteration_range=(0, n_iterations),
+                    output_margin=True,
+                    validate_features=False,
                 )
 
         elif self.model.model_type == "lightgbm":
@@ -857,7 +874,10 @@ class TreeExplainer(Explainer):
 
             n_iterations = _xgboost_n_iterations(tree_limit, self.model.num_stacked_models)
             phi = self.model.original_model.predict(
-                X, iteration_range=(0, n_iterations), pred_interactions=True, validate_features=False
+                X,
+                iteration_range=(0, n_iterations),
+                pred_interactions=True,
+                validate_features=False,
             )
 
             # note we pull off the last column and keep it as our expected_value
@@ -882,7 +902,11 @@ class TreeExplainer(Explainer):
             phi = self.model.original_model.get_feature_importance(data=X, fstr_type="ShapInteractionValues")
             # note we pull off the last column and keep it as our expected_value
             if len(phi.shape) == 4:
-                self.expected_value = getattr(self, "expected_value", [phi[0, i, -1, -1] for i in range(phi.shape[1])])
+                self.expected_value = getattr(
+                    self,
+                    "expected_value",
+                    [phi[0, i, -1, -1] for i in range(phi.shape[1])],
+                )
                 return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]  # type: ignore[return-value]
             else:
                 self.expected_value = getattr(self, "expected_value", phi[0, -1, -1])
@@ -929,12 +953,22 @@ class TreeExplainer(Explainer):
         else:
             self.expected_value = [phi[0, -1, -1, i] for i in range(phi.shape[3])]
             if flat_output:
-                out = np.stack([phi[0, :-1, :-1, i] for i in range(self.model.num_outputs)], axis=-1)
+                out = np.stack(
+                    [phi[0, :-1, :-1, i] for i in range(self.model.num_outputs)],
+                    axis=-1,
+                )
             else:
-                out = np.stack([phi[:, :-1, :-1, i] for i in range(self.model.num_outputs)], axis=-1)
+                out = np.stack(
+                    [phi[:, :-1, :-1, i] for i in range(self.model.num_outputs)],
+                    axis=-1,
+                )
         return out
 
-    def assert_additivity(self, phi: npt.NDArray[Any] | list[npt.NDArray[Any]], model_output: npt.NDArray[Any]) -> None:
+    def assert_additivity(
+        self,
+        phi: npt.NDArray[Any] | list[npt.NDArray[Any]],
+        model_output: npt.NDArray[Any],
+    ) -> None:
         def check_sum(sum_val: npt.NDArray[Any], model_output: npt.NDArray[Any]) -> None:
             diff = np.abs(sum_val - model_output)
             # TODO: add arguments for passing custom 'atol' and 'rtol' values to 'np.allclose'
@@ -1183,7 +1217,13 @@ class TreeEnsemble:
             self.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_)  # output is average of trees
             self.trees = [
-                SingleTree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing)
+                SingleTree(
+                    e.tree_,
+                    normalize=True,
+                    scaling=scaling,
+                    data=data,
+                    data_missing=data_missing,
+                )
                 for e in model.estimators_
             ]
             self.objective = objective_name_map.get(model.criterion, None)
@@ -1221,7 +1261,12 @@ class TreeEnsemble:
                 raise InvalidModelError(emsg)
 
             self.trees = [
-                SingleTree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing)
+                SingleTree(
+                    e.tree_,
+                    scaling=model.learning_rate,
+                    data=data,
+                    data_missing=data_missing,
+                )
                 for e in model.estimators_[:, 0]
             ]
             self.objective = objective_name_map.get(model.criterion, None)
@@ -1327,7 +1372,12 @@ class TreeEnsemble:
                 raise InvalidModelError(emsg)
 
             self.trees = [
-                SingleTree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing)
+                SingleTree(
+                    e.tree_,
+                    scaling=model.learning_rate,
+                    data=data,
+                    data_missing=data_missing,
+                )
                 for e in model.estimators_[:, 0]
             ]
             self.objective = objective_name_map.get(model.criterion, None)
@@ -1352,7 +1402,11 @@ class TreeEnsemble:
             ):
                 sum_weight = sum(model.treeWeights)  # output is average of trees
                 self.trees = [
-                    SingleTree(tree, normalize=normalize, scaling=model.treeWeights[i] / sum_weight)
+                    SingleTree(
+                        tree,
+                        normalize=normalize,
+                        scaling=model.treeWeights[i] / sum_weight,
+                    )
                     for i, tree in enumerate(model.trees)
                 ]
             # Spark GBT, create 1 weighted (learning rate) tree per sub-model
@@ -1520,7 +1574,13 @@ class TreeEnsemble:
             self.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_)  # output is average of trees
             self.trees = [
-                SingleTree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing)
+                SingleTree(
+                    e.tree_,
+                    normalize=True,
+                    scaling=scaling,
+                    data=data,
+                    data_missing=data_missing,
+                )
                 for e in model.estimators_
             ]
             self.objective = objective_name_map.get(model.criterion, None)
@@ -1544,7 +1604,10 @@ class TreeEnsemble:
                 self.model_output = "raw"  # note that after loading we have a new model_output type
             assert safe_isinstance(
                 model.base_models[0][param_idx],
-                ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor"],
+                [
+                    "sklearn.tree.DecisionTreeRegressor",
+                    "sklearn.tree.tree.DecisionTreeRegressor",
+                ],
             ), "You must use default_tree_learner!"
             shap_trees = [trees[param_idx] for trees in model.base_models]
             self.internal_dtype = shap_trees[0].tree_.value.dtype.type
@@ -1574,6 +1637,17 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(shap_trees[0].criterion, None)
             self.tree_output = "raw_value"
             self.base_offset = model.init_params[param_idx]
+        elif safe_isinstance(model, ["treelite.Model", "treelite.core.Model"]):
+            assert_import("treelite")
+            self.original_model = model
+            loader = TreeliteModelLoader(model)
+            self.trees = loader.get_trees(data=data, data_missing=data_missing)
+            self.base_offset = loader.base_score
+            self.objective = loader.objective
+            self.tree_output = loader.tree_output
+            self.input_dtype = np.float64
+            if loader.num_stacked_models > 1:
+                self.num_stacked_models = loader.num_stacked_models
         else:
             raise InvalidModelError("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
@@ -2057,8 +2131,7 @@ class SingleTree:
             self.values = np.multiply(self.values, scaling)
 
         elif isinstance(tree, dict) and "nodeid" in tree:
-            """ Directly create tree given the JSON dump (with stats) of a XGBoost model.
-            """
+            """Directly create tree given the JSON dump (with stats) of a XGBoost model."""
 
             def max_id(node):
                 if "children" in node:
@@ -2095,8 +2168,7 @@ class SingleTree:
             extract_data(tree, self)
 
         elif isinstance(tree, str):
-            """ Build a tree from a text dump (with stats) of xgboost.
-            """
+            """Build a tree from a text dump (with stats) of xgboost."""
 
             nodes = [t.lstrip() for t in tree[:-1].split("\n")]
             nodes_dict = {}
@@ -2192,7 +2264,10 @@ class SingleTree:
 
         # we compute the expectations to make sure they follow the SHAP logic
         self.max_depth = _cext.compute_expectations(
-            self.children_left, self.children_right, self.node_sample_weight, self.values
+            self.children_left,
+            self.children_right,
+            self.node_sample_weight,
+            self.values,
         )
 
 
@@ -2610,3 +2685,126 @@ class CatBoostTreeModelLoader:
             )
 
         return trees
+
+
+class TreeliteModelLoader:
+    """Load a TreeLite model into SHAP's tree format.
+
+    Requires treelite >= 4.0 (regression, binary clf, multi-class clf).
+    Uses the field accessor API for both header and tree structure.
+    """
+
+    def __init__(self, treelite_model: Any) -> None:
+        self.num_feature: int = treelite_model.num_feature
+        self.num_tree: int = treelite_model.num_tree
+
+        ha = treelite_model.get_header_accessor()
+        task_type_list = [
+            "kBinaryClf",
+            "kRegressor",
+            "kMultiClf",
+            "kLearningToRank",
+            "kIsolationForest",
+        ]
+        task_type: str = task_type_list[int(ha.get_field("task_type")[0])]
+        self.average_tree_output: bool = bool(ha.get_field("average_tree_output")[0])
+        self.num_class: int = int(ha.get_field("num_class")[0])
+        self.base_score: float = float(ha.get_field("base_scores")[0])
+
+        self.num_stacked_models: int = self.num_class if (task_type == "kMultiClf" and self.num_class > 1) else 1
+
+        _task_map: dict[str, tuple[str | None, str]] = {
+            "kRegressor": ("squared_error", "raw_value"),
+            "kBinaryClf": ("binary_crossentropy", "log_odds"),
+            "kMultiClf": (None, "raw_value"),
+            "kLearningToRank": (None, "raw_value"),
+        }
+        self.objective, self.tree_output = _task_map.get(task_type, (None, "raw_value"))
+
+        self._trees_data: list[dict] = [self._parse_tree(treelite_model, i) for i in range(self.num_tree)]
+
+    def _parse_tree(self, treelite_model: Any, tree_id: int) -> dict:
+        """Load one tree via the tree accessor API into SHAP's dict format.
+
+        treelite's ``cmp`` field encodes which direction (cleft/cright) is taken
+        when the split condition is TRUE.  SHAP always uses ``feature <= threshold``
+        to mean *go left*, so we must normalise any other operator:
+
+        * cmp=2 (<)  : cleft is the left child; shift threshold down by 1 ULP
+        * cmp=3 (<=) : cleft is the left child; no adjustment needed
+        * cmp=4 (>)  : condition is inverted → swap cleft/cright for SHAP
+        * cmp=5 (>=) : swap cleft/cright and shift threshold down by 1 ULP
+        """
+        ta = treelite_model.get_tree_accessor(tree_id)
+
+        num_nodes: int = int(ta.get_field("num_nodes")[0])
+        node_type = ta.get_field("node_type")
+        cleft = ta.get_field("cleft").astype(np.int32)
+        cright = ta.get_field("cright").astype(np.int32)
+        split_index = ta.get_field("split_index").astype(np.int32)
+        default_left = ta.get_field("default_left")
+        leaf_value = ta.get_field("leaf_value").astype(np.float64)
+        threshold = ta.get_field("threshold").copy()
+        cmp = ta.get_field("cmp")
+
+        # Node sample weight: prefer sum_hess (XGBoost), fall back to data_count (LightGBM)
+        sum_hess = ta.get_field("sum_hess")
+        data_count = ta.get_field("data_count")
+        if len(sum_hess) == num_nodes:
+            node_sample_weight = sum_hess.astype(np.float64)
+        elif len(data_count) == num_nodes:
+            node_sample_weight = data_count.astype(np.float64)
+        else:
+            node_sample_weight = np.zeros(num_nodes, dtype=np.float64)
+
+        is_leaf = node_type == 0
+        is_internal = ~is_leaf
+
+        # Normalise to SHAP convention (<=): operators that invert left/right
+        # cmp=4 (>) and cmp=5 (>=) send larger values to cleft,
+        # so we swap cleft and cright for SHAP.
+        swap_mask = is_internal & ((cmp == 4) | (cmp == 5))
+        children_left = np.where(swap_mask, cright, cleft).astype(np.int32)
+        children_right = np.where(swap_mask, cleft, cright).astype(np.int32)
+
+        # Both < and >= (after swapping children) require SHAP's left branch
+        # to represent feature < threshold. Shift down in the original dtype
+        # before converting to float64, matching the source threshold precision.
+        shift_down = is_internal & ((cmp == 2) | (cmp == 5))
+        threshold[shift_down] = np.nextafter(
+            threshold[shift_down],
+            np.array(-np.inf, dtype=threshold.dtype),
+        )
+        threshold = threshold.astype(np.float64)
+
+        # children_default: swapping cleft/cright also swaps the default direction
+        effective_default_left = np.logical_xor(default_left.astype(bool), swap_mask)
+        children_default = np.where(
+            is_leaf,
+            np.int32(-1),
+            np.where(effective_default_left, children_left, children_right),
+        ).astype(np.int32)
+
+        # treelite stores -1 for leaf split_index (no split feature at leaf nodes)
+        features = split_index.astype(np.int32)
+
+        values = leaf_value.reshape(num_nodes, 1)
+        if self.average_tree_output and self.num_tree > 0:
+            values = values / self.num_tree
+
+        return {
+            "children_left": children_left,
+            "children_right": children_right,
+            "children_default": children_default,
+            "features": features,
+            "thresholds": threshold,
+            "values": values,
+            "node_sample_weight": node_sample_weight,
+        }
+
+    def get_trees(
+        self,
+        data: npt.NDArray[Any] | None = None,
+        data_missing: npt.NDArray[np.bool_] | None = None,
+    ) -> list[SingleTree]:
+        return [SingleTree(td, data=data, data_missing=data_missing) for td in self._trees_data]
