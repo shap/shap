@@ -516,7 +516,6 @@ def is_color_map(color):
     return safe_isinstance(color, "matplotlib.colors.Colormap")
 
 
-# TODO: remove unused title argument / use title argument
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
 def summary_legacy(
     shap_values,
@@ -526,7 +525,6 @@ def summary_legacy(
     plot_type=None,
     color=None,
     axis_color="#333333",
-    title=None,
     alpha=1,
     show=True,
     sort=True,
@@ -691,7 +689,6 @@ def summary_legacy(
                 plot_type="dot",
                 color=color,
                 axis_color=axis_color,
-                title=title,
                 alpha=alpha,
                 show=show,
                 sort=sort,
