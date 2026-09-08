@@ -717,7 +717,6 @@ class TreeExplainer(Explainer):
             X, y, tree_limit, check_additivity
         )
         transform = self.model.get_transform()
-        _xgboost_cat_unsupported(self.model)
 
         # run the core algorithm using the C extension
         assert_import("cext")
@@ -838,11 +837,13 @@ class TreeExplainer(Explainer):
                 Return type for models with multiple outputs changed from list to np.ndarray.
 
         """
-        assert self.model.model_output == "raw", (
-            'Only model_output = "raw" is supported for SHAP interaction values right now!'
-        )
-        # assert self.feature_perturbation == "tree_path_dependent", "Only feature_perturbation = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
-        transform = "identity"
+        if self.feature_perturbation == "interventional":
+            transform = self.model.get_transform()
+        else:
+            assert self.model.model_output == "raw", (
+                'Only model_output = "raw" is supported for SHAP interaction values with tree_path_dependent!'
+            )
+            transform = "identity"
 
         # see if we have a default tree_limit in place.
         if tree_limit is None:
@@ -853,7 +854,8 @@ class TreeExplainer(Explainer):
             import xgboost
 
             if not isinstance(X, xgboost.core.DMatrix):
-                X = xgboost.DMatrix(X)
+                dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
+                X = xgboost.DMatrix(X, **dmatrix_props)
 
             n_iterations = _xgboost_n_iterations(tree_limit, self.model.num_stacked_models)
             phi = self.model.original_model.predict(
@@ -2022,7 +2024,7 @@ class SingleTree:
                         threshold = 0.0
                         categories = [int(x) for x in vertex["threshold"].split("||")]
                         for cat in categories:
-                            threshold += 2 ** (cat - 1)
+                            threshold += 2**cat
                         self.thresholds[vsplit_idx] = threshold
                         self.threshold_types[vsplit_idx] = 1  # Indicates that this is a categorical split
                     else:
