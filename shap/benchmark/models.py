@@ -1,5 +1,4 @@
 import numpy as np
-import sklearn
 import sklearn.ensemble
 from sklearn.preprocessing import StandardScaler
 
