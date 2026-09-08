@@ -489,6 +489,8 @@ class TreeExplainer(Explainer):
         # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
         if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.to_numpy(dtype=self.model.input_dtype, na_value=np.nan)
+        if not isinstance(X, np.ndarray):
+            raise TypeError(f"X must be a numpy array (or pandas DataFrame/Series), not {type(X).__name__}")
         flat_output = False
         if len(X.shape) == 1:
             flat_output = True
