@@ -9,6 +9,7 @@ import pandas as pd
 from packaging import version
 from scipy.stats import gaussian_kde
 
+from .. import Explanation
 from ..utils._exceptions import DimensionError
 from . import colors
 from ._labels import labels
@@ -106,7 +107,7 @@ def violin(
     if title is not None:
         warnings.warn("The `title` argument is unused and will be removed in a future release.", DeprecationWarning)
     # support passing an explanation object
-    if str(type(shap_values)).endswith("Explanation'>"):
+    if isinstance(shap_values, Explanation):
         shap_exp = shap_values
         shap_values = shap_exp.values
         if features is None:
@@ -126,7 +127,9 @@ def violin(
         emsg = f"plot_type: Expected one of ('violin','layered_violin'), received {plot_type} instead."
         raise ValueError(emsg)
 
-    assert len(shap_values.shape) != 1, "Violin summary plots need a matrix of shap_values, not a vector."
+    if shap_values.ndim < 2:
+        emsg = "Violin summary plots need a matrix of shap_values, not a vector."
+        raise ValueError(emsg)
 
     # default color:
     if color is None:
