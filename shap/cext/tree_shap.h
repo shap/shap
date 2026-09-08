@@ -152,11 +152,26 @@ inline tfloat squared_loss_transform(const tfloat margin, const tfloat y) {
     return (margin - y) * (margin - y);
 }
 
+inline void softmax_vector(const tfloat *d, tfloat *out, unsigned num_outputs) {
+    const tfloat scale = 1.0 / (num_outputs - 1);
+    tfloat max_val = d[0] * scale;
+    for (unsigned k = 1; k < num_outputs; ++k) {
+        if (d[k] * scale > max_val) max_val = d[k] * scale;
+    }
+    tfloat sum_exp = 0;
+    for (unsigned k = 0; k < num_outputs; ++k) {
+        out[k] = exp(d[k] * scale - max_val);
+        sum_exp += out[k];
+    }
+    for (unsigned k = 0; k < num_outputs; ++k) out[k] /= sum_exp;
+}
+
 namespace MODEL_TRANSFORM {
     const unsigned identity = 0;
     const unsigned logistic = 1;
     const unsigned logistic_nlogloss = 2;
     const unsigned squared_loss = 3;
+    const unsigned softmax = 4;
 }
 
 inline transform_f get_transform(unsigned model_transform) {
@@ -233,7 +248,9 @@ inline void dense_tree_predict(tfloat *out, const TreeEnsemble &trees, const Exp
         }
 
         // apply any needed transform
-        if (transform != NULL) {
+        if (model_transform == MODEL_TRANSFORM::softmax) {
+            softmax_vector(row_out, row_out, trees.num_outputs);
+        } else if (transform != NULL) {
             const tfloat y_i = data.y == NULL ? 0 : data.y[i];
             for (unsigned k = 0; k < trees.num_outputs; ++k) {
                 row_out[k] = transform(row_out[k], y_i);
@@ -1137,7 +1154,8 @@ inline void print_progress_bar(tfloat &last_print, tfloat start_time, unsigned i
  * Runs Tree SHAP with feature independence assumptions on dense data.
  */
 inline void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data,
-                       tfloat *out_contribs, tfloat transform(const tfloat, const tfloat)) {
+                       tfloat *out_contribs, tfloat transform(const tfloat, const tfloat),
+                       unsigned model_transform = MODEL_TRANSFORM::identity) {
 
     // reformat the trees for faster access
     Node *node_trees = new Node[trees.tree_limit * trees.max_nodes];
@@ -1180,6 +1198,38 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
         }
     }
 
+    // precompute softmax values if needed
+    bool is_softmax = (model_transform == MODEL_TRANSFORM::softmax);
+    tfloat *softmax_x_all = NULL, *softmax_r_all = NULL;
+    tfloat *margin_x_all = NULL, *margin_r_all = NULL;
+
+    if (is_softmax) {
+        unsigned K = trees.num_outputs;
+        margin_x_all = new tfloat[data.num_X * K];
+        softmax_x_all = new tfloat[data.num_X * K];
+        margin_r_all = new tfloat[data.num_R * K];
+        softmax_r_all = new tfloat[data.num_R * K];
+
+        for (unsigned i = 0; i < data.num_X; ++i) {
+            tfloat *mx = margin_x_all + i * K;
+            for (unsigned c = 0; c < K; ++c) mx[c] = trees.base_offset[c];
+            for (unsigned t = 0; t < trees.tree_limit; ++t) {
+                const tfloat *lv = tree_predict(t, trees, data.X + i * data.M, data.X_missing + i * data.M);
+                for (unsigned c = 0; c < K; ++c) mx[c] += lv[c];
+            }
+            softmax_vector(mx, softmax_x_all + i * K, K);
+        }
+        for (unsigned j = 0; j < data.num_R; ++j) {
+            tfloat *mr = margin_r_all + j * K;
+            for (unsigned c = 0; c < K; ++c) mr[c] = trees.base_offset[c];
+            for (unsigned t = 0; t < trees.tree_limit; ++t) {
+                const tfloat *lv = tree_predict(t, trees, data.R + j * data.M, data.R_missing + j * data.M);
+                for (unsigned c = 0; c < K; ++c) mr[c] += lv[c];
+            }
+            softmax_vector(mr, softmax_r_all + j * K, K);
+        }
+    }
+
     // compute the explanations for each sample
     tfloat *instance_out_contribs;
     tfloat rescale_factor = 1.0;
@@ -1207,7 +1257,7 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
             print_progress_bar(last_print, start_time, oind * data.num_X + i, data.num_X * trees.num_outputs);
 
             // compute the model's margin output for x
-            if (transform != NULL) {
+            if (!is_softmax && transform != NULL) {
                 margin_x = trees.base_offset[oind];
                 for (unsigned k = 0; k < trees.tree_limit; ++k) {
                     margin_x += tree_predict(k, trees, x, x_missing)[oind];
@@ -1220,7 +1270,7 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
                 std::fill_n(tmp_out_contribs, (data.M + 1), 0);
 
                 // compute the model's margin output for r
-                if (transform != NULL) {
+                if (!is_softmax && transform != NULL) {
                     margin_r = trees.base_offset[oind];
                     for (unsigned k = 0; k < trees.tree_limit; ++k) {
                         margin_r += tree_predict(k, trees, r, r_missing)[oind];
@@ -1236,7 +1286,16 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
                 }
 
                 // compute the rescale factor
-                if (transform != NULL) {
+                if (is_softmax) {
+                    unsigned K = trees.num_outputs;
+                    tfloat m_x = margin_x_all[i * K + oind];
+                    tfloat m_r = margin_r_all[j * K + oind];
+                    if (m_x == m_r) {
+                        rescale_factor = 1.0;
+                    } else {
+                        rescale_factor = (softmax_x_all[i * K + oind] - softmax_r_all[j * K + oind]) / (m_x - m_r);
+                    }
+                } else if (transform != NULL) {
                     if (margin_x == margin_r) {
                         rescale_factor = 1.0;
                     } else {
@@ -1252,7 +1311,9 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
                 }
 
                 // Add the base offset
-                if (transform != NULL) {
+                if (is_softmax) {
+                    instance_out_contribs[data.M * trees.num_outputs + oind] += softmax_r_all[j * trees.num_outputs + oind];
+                } else if (transform != NULL) {
                     instance_out_contribs[data.M * trees.num_outputs + oind] += (*transform)(trees.base_offset[oind] + tmp_out_contribs[data.M], 0);
                 } else {
                     instance_out_contribs[data.M * trees.num_outputs + oind] += trees.base_offset[oind] + tmp_out_contribs[data.M];
@@ -1269,6 +1330,13 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
             //     instance_out_contribs[data.M * trees.num_outputs + j] += (*transform)(trees.base_offset[j], 0);
             // }
         }
+    }
+
+    if (is_softmax) {
+        delete[] softmax_x_all;
+        delete[] softmax_r_all;
+        delete[] margin_x_all;
+        delete[] margin_r_all;
     }
 
     delete[] tmp_out_contribs;
@@ -1462,7 +1530,7 @@ inline void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset 
         case FEATURE_DEPENDENCE::independent:
             if (interactions) {
                 std::cerr << "FEATURE_DEPENDENCE::independent does not support interactions!\n";
-            } else dense_independent(trees, data, out_contribs, transform);
+            } else dense_independent(trees, data, out_contribs, transform, model_transform);
             return;
 
         case FEATURE_DEPENDENCE::tree_path_dependent:
