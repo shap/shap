@@ -23,7 +23,6 @@ allow_to_fail = [
     Path("overviews/Explaining quantitative measures of fairness.ipynb"),
     Path("tabular_examples/model_agnostic/Multioutput Regression SHAP.ipynb"),
     Path("tabular_examples/neural_networks/Census income classification with Keras.ipynb"),
-    Path("tabular_examples/tree_based_models/League of Legends Win Prediction with XGBoost.ipynb"),
     Path("tabular_examples/tree_based_models/Perfomance Comparison.ipynb"),
     Path("tabular_examples/tree_based_models/tree_shap_paper/Figure 6 - Supervised Clustering R-squared.ipynb"),
     Path("tabular_examples/tree_based_models/tree_shap_paper/Figure 7 - Airline Tweet Sentiment Analysis.ipynb"),
