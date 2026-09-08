@@ -226,7 +226,7 @@ def test_summary_plot_interaction():
     feature_names = [f"Feature {i + 1}" for i in range(n_features)]
     X = pd.DataFrame(np.random.randn(n_samples, n_features), columns=feature_names)
 
-    shap.summary_plot(shap_values, X)
+    shap.summary_plot(shap_values, X, show=False)
     fig = plt.gcf()
     fig.set_layout_engine("tight")
     return fig
@@ -310,3 +310,6 @@ def test_summary_plot_warning(explainer):
     shap_values = explainer(explainer.data)
     with pytest.warns(FutureWarning, match="NumPy global RNG"):
         shap.summary_plot(shap_values, show=False)
+
+
+pytestmark = pytest.mark.filterwarnings("ignore:.*NumPy global RNG.*")

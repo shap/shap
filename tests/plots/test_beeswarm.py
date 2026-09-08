@@ -119,3 +119,6 @@ def test_beeswarm_colors_values_with_data(color):
         data=np.array([["cat"] * 5] * 100),
     )
     shap.plots.beeswarm(explanation, show=False, color_bar=True, color=color)
+
+
+pytestmark = pytest.mark.filterwarnings("ignore:.*NumPy global RNG.*")
