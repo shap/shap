@@ -18,9 +18,29 @@ class TransformersPipeline(Model):
         self.rescale_to_logits = rescale_to_logits
 
         # self.tokenizer = self.inner_model.model.tokenizer
-        self.label2id = self.inner_model.model.config.label2id
-        self.label2id = {k: int(v) for k, v in self.label2id.items()}
-        self.id2label = self.inner_model.model.config.id2label
+        model = getattr(self.inner_model, "model", None)
+        if model is None or not hasattr(model, "config"):
+            raise AttributeError("Pipeline model does not expose a config.")
+
+        config = model.config
+        raw_label2id = getattr(config, "label2id", None)
+        raw_id2label = getattr(config, "id2label", None)
+
+        if raw_label2id:
+            self.label2id = {k: int(v) for k, v in raw_label2id.items()}
+        elif raw_id2label:
+            self.label2id = {v: int(k) for k, v in raw_id2label.items()}
+        else:
+            num_labels = getattr(config, "num_labels", None)
+            if num_labels is None:
+                raise ValueError("Could not determine label mapping from model config.")
+            self.label2id = {f"LABEL_{i}": i for i in range(num_labels)}
+
+        if raw_id2label:
+            self.id2label = {int(k): v for k, v in raw_id2label.items()}
+        else:
+            self.id2label = {v: k for k, v in self.label2id.items()}
+
         self.output_shape = (max(self.label2id.values()) + 1,)
         if len(self.output_shape) == 1:
             self.output_names = [self.id2label.get(i, "Unknown") for i in range(self.output_shape[0])]

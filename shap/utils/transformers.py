@@ -5,6 +5,11 @@ SENTENCEPIECE_TOKENIZERS = [
     "transformers.T5Tokenizer",
     "transformers.XLNetTokenizer",
     "transformers.AlbertTokenizer",
+    "transformers.CamembertTokenizer",
+    "transformers.MBartTokenizer",
+    "transformers.PegasusTokenizer",
+    "transformers.ReformerTokenizer",
+    "transformers.LlamaTokenizer",
 ]
 
 
