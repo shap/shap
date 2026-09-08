@@ -245,3 +245,24 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_explanation_rtruediv():
+    """Checks that __rtruediv__ correctly computes other / self, not self / other."""
+    exp = shap.Explanation(values=np.array([1.0, 2.0, 4.0]))
+
+    # Test 1: float / explanation gives correct inverted values
+    result = 4.0 / exp
+    assert isinstance(result, shap.Explanation)
+    assert np.allclose(result.values, [4.0, 2.0, 1.0])
+
+    # Test 2: int / explanation (covers non-float scalars)
+    result_int = 8 / exp
+    assert isinstance(result_int, shap.Explanation)
+    assert np.allclose(result_int.values, [8.0, 4.0, 2.0])
+
+    # Test 3: operand-order regression guard — must NOT equal explanation / scalar
+    forward = (exp / 4.0).values
+    assert not np.allclose(result.values, forward), (
+        "__rtruediv__ returned same result as __truediv__ - operand order is wrong"
+    )
