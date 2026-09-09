@@ -206,12 +206,15 @@ def get_latest_tag() -> str:
         # A source checkout without tags can still build successfully; in that
         # case, linking master to itself is preferable to failing the build.
         try:
-            return subprocess.check_output(
-                ["git", "describe", "--tags", "--abbrev=0"],
-                cwd=os.path.dirname(__file__),
-                text=True,
-                stderr=subprocess.DEVNULL,
-            ).strip() or "master"
+            return (
+                subprocess.check_output(
+                    ["git", "describe", "--tags", "--abbrev=0"],
+                    cwd=os.path.dirname(__file__),
+                    text=True,
+                    stderr=subprocess.DEVNULL,
+                ).strip()
+                or "master"
+            )
         except (OSError, subprocess.CalledProcessError):
             return "master"
 
