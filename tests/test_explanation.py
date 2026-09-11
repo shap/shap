@@ -95,6 +95,108 @@ def test_explanation_hstack_errors(random_seed):
         _ = base_exp.hstack(exp2)
 
 
+def test_explanation_vstack_basic(random_seed):
+    """Test standard 2D tabular vstacking with compute_time tracking and value verification."""
+    rs = np.random.RandomState(random_seed)
+    exp1 = shap.Explanation(
+        values=rs.normal(size=(10, 5)),
+        base_values=rs.normal(size=(10,)),
+        data=rs.normal(size=(10, 5)),
+        feature_names=["A", "B", "C", "D", "E"],
+        compute_time=0.5,
+    )
+    exp2 = shap.Explanation(
+        values=rs.normal(size=(5, 5)),
+        base_values=rs.normal(size=(5,)),
+        data=rs.normal(size=(5, 5)),
+        feature_names=["A", "B", "C", "D", "E"],
+        compute_time=0.3,
+    )
+
+    stacked = exp1.vstack(exp2)
+
+    # 1. Shape Verification
+    assert stacked.values.shape == (15, 5)
+    assert stacked.base_values.shape == (15,)
+    assert stacked.data.shape == (15, 5)
+    assert np.all(np.array(stacked.feature_names) == np.array(["A", "B", "C", "D", "E"]))
+
+    # 2. Value Verification (crucial for concatenation logic)
+    assert np.allclose(stacked.values[:10], exp1.values)
+    assert np.allclose(stacked.values[10:], exp2.values)
+    assert np.allclose(stacked.base_values[:10], exp1.base_values)
+    assert np.allclose(stacked.base_values[10:], exp2.base_values)
+
+    # 3. Float and Tracking Verification
+    assert np.isclose(stacked.compute_time, 0.8)
+    assert stacked.op_history[-1].name == "vstack"
+    assert len(stacked.op_history) == len(exp1.op_history) + 1
+
+
+def test_explanation_vstack_feature_name_mismatch(random_seed):
+    """Ensure vstack fails cleanly when feature names do not match."""
+    rs = np.random.RandomState(random_seed)
+    exp1 = shap.Explanation(values=rs.normal(size=(10, 2)), feature_names=["A", "B"])
+    exp2 = shap.Explanation(values=rs.normal(size=(5, 2)), feature_names=["A", "C"])  # Mismatch
+
+    with pytest.raises(ValueError, match="different feature names"):
+        exp1.vstack(exp2)
+
+
+def test_explanation_vstack_dimension_mismatch(random_seed):
+    """Ensure vstack fails if feature dimensions do not match."""
+    rs = np.random.RandomState(random_seed)
+    exp1 = shap.Explanation(values=rs.normal(size=(10, 3)))
+    exp2 = shap.Explanation(values=rs.normal(size=(5, 4)))  # Mismatch in columns
+
+    with pytest.raises(ValueError, match="different feature dimensions"):
+        exp1.vstack(exp2)
+
+
+def test_explanation_vstack_inconsistent_metadata(random_seed):
+    """Ensure vstack fails if one explanation has metadata and the other does not."""
+    rs = np.random.RandomState(random_seed)
+    # exp2 completely omits 'data' to test the strict None check
+    exp1 = shap.Explanation(values=rs.normal(size=(10, 2)), data=rs.normal(size=(10, 2)))
+    exp2 = shap.Explanation(values=rs.normal(size=(5, 2)))
+
+    with pytest.raises(ValueError, match="inconsistent metadata"):
+        exp1.vstack(exp2)
+
+
+def test_explanation_vstack_multiclass(random_seed):
+    """Test vstacking on 3D (multiclass) explanations and verify values."""
+    rs = np.random.RandomState(random_seed)
+    exp1 = shap.Explanation(values=rs.normal(size=(10, 4, 3)), data=rs.normal(size=(10, 4)))
+    exp2 = shap.Explanation(values=rs.normal(size=(8, 4, 3)), data=rs.normal(size=(8, 4)))
+
+    stacked = exp1.vstack(exp2)
+
+    # Shape Checks
+    assert stacked.values.shape == (18, 4, 3)
+    assert stacked.data.shape == (18, 4)
+
+    # Value Checks
+    assert np.allclose(stacked.values[:10], exp1.values)
+    assert np.allclose(stacked.values[10:], exp2.values)
+
+
+def test_explanation_vstack_scalar_base_values(random_seed):
+    """Ensure scalar base_values are correctly broadcasted to arrays matching the row counts."""
+    rs = np.random.RandomState(random_seed)
+    exp1 = shap.Explanation(values=rs.normal(size=(10, 3)), base_values=0.5)
+    exp2 = shap.Explanation(values=rs.normal(size=(5, 3)), base_values=0.5)
+
+    stacked = exp1.vstack(exp2)
+
+    # The scalars should be broadcasted to a 1D array of length (10 + 5)
+    assert stacked.base_values.shape == (15,)
+
+    # Verify the first 10 elements belong to exp1's broadcast, and the next 5 to exp2's
+    assert np.allclose(stacked.base_values[:10], np.full(10, 0.5))
+    assert np.allclose(stacked.base_values[10:], np.full(5, 0.5))
+
+
 @pytest.mark.parametrize("N", [4, 5, 6])
 def test_feature_names_slicing_for_square_arrays(random_seed, N):
     """Checks that feature names in Explanations are properly sliced with "square"
