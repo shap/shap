@@ -108,6 +108,7 @@ install(TARGETS _cext LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
 # ==============================================================================
 
 if(DEFINED ENV{SHAP_ENABLE_CUDA})
+  message(MESSAGE "SHAP_ENABLE_CUDA is set, attempting to build the GPU extension...")
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED)
 
@@ -139,4 +140,6 @@ if(DEFINED ENV{SHAP_ENABLE_CUDA})
   )
 
   install(TARGETS _cext_gpu LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
+else()
+  message(MESSAGE "SHAP_ENABLE_CUDA is not set, skipping the GPU extension.")
 endif()

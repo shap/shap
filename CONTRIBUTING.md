@@ -9,6 +9,7 @@
   - [Installing from source](#installing-from-source)
   - [Code checks with precommit](#code-checks-with-precommit)
   - [Unit tests with pytest](#unit-tests-with-pytest)
+  - [Performance monitoring with asv](#performance-monitoring-with-asv)
 - [Pull Requests (PRs)](#pull-requests-prs)
   - [Etiquette for creating PRs](#etiquette-for-creating-prs)
   - [Checklist for publishing PRs](#checklist-for-publishing-prs)
@@ -93,11 +94,10 @@ green `<> Code` button on your projects home page.
 
 ### Creating a python environment
 
-Create a new isolated environment for the project, e.g. with conda:
+Create a new isolated environment for the project, e.g. with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-conda create -n shap python=3.12
-conda activate shap
+uv venv
 ```
 
 ### Installing from source
@@ -113,15 +113,17 @@ To build from source, you need a compiler to build the C extension.
 - Or on Windows, one way of getting a compiler is to [install
   mingw64](https://www.mingw-w64.org/downloads/).
 
-Pip-install the project with the `--editable` flag, which ensures that any
+Pip-install the project with the `-e` flag, which ensures that any
 changes you make to the source code are immediately reflected in your
 environment.
 
 ```bash
-pip install --editable '.[test,plots,docs]'
+pip install -e . --group test-core --group plots
+# or using uv (-e is implied)
+uv sync --group test-core --group plots
 ```
 
-The various pip extras are defined in [pyproject.toml](pyproject.toml):
+The various dependency groups are defined in [pyproject.toml](pyproject.toml):
 
 - `test-core`: a minimal set of dependencies to run pytest.
 - `test`: a wider set of 3rd party packages for the full test suite such as
@@ -129,13 +131,13 @@ The various pip extras are defined in [pyproject.toml](pyproject.toml):
 - `plots`: includes matplotlib.
 - `docs`: dependencies for building the docs with Sphinx.
 
-Note: When installing from source, shap will attempt to build the C extension
-and the CUDA extension. If CUDA is not available, shap will retry the build
-without CUDA support.
+To use the CUDA extension for ``GPUTreeExplainer``, set the ``SHAP_ENABLE_CUDA`` environment variable to `1` when installing:
 
-Consequently, is is quite normal to see warnings such as `WARNING: Could not
-compile cuda extensions` when building from source if you do not have CUDA
-available.
+```bash
+SHAP_ENABLE_CUDA=1 pip install -e . --group test-core --group plots
+# or using uv
+SHAP_ENABLE_CUDA=1 uv sync --group test-core --group plots
+```
 
 ### Code checks with precommit
 
@@ -143,23 +145,26 @@ We use [pre-commit hooks](https://pre-commit.com/#install) to run code checks.
 Enable `pre-commit` in your local environment with:
 
 ```bash
-pip install pre-commit
 pre-commit install
+# or using uv
+uv run pre-commit install
 ```
 
 To run the checks on all files, use:
 
 ```bash
-pre-commit install
 pre-commit run --all-files
+# or using uv
+uv run pre-commit run --all-files
 ```
 
 [Ruff](https://beta.ruff.rs/docs/) is used as a linter, and it is enabled as a
 pre-commit hook. You can also run `ruff` locally with:
 
 ```bash
-pip install ruff
 ruff check .
+# or using uv
+uv run ruff check .
 ```
 
 ### Unit tests with pytest
@@ -168,9 +173,40 @@ The unit test suite can be run locally with:
 
 ```bash
 pytest
+# or using uv
+uv run pytest
 ```
 
 For info about matplotlib tests, see `tests/plots/__init__.py`.
+
+### Performance monitoring with asv
+
+We use [airspeed velocity (asv)](https://asv.readthedocs.io/) to monitor the
+performance of time-sensitive explainers. If you are contributing to the performance of these explainers or modifying C++ extensions, please run the monitoring suite and report the results to ensure that your changes do not introduce any regressions.
+
+Install the test dependencies, which
+include asv, and run the monitoring suite with:
+
+```bash
+pip install -e . --group test --group plots
+asv run
+# or using uv
+uv sync --group test --group plots
+uv run asv run
+```
+
+To generate and view an HTML report of the results, run:
+
+```bash
+asv publish && asv preview
+# or using uv
+uv run asv publish && asv preview
+```
+
+The monitoring definitions are in the `monitoring` directory. Generated results
+and HTML reports are written to `monitoring/results` and `monitoring/html`,
+respectively, and are excluded from version control. The monitoring suite is
+currently run locally rather than in CI.
 
 ## Pull Requests (PRs)
 
@@ -296,7 +332,7 @@ whenever you commit any changes.
 To run the code-quality checks manually, you can do, e.g.:
 
 ```bash
-pre-commit run --files notebook1.ipynb notebook2.ipynb
+uv run pre-commit run --files notebook1.ipynb notebook2.ipynb
 ```
 
 replacing `notebook1.ipynb` and `notebook2.ipynb` with any notebook(s) you have modified.

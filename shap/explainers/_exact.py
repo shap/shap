@@ -5,10 +5,9 @@ from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
-from numba import njit  # type: ignore[attr-defined]
 
 from .. import links
-from .._cutils import compute_grey_code_row_values
+from .._cutils import compute_grey_code_row_values, compute_grey_code_row_values_st
 from ..models import Model
 from ..utils import (
     MaskedModel,
@@ -138,6 +137,9 @@ class ExactExplainer(Explainer):
         if getattr(self.masker, "clustering", None) is None:
             # see which elements we actually need to perturb
             inds = fm.varying_inputs()
+            # varying_inputs() returns np.intp, which is int32 on Windows; copy=False
+            # makes this free on platforms where it is already int64
+            inds = inds.astype(np.int64, copy=False)
             if len(inds) == 0:
                 # if nothing varies then we can just return the expected value as the output and be done with it
                 outputs = fm(np.array([MaskedModel.delta_mask_noop_value]), zero_index=0, batch_size=batch_size)
@@ -162,7 +164,7 @@ class ExactExplainer(Explainer):
             delta_indexes = self._cached_gray_codes(len(inds))
 
             # map to a larger mask that includes the invariant entries
-            extended_delta_indexes = np.zeros(2 ** len(inds), dtype=int)
+            extended_delta_indexes = np.zeros(2 ** len(inds), dtype=np.int64)
             for i in range(2 ** len(inds)):
                 if delta_indexes[i] == MaskedModel.delta_mask_noop_value:
                     extended_delta_indexes[i] = delta_indexes[i]
@@ -177,7 +179,7 @@ class ExactExplainer(Explainer):
             if interactions is False or (interactions == 1 and interactions is not True):
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
-                row_values = np.zeros((len(fm),) + outputs.shape[1:])
+                row_values = np.zeros((len(fm),) + outputs.shape[1:], dtype=np.float64)
                 mask = np.zeros(len(fm), dtype=bool)
 
                 compute_grey_code_row_values(
@@ -188,9 +190,9 @@ class ExactExplainer(Explainer):
             elif interactions is True or interactions == 2:
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
-                row_values = np.zeros((len(fm), len(fm)) + outputs.shape[1:])
+                row_values = np.zeros((len(fm), len(fm)) + outputs.shape[1:], dtype=np.float64)
                 mask = np.zeros(len(fm), dtype=bool)
-                _compute_grey_code_row_values_st(
+                compute_grey_code_row_values_st(
                     row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value
                 )
 
@@ -241,42 +243,6 @@ class ExactExplainer(Explainer):
         }
 
 
-@njit
-def _compute_grey_code_row_values_st(
-    row_values: npt.NDArray[Any],
-    mask: npt.NDArray[np.bool_],
-    inds: npt.NDArray[np.intp],
-    outputs: npt.NDArray[Any],
-    shapley_coeff: npt.NDArray[Any],
-    extended_delta_indexes: npt.NDArray[np.intp],
-    noop_code: int,
-) -> None:
-    set_size = 0
-    M = len(inds)
-    for i in range(2**M):
-        # update the mask
-        delta_ind = extended_delta_indexes[i]
-        if delta_ind != noop_code:
-            mask[delta_ind] = ~mask[delta_ind]
-            if mask[delta_ind]:
-                set_size += 1
-            else:
-                set_size -= 1
-
-        # distribute the effect of this mask set over all the terms it impacts
-        out = outputs[i]
-        for j in range(M):
-            for k in range(j + 1, M):
-                if not mask[j] and not mask[k]:
-                    delta = out * shapley_coeff[set_size]  # * 2
-                elif (not mask[j] and mask[k]) or (mask[j] and not mask[k]):
-                    delta = -out * shapley_coeff[set_size - 1]  # * 2
-                else:  # both true
-                    delta = out * shapley_coeff[set_size - 2]  # * 2
-                row_values[j, k] += delta
-                row_values[k, j] += delta
-
-
 def partition_delta_indexes(partition_tree: npt.NDArray[Any], all_masks: npt.NDArray[np.bool_]) -> npt.NDArray[np.intp]:
     """Return an delta index encoded array of all the masks possible while following the given partition tree."""
     # convert the masks to delta index format
@@ -310,14 +276,14 @@ def partition_masks(
     inds_lists: list[list[list[int]]] = [[[], []] for i in range(M)]  # type: ignore[var-annotated]
     _partition_masks_recurse(len(partition_tree) - 1, m00, 0, 1, inds_lists, mask_matrix, partition_tree, M, all_masks)
 
-    all_masks = np.array(all_masks)  # type: ignore[assignment]
+    all_masks_arr = np.array(all_masks)
 
     # we resort the clustering matrix to minimize the sequential difference between the masks
     # this minimizes the number of model evaluations we need to run when the background sometimes
     # matches the foreground. We seem to average about 1.5 feature changes per mask with this
     # approach. This is not as clean as the grey code ordering, but a perfect 1 feature change
     # ordering is not possible with a clustering tree
-    order = delta_minimization_order(all_masks)
+    order = delta_minimization_order(all_masks_arr)
     inverse_order = np.arange(len(order))[np.argsort(order)]
 
     for inds_list0, inds_list1 in inds_lists:
@@ -326,7 +292,7 @@ def partition_masks(
             inds_list1[i] = inverse_order[inds_list1[i]]
 
     # Care: inds_lists have different lengths, so partition_masks_inds is a "ragged" array. See GH #3063
-    partition_masks = all_masks[order]
+    partition_masks = all_masks_arr[order]
     partition_masks_inds = [[np.array(on), np.array(off)] for on, off in inds_lists]
     return partition_masks, partition_masks_inds
 

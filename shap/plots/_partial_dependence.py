@@ -68,7 +68,7 @@ def partial_dependence(
         feature_names = [f"Feature {i}" for i in range(features.shape[1])]
 
     # this is for a 1D partial dependence plot
-    if type(ind) is not tuple:
+    if not isinstance(ind, tuple):
         ind = convert_name(ind, None, feature_names)
         xv = features[:, ind]
         xmin, xmax = compute_bounds(xmin, xmax, xv)
@@ -213,10 +213,10 @@ def partial_dependence(
         xv0 = features[:, ind0]
         xv1 = features[:, ind1]
 
-        xmin0 = xmin[0] if type(xmin) is tuple else xmin
-        xmin1 = xmin[1] if type(xmin) is tuple else xmin
-        xmax0 = xmax[0] if type(xmax) is tuple else xmax
-        xmax1 = xmax[1] if type(xmax) is tuple else xmax
+        xmin0 = xmin[0] if isinstance(xmin, tuple) else xmin
+        xmin1 = xmin[1] if isinstance(xmin, tuple) else xmin
+        xmax0 = xmax[0] if isinstance(xmax, tuple) else xmax
+        xmax1 = xmax[1] if isinstance(xmax, tuple) else xmax
 
         xmin0, xmax0 = compute_bounds(xmin0, xmax0, xv0)
         xmin1, xmax1 = compute_bounds(xmin1, xmax1, xv1)

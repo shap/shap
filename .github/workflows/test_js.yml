@@ -18,8 +18,8 @@ jobs:
   build-js:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v3
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/setup-node@v7
       with:
         node-version: lts/Hydrogen
     - run: npm ci
