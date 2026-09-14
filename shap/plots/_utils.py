@@ -188,7 +188,24 @@ def fill_internal_max_values(partition_tree, leaf_values):
 
 
 def fill_counts(partition_tree):
-    """This updates the"""
+    """Update the fourth column of a partition tree with the number of leaf nodes in each cluster.
+
+    For each internal node in the partition tree, this computes the total count
+    of leaf nodes under that node by summing the counts of its left and right
+    children. A child with an index less than M (the number of leaf nodes) is a
+    leaf and contributes a count of 1. A child with an index >= M is an internal
+    node whose count is read from column 3 of its row.
+
+    The partition tree is modified in place.
+
+    Parameters
+    ----------
+    partition_tree : np.ndarray of shape (n - 1, 4)
+        A scipy-style hierarchical clustering linkage matrix where each row
+        represents an internal node. Columns 0 and 1 are the indices of the
+        left and right children, column 2 is the distance, and column 3 is
+        overwritten with the count of leaf nodes in that cluster.
+    """
     M = partition_tree.shape[0] + 1
     for i in range(partition_tree.shape[0]):
         val = 0
