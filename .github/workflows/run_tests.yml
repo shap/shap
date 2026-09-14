@@ -14,6 +14,8 @@ on:
       - "data/**"
       - "javascript/**"  # Include JS changes that affect bundle.js
       - ".github/workflows/run_tests.yml"
+      - ".github/workflows/build_pyodide_wheel.yml"
+      - "scripts/run_pyodide_tests.py"
       - "pyproject.toml"
       - "CMakeLists.txt"
 
@@ -44,7 +46,8 @@ jobs:
         run: |
           mkdir -p /tmp/test_data_cache
           cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
-          cp -r shap/cached_data /tmp/test_data_cache/ || true
+          SHAP_DATA_DIR=$(python -P -c "import pathlib, shap; print(pathlib.Path(shap.__file__).parent / 'cached_data')")
+          cp -r "$SHAP_DATA_DIR" /tmp/test_data_cache/
           ls -la /tmp/test_data_cache/
       - name: Upload cached datasets
         uses: actions/upload-artifact@v7
@@ -52,6 +55,10 @@ jobs:
           name: test-data-cache
           path: /tmp/test_data_cache
           retention-days: 1
+
+  run_wasm_tests:
+    needs: prepare_data
+    uses: ./.github/workflows/build_pyodide_wheel.yml
 
   run_tests:
     needs: prepare_data
