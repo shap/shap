@@ -143,7 +143,7 @@ jobs:
         run: uv pip install pytest pytest-mpl pytest-cov xgboost lightgbm matplotlib ipython
 
       - name: Download pre-cached datasets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
