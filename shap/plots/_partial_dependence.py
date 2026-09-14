@@ -67,9 +67,11 @@ def partial_dependence(
     if feature_names is None:
         feature_names = [f"Feature {i}" for i in range(features.shape[1])]
 
+    shap_values_array = shap_values.values if isinstance(shap_values, Explanation) else None
+
     # this is for a 1D partial dependence plot
     if not isinstance(ind, tuple):
-        ind = convert_name(ind, None, feature_names)
+        ind = convert_name(ind, shap_values_array, feature_names)
         xv = features[:, ind]
         xmin, xmax = compute_bounds(xmin, xmax, xv)
         npoints = 100 if npoints is None else npoints
@@ -208,8 +210,8 @@ def partial_dependence(
 
     # this is for a 2D partial dependence plot
     else:
-        ind0 = convert_name(ind[0], None, feature_names)
-        ind1 = convert_name(ind[1], None, feature_names)
+        ind0 = convert_name(ind[0], shap_values_array, feature_names)
+        ind1 = convert_name(ind[1], shap_values_array, feature_names)
         xv0 = features[:, ind0]
         xv1 = features[:, ind1]
 
