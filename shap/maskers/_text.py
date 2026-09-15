@@ -203,7 +203,7 @@ class Text(Masker):
             # add spaces to separate the tokens (since we want segments not tokens)
             if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
                 for i, v in enumerate(tokens):
-                    if v.startswith("_"):
+                    if v.startswith(" "):
                         tokens[i] = " " + tokens[i][1:]
             else:
                 for i, v in enumerate(tokens):
