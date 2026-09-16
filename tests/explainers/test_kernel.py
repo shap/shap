@@ -139,6 +139,38 @@ def test_kernel_shap_with_dataframe_explanation(random_seed):
     shap.plots.scatter(explanation[:, "a"], show=False)
 
 
+def test_kernel_dataframe_reordered_columns():
+    """Features of X are matched to the background data by name, not position.
+
+    cf. GH #3958
+    """
+    background = pd.DataFrame(np.random.RandomState(0).normal(size=(20, 3)), columns=list("abc"))
+    X = pd.DataFrame([[1.0, 2.0, 3.0], [-1.0, 0.5, 4.0]], columns=list("abc"))
+    X_reordered = X[["c", "a", "b"]]
+
+    def model(x):
+        return 5.0 * x[:, 1]  # only depends on "b"
+
+    explainer = shap.KernelExplainer(model, background)
+    expected = explainer.shap_values(X, silent=True)[:, [2, 0, 1]]
+
+    np.testing.assert_allclose(explainer.shap_values(X_reordered, silent=True), expected)
+
+    explanation = explainer(X_reordered, silent=True)
+    assert explanation.feature_names == ["c", "a", "b"]
+    np.testing.assert_allclose(explanation.values, expected)
+    np.testing.assert_allclose(explanation.data, X_reordered.to_numpy())
+
+
+def test_kernel_dataframe_missing_columns():
+    """A clear error is raised if X lacks features present in the background data."""
+    background = pd.DataFrame(np.ones((2, 3)), columns=list("abc"))
+    explainer = shap.KernelExplainer(lambda x: x[:, 0], background)
+
+    with pytest.raises(ValueError, match="missing"):
+        explainer.shap_values(pd.DataFrame(np.ones((1, 2)), columns=list("ab")))
+
+
 def test_kernel_shap_with_a1a_sparse_zero_background():
     """Test with a sparse matrix for the background."""
     X, y = shap.datasets.a1a()

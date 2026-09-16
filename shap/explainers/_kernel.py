@@ -226,6 +226,26 @@ class KernelExplainer(Explainer):
             compute_time=time.time() - start_time,
         )
 
+    def _background_order(self, X: pd.DataFrame) -> list[int] | None:
+        """Return the background position of each column of ``X``, if ``X`` reorders them.
+
+        Columns are matched by name. ``None`` means ``X`` is used by position, as before.
+        """
+        names = getattr(self, "data_feature_names", None)
+        if names is None:
+            return None
+        names, labels = list(names), list(X.columns)
+        if labels == names or len(set(names)) != len(names):
+            return None
+        present = set(labels)
+        missing = [name for name in names if name not in present]
+        if missing and len(labels) < len(names) and len(missing) < len(names):
+            raise ValueError(f"X is missing features present in the background data: {missing}")
+        if missing or len(labels) != len(names) or present != set(names):
+            return None
+        position = {name: i for i, name in enumerate(names)}
+        return [position[label] for label in labels]
+
     def shap_values(
         self,
         X: npt.NDArray[Any] | pd.DataFrame | pd.Series | scipy.sparse.spmatrix,
@@ -283,6 +303,13 @@ class KernelExplainer(Explainer):
                 Return type for models with multiple outputs and one input changed from list to np.ndarray.
 
         """
+        # match the columns of a DataFrame to the background data by name
+        if isinstance(X, pd.DataFrame):
+            order = self._background_order(X)
+            if order is not None:
+                values = self.shap_values(X[list(self.data_feature_names)], **kwargs)
+                return np.take(values, order, axis=1)
+
         # convert dataframes
         if isinstance(X, pd.Series):
             X = X.values
