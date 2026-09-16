@@ -12,6 +12,7 @@ jobs:
     timeout-minutes: 60
     env:
       PYODIDE_VERSION: "314.0.7"
+      MATPLOTLIB_VERSION: "3.11.2"
       PYODIDE_XBUILDENV_PATH: /tmp/shap-pyodide-xbuildenv
       WASM_BUILD_ENV: /tmp/shap-pyodide-build
       WASM_TEST_ENV: /tmp/shap-pyodide-test
@@ -34,7 +35,7 @@ jobs:
       - name: Download prebuilt Pyodide build environment
         run: |
           uv venv --python 3.14 "$WASM_BUILD_ENV"
-          uv pip install --python "$WASM_BUILD_ENV/bin/python" pyodide-build==0.39.0
+          uv pip install --python "$WASM_BUILD_ENV/bin/python" 'pyodide-build[resolve]==0.39.0'
           source "$WASM_BUILD_ENV/bin/activate"
           pyodide xbuildenv install "$PYODIDE_VERSION"
 
@@ -46,11 +47,27 @@ jobs:
             -Cwheel.py-api= \
             -Ccmake.define.Python_INCLUDE_DIR="$PYODIDE_XBUILDENV_PATH/$PYODIDE_VERSION/xbuildenv/pyodide-root/cpython/installs/python-3.14.2/include/python3.14"
 
+      # Pyodide's prebuilt Matplotlib 3.10 uses a different plotting stack from our baselines.
+      # todo: remove once at least 3.11.2 is available in pyodide
+      - name: Cache Matplotlib WASM wheel
+        id: matplotlib-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/matplotlib-wheels
+          key: matplotlib-${{ env.MATPLOTLIB_VERSION }}-pyodide-${{ env.PYODIDE_VERSION }}-build-0.39.0-${{ runner.os }}-${{ runner.arch }}-v1
+
+      - name: Build Matplotlib WASM wheel
+        if: steps.matplotlib-cache.outputs.cache-hit != 'true'
+        run: |
+          source "$WASM_BUILD_ENV/bin/activate"
+          pyodide build "matplotlib==$MATPLOTLIB_VERSION" -o "$RUNNER_TEMP/matplotlib-wheels"
+
       - name: Install wheel and test dependencies in Pyodide
         run: |
           source "$WASM_BUILD_ENV/bin/activate"
           pyodide venv "$WASM_TEST_ENV"
-          "$WASM_TEST_ENV/bin/pip" install wheelhouse/shap-*.whl pytest pytest-mpl matplotlib ipython
+          "$WASM_TEST_ENV/bin/pip" install wheelhouse/shap-*.whl \
+            "$RUNNER_TEMP"/matplotlib-wheels/matplotlib-*.whl pytest pytest-mpl ipython
 
       - name: Download pre-cached datasets
         uses: actions/download-artifact@v4
