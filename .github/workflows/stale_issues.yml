@@ -18,7 +18,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v9
+      - uses: actions/stale@v11
         with:
           # See discussion on generous time limits:
           # https://github.com/shap/shap/discussions/3051

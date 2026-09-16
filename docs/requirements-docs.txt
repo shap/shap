@@ -103,7 +103,7 @@ mdit-py-plugins==0.5.0
     # via myst-parser
 mdurl==0.1.2
     # via markdown-it-py
-mistune==3.3.0
+mistune==3.3.3
     # via nbconvert
 myst-parser==5.0.0
     # via shap (pyproject.toml:docs)
@@ -234,7 +234,7 @@ threadpoolctl==3.6.0
     # via scikit-learn
 tinycss2==1.4.0
     # via bleach
-tornado==6.5.7
+tornado==6.5.8
     # via jupyter-client
 tqdm==4.67.3
     # via shap (pyproject.toml)
