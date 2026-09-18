@@ -237,9 +237,13 @@ class KernelExplainer(Explainer):
         names, labels = list(names), list(X.columns)
         if labels == names or len(set(names)) != len(names):
             return None
+        columns = getattr(self.data, "group_names", None)
+        if columns is not None and list(columns) != names and set(columns) == set(names):
+            # the background's own column order disagrees with feature_names
+            return None
         present = set(labels)
         missing = [name for name in names if name not in present]
-        if missing and len(labels) < len(names) and len(missing) < len(names):
+        if missing and len(labels) < len(names):
             raise ValueError(f"X is missing features present in the background data: {missing}")
         if missing or len(labels) != len(names) or present != set(names):
             return None
@@ -307,7 +311,7 @@ class KernelExplainer(Explainer):
         if isinstance(X, pd.DataFrame):
             order = self._background_order(X)
             if order is not None:
-                values = self.shap_values(X[list(self.data_feature_names)], **kwargs)
+                values = self.shap_values(X.iloc[:, np.argsort(order)], **kwargs)
                 return np.take(values, order, axis=1)
 
         # convert dataframes

@@ -162,6 +162,23 @@ def test_kernel_dataframe_reordered_columns():
     np.testing.assert_allclose(explanation.data, X_reordered.to_numpy())
 
 
+def test_kernel_feature_names_out_of_order():
+    """feature_names that reorder a DataFrame background do not realign X.
+
+    cf. GH #3958
+    """
+    background = pd.DataFrame(np.random.RandomState(0).normal(size=(20, 3)), columns=list("abc"))
+    X = pd.DataFrame([[1.0, 2.0, 3.0]], columns=list("abc"))
+
+    def model(x):
+        return 5.0 * x[:, 1]
+
+    expected = shap.KernelExplainer(model, background).shap_values(X, silent=True)
+    explainer = shap.KernelExplainer(model, background, feature_names=["b", "a", "c"])
+
+    np.testing.assert_allclose(explainer.shap_values(X, silent=True), expected)
+
+
 def test_kernel_dataframe_missing_columns():
     """A clear error is raised if X lacks features present in the background data."""
     background = pd.DataFrame(np.ones((2, 3)), columns=list("abc"))
@@ -169,6 +186,9 @@ def test_kernel_dataframe_missing_columns():
 
     with pytest.raises(ValueError, match="missing"):
         explainer.shap_values(pd.DataFrame(np.ones((1, 2)), columns=list("ab")))
+
+    with pytest.raises(ValueError, match="missing"):
+        explainer.shap_values(pd.DataFrame(np.ones((1, 2)), columns=list("xy")))
 
 
 def test_kernel_shap_with_a1a_sparse_zero_background():
