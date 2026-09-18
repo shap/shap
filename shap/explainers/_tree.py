@@ -1645,7 +1645,7 @@ class TreeEnsemble:
             self.base_offset = loader.base_score
             self.objective = loader.objective
             self.tree_output = loader.tree_output
-            self.input_dtype = np.float64
+            self.input_dtype = np.float32  # XGBoost & sklearn round inputs to float32 before predicting
             if loader.num_stacked_models > 1:
                 self.num_stacked_models = loader.num_stacked_models
         else:
@@ -1967,7 +1967,10 @@ class SingleTree:
             self.children_default = tree["children_default"].astype(np.int32)
             self.features = tree["features"].astype(np.int32)
             self.thresholds = tree["thresholds"]
-            self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
+            if "threshold_types" in tree:
+                self.threshold_types = tree["threshold_types"].astype(np.int32)
+            else:
+                self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = tree["values"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
@@ -2709,9 +2712,30 @@ class TreeliteModelLoader:
         task_type: str = task_type_list[int(ha.get_field("task_type")[0])]
         self.average_tree_output: bool = bool(ha.get_field("average_tree_output")[0])
         self.num_class: int = int(ha.get_field("num_class")[0])
-        self.base_score: float = float(ha.get_field("base_scores")[0])
 
-        self.num_stacked_models: int = self.num_class if (task_type == "kMultiClf" and self.num_class > 1) else 1
+        # base_scores is a vector for multiclass (one score per class)
+        base_scores_raw = ha.get_field("base_scores").astype(np.float64)
+        self.base_score: Any = base_scores_raw if len(base_scores_raw) > 1 else float(base_scores_raw[0])
+
+        # num_target > 1 means multiple regression outputs (XGBoost multi-output)
+        try:
+            self.num_target: int = int(ha.get_field("num_target")[0])
+        except Exception:
+            self.num_target = 1
+
+        try:
+            lvs = ha.get_field("leaf_vector_shape")
+            self.leaf_vector_size: int = int(lvs[1]) if len(lvs) > 1 and int(lvs[1]) > 1 else 1
+        except Exception:
+            self.leaf_vector_size = 1
+
+        self.num_stacked_models: int = 1
+        if self.leaf_vector_size > 1:
+            self.num_stacked_models = 1  # outputs come from the leaf vector
+        elif task_type == "kMultiClf" and self.num_class > 1:
+            self.num_stacked_models = self.num_class
+        elif self.num_target > 1:
+            self.num_stacked_models = self.num_target
 
         _task_map: dict[str, tuple[str | None, str]] = {
             "kRegressor": ("squared_error", "raw_value"),
@@ -2721,20 +2745,23 @@ class TreeliteModelLoader:
         }
         self.objective, self.tree_output = _task_map.get(task_type, (None, "raw_value"))
 
+        # sigmoid_alpha: LightGBM binary models can use a custom sigmoid scale
+        try:
+            self.sigmoid_alpha: float = float(ha.get_field("sigmoid_alpha")[0])
+        except Exception:
+            self.sigmoid_alpha = 1.0
+
+        # Scale base_score by sigmoid_alpha so the standard logistic transform is correct
+        if self.sigmoid_alpha != 1.0 and self.tree_output == "log_odds":
+            if isinstance(self.base_score, np.ndarray):
+                self.base_score = self.base_score * self.sigmoid_alpha
+            else:
+                self.base_score = self.base_score * self.sigmoid_alpha
+
         self._trees_data: list[dict] = [self._parse_tree(treelite_model, i) for i in range(self.num_tree)]
 
     def _parse_tree(self, treelite_model: Any, tree_id: int) -> dict:
-        """Load one tree via the tree accessor API into SHAP's dict format.
-
-        treelite's ``cmp`` field encodes which direction (cleft/cright) is taken
-        when the split condition is TRUE.  SHAP always uses ``feature <= threshold``
-        to mean *go left*, so we must normalise any other operator:
-
-        * cmp=2 (<)  : cleft is the left child; shift threshold down by 1 ULP
-        * cmp=3 (<=) : cleft is the left child; no adjustment needed
-        * cmp=4 (>)  : condition is inverted → swap cleft/cright for SHAP
-        * cmp=5 (>=) : swap cleft/cright and shift threshold down by 1 ULP
-        """
+        """Load one tree via the tree accessor API into SHAP's dict format."""
         ta = treelite_model.get_tree_accessor(tree_id)
 
         num_nodes: int = int(ta.get_field("num_nodes")[0])
@@ -2760,21 +2787,16 @@ class TreeliteModelLoader:
         is_leaf = node_type == 0
         is_internal = ~is_leaf
 
-        # Normalise to SHAP convention (<=): operators that invert left/right
-        # cmp=4 (>) and cmp=5 (>=) send larger values to cleft,
-        # so we swap cleft and cright for SHAP.
+        # treelite ops: 2="<", 3="<=", 4=">", 5=">=" (TRUE branch -> cleft).
+        # SHAP means "feature <= threshold -> left", so only ">" and ">=" swap.
         swap_mask = is_internal & ((cmp == 4) | (cmp == 5))
         children_left = np.where(swap_mask, cright, cleft).astype(np.int32)
         children_right = np.where(swap_mask, cleft, cright).astype(np.int32)
 
-        # Both < and >= (after swapping children) require SHAP's left branch
-        # to represent feature < threshold. Shift down in the original dtype
-        # before converting to float64, matching the source threshold precision.
+        # "<" and ">=" (after swap) mean "feature < T": shift threshold down 1 ULP
+        # in the ORIGINAL dtype (float32 for XGBoost) before the float64 cast.
         shift_down = is_internal & ((cmp == 2) | (cmp == 5))
-        threshold[shift_down] = np.nextafter(
-            threshold[shift_down],
-            np.array(-np.inf, dtype=threshold.dtype),
-        )
+        threshold[shift_down] = np.nextafter(threshold[shift_down], np.array(-np.inf, dtype=threshold.dtype))
         threshold = threshold.astype(np.float64)
 
         # children_default: swapping cleft/cright also swaps the default direction
@@ -2785,10 +2807,61 @@ class TreeliteModelLoader:
             np.where(effective_default_left, children_left, children_right),
         ).astype(np.int32)
 
-        # treelite stores -1 for leaf split_index (no split feature at leaf nodes)
+        # Categorical splits (node_type == 2). treelite lists per-node categories in
+        # category_list (sliced by category_list_begin/end) plus a flag
+        # category_list_right_child. SHAP encodes the LEFT-going categories as a
+        # bitmask (sum of 2**(cat-1)) with threshold_type=1.
+        threshold_types = np.zeros(num_nodes, dtype=np.int32)
+        cat_node_mask = node_type == 2
+        if cat_node_mask.any():
+            category_list = ta.get_field("category_list").astype(np.int64)
+            cat_begin = ta.get_field("category_list_begin").astype(np.int64)
+            cat_end = ta.get_field("category_list_end").astype(np.int64)
+            cat_right = ta.get_field("category_list_right_child").astype(bool)
+            for nid in np.where(cat_node_mask)[0]:
+                node_cats = category_list[int(cat_begin[nid]) : int(cat_end[nid])]
+                if cat_right[nid]:
+                    children_left[nid], children_right[nid] = cright[nid], cleft[nid]
+                else:
+                    children_left[nid], children_right[nid] = cleft[nid], cright[nid]
+                threshold[nid] = float(np.sum(2.0 ** (node_cats.astype(np.float64) - 1)))
+                threshold_types[nid] = 1
+                children_default[nid] = cleft[nid] if default_left[nid] else cright[nid]
+                if 0 in node_cats:
+                    # The C extension uses (1 << (cat-1)); for cat=0 this is
+                    # (1 << -1) = UB, acting as (1 << 31) = 0x80000000 on x86.
+                    # cat=0 ALWAYS goes to children_right. Fix: complement encoding
+                    # + swap so cat=0 falls to children_right = the correct leaf.
+                    # 0xFFFFFF = 2^24-1: exactly representable in float32,
+                    # bit31=0 ensures cat=0 UB always ANDs to 0.
+                    bitmask_nz = int(threshold[nid])
+                    threshold[nid] = float(0xFFFFFF - bitmask_nz)
+                    children_left[nid], children_right[nid] = (
+                        children_right[nid],
+                        children_left[nid],
+                    )
+                    children_default[nid] = cleft[nid] if default_left[nid] else cright[nid]
+
         features = split_index.astype(np.int32)
 
-        values = leaf_value.reshape(num_nodes, 1)
+        # Vector-valued leaves store values in a flattened leaf_vector field,
+        # sliced per node by leaf_vector_begin/end (leaf_value is empty here).
+        if self.leaf_vector_size > 1:
+            leaf_vector = ta.get_field("leaf_vector").astype(np.float64)
+            lv_begin = ta.get_field("leaf_vector_begin").astype(np.int64)
+            lv_end = ta.get_field("leaf_vector_end").astype(np.int64)
+            values = np.zeros((num_nodes, self.leaf_vector_size), dtype=np.float64)
+            for nid in range(num_nodes):
+                beg, end = int(lv_begin[nid]), int(lv_end[nid])
+                if end > beg:
+                    values[nid, : end - beg] = leaf_vector[beg:end]
+        else:
+            values = leaf_value.reshape(num_nodes, 1)
+
+        # Scale by sigmoid_alpha for LightGBM binary with custom sigmoid
+        if self.sigmoid_alpha != 1.0 and self.tree_output == "log_odds":
+            values = values * self.sigmoid_alpha
+
         if self.average_tree_output and self.num_tree > 0:
             values = values / self.num_tree
 
@@ -2798,6 +2871,7 @@ class TreeliteModelLoader:
             "children_default": children_default,
             "features": features,
             "thresholds": threshold,
+            "threshold_types": threshold_types,
             "values": values,
             "node_sample_weight": node_sample_weight,
         }
