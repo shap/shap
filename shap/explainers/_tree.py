@@ -356,9 +356,9 @@ class TreeExplainer(Explainer):
         if self.model.model_output == "log_loss":
             if self.model.trees is None:
                 raise ExplainerError(
-                    "Currently TreeExplainer can only handle models with categorical splits when "
-                    'feature_perturbation="tree_path_dependent" and no background data is passed. Please try again using '
-                    'shap.TreeExplainer(model, feature_perturbation="tree_path_dependent").'
+                    "TreeExplainer cannot compute log_loss for models with native categorical splits: "
+                    'log_loss requires background data and feature_perturbation="interventional", '
+                    "which are unsupported for such models."
                 )
             self.expected_value = self.__dynamic_expected_value
         elif data is not None:
