@@ -139,7 +139,9 @@ def test_kernel_shap_with_dataframe_explanation(random_seed):
     shap.plots.scatter(explanation[:, "a"], show=False)
 
 
-def test_kernel_dataframe_reordered_columns():
+@pytest.mark.parametrize("keep_index", [False, True])
+@pytest.mark.parametrize("multi_output", [False, True])
+def test_kernel_dataframe_reordered_columns(keep_index, multi_output):
     """Features of X are matched to the background data by name, not position.
 
     cf. GH #3958
@@ -149,9 +151,11 @@ def test_kernel_dataframe_reordered_columns():
     X_reordered = X[["c", "a", "b"]]
 
     def model(x):
-        return 5.0 * x[:, 1]  # only depends on "b"
+        values = x.to_numpy() if isinstance(x, pd.DataFrame) else x
+        output = 5.0 * values[:, 1]  # only depends on "b"
+        return np.column_stack((output, -output)) if multi_output else output
 
-    explainer = shap.KernelExplainer(model, background)
+    explainer = shap.KernelExplainer(model, background, keep_index=keep_index)
     expected = explainer.shap_values(X, silent=True)[:, [2, 0, 1]]
 
     np.testing.assert_allclose(explainer.shap_values(X_reordered, silent=True), expected)
@@ -162,8 +166,9 @@ def test_kernel_dataframe_reordered_columns():
     np.testing.assert_allclose(explanation.data, X_reordered.to_numpy())
 
 
-def test_kernel_feature_names_out_of_order():
-    """feature_names that reorder a DataFrame background do not realign X.
+@pytest.mark.parametrize("feature_names", [["b", "a", "c"], ["A", "B", "C"]])
+def test_kernel_feature_names_out_of_order(feature_names):
+    """Alignment uses background columns independently of display feature_names.
 
     cf. GH #3958
     """
@@ -174,21 +179,46 @@ def test_kernel_feature_names_out_of_order():
         return 5.0 * x[:, 1]
 
     expected = shap.KernelExplainer(model, background).shap_values(X, silent=True)
-    explainer = shap.KernelExplainer(model, background, feature_names=["b", "a", "c"])
+    explainer = shap.KernelExplainer(model, background, feature_names=feature_names)
 
     np.testing.assert_allclose(explainer.shap_values(X, silent=True), expected)
+    explanation = explainer(X[["c", "a", "b"]], silent=True)
+    np.testing.assert_allclose(explanation.values, expected[:, [2, 0, 1]])
+    assert explanation.feature_names == ["c", "a", "b"]
+    np.testing.assert_array_equal(explanation.data, X[["c", "a", "b"]].to_numpy())
 
 
-def test_kernel_dataframe_missing_columns():
-    """A clear error is raised if X lacks features present in the background data."""
+@pytest.mark.parametrize("input_columns", ["ab", "xy", "abd", "abcd"])
+def test_kernel_dataframe_mismatched_columns(input_columns):
+    """Reject missing, replaced, or extra columns before explaining the input."""
     background = pd.DataFrame(np.ones((2, 3)), columns=list("abc"))
     explainer = shap.KernelExplainer(lambda x: x[:, 0], background)
 
-    with pytest.raises(ValueError, match="missing"):
-        explainer.shap_values(pd.DataFrame(np.ones((1, 2)), columns=list("ab")))
+    with pytest.raises(ValueError, match="same column names"):
+        explainer.shap_values(pd.DataFrame(np.ones((1, len(input_columns))), columns=list(input_columns)))
 
-    with pytest.raises(ValueError, match="missing"):
-        explainer.shap_values(pd.DataFrame(np.ones((1, 2)), columns=list("xy")))
+
+def test_kernel_dataframe_duplicate_background_columns():
+    background = pd.DataFrame(np.ones((2, 3)), columns=list("aab"))
+
+    def model(x):
+        pytest.fail("Duplicate background columns must be rejected before calling the model")
+
+    with pytest.raises(ValueError, match="Background data must have unique column names"):
+        shap.KernelExplainer(model, background)
+
+
+@pytest.mark.parametrize("dataframe_background", [False, True])
+@pytest.mark.parametrize("input_columns", ["aab", "abcc"])
+def test_kernel_dataframe_duplicate_input_columns(dataframe_background, input_columns):
+    background = np.ones((2, 3))
+    if dataframe_background:
+        background = pd.DataFrame(background, columns=list("abc"))
+    explainer = shap.KernelExplainer(lambda x: x[:, 0], background)
+    X = pd.DataFrame(np.ones((1, len(input_columns))), columns=list(input_columns))
+
+    with pytest.raises(ValueError, match="X must have unique column names"):
+        explainer.shap_values(X)
 
 
 def test_kernel_shap_with_a1a_sparse_zero_background():

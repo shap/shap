@@ -127,6 +127,11 @@ class KernelExplainer(Explainer):
         elif isinstance(data, pd.DataFrame):
             self.data_feature_names = list(data.columns)
 
+        self._background_columns = None
+        if isinstance(data, pd.DataFrame):
+            if not data.columns.is_unique:
+                raise ValueError("Background data must have unique column names.")
+            self._background_columns = data.columns.copy()
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
         self.keep_index = kwargs.get("keep_index", False)
@@ -226,30 +231,6 @@ class KernelExplainer(Explainer):
             compute_time=time.time() - start_time,
         )
 
-    def _background_order(self, X: pd.DataFrame) -> list[int] | None:
-        """Return the background position of each column of ``X``, if ``X`` reorders them.
-
-        Columns are matched by name. ``None`` means ``X`` is used by position, as before.
-        """
-        names = getattr(self, "data_feature_names", None)
-        if names is None:
-            return None
-        names, labels = list(names), list(X.columns)
-        if labels == names or len(set(names)) != len(names):
-            return None
-        columns = getattr(self.data, "group_names", None)
-        if columns is not None and list(columns) != names and set(columns) == set(names):
-            # the background's own column order disagrees with feature_names
-            return None
-        present = set(labels)
-        missing = [name for name in names if name not in present]
-        if missing and len(labels) < len(names):
-            raise ValueError(f"X is missing features present in the background data: {missing}")
-        if missing or len(labels) != len(names) or present != set(names):
-            return None
-        position = {name: i for i, name in enumerate(names)}
-        return [position[label] for label in labels]
-
     def shap_values(
         self,
         X: npt.NDArray[Any] | pd.DataFrame | pd.Series | scipy.sparse.spmatrix,
@@ -307,12 +288,23 @@ class KernelExplainer(Explainer):
                 Return type for models with multiple outputs and one input changed from list to np.ndarray.
 
         """
-        # match the columns of a DataFrame to the background data by name
-        if isinstance(X, pd.DataFrame):
-            order = self._background_order(X)
-            if order is not None:
-                values = self.shap_values(X.iloc[:, np.argsort(order)], **kwargs)
-                return np.take(values, order, axis=1)
+        # Align by background labels, then restore the input order in the result.
+        input_order = None
+        columns = self._background_columns
+        if isinstance(X, pd.DataFrame) and not X.columns.is_unique:
+            raise ValueError(
+                "X must have unique column names. Please ensure that the input DataFrame has unique column names or use a numpy array."
+            )
+        if isinstance(X, pd.DataFrame) and columns is not None:
+            if set(X.columns) != set(columns):
+                missing = list(columns.difference(X.columns))
+                unexpected = list(X.columns.difference(columns))
+                raise ValueError(
+                    "X must have the same column names as the background data: "
+                    f"missing={missing}, unexpected={unexpected}"
+                )
+            input_order = columns.get_indexer(X.columns)
+            X = X.loc[:, columns]
 
         # convert dataframes
         if isinstance(X, pd.Series):
@@ -363,14 +355,14 @@ class KernelExplainer(Explainer):
                     for j in range(s[1]):
                         outs[j][i] = explanations[i][:, j]
                 outs = np.stack(outs, axis=-1)  # type: ignore[assignment]
-                return outs  # type: ignore[return-value]
+                return np.take(outs, input_order, axis=1) if input_order is not None else outs  # type: ignore[return-value]
 
             # single-output
             else:
                 out = np.zeros((X.shape[0], s[0]))
                 for i in range(X.shape[0]):
                     out[i] = explanations[i]
-                return out
+                return np.take(out, input_order, axis=1) if input_order is not None else out
 
         else:
             emsg = "Instance must have 1 or 2 dimensions!"
