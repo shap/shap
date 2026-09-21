@@ -4,16 +4,18 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
     paths:
       - "shap/**"
       - "tests/**"
       - "data/**"
       - "javascript/**"  # Include JS changes that affect bundle.js
       - ".github/workflows/run_tests.yml"
+      - ".github/workflows/build_pyodide_wheel.yml"
+      - "scripts/run_pyodide_tests.py"
       - "pyproject.toml"
       - "CMakeLists.txt"
 
@@ -28,9 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install uv
@@ -44,14 +46,19 @@ jobs:
         run: |
           mkdir -p /tmp/test_data_cache
           cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
-          cp -r shap/cached_data /tmp/test_data_cache/ || true
+          SHAP_DATA_DIR=$(python -P -c "import pathlib, shap; print(pathlib.Path(shap.__file__).parent / 'cached_data')")
+          cp -r "$SHAP_DATA_DIR" /tmp/test_data_cache/
           ls -la /tmp/test_data_cache/
       - name: Upload cached datasets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
           retention-days: 1
+
+  run_wasm_tests:
+    needs: prepare_data
+    uses: ./.github/workflows/build_pyodide_wheel.yml
 
   run_tests:
     needs: prepare_data
@@ -65,6 +72,10 @@ jobs:
                          ]
         extras: ["test"]
         include:
+          # Use core dependencies until the optional test stack supports 3.15.
+          - os: ubuntu-latest
+            python-version: "3.15"
+            extras: "test-core"
           # Test on windows/mac, just one job each
           - os: windows-latest
             python-version: "3.13"
@@ -81,21 +92,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
             js:
               - 'javascript/**'
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
+          allow-prereleases: ${{ matrix.python-version == '3.15' }}
       # Build JavaScript bundle if JS files have changed
       - name: Set up Node.js
         if: steps.filter.outputs.js == 'true'
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v7
         with:
           node-version: lts/Hydrogen
       - name: Build JavaScript bundle conditionally
@@ -116,6 +128,14 @@ jobs:
           unset _libomp_path
       - name: Install uv
         uses: astral-sh/setup-uv@v7
+      # Released pandas/scikit-learn do not yet ship cp315 wheels. In particular,
+      # scikit-learn's isolated build pulls in scipy<1.18, which has no cp315 wheels.
+      - name: Install Python 3.15 dependency nightlies
+        if: matrix.python-version == '3.15'
+        run: >
+          uv pip install --system --pre --only-binary=:all:
+          --index https://pypi.anaconda.org/scientific-python-nightly-wheels/simple
+          pandas scikit-learn
       - name: Install dependencies
         # Do regular install NOT editable install: see GH #3020
         run: |
@@ -160,13 +180,13 @@ jobs:
           --import-mode=append
       - name: Upload mpl test report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mpl-results-${{ matrix.python-version }}-${{ runner.os }}-${{ matrix.extras }}
           path: mpl-results/
           if-no-files-found: ignore
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -178,9 +198,9 @@ jobs:
     name: run tests (oldest supported numpy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: 3.12
       - name: Install uv
@@ -196,9 +216,9 @@ jobs:
     name: run mypy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: 3.13
       - name: Install uv

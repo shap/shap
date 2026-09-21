@@ -1,0 +1,101 @@
+name: Build and test WASM wheel
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PYODIDE_VERSION: "314.0.7"
+      MATPLOTLIB_VERSION: "3.11.2"
+      PYODIDE_XBUILDENV_PATH: /tmp/shap-pyodide-xbuildenv
+      WASM_BUILD_ENV: /tmp/shap-pyodide-build
+      WASM_TEST_ENV: /tmp/shap-pyodide-test
+      SHAP_TEST_DATA_CACHE: /tmp/test_data_cache
+      SCIKIT_LEARN_DATA: /tmp/scikit_learn_data
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Download prebuilt Pyodide build environment
+        run: |
+          uv venv --python 3.14 "$WASM_BUILD_ENV"
+          uv pip install --python "$WASM_BUILD_ENV/bin/python" 'pyodide-build[resolve]==0.39.0'
+          source "$WASM_BUILD_ENV/bin/activate"
+          pyodide xbuildenv install "$PYODIDE_VERSION"
+
+      - name: Build SHAP WASM wheel
+        run: |
+          source "$WASM_BUILD_ENV/bin/activate"
+          pyodide build . -o wheelhouse \
+            -Cbuild-dir="$RUNNER_TEMP/shap-wasm-build" \
+            -Cwheel.py-api= \
+            -Ccmake.define.Python_INCLUDE_DIR="$PYODIDE_XBUILDENV_PATH/$PYODIDE_VERSION/xbuildenv/pyodide-root/cpython/installs/python-3.14.2/include/python3.14"
+
+      # Pyodide's prebuilt Matplotlib 3.10 uses a different plotting stack from our baselines.
+      # todo: remove once at least 3.11.2 is available in pyodide
+      - name: Cache Matplotlib WASM wheel
+        id: matplotlib-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/matplotlib-wheels
+          key: matplotlib-${{ env.MATPLOTLIB_VERSION }}-pyodide-${{ env.PYODIDE_VERSION }}-build-0.39.0-${{ runner.os }}-${{ runner.arch }}-v1
+
+      - name: Build Matplotlib WASM wheel
+        if: steps.matplotlib-cache.outputs.cache-hit != 'true'
+        run: |
+          source "$WASM_BUILD_ENV/bin/activate"
+          pyodide build "matplotlib==$MATPLOTLIB_VERSION" -o "$RUNNER_TEMP/matplotlib-wheels"
+
+      - name: Install wheel and test dependencies in Pyodide
+        run: |
+          source "$WASM_BUILD_ENV/bin/activate"
+          pyodide venv "$WASM_TEST_ENV"
+          "$WASM_TEST_ENV/bin/pip" install wheelhouse/shap-*.whl \
+            "$RUNNER_TEMP"/matplotlib-wheels/matplotlib-*.whl pytest pytest-mpl ipython
+
+      - name: Download pre-cached datasets
+        uses: actions/download-artifact@v4
+        with:
+          name: test-data-cache
+          path: ${{ env.SHAP_TEST_DATA_CACHE }}
+
+      - name: Run existing tests with Node sockets enabled
+        working-directory: ${{ runner.temp }}
+        run: |
+          "$WASM_TEST_ENV/bin/python" -P "$GITHUB_WORKSPACE/scripts/run_pyodide_tests.py" \
+            "$GITHUB_WORKSPACE/tests" --import-mode=append --durations=20 -ra \
+            --junitxml="$RUNNER_TEMP/wasm-results.xml" \
+            --mpl-generate-summary=html --mpl-results-path="$RUNNER_TEMP/wasm-mpl-results"
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-test-results
+          path: |
+            ${{ runner.temp }}/wasm-results.xml
+            ${{ runner.temp }}/wasm-mpl-results/
+          if-no-files-found: ignore
+
+      - name: Upload tested wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: bdist_files_wasm
+          path: wheelhouse/*.whl
+          if-no-files-found: error
