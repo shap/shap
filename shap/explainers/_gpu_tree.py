@@ -5,7 +5,6 @@ import numpy as np
 from ..utils import assert_import, record_import_error
 from ._tree import (
     TreeExplainer,
-    _xgboost_cat_unsupported,
     feature_perturbation_codes,
     output_transform_codes,
 )
@@ -70,7 +69,12 @@ class GPUTreeExplainer(TreeExplainer):
         )
 
         model = self.model
-        _xgboost_cat_unsupported(model)
+        if np.any(model.threshold_types != 0):
+            raise NotImplementedError(
+                "Categorical splits are not yet supported by GPUTreeExplainer. Use"
+                " TreeExplainer (CPU) with feature_perturbation='interventional'"
+                " or feature_perturbation='tree_path_dependent' instead."
+            )
         transform = model.get_transform()
 
         # run the core algorithm using the C extension
