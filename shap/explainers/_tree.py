@@ -1645,7 +1645,7 @@ class TreeEnsemble:
             self.base_offset = loader.base_score
             self.objective = loader.objective
             self.tree_output = loader.tree_output
-            self.input_dtype = np.float32  # XGBoost & sklearn round inputs to float32 before predicting
+            self.input_dtype = loader.input_dtype
             if loader.num_stacked_models > 1:
                 self.num_stacked_models = loader.num_stacked_models
         else:
@@ -2701,6 +2701,18 @@ class TreeliteModelLoader:
         self.num_feature: int = treelite_model.num_feature
         self.num_tree: int = treelite_model.num_tree
 
+        # Detect origin so we know how the model rounded inputs before
+        # splitting: XGBoost/sklearn round to float32; LightGBM's native
+        # predictor operates in float64 with no rounding.
+        ta0 = treelite_model.get_tree_accessor(0)
+        num_nodes0 = int(ta0.get_field("num_nodes")[0])
+        sum_hess0 = ta0.get_field("sum_hess")
+        data_count0 = ta0.get_field("data_count")
+        if len(sum_hess0) != num_nodes0 and len(data_count0) == num_nodes0:
+            self.input_dtype: type = np.float64  # LightGBM
+        else:
+            self.input_dtype = np.float32  # XGBoost / sklearn
+
         ha = treelite_model.get_header_accessor()
         task_type_list = [
             "kBinaryClf",
@@ -2725,7 +2737,8 @@ class TreeliteModelLoader:
 
         try:
             lvs = ha.get_field("leaf_vector_shape")
-            self.leaf_vector_size: int = int(lvs[1]) if len(lvs) > 1 and int(lvs[1]) > 1 else 1
+            total = int(np.prod(lvs)) if len(lvs) > 0 else 1
+            self.leaf_vector_size: int = total if total > 1 else 1
         except Exception:
             self.leaf_vector_size = 1
 
