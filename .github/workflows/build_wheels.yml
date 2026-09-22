@@ -68,12 +68,13 @@ jobs:
         run: |
           uv pip install --system . --group download-datasets
       - name: Pre-download datasets
-        run: python tests/datasets_to_cache.py
+        run: python -P tests/datasets_to_cache.py
       - name: Create unified cache directory
         run: |
           mkdir -p /tmp/test_data_cache
           cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
-          cp -r shap/cached_data /tmp/test_data_cache/ || true
+          SHAP_DATA_DIR=$(python -P -c "import pathlib, shap; print(pathlib.Path(shap.__file__).parent / 'cached_data')")
+          cp -r "$SHAP_DATA_DIR" /tmp/test_data_cache/
           ls -la /tmp/test_data_cache/
       - name: Upload cached datasets
         uses: actions/upload-artifact@v7
@@ -81,6 +82,10 @@ jobs:
           name: test-data-cache
           path: /tmp/test_data_cache
           retention-days: 1
+
+  build_wasm:
+    needs: prepare_data
+    uses: ./.github/workflows/build_pyodide_wheel.yml
 
   build_wheels:
     name: Build ${{ matrix.os }} wheels
@@ -183,7 +188,7 @@ jobs:
 
   publish_test_pypi:
     name: Publish wheels to TestPyPI
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels, build_wasm, build_sdist]
     runs-on: ubuntu-latest
     if: github.event_name != 'schedule'
     environment:
@@ -211,7 +216,7 @@ jobs:
 
   publish_pypi:
     name: Publish wheels to PyPI
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels, build_wasm, build_sdist]
     runs-on: ubuntu-latest
     # Only publish tagged releases to PyPI
     if: startsWith(github.ref, 'refs/tags')
@@ -237,7 +242,7 @@ jobs:
 
   upload_nightly:
     name: Upload nightly wheels to Anaconda.org
-    needs: [build_wheels]
+    needs: [build_wheels, build_wasm]
     runs-on: ubuntu-latest
     # Only upload nightlies from the scheduled run on the main repository, never from forks
     if: github.event_name == 'schedule' && github.repository == 'shap/shap'
