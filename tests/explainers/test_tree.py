@@ -3016,3 +3016,235 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+def test_treelite_regressor():
+    treelite = pytest.importorskip("treelite")
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.california(n_points=100)
+    bst = xgboost.train(
+        {"learning_rate": 0.1, "max_depth": 3, "verbosity": 0},
+        xgboost.DMatrix(X, label=y),
+        num_boost_round=20,
+    )
+    tl_model = treelite.frontend.from_xgboost(bst)
+    explainer = shap.TreeExplainer(tl_model)
+    sv = explainer(X)
+    assert sv.values.shape == (len(X), X.shape[1])
+
+
+@pytest.mark.parametrize("fraction", [0.25, 0.5, 0.75])
+def test_treelite_xgboost_float32_threshold_precision(fraction):
+    """Converting float32 split thresholds must preserve SHAP values at the boundary."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    xgboost = pytest.importorskip("xgboost")
+
+    # A single split at x < 4, with leaf values 0 and 1 and equal sample weights.
+    X = np.array([[3.0], [4.0]], dtype=np.float32)
+    model = xgboost.train(
+        {
+            "objective": "reg:squarederror",
+            "max_depth": 1,
+            "eta": 1,
+            "min_child_weight": 0,
+            "lambda": 0,
+            "base_score": 0,
+            "tree_method": "hist",
+        },
+        xgboost.DMatrix(X, label=[0.0, 1.0]),
+        num_boost_round=1,
+    )
+    tl_model = treelite.frontend.from_xgboost(model)
+    thresholds = tl_model.get_tree_accessor(0).get_field("threshold")
+    assert thresholds.dtype == np.float32
+    assert thresholds[0] == 4.0
+
+    # SHAP implements < as <= nextafter(threshold, -inf). Moving one float32
+    # step before converting to float64 gives a different boundary than moving
+    # one float64 step afterwards. This input lies strictly between the two.
+    lower = float(np.nextafter(np.float32(4.0), np.float32(-np.inf)))
+    upper = np.nextafter(np.float64(4.0), -np.inf)
+    probe = lower + fraction * (4.0 - lower)
+    assert lower < probe < upper
+    goes_right = fraction >= 0.5
+    assert (np.float32(probe) == 4.0) == goes_right
+    X_test = np.array([[3.0], [probe], [4.0]], dtype=np.float64)
+
+    expected = shap.TreeExplainer(model)(X_test)
+    actual = shap.TreeExplainer(tl_model)(X_test)
+
+    # The quarter-gap input rounds down; the midpoint and three-quarter input
+    # round up to 4. The conversion must preserve both rounding directions.
+    predictions = model.predict(xgboost.DMatrix(X_test))
+    np.testing.assert_array_equal(predictions, [0.0, float(goes_right), 1.0])
+    np.testing.assert_allclose(expected.values, [[-0.5], [float(goes_right) - 0.5], [0.5]])
+    np.testing.assert_allclose(actual.base_values + actual.values.sum(axis=1), predictions)
+    np.testing.assert_allclose(actual.base_values, expected.base_values)
+    np.testing.assert_allclose(actual.values, expected.values)
+
+
+def test_treelite_binary_classifier():
+    treelite = pytest.importorskip("treelite")
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.adult(n_points=100)
+    bst = xgboost.train(
+        {"objective": "binary:logistic", "learning_rate": 0.1, "max_depth": 3, "verbosity": 0},
+        xgboost.DMatrix(X, label=y),
+        num_boost_round=10,
+    )
+    tl_model = treelite.frontend.from_xgboost(bst)
+    explainer = shap.TreeExplainer(tl_model, model_output="raw")
+    sv = explainer(X)
+    assert sv.values.shape == (len(X), X.shape[1])
+
+
+def test_treelite_lightgbm():
+    treelite = pytest.importorskip("treelite")
+    lgb = pytest.importorskip("lightgbm")
+    X, y = shap.datasets.california(n_points=100)
+    bst = lgb.train({"num_leaves": 7, "n_iter": 10, "verbose": -1}, lgb.Dataset(X, label=y))
+    tl_model = treelite.frontend.from_lightgbm(bst)
+    explainer = shap.TreeExplainer(tl_model)
+    sv = explainer(X)
+    assert sv.values.shape == (len(X), X.shape[1])
+
+
+def test_treelite_sklearn_float32_input_precision():
+    """Sklearn rounds inputs to float32 even though its thresholds are float64."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    model = sklearn.ensemble.RandomForestRegressor(n_estimators=1, max_depth=1, bootstrap=False, random_state=0).fit(
+        [[3.0], [5.0]], [0.0, 1.0]
+    )
+    assert model.estimators_[0].tree_.threshold[0] == 4.0
+    X_test = np.array([[3.0], [4.0 + 1e-8], [5.0]], dtype=np.float64)
+    assert X_test[1, 0] > 4.0
+    assert np.float32(X_test[1, 0]) == 4.0
+
+    expected = shap.TreeExplainer(model)(X_test)
+    actual = shap.TreeExplainer(treelite.sklearn.import_model(model))(X_test)
+    predictions = model.predict(X_test)
+    np.testing.assert_array_equal(predictions, [0.0, 0.0, 1.0])
+    np.testing.assert_allclose(actual.base_values + actual.values.sum(axis=1), predictions)
+    np.testing.assert_allclose(actual.values, expected.values)
+
+
+def test_treelite_xgboost_multiclass_base_scores():
+    """Each class must retain its own base score when reconstructing raw margins."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    xgboost = pytest.importorskip("xgboost", minversion="3.1")
+    X = np.arange(30, dtype=np.float32).reshape(-1, 1)
+    y = np.array([0] * 20 + [1] * 7 + [2] * 3)
+    model = xgboost.train(
+        {
+            "objective": "multi:softprob",
+            "num_class": 3,
+            "base_score": "[0.25,0.5,0.75]",
+            "max_depth": 2,
+            "nthread": 1,
+        },
+        xgboost.DMatrix(X, label=y),
+        num_boost_round=2,
+    )
+    tl_model = treelite.frontend.from_xgboost(model)
+    np.testing.assert_array_equal(tl_model.get_header_accessor().get_field("base_scores"), [0.25, 0.5, 0.75])
+
+    sv = shap.TreeExplainer(tl_model)(X)
+    predictions = model.predict(xgboost.DMatrix(X), output_margin=True)
+    reconstructed = sv.base_values + sv.values.sum(axis=1)
+    assert reconstructed.shape == predictions.shape
+    np.testing.assert_allclose(reconstructed, predictions, rtol=1e-6, atol=1e-6)
+
+
+def test_treelite_lightgbm_categorical_split():
+    """A categorical split must preserve membership in a non-contiguous category set."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    lightgbm = pytest.importorskip("lightgbm")
+    X = np.tile(np.array([[0.0], [1.0], [2.0], [3.0]]), (30, 1))
+    y = np.isin(X[:, 0], [0, 2]).astype(float)
+    model = lightgbm.train(
+        {
+            "objective": "regression",
+            "num_leaves": 2,
+            "min_data_in_leaf": 1,
+            "min_data_per_group": 1,
+            "cat_smooth": 0,
+            "cat_l2": 0,
+            "max_cat_to_onehot": 1,
+            "verbose": -1,
+            "num_threads": 1,
+        },
+        lightgbm.Dataset(X, label=y, categorical_feature=[0]),
+        num_boost_round=3,
+    )
+    tl_model = treelite.frontend.from_lightgbm(model)
+    assert tl_model.get_tree_accessor(0).get_field("node_type")[0] == 2
+    X_test = X[:4]
+    predictions = model.predict(X_test, raw_score=True)
+    assert predictions[0] == predictions[2]
+    assert predictions[0] != predictions[1]
+
+    sv = shap.TreeExplainer(tl_model)(X_test)
+    np.testing.assert_allclose(sv.base_values + sv.values.sum(axis=1), predictions, rtol=1e-6, atol=1e-6)
+
+
+def test_treelite_xgboost_multiple_targets():
+    """Trees assigned to different regression targets must not be summed together."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    xgboost = pytest.importorskip("xgboost", minversion="2.0")
+    X = np.arange(12, dtype=np.float32).reshape(-1, 1)
+    y = np.column_stack((X[:, 0], -X[:, 0]))
+    model = xgboost.train(
+        {"max_depth": 1, "multi_strategy": "one_output_per_tree", "nthread": 1},
+        xgboost.DMatrix(X, label=y),
+        num_boost_round=1,
+    )
+    tl_model = treelite.frontend.from_xgboost(model)
+    assert tl_model.get_header_accessor().get_field("num_target")[0] == 2
+
+    sv = shap.TreeExplainer(tl_model)(X)
+    predictions = model.predict(xgboost.DMatrix(X), output_margin=True)
+    reconstructed = sv.base_values + sv.values.sum(axis=1)
+    assert reconstructed.shape == predictions.shape
+    np.testing.assert_allclose(reconstructed, predictions, rtol=1e-6, atol=1e-6)
+
+
+def test_treelite_sklearn_vector_leaves():
+    """Random-forest class probabilities are stored in vector-valued leaves."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    X = np.arange(12, dtype=np.float64).reshape(-1, 1)
+    model = RandomForestClassifier(n_estimators=1, max_depth=1, bootstrap=False, random_state=0).fit(
+        X, [0] * 6 + [1] * 6
+    )
+    tl_model = treelite.sklearn.import_model(model)
+    np.testing.assert_array_equal(tl_model.get_header_accessor().get_field("leaf_vector_shape"), [1, 2])
+
+    sv = shap.TreeExplainer(tl_model)(X)
+    predictions = model.predict_proba(X)
+    reconstructed = sv.base_values + sv.values.sum(axis=1)
+    assert reconstructed.shape == predictions.shape
+    np.testing.assert_allclose(reconstructed, predictions, rtol=1e-6, atol=1e-6)
+
+
+def test_treelite_lightgbm_scaled_sigmoid():
+    """Probability explanations must account for LightGBM's sigmoid scale."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    lightgbm = pytest.importorskip("lightgbm")
+    X = np.arange(20, dtype=np.float64).reshape(-1, 1)
+    y = (X[:, 0] >= 10).astype(int)
+    model = lightgbm.train(
+        {
+            "objective": "binary",
+            "sigmoid": 2.0,
+            "num_leaves": 2,
+            "min_data_in_leaf": 1,
+            "verbose": -1,
+            "num_threads": 1,
+        },
+        lightgbm.Dataset(X, label=y),
+        num_boost_round=3,
+    )
+    tl_model = treelite.frontend.from_lightgbm(model)
+    assert tl_model.get_header_accessor().get_field("sigmoid_alpha")[0] == 2.0
+
+    sv = shap.TreeExplainer(tl_model, data=X, model_output="probability")(X)
+    np.testing.assert_allclose(sv.base_values + sv.values.sum(axis=1), model.predict(X), rtol=1e-6, atol=1e-6)
