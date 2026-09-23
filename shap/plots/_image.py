@@ -19,6 +19,7 @@ from .._explanation import Explanation
 from ..utils import ordinal_str
 from ..utils._legacy import kmeans
 from . import colors
+from ._show import resolve_show
 
 if TYPE_CHECKING:
     from matplotlib.colors import Colormap
@@ -35,7 +36,7 @@ def image(
     labelpad: float | None = None,
     cmap: str | Colormap | None = colors.red_transparent_blue,
     vmax: float | None = None,
-    show: bool | None = True,
+    show: bool | None = None,
 ):
     """Plots SHAP values for image inputs.
 
@@ -81,6 +82,8 @@ def image(
     See `image plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/image.html>`_.
 
     """
+    show = resolve_show(show, plot_name="image")
+
     # support passing an explanation object
     if isinstance(shap_values, Explanation):
         shap_exp: Explanation = shap_values
