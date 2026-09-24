@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
+from matplotlib.axes import Axes
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeRegressor
 
@@ -44,6 +45,14 @@ def test_waterfall_legacy(explainer):
     shap.plots._waterfall.waterfall_legacy(explainer.expected_value, shap_values[0], show=False)
     plt.tight_layout()
     return fig
+
+
+def test_waterfall_legacy_returns_axes_when_show_false():
+    shap_values = np.array([1.0, 2.0, 3.0, 4.0])
+
+    ax = shap.plots._waterfall.waterfall_legacy(0.0, shap_values, show=False)
+
+    assert isinstance(ax, Axes)
 
 
 @pytest.mark.mpl_image_compare(tolerance=3)
