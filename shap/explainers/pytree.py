@@ -1,140 +1,13 @@
 """This module is a pure python implementation of Tree SHAP.
-It is primarily for illustration since it is slower than the 'tree'
-module which uses a compiled C++ implementation.
+
+It is primarily for illustration and educational purposes, as it is slower than the
+main TreeExplainer which uses a compiled C++ implementation.
 """
 
 import numpy as np
 import pandas as pd
 
-# import numba
 from ..utils._exceptions import ExplainerError
-
-# class TreeExplainer(Explainer):
-#     def __init__(self, model, **kwargs):
-#         self.model_type = "internal"
-
-#         if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
-#             self.trees = [Tree(e.tree_) for e in model.estimators_]
-#         elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
-#             self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
-#         elif str(type(model)).endswith("xgboost.core.Booster'>"):
-#             self.model_type = "xgboost"
-#             self.trees = model
-#         elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
-#             self.model_type = "lightgbm"
-#             self.trees = model
-#         else:
-#             raise Exception("Model type not supported by TreeExplainer: " + str(type(model)))
-
-#     def shap_values(self, X, tree_limit=-1, **kwargs):
-
-#         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
-#         # these are about 10x faster than the numba jit'd implementation below...
-#         if self.model_type == "xgboost":
-#             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
-#                 X = xgboost.DMatrix(X)
-#             if tree_limit==-1:
-#                 tree_limit=0
-#             return self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
-#         elif self.model_type == "lightgbm":
-#             return self.trees.predict(X, num_iteration=tree_limit, pred_contrib=True)
-
-#         # convert dataframes
-#         if isinstance(X, (pd.Series, pd.DataFrame)):
-#             X = X.values
-
-#         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
-#         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
-
-#         n_outputs = self.trees[0].values.shape[1]
-
-#         # single instance
-#         if len(X.shape) == 1:
-
-#             phi = np.zeros((X.shape[0] + 1, n_outputs))
-#             x_missing = np.zeros(X.shape[0], dtype=bool)
-#             for t in self.trees:
-#                 self.tree_shap(t, X, x_missing, phi)
-#             phi /= len(self.trees)
-
-#             if n_outputs == 1:
-#                 return phi[:, 0]
-#             else:
-#                 return [phi[:, i] for i in range(n_outputs)]
-
-#         elif len(X.shape) == 2:
-#             phi = np.zeros((X.shape[0], X.shape[1] + 1, n_outputs))
-#             x_missing = np.zeros(X.shape[1], dtype=bool)
-#             for i in range(X.shape[0]):
-#                 for t in self.trees:
-#                     self.tree_shap(t, X[i,:], x_missing, phi[i,:,:])
-#             phi /= len(self.trees)
-
-#             if n_outputs == 1:
-#                 return phi[:, :, 0]
-#             else:
-#                 return [phi[:, :, i] for i in range(n_outputs)]
-
-#     def shap_interaction_values(self, X, tree_limit=-1, **kwargs):
-
-#         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
-#         if self.model_type == "xgboost":
-#             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
-#                 X = xgboost.DMatrix(X)
-#             if tree_limit==-1:
-#                 tree_limit=0
-#             return self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)
-#         else:
-#             raise Exception("Interaction values not yet supported for model type: " + str(type(X)))
-
-#     def tree_shap(self, tree, x, x_missing, phi, condition=0, condition_feature=0):
-
-#         # start the recursive algorithm
-#         shap._cext.tree_shap(
-#             tree.max_depth, tree.children_left, tree.children_right, tree.children_default, tree.features,
-#             tree.thresholds, tree.values, tree.node_sample_weight,
-#             x, x_missing, phi, condition, condition_feature
-#         )
-
-
-# class Tree:
-#     def __init__(self, children_left, children_right, children_default, feature, threshold, value, node_sample_weight):
-#         self.children_left = children_left.astype(np.int32)
-#         self.children_right = children_right.astype(np.int32)
-#         self.children_default = children_default.astype(np.int32)
-#         self.features = feature.astype(np.int32)
-#         self.thresholds = threshold
-#         self.values = value
-#         self.node_sample_weight = node_sample_weight
-
-#         # we compute the expectations to make sure they follow the SHAP logic
-#         self.max_depth = shap._cext.compute_expectations(
-#             self.children_left, self.children_right, self.node_sample_weight,
-#             self.values
-#         )
-
-#     def __init__(self, tree, normalize=False):
-#         if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
-#             self.children_left = tree.children_left.astype(np.int32)
-#             self.children_right = tree.children_right.astype(np.int32)
-#             self.children_default = self.children_left
-#             if hasattr(tree, "missing_go_to_left"):
-#                 self.children_default = np.where(tree.missing_go_to_left, tree.children_left, tree.children_right)
-#             self.features = tree.feature.astype(np.int32)
-#             self.thresholds = tree.threshold.astype(np.float64)
-#             if normalize:
-#                 self.values = (tree.value[:,0,:].T / tree.value[:,0,:].sum(1)).T
-#             else:
-#                 self.values = tree.value[:,0,:]
-
-
-#             self.node_sample_weight = tree.weighted_n_node_samples.astype(np.float64)
-
-#             # we compute the expectations to make sure they follow the SHAP logic
-#             self.max_depth = shap._cext.compute_expectations(
-#                 self.children_left, self.children_right, self.node_sample_weight,
-#                 self.values
-#             )
 
 
 class TreeExplainer:
@@ -143,18 +16,23 @@ class TreeExplainer:
     def __init__(self, model, **kwargs):
         self.model_type = "internal"
 
-        if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
+        model_type_str = str(type(model))
+        if "sklearn.ensemble" in model_type_str and "ForestRegressor" in model_type_str:
             self.trees = [Tree(e.tree_) for e in model.estimators_]
-        elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
+        elif "sklearn.ensemble" in model_type_str and "ForestClassifier" in model_type_str:
             self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
-        elif str(type(model)).endswith("xgboost.core.Booster'>"):
+        elif "sklearn.tree" in model_type_str and "DecisionTreeRegressor" in model_type_str:
+            self.trees = [Tree(model.tree_)]
+        elif "sklearn.tree" in model_type_str and "DecisionTreeClassifier" in model_type_str:
+            self.trees = [Tree(model.tree_, normalize=True)]
+        elif "xgboost.core.Booster" in model_type_str:
             self.model_type = "xgboost"
             self.trees = model
-        elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
+        elif "lightgbm.basic.Booster" in model_type_str:
             self.model_type = "lightgbm"
             self.trees = model
         else:
-            raise ExplainerError("Model type not supported by TreeExplainer: " + str(type(model)))
+            raise ExplainerError("Model type not supported by TreeExplainer: " + model_type_str)
 
         if self.model_type == "internal":
             # Preallocate space for the unique path data
@@ -261,7 +139,6 @@ class TreeExplainer:
 
 
 # extend our decision path with a fraction of one and zero extensions
-# @numba.jit(nopython=True, nogil=True)
 def extend_path(
     feature_indexes, zero_fractions, one_fractions, pweights, unique_depth, zero_fraction, one_fraction, feature_index
 ):
@@ -279,7 +156,6 @@ def extend_path(
 
 
 # undo a previous extension of the decision path
-# @numba.jit(nopython=True, nogil=True)
 def unwind_path(feature_indexes, zero_fractions, one_fractions, pweights, unique_depth, path_index):
     one_fraction = one_fractions[path_index]
     zero_fraction = zero_fractions[path_index]
@@ -301,7 +177,6 @@ def unwind_path(feature_indexes, zero_fractions, one_fractions, pweights, unique
 
 # determine what the total permutation weight would be if
 # we unwound a previous extension in the decision path
-# @numba.jit(nopython=True, nogil=True)
 def unwound_path_sum(feature_indexes, zero_fractions, one_fractions, pweights, unique_depth, path_index):
     one_fraction = one_fractions[path_index]
     zero_fraction = zero_fractions[path_index]
@@ -320,20 +195,6 @@ def unwound_path_sum(feature_indexes, zero_fractions, one_fractions, pweights, u
 
 
 class Tree:
-    # def __init__(self, children_left, children_right, children_default, feature, threshold, value, node_sample_weight):
-    #     self.children_left = children_left.astype(np.int32)
-    #     self.children_right = children_right.astype(np.int32)
-    #     self.children_default = children_default.astype(np.int32)
-    #     self.features = feature.astype(np.int32)
-    #     self.thresholds = threshold
-    #     self.values = value
-    #     self.node_sample_weight = node_sample_weight
-
-    #     self.max_depth = compute_expectations(
-    #         self.children_left, self.children_right, self.node_sample_weight,
-    #         self.values, 0
-    #     )
-
     def __init__(self, tree, normalize=False):
         if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
             self.children_left = tree.children_left.astype(np.int32)
@@ -356,7 +217,6 @@ class Tree:
             )
 
 
-# @numba.jit(nopython=True)
 def compute_expectations(children_left, children_right, node_sample_weight, values, i, depth=0):
     if children_right[i] == -1:
         values[i, :] = values[i, :]
@@ -374,7 +234,6 @@ def compute_expectations(children_left, children_right, node_sample_weight, valu
 
 
 # recursive computation of SHAP values for a decision tree
-# @numba.jit(nopython=True, nogil=True)
 def tree_shap_recursive(
     children_left,
     children_right,
