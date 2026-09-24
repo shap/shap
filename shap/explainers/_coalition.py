@@ -230,6 +230,7 @@ class CoalitionExplainer(Explainer):
         if self._curr_base_value is None or not getattr(self.masker, "fixed_background", False):
             base_output = fm(m00.reshape(1, -1), zero_index=0)[0]
             self._curr_base_value = np.array(base_output) if isinstance(base_output, (list, tuple)) else base_output
+            self.expected_value = self._curr_base_value
 
         # Handle multi-output predictions
         if isinstance(self._curr_base_value, np.ndarray) and self._curr_base_value.ndim > 0:
