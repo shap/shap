@@ -245,3 +245,18 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_mismatched_feature_names_does_not_crash():
+    """GH #4826: Explanation allows mismatched feature_names without crashing.
+
+    When feature_names length does not match any axis of values, the object
+    should still be created successfully with feature_names stored as provided.
+    """
+    values = np.ones((10, 4))
+    mismatched_names = ["a", "b", "c"]  # 3 names for 4 features
+
+    exp = shap.Explanation(values=values, feature_names=mismatched_names)
+
+    assert isinstance(exp, shap.Explanation)
+    assert exp.feature_names == mismatched_names
