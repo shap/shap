@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 import shap
+from shap.plots._scatter import _suggest_x_jitter
 
 
 @pytest.mark.mpl_image_compare
@@ -97,6 +98,13 @@ def test_scatter_categorical(categorical_explanation):
     shap.plots.scatter(categorical_explanation[:, "sex"], ax=ax, show=False)
     plt.tight_layout()
     return fig
+
+
+def test_scatter_categorical_with_missing():
+    """_suggest_x_jitter should not raise when a categorical feature contains NaN"""
+    values = np.array(["a", "b", np.nan, "a", "c", np.nan, "b", "c"], dtype=object)
+    result = _suggest_x_jitter(values)
+    assert isinstance(result, (int, float))
 
 
 @pytest.mark.mpl_image_compare
