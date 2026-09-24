@@ -8,6 +8,7 @@ import sklearn
 from conftest import compare_numpy_outputs_against_baseline
 
 import shap
+from shap.explainers import _kernel as kernel_module
 
 from . import common
 
@@ -350,6 +351,29 @@ def test_kernel_multiclass_multiple_rows():
     explainer = shap.KernelExplainer(lr.predict_proba, X)
     shap_values = explainer(X.iloc[[0, 1], :])
     np.testing.assert_allclose(shap_values.values.sum(1) + explainer.expected_value, pred, atol=1e-04)
+
+
+def test_kernel_explainer_silent_default_and_override(monkeypatch):
+    tqdm_disable_values = []
+
+    def fake_tqdm(iterable, *args, **kwargs):
+        tqdm_disable_values.append(kwargs.get("disable"))
+        return iterable
+
+    monkeypatch.setattr(kernel_module, "tqdm", fake_tqdm)
+
+    X = np.array([[0.0, 1.0], [1.0, 0.0], [0.5, 0.5], [2.0, -1.0]])
+    y = X[:, 0] - 2 * X[:, 1]
+    model = sklearn.linear_model.LinearRegression().fit(X, y)
+
+    explainer = shap.KernelExplainer(model.predict, X[:2], silent=True)
+
+    # Constructor-level default should suppress the progress bar.
+    explainer.shap_values(X[2:], nsamples=8)
+    # Call-level override should still be respected.
+    explainer.shap_values(X[2:], nsamples=8, silent=False)
+
+    assert tqdm_disable_values == [True, False]
 
 
 @pytest.mark.parametrize("nsamples", [3, 5, 10, 100])
