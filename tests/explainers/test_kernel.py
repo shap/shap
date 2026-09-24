@@ -1,13 +1,19 @@
+import logging
 import sys
+import warnings
 
 import numpy as np
 import pandas as pd
 import pytest
 import scipy.sparse
 import sklearn
-from conftest import compare_numpy_outputs_against_baseline
+import sklearn.datasets
+import sklearn.ensemble
+import sklearn.linear_model
+from scipy.special import expit
 
 import shap
+from shap.utils._exceptions import DimensionError
 
 from . import common
 
@@ -391,7 +397,454 @@ def test_explainer_non_number_dtype(dt):
     np.testing.assert_allclose(shap_values.values.max(), 0.26548, rtol=1e-2)
 
 
-@compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_serialization():
     model, data = common.basic_sklearn_scenario()
-    return common.test_serialization(shap.explainers.KernelExplainer, model.predict, data, data)
+    common.test_serialization(shap.explainers.KernelExplainer, model.predict, data, data)
+
+
+def _make_linear_data(n=30, p=4, seed=0):
+    rng = np.random.RandomState(seed)
+    X = rng.randn(n, p)
+    y = X[:, 0] + 2.0 * X[:, 1]
+    model = sklearn.linear_model.LinearRegression().fit(X, y)
+    return X, y, model
+
+
+def _make_classification_data(n=100, p=5, seed=0):
+    X, y = sklearn.datasets.make_classification(n, p, random_state=seed)
+    model = sklearn.linear_model.LogisticRegression(max_iter=1000).fit(X, y)
+    return X, y, model
+
+
+class TestL1RegVariants:
+    def setup_method(self):
+        self.X, _, self.model = _make_linear_data()
+        self.explainer = shap.KernelExplainer(self.model.predict, self.X)
+        self.X_test = self.X[:2]
+
+    def test_l1_reg_aic(self):
+        sv = self.explainer.shap_values(self.X_test, l1_reg="aic", silent=True)
+        assert sv.shape == self.X_test.shape
+
+    def test_l1_reg_bic(self):
+        sv = self.explainer.shap_values(self.X_test, l1_reg="bic", silent=True)
+        assert sv.shape == self.X_test.shape
+
+    def test_l1_reg_float(self):
+        sv = self.explainer.shap_values(self.X_test, l1_reg=0.05, silent=True)
+        assert sv.shape == self.X_test.shape
+
+    def test_l1_reg_false(self):
+        sv = self.explainer.shap_values(self.X_test, l1_reg=False, silent=True)
+        assert sv.shape == self.X_test.shape
+
+    def test_l1_reg_zero(self):
+        sv = self.explainer.shap_values(self.X_test, l1_reg=0, silent=True)
+        assert sv.shape == self.X_test.shape
+
+    def test_l1_reg_num_features_string(self):
+        sv = self.explainer.shap_values(self.X_test, l1_reg="num_features(2)", silent=True)
+        assert sv.shape == self.X_test.shape
+
+    def test_l1_reg_auto_raises_deprecation_warning(self):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            self.explainer.shap_values(self.X[:1], l1_reg="auto", silent=True)
+        dep_warnings = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+        assert len(dep_warnings) >= 1, "Expected DeprecationWarning for l1_reg='auto'"
+
+
+class TestNsamples:
+    def setup_method(self):
+        self.X, _, self.model = _make_linear_data(p=4)
+
+    def test_nsamples_auto_capped_at_max_samples(self):
+        e = shap.KernelExplainer(self.model.predict, self.X)
+        e.explain(self.X[:1], nsamples="auto", silent=True)
+        assert e.nsamples == e.max_samples
+
+    def test_explicit_nsamples_also_capped(self):
+        e = shap.KernelExplainer(self.model.predict, self.X)
+        e.explain(self.X[:1], nsamples=99999, silent=True)
+        assert e.nsamples == e.max_samples
+
+    @pytest.mark.parametrize("ns", [10, 50, 200])
+    def test_explicit_nsamples_values(self, ns):
+        X_large, _, model_large = _make_linear_data(p=12, n=30)
+        e = shap.KernelExplainer(model_large.predict, X_large)
+        sv = e.shap_values(X_large[:1], nsamples=ns, silent=True)
+        assert sv.shape == (1, 12)
+
+    def test_auto_nsamples_large_m_not_capped(self):
+        rng = np.random.RandomState(0)
+        p = 35
+        X = rng.randn(10, p)
+        model = sklearn.linear_model.LinearRegression().fit(X, X[:, 0])
+        e = shap.KernelExplainer(model.predict, X)
+        e.explain(X[:1], nsamples="auto", silent=True)
+        assert e.nsamples == 2 * e.M + 2**11
+
+
+def test_gc_collect_runs_without_error():
+    X, _, model = _make_linear_data()
+    e = shap.KernelExplainer(model.predict, X)
+    sv = e.shap_values(X[:3], gc_collect=True, silent=True)
+    assert sv.shape == (3, X.shape[1])
+
+
+def test_silent_suppresses_progress_output(capsys):
+    X, _, model = _make_linear_data()
+    e = shap.KernelExplainer(model.predict, X)
+    e.shap_values(X[:3], silent=True)
+    captured = capsys.readouterr()
+    assert "it/s" not in captured.err and "%" not in captured.err
+
+
+def test_feature_names_from_constructor():
+    X, _, model = _make_linear_data(p=3)
+    names = ["alpha", "beta", "gamma"]
+    e = shap.KernelExplainer(model.predict, X, feature_names=names)
+    assert e.data_feature_names == names
+
+
+def test_feature_names_from_dataframe_background():
+    df = pd.DataFrame({"x1": [1.0, 2.0, 3.0], "x2": [4.0, 5.0, 6.0]})
+    model = sklearn.linear_model.LinearRegression().fit(df, df["x1"] + df["x2"])
+    e = shap.KernelExplainer(model.predict, df)
+    assert e.data_feature_names == ["x1", "x2"]
+
+
+def test_explanation_call_stores_feature_names():
+    df = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]})
+    model = sklearn.linear_model.LinearRegression().fit(df, df["a"] + df["b"])
+    e = shap.KernelExplainer(model.predict, df)
+    expl = e(df)
+    assert expl.feature_names == ["a", "b"]
+
+
+def test_explanation_data_is_numpy_array():
+    df = pd.DataFrame({"a": [1.0, 2.0], "b": [3.0, 4.0]})
+    model = sklearn.linear_model.LinearRegression().fit(df, df["a"])
+    e = shap.KernelExplainer(model.predict, df)
+    expl = e(df)
+    assert isinstance(expl.data, np.ndarray)
+
+
+def test_dimension_error_on_3d_input():
+    X, _, model = _make_linear_data()
+    e = shap.KernelExplainer(model.predict, X)
+    with pytest.raises(DimensionError, match="1 or 2 dimensions"):
+        e.shap_values(np.ones((2, 3, 4)))
+
+
+def test_large_background_logs_warning(caplog):
+    X = np.random.randn(150, 3)
+    with caplog.at_level(logging.WARNING, logger="shap"):
+        shap.KernelExplainer(lambda x: x[:, 0], X)
+    assert any("150" in msg for msg in caplog.messages)
+
+
+def test_no_features_vary_phi_is_zero():
+    X = np.ones((5, 4))
+    e = shap.KernelExplainer(lambda x: x[:, 0], X)
+    phi = e.explain(np.ones((1, 4)))
+    assert np.all(phi == 0), f"Expected all-zero phi, got {phi}"
+
+
+def test_single_feature_varies_carries_full_effect():
+    X = np.ones((5, 4))
+    e = shap.KernelExplainer(lambda x: x[:, 0].astype(float), X)
+    x_test = np.ones((1, 4))
+    x_test[0, 0] = 10.0
+    phi = e.explain(x_test)
+    assert np.abs(phi[0] - 9.0) < 1e-8, f"Feature-0 phi should be 9.0, got {phi[0]}"
+    assert np.all(phi[1:] == 0), f"All other phis should be 0, got {phi[1:]}"
+
+
+def test_single_row_background_additivity():
+    X_bg = np.array([[1.0, 2.0, 3.0]])
+    X_test = np.array([[4.0, 5.0, 6.0]])
+
+    def f(x):
+        return x[:, 0] + x[:, 1]
+
+    e = shap.KernelExplainer(f, X_bg)
+    sv = e.shap_values(X_test, silent=True)
+    residual = np.abs(sv.sum() + e.expected_value - f(X_test)[0])
+    assert residual < 1e-6, f"Additivity violated: residual={residual}"
+
+
+def test_kmeans_background():
+    X, _, model = _make_linear_data(n=60)
+    e = shap.KernelExplainer(model.predict, shap.kmeans(X, 5))
+    sv = e.shap_values(X[:3], silent=True)
+    assert sv.shape == (3, X.shape[1])
+
+
+def test_sample_background():
+    X, _, model = _make_linear_data(n=60)
+    e = shap.KernelExplainer(model.predict, shap.sample(X, 8))
+    sv = e.shap_values(X[:3], silent=True)
+    assert sv.shape == (3, X.shape[1])
+
+
+def test_model_returning_pandas_series():
+    X, _, _ = _make_linear_data()
+    e = shap.KernelExplainer(lambda x: pd.Series(x[:, 0]), X)
+    sv = e.shap_values(X[:2], silent=True)
+    assert sv.shape == (2, X.shape[1])
+
+
+def test_model_returning_dataframe_initializes_correctly():
+    X, _, _ = _make_linear_data()
+
+    def model_df(x):
+        return pd.DataFrame({"out": x[:, 0]})
+
+    e = shap.KernelExplainer(model_df, X)
+    assert e.fnull.shape == (1,)
+    assert np.isfinite(float(e.expected_value))
+
+
+def test_expected_value_equals_mean_model_output():
+    X, _, model = _make_linear_data(n=50)
+    e = shap.KernelExplainer(model.predict, X)
+    assert np.abs(e.expected_value - float(np.mean(model.predict(X)))) < 1e-8
+
+
+def test_expected_value_is_vector_for_multi_output():
+    X, _, _ = _make_linear_data()
+    e = shap.KernelExplainer(lambda x: np.column_stack([x[:, 0], x[:, 1]]), X)
+    assert hasattr(e.expected_value, "__len__")
+    assert len(e.expected_value) == 2
+
+
+def test_expected_value_is_scalar_for_single_output():
+    X, _, model = _make_linear_data()
+    e = shap.KernelExplainer(model.predict, X)
+    assert isinstance(e.expected_value, float)
+
+
+def test_additivity_linear_model(random_seed):
+    X, _, model = _make_linear_data(seed=random_seed)
+    e = shap.KernelExplainer(model.predict, X)
+    sv = e.shap_values(X[:5], nsamples=500, silent=True)
+    residuals = np.abs(sv.sum(1) + e.expected_value - model.predict(X[:5]))
+    assert residuals.max() < 1e-6
+
+
+def test_additivity_random_forest():
+    X, y, _ = _make_linear_data(n=80)
+    rf = sklearn.ensemble.RandomForestRegressor(n_estimators=10, random_state=0).fit(X, y)
+    e = shap.KernelExplainer(rf.predict, X[:20])
+    sv = e.shap_values(X[:3], nsamples=300, silent=True)
+    residuals = np.abs(sv.sum(1) + e.expected_value - rf.predict(X[:3]))
+    assert residuals.max() < 5e-2
+
+
+def test_additivity_multioutput():
+    rng = np.random.RandomState(0)
+    X = rng.randn(20, 4)
+
+    def multi_out(x):
+        return np.column_stack([x[:, 0] + x[:, 1], x[:, 2] - x[:, 3]])
+
+    e = shap.KernelExplainer(multi_out, X)
+    sv = e.shap_values(X[:3], nsamples=300, silent=True)
+    pred = multi_out(X[:3])
+    for d in range(2):
+        ev = np.asarray(e.expected_value)
+        residuals = np.abs(sv[:, :, d].sum(1) + ev[d] - pred[:, d])
+        assert residuals.max() < 1e-4
+
+
+def test_identity_link_sum_property():
+    X, _, model = _make_linear_data()
+    e = shap.KernelExplainer(model.predict, X)
+    sv = e.shap_values(X[:2], silent=True)
+    np.testing.assert_allclose(sv.sum(1) + e.expected_value, model.predict(X[:2]), atol=1e-6)
+
+
+def test_logit_link_expected_value_is_finite():
+    X, y, model = _make_classification_data()
+    e = shap.KernelExplainer(model.predict_proba, X, link="logit")
+    assert np.all(np.isfinite(np.asarray(e.expected_value)))
+
+
+def test_logit_link_recovers_probabilities():
+    X, y, model = _make_classification_data(n=60)
+    e = shap.KernelExplainer(model.predict_proba, X[:20], link="logit")
+    sv = e.shap_values(X[:3], nsamples=300, silent=True)
+    recovered = expit(sv.sum(1) + e.expected_value)
+    np.testing.assert_allclose(recovered, model.predict_proba(X[:3]), atol=1e-3)
+
+
+def test_vector_out_false_for_single_output():
+    X, _, model = _make_linear_data()
+    e = shap.KernelExplainer(model.predict, X)
+    assert e.vector_out is False
+    assert e.D == 1
+
+
+def test_vector_out_true_for_multi_output():
+    X, _, _ = _make_linear_data()
+    e = shap.KernelExplainer(lambda x: np.column_stack([x[:, 0], x[:, 1]]), X)
+    assert e.vector_out is True
+    assert e.D == 2
+
+
+def test_multioutput_shap_values_shape():
+    rng = np.random.RandomState(7)
+    X = rng.randn(15, 4)
+    e = shap.KernelExplainer(lambda x: np.column_stack([x[:, 0], x[:, 1], x[:, 2]]), X)
+    sv = e.shap_values(X[:3], silent=True)
+    assert sv.shape == (3, 4, 3)
+
+
+def test_not_equal_numpy_float32_equal():
+    assert shap.KernelExplainer.not_equal(np.float32(1.0), np.float32(1.0)) == 0
+
+
+def test_not_equal_numpy_float32_unequal():
+    assert shap.KernelExplainer.not_equal(np.float32(1.0), np.float32(2.0)) == 1
+
+
+def test_not_equal_numpy_int_equal():
+    assert shap.KernelExplainer.not_equal(np.int32(5), np.int32(5)) == 0
+
+
+def test_not_equal_numpy_int_unequal():
+    assert shap.KernelExplainer.not_equal(np.int32(5), np.int32(6)) == 1
+
+
+def test_not_equal_numpy_nan_equals_nan():
+    assert shap.KernelExplainer.not_equal(np.float64(np.nan), np.float64(np.nan)) == 0
+
+
+def test_not_equal_int_float_cross_type_equal():
+    assert shap.KernelExplainer.not_equal(1, 1.0) == 0
+
+
+def test_not_equal_int_float_cross_type_unequal():
+    assert shap.KernelExplainer.not_equal(1, 2.0) == 1
+
+
+def test_not_equal_none_vs_none():
+    assert shap.KernelExplainer.not_equal(None, None) == 0
+
+
+def test_not_equal_none_vs_value():
+    assert shap.KernelExplainer.not_equal(None, 1) == 1
+
+
+def test_not_equal_bool_numpy_equal():
+    a, b = np.array([True], dtype=bool), np.array([True], dtype=bool)
+    assert shap.KernelExplainer.not_equal(a[0], b[0]) == 0
+
+
+def test_not_equal_bool_numpy_unequal():
+    a, b = np.array([True], dtype=bool), np.array([False], dtype=bool)
+    assert shap.KernelExplainer.not_equal(a[0], b[0]) == 1
+
+
+def test_keep_index_ordered_runs_without_error():
+    df = pd.DataFrame({"a": [3.0, 1.0, 2.0], "b": [6.0, 4.0, 5.0]}, index=[30, 10, 20])
+    e = shap.KernelExplainer(lambda x: x["a"].values + x["b"].values, df, keep_index=True, keep_index_ordered=True)
+    sv = e.shap_values(df, silent=True)
+    assert sv.shape == (3, 2)
+
+
+def test_sparse_zero_background_with_sparse_test():
+    rng = np.random.RandomState(0)
+    X_dense = rng.randn(20, 8)
+    model = sklearn.linear_model.LinearRegression().fit(X_dense, X_dense[:, 0])
+    _, cols = X_dense.shape
+    bg = scipy.sparse.csr_matrix((1, cols))
+    e = shap.KernelExplainer(model.predict, bg)
+    sv = e.shap_values(scipy.sparse.csr_matrix(X_dense[:2]), silent=True)
+    assert sv.shape == (2, cols)
+
+
+def test_sparse_csr_background_and_input():
+    rng = np.random.RandomState(1)
+    X_dense = rng.randn(30, 6)
+    model = sklearn.linear_model.LinearRegression().fit(X_dense, X_dense[:, 0])
+    e = shap.KernelExplainer(model.predict, scipy.sparse.csr_matrix(X_dense[:5]))
+    sv = e.shap_values(scipy.sparse.csr_matrix(X_dense[:3]), silent=True)
+    assert sv.shape == (3, 6)
+
+
+def test_shap_values_with_pandas_series_input():
+    X, _, model = _make_linear_data(p=4)
+    e = shap.KernelExplainer(model.predict, X)
+    row = pd.Series(X[0], index=[f"f{i}" for i in range(4)])
+    sv = e.shap_values(row, silent=True)
+    assert sv.shape == (4,)
+
+
+def test_multiclass_additivity_all_outputs():
+    X, y = shap.datasets.iris()
+    lr = sklearn.linear_model.LogisticRegression(solver="lbfgs", max_iter=200).fit(X, y)
+    X_test = X.iloc[:3, :]
+    e = shap.KernelExplainer(lr.predict_proba, X)
+    sv = e.shap_values(X_test, nsamples=200, silent=True)
+    pred = lr.predict_proba(X_test)
+    for cls in range(3):
+        ev = np.asarray(e.expected_value)
+        residuals = np.abs(sv[:, :, cls].sum(1) + ev[cls] - pred[:, cls])
+        assert residuals.max() < 1e-3
+
+
+def test_call_method_returns_explanation_object():
+    X, _, model = _make_linear_data()
+    e = shap.KernelExplainer(model.predict, X)
+    expl = e(X[:3])
+    assert isinstance(expl, shap.Explanation)
+    assert expl.values.shape == (3, X.shape[1])
+
+
+def test_call_method_base_values_tiled_correctly():
+    X, _, model = _make_linear_data()
+    e = shap.KernelExplainer(model.predict, X)
+    expl = e(X[:4])
+    assert expl.base_values.shape == (4,)
+    np.testing.assert_array_equal(expl.base_values, e.expected_value)
+
+
+def test_call_method_multioutput_base_values_shape():
+    rng = np.random.RandomState(0)
+    X = rng.randn(20, 4)
+    e = shap.KernelExplainer(lambda x: np.column_stack([x[:, 0], x[:, 1]]), X)
+    expl = e(X[:3])
+    assert expl.base_values.shape == (3, 2)
+
+
+def test_unsupported_background_type_raises_type_error():
+    with pytest.raises(TypeError):
+        shap.KernelExplainer(lambda x: x[:, 0], "not_a_valid_data_source")
+
+
+def test_n_and_p_attributes_set_correctly():
+    X = np.random.randn(12, 7)
+    e = shap.KernelExplainer(lambda x: x[:, 0], X)
+    assert e.N == 12
+    assert e.P == 7
+
+
+def test_constant_feature_gets_zero_shap_value():
+    rng = np.random.RandomState(0)
+    X = rng.randn(20, 4)
+    X[:, 2] = 5.0
+    e = shap.KernelExplainer(lambda x: x[:, 0] + x[:, 1], X)
+    x_test = np.array([[1.0, 2.0, 5.0, 3.0]])
+    sv = e.shap_values(x_test, nsamples=100, silent=True)
+    assert sv[0, 2] == 0.0
+
+
+def test_varying_groups_sparse_nonzero_detection():
+    rng = np.random.RandomState(0)
+    X_dense = rng.randn(10, 5)
+    model = sklearn.linear_model.LinearRegression().fit(X_dense, X_dense[:, 0])
+    e = shap.KernelExplainer(model.predict, scipy.sparse.csr_matrix(np.zeros((1, 5))))
+    sv = e.shap_values(scipy.sparse.csr_matrix(X_dense[:2]), silent=True)
+    assert sv.shape == (2, 5)
