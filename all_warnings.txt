@@ -1,0 +1,3 @@
+PytestReturnNotNoneWarning: Test functions should return None, but tests/explainers/test_coalition.py::test_tabular_coalition_single_output returned <class 'shap._explanation.Explanation'>.
+Did you mean to use `assert` instead of `return`?
+See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
