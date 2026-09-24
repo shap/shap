@@ -300,6 +300,9 @@ class KernelExplainer(Explainer):
             X = X.tolil()  # type: ignore[union-attr]
         assert x_type.endswith(arr_type) or scipy.sparse.isspmatrix_lil(X), "Unknown instance type: " + x_type
 
+        if X.shape[0] == 0:
+            raise ValueError("Input data must contain at least one sample.")
+
         # single instance
         if len(X.shape) == 1:
             data = X.reshape((1, X.shape[0]))
@@ -325,6 +328,8 @@ class KernelExplainer(Explainer):
                     gc.collect()
 
             # vector-output
+            if len(explanations) == 0:
+                return []
             s = explanations[0].shape
             if len(s) == 2:
                 outs = [np.zeros((X.shape[0], s[0])) for j in range(s[1])]
