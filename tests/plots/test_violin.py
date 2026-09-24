@@ -101,3 +101,36 @@ def test_summary_layered_violin_with_data2():
     )
     fig.set_layout_engine("tight")
     return fig
+
+
+# AI-generated test cases for SHAP coverage improvement
+@patch("matplotlib.pyplot.show")
+def test_violin_plot_edge_cases(monkeypatch):
+    """Hits branches handling max_display, title, specific color strings, and show=True."""
+    # Use pytest's native monkeypatch to prevent GUI windows from opening
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+
+    shap_values = np.random.randn(20, 5)
+    features = np.random.randn(20, 5)
+    feature_names = ["F1", "F2", "F3", "F4", "F5"]
+
+    shap.plots.violin(
+        shap_values,
+        features=features,
+        feature_names=feature_names,
+        max_display=2,
+        color="red",
+        title="Custom Title",
+        plot_size=(8, 4),
+        show=True,
+    )
+    plt.close()
+
+
+def test_violin_plot_explanation_object():
+    """Hits branches extracting matrices and names directly from an Explanation object."""
+    expl = shap.Explanation(
+        values=np.random.randn(20, 5), data=np.random.randn(20, 5), feature_names=["F1", "F2", "F3", "F4", "F5"]
+    )
+    shap.plots.violin(expl, show=False)
+    plt.close()
