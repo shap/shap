@@ -24,9 +24,6 @@ def runtime(X, y, model_generator, method_name):
     transform = "negate_log"
     sort_order = 2
     """
-    old_seed = np.random.seed()
-    np.random.seed(3293)
-
     # average the method scores over several train/test splits
     method_reps = []
     for i in range(3):
@@ -48,7 +45,6 @@ def runtime(X, y, model_generator, method_name):
         # we always normalize the explain time as though we were explaining 1000 samples
         # even if to reduce the runtime of the benchmark we do less (like just 100)
         method_reps.append(build_time + explain_time * 1000.0 / X_test.shape[0])
-    np.random.seed(old_seed)
 
     return None, np.mean(method_reps)
 
@@ -502,9 +498,6 @@ def __score_method(
     except NameError:
         raise ImportError("The 'dill' package could not be loaded and is needed for the benchmark!")
 
-    old_seed = np.random.seed()
-    np.random.seed(3293)
-
     # average the method scores over several train/test splits
     method_reps = []
 
@@ -546,7 +539,6 @@ def __score_method(
         else:
             method_reps.append(score(None))
 
-    np.random.seed(old_seed)
     return np.array(method_reps).mean(0)
 
 
