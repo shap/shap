@@ -44,7 +44,7 @@ def remove_retrain(
     X_train_tmp = np.zeros(X_train.shape)
     X_test_tmp = np.zeros(X_test.shape)
     yp_masked_test = np.zeros(y_test.shape)
-    tie_breaking_noise = const_rand(X_train.shape[1]) * 1e-6
+    tie_breaking_noise = const_rand(X_train.shape[1], random_state) * 1e-6
     last_nmask = _remove_cache.get("nmask", None)
     last_yp_masked_test = _remove_cache.get("yp_masked_test", None)
     for i in tqdm(range(len(y_test)), "Retraining for the 'remove' metric"):
@@ -150,7 +150,7 @@ def remove_resample(
     # keep nkeep top features for each test explanation
     N, M = X_test.shape
     X_test_tmp = np.tile(X_test, [1, nsamples]).reshape(nsamples * N, M)
-    tie_breaking_noise = const_rand(M) * 1e-6
+    tie_breaking_noise = const_rand(M, random_state) * 1e-6
     inds = sklearn.utils.resample(np.arange(N), n_samples=nsamples, random_state=random_state)
     for i in range(N):
         if nmask[i] > 0:
@@ -166,7 +166,17 @@ def remove_resample(
 
 
 def batch_remove_retrain(
-    nmask_train, nmask_test, X_train, y_train, X_test, y_test, attr_train, attr_test, model_generator, metric
+    nmask_train,
+    nmask_test,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    attr_train,
+    attr_test,
+    model_generator,
+    metric,
+    random_state=None,
 ):
     """An approximation of holdout that only retraines the model once.
 
@@ -185,7 +195,7 @@ def batch_remove_retrain(
     # mask nmask top features for each explanation
     X_train_tmp = X_train.copy()
     X_train_mean = X_train.mean(0)
-    tie_breaking_noise = const_rand(X_train.shape[1]) * 1e-6
+    tie_breaking_noise = const_rand(X_train.shape[1], random_state) * 1e-6
     for i in range(len(y_train)):
         if nmask_train[i] > 0:
             ordering = np.argsort(-attr_train[i, :] + tie_breaking_noise)
@@ -243,7 +253,7 @@ def keep_retrain(
     X_train_tmp = np.zeros(X_train.shape)
     X_test_tmp = np.zeros(X_test.shape)
     yp_masked_test = np.zeros(y_test.shape)
-    tie_breaking_noise = const_rand(X_train.shape[1]) * 1e-6
+    tie_breaking_noise = const_rand(X_train.shape[1], random_state) * 1e-6
     last_nkeep = _keep_cache.get("nkeep", None)
     last_yp_masked_test = _keep_cache.get("yp_masked_test", None)
     for i in tqdm(range(len(y_test)), "Retraining for the 'keep' metric"):
@@ -348,7 +358,7 @@ def keep_resample(
     # keep nkeep top features for each test explanation
     N, M = X_test.shape
     X_test_tmp = np.tile(X_test, [1, nsamples]).reshape(nsamples * N, M)
-    tie_breaking_noise = const_rand(M) * 1e-6
+    tie_breaking_noise = const_rand(M, random_state) * 1e-6
     inds = sklearn.utils.resample(np.arange(N), n_samples=nsamples, random_state=random_state)
     for i in range(N):
         if nkeep[i] < M:
@@ -364,7 +374,17 @@ def keep_resample(
 
 
 def batch_keep_retrain(
-    nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, attr_train, attr_test, model_generator, metric
+    nkeep_train,
+    nkeep_test,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    attr_train,
+    attr_test,
+    model_generator,
+    metric,
+    random_state=None,
 ):
     """An approximation of keep that only retraines the model once.
 
@@ -383,7 +403,7 @@ def batch_keep_retrain(
     # mask nkeep top features for each explanation
     X_train_tmp = X_train.copy()
     X_train_mean = X_train.mean(0)
-    tie_breaking_noise = const_rand(X_train.shape[1]) * 1e-6
+    tie_breaking_noise = const_rand(X_train.shape[1], random_state) * 1e-6
     for i in range(len(y_train)):
         if nkeep_train[i] < X_train.shape[1]:
             ordering = np.argsort(-attr_train[i, :] + tie_breaking_noise)
@@ -421,19 +441,14 @@ def to_array(*args):
 
 def const_rand(size, seed=23980):
     """Generate a random array with a fixed seed."""
-    old_seed = np.random.seed()
-    np.random.seed(seed)
-    out = np.random.rand(size)
-    np.random.seed(old_seed)
-    return out
+    rng = np.random.default_rng(seed)
+    return rng.random(size)
 
 
 def const_shuffle(arr, seed=23980):
     """Shuffle an array in-place with a fixed seed."""
-    old_seed = np.random.seed()
-    np.random.seed(seed)
-    np.random.shuffle(arr)
-    np.random.seed(old_seed)
+    rng = np.random.default_rng(seed)
+    rng.shuffle(arr)
 
 
 def strip_list(attrs):
