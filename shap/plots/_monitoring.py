@@ -58,10 +58,18 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
         # stat, pval = scipy.stats.mannwhitneyu(v[:i], v[i:], alternative="two-sided")
         _, pval = scipy.stats.ttest_ind(ys[:i], ys[i:])
         pvals.append(pval)
-    min_pval = np.min(pvals)
-    min_pval_ind = float(np.argmin(pvals) * inc + inc)
 
-    if min_pval < 0.05 / shap_values.shape[1]:
+    if pvals:
+        min_pval = np.min(pvals)
+        min_pval_ind = np.argmin(pvals)
+    else:
+        min_pval = None
+        min_pval_ind = None
+
+    if min_pval_ind is not None:
+        min_pval_ind = float(min_pval_ind * inc + inc)
+
+    if min_pval is not None and min_pval < 0.05 / shap_values.shape[1]:
         plt.axvline(min_pval_ind, linestyle="dashed", color="#666666", alpha=0.2)
 
     plt.scatter(xs, ys, s=10, c=features[:, ind], cmap=colors.red_blue)
