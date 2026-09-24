@@ -198,4 +198,13 @@ class Deserializer:
         if encoder_name == "cloudpickle.dump":
             return cloudpickle.load(self.in_stream)
 
-        raise ValueError(f"Unsupported encoder type found: {encoder_name}")
+        supported_encoders = [
+            "custom_encoder",
+            "no_encoder",
+            "serializable.save",
+            "numpy.save",
+            "pickle.dump",
+            "cloudpickle.dump",
+        ]
+
+        raise ValueError(f"Unsupported encoder type '{encoder_name}'. Supported types are: {supported_encoders}")
