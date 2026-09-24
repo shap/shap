@@ -245,3 +245,22 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_feature_names_preservation_when_slicing_with_2d_output_names(random_seed):
+    """Checks that slicing an Explanation by a 2D output_names string preserves original feature_names."""
+    rs = np.random.RandomState(random_seed)
+    n_instances, n_features, n_outputs = 3, 4, 2
+    featnames = ["feat_a", "feat_b", "feat_c", "feat_d"]
+    outnames = np.array([["out_x", "out_y"]] * n_instances)
+
+    exp = shap.Explanation(
+        values=rs.randn(n_instances, n_features, n_outputs),
+        base_values=rs.randn(n_instances, n_outputs),
+        data=rs.randn(n_instances, n_features),
+        feature_names=featnames,
+        output_names=outnames,
+    )
+
+    sliced = exp[:, :, "out_x"]
+    assert list(sliced.feature_names) == featnames
