@@ -62,7 +62,6 @@ class AdditiveExplainer(Explainer):
                 raise NotImplementedError(
                     "Masker not given and we don't yet support pulling the distribution centering directly from the EBM model!"
                 )
-                return
 
         # here we need to compute the offsets ourselves because we can't pull them directly from a model we know about
         assert safe_isinstance(self.masker, "shap.maskers.Independent"), (
