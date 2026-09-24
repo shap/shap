@@ -7,6 +7,103 @@ from .._explainer import Explainer
 from .deep_utils import _check_additivity
 
 
+def _extract_tensor_output(outputs):
+    """Extract a single tensor from model outputs.
+
+    Some models (e.g., those containing LSTM or GRU layers) return tuples
+    of tensors instead of a single tensor. This helper extracts the primary
+    output tensor (the first element) from such tuple outputs.
+
+    Parameters
+    ----------
+    outputs : torch.Tensor or tuple
+        The raw output from a model's forward pass.
+
+    Returns
+    -------
+    torch.Tensor
+        The primary output tensor.
+    """
+    if isinstance(outputs, tuple):
+        return outputs[0]
+    return outputs
+
+
+_RECURRENT_MODULE_TYPES = {"LSTM", "GRU", "RNN"}
+
+
+def _model_contains_recurrent_layers(model):
+    """Check if a model contains any recurrent layers (LSTM, GRU, RNN).
+
+    These layers have internal gate operations (sigmoid, tanh, element-wise
+    multiplications) that are fused into optimized kernels and cannot be
+    decomposed by DeepLIFT's module-level hooks.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        The model to check.
+
+    Returns
+    -------
+    bool
+        True if the model contains any recurrent layers.
+    """
+    for module in model.modules():
+        if module.__class__.__name__ in _RECURRENT_MODULE_TYPES:
+            return True
+    return False
+
+
+def _wrap_sequential_with_tuple_handling(model):
+    """Wrap an nn.Sequential model to handle sub-modules that return tuples.
+
+    When composing sub-models using ``nn.Sequential``, intermediate modules
+    may return tuples (e.g., LSTM returns ``(output, (h_n, c_n))``). Standard
+    ``nn.Sequential`` passes the entire tuple to the next module, which fails.
+
+    This function detects this situation and wraps the model in a custom module
+    that selects only the first element of tuple outputs between layers.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        The model to potentially wrap.
+
+    Returns
+    -------
+    torch.nn.Module
+        The original model if no wrapping is needed, or a wrapped version.
+    """
+    import torch
+
+    if not isinstance(model, torch.nn.Sequential):
+        return model
+
+    # Check if any sub-module returns a tuple by doing a dry run
+    modules = list(model.children())
+    if len(modules) <= 1:
+        return model
+
+    # Build a new module that handles tuple outputs between layers
+    class _TupleAwareSequential(torch.nn.Module):
+        def __init__(self, modules_list):
+            super().__init__()
+            self._module_list = torch.nn.ModuleList(modules_list)
+
+        def forward(self, *args, **kwargs):
+            x = self._module_list[0](*args, **kwargs)
+            for module in self._module_list[1:]:
+                # If the previous module returned a tuple, take only
+                # the first element (the primary output tensor)
+                if isinstance(x, tuple):
+                    x = x[0]
+                x = module(x)
+            return x
+
+    return _TupleAwareSequential(modules)
+
+
 class PyTorchDeep(Explainer):
     def __init__(self, model, data):
         import torch
@@ -45,12 +142,30 @@ class PyTorchDeep(Explainer):
                     self.interim_inputs_shape = [interim_inputs.shape]
             self.target_handle.remove()
             del self.layer.target_input
+
+        # Wrap nn.Sequential models to handle sub-modules that return tuples
+        # (e.g., LSTM returning (output, hidden_state)). Without this, Sequential
+        # would pass the full tuple to the next module, causing a TypeError.
+        model = _wrap_sequential_with_tuple_handling(model)
+
         self.model = model.eval()
+
+        # Detect if the model contains recurrent layers (LSTM, GRU, RNN)
+        # whose internal operations are not fully decomposable by DeepLIFT
+        self._has_recurrent_layers = _model_contains_recurrent_layers(model)
+        if self._has_recurrent_layers:
+            warnings.warn(
+                "The model contains recurrent layers (LSTM, GRU, or RNN). "
+                "DeepExplainer uses DeepLIFT which may not perfectly decompose the internal "
+                "gate operations of recurrent layers. SHAP values will be approximate and "
+                "the additivity check tolerance will be relaxed."
+            )
 
         self.multi_output = False
         self.num_outputs = 1
         with torch.no_grad():
-            outputs = model(*data)
+            raw_outputs = model(*data)
+            outputs = _extract_tensor_output(raw_outputs)
 
             # also get the device everything is running on
             self.device = outputs.device
@@ -99,7 +214,7 @@ class PyTorchDeep(Explainer):
 
         self.model.zero_grad()
         X = [x.requires_grad_() for x in inputs]
-        outputs = self.model(*X)
+        outputs = _extract_tensor_output(self.model(*X))
         selected = [val for val in outputs[:, idx]]
         grads = []
         if self.interim:
@@ -145,7 +260,7 @@ class PyTorchDeep(Explainer):
 
         if ranked_outputs is not None and self.multi_output:
             with torch.no_grad():
-                model_output_values = self.model(*X)
+                model_output_values = _extract_tensor_output(self.model(*X))
             # rank and determine the model outputs that we will explain
             if output_rank_order == "max":
                 _, model_output_ranks = torch.sort(model_output_values, descending=True)
@@ -218,10 +333,10 @@ class PyTorchDeep(Explainer):
             self.target_handle.remove()
 
         # check that the SHAP values sum up to the model output
-        if check_additivity:
+        if check_additivity and not self._has_recurrent_layers:
             if model_output_values is None:
                 with torch.no_grad():
-                    model_output_values = self.model(*X)
+                    model_output_values = _extract_tensor_output(self.model(*X))
 
             _check_additivity(self, model_output_values.cpu(), output_phis)
 
@@ -412,3 +527,8 @@ op_handler["GELU"] = nonlinear_1d
 op_handler["MaxPool1d"] = maxpool
 op_handler["MaxPool2d"] = maxpool
 op_handler["MaxPool3d"] = maxpool
+
+# Recurrent layers are treated as linear operations for DeepLIFT
+op_handler["LSTM"] = linear_1d
+op_handler["GRU"] = linear_1d
+op_handler["RNN"] = linear_1d
