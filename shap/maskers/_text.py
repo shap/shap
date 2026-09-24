@@ -65,10 +65,6 @@ class Text(Masker):
 
         self.keep_prefix = parsed_tokenizer_dict["keep_prefix"]
         self.keep_suffix = parsed_tokenizer_dict["keep_suffix"]
-        # self.prefix_strlen = parsed_tokenizer_dict['prefix_strlen']
-        # self.suffix_strlen = parsed_tokenizer_dict['suffix_strlen']
-        # null_tokens = parsed_tokenizer_dict['null_tokens']
-
         self.text_data = True
 
         if mask_token is None:
