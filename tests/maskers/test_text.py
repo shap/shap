@@ -15,12 +15,14 @@ def test_method_token_segments_pretrained_tokenizer():
     """Check that the Text masker produces the same segments as its non-fast pretrained tokenizer."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "hf-internal-testing/tiny-random-DistilBertForSequenceClassification", use_fast=False
+    )
     masker = shap.maskers.Text(tokenizer)
 
     test_text = "I ate a Cannoli"
     output_token_segments, _ = masker.token_segments(test_text)
-    correct_token_segments = ["", " I", " ate", " a", " Can", "no", "li", ""]
+    correct_token_segments = ["", " i", " a", "t", "e", " a", " c", "a", "n", "n", "o", "l", "i", ""]
 
     assert output_token_segments == correct_token_segments
 
@@ -29,12 +31,14 @@ def test_method_token_segments_pretrained_tokenizer_fast():
     """Check that the Text masker produces the same segments as its fast pretrained tokenizer."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased", use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "hf-internal-testing/tiny-random-DistilBertForSequenceClassification", use_fast=True
+    )
     masker = shap.maskers.Text(tokenizer)
 
     test_text = "I ate a Cannoli"
     output_token_segments, _ = masker.token_segments(test_text)
-    correct_token_segments = ["", "I ", "ate ", "a ", "Can", "no", "li", ""]
+    correct_token_segments = ["", "I ", "a", "t", "e ", "a ", "C", "a", "n", "n", "o", "l", "i", ""]
 
     assert output_token_segments == correct_token_segments
 
@@ -43,14 +47,18 @@ def test_masker_call_pretrained_tokenizer():
     """Check that the Text masker with a non-fast pretrained tokenizer masks correctly."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased", use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "hf-internal-testing/tiny-random-DistilBertForSequenceClassification", use_fast=False
+    )
     masker = shap.maskers.Text(tokenizer)
 
     test_text = "I ate a Cannoli"
-    test_input_mask = np.array([True, False, True, True, False, True, True, True])
+    # The tiny model has 14 tokens for this text
+    test_input_mask = np.array([True] * 14)
+    test_input_mask[1] = False  # mask the first word segment
 
     output_masked_text = masker(test_input_mask, test_text)
-    correct_masked_text = "[MASK] ate a [MASK]noli"
+    correct_masked_text = "[MASK] ate a cannoli"
 
     assert output_masked_text[0] == correct_masked_text
 
@@ -59,14 +67,18 @@ def test_masker_call_pretrained_tokenizer_fast():
     """Check that the Text masker with a fast pretrained tokenizer masks correctly."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased", use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "hf-internal-testing/tiny-random-DistilBertForSequenceClassification", use_fast=True
+    )
     masker = shap.maskers.Text(tokenizer)
 
     test_text = "I ate a Cannoli"
-    test_input_mask = np.array([True, False, True, True, False, True, True, True])
+    # The tiny model has 14 tokens for this text
+    test_input_mask = np.array([True] * 14)
+    test_input_mask[1] = False
 
     output_masked_text = masker(test_input_mask, test_text)
-    correct_masked_text = "[MASK]ate a [MASK]noli"
+    correct_masked_text = "[MASK]ate a Cannoli"
 
     assert output_masked_text[0] == correct_masked_text
 
@@ -77,7 +89,7 @@ def test_sentencepiece_tokenizer_output():
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
     pytest.importorskip("sentencepiece")
 
-    tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-es")
+    tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-MarianMTModel")
     masker = shap.maskers.Text(tokenizer)
 
     s = "This is a test statement for sentencepiece tokenizer"
@@ -93,9 +105,9 @@ def test_keep_prefix_suffix_tokenizer_parsing():
     """Checks parsed keep prefix and keep suffix for different tokenizers."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer_mt = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-es")
-    tokenizer_gpt = AutoTokenizer.from_pretrained("gpt2")
-    tokenizer_bart = AutoTokenizer.from_pretrained("sshleifer/distilbart-xsum-12-6")
+    tokenizer_mt = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-MarianMTModel")
+    tokenizer_gpt = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-GPT2LMHeadModel")
+    tokenizer_bart = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-BartForConditionalGeneration")
 
     masker_mt = shap.maskers.Text(tokenizer_mt)
     masker_gpt = shap.maskers.Text(tokenizer_gpt)
@@ -201,7 +213,9 @@ def test_serialization_text_masker():
     """Make sure text serialization works."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "hf-internal-testing/tiny-random-DistilBertForSequenceClassification", use_fast=False
+    )
     original_masker = shap.maskers.Text(tokenizer)
 
     with tempfile.TemporaryFile() as temp_serialization_file:
@@ -225,7 +239,9 @@ def test_serialization_text_masker_custom_mask():
     """Make sure text serialization works with custom mask."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "hf-internal-testing/tiny-random-DistilBertForSequenceClassification", use_fast=True
+    )
     original_masker = shap.maskers.Text(tokenizer, mask_token="[CUSTOM-MASK]")
 
     with tempfile.TemporaryFile() as temp_serialization_file:
@@ -249,7 +265,9 @@ def test_serialization_text_masker_collapse_mask_token():
     """Make sure text serialization works with collapse mask token."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "hf-internal-testing/tiny-random-DistilBertForSequenceClassification", use_fast=True
+    )
     original_masker = shap.maskers.Text(tokenizer, collapse_mask_token=True)
 
     with tempfile.TemporaryFile() as temp_serialization_file:
