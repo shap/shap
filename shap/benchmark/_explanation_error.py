@@ -89,7 +89,7 @@ class ExplanationError:
         else:
             self.data_type = "tabular"
 
-    def __call__(self, explanation, name, step_fraction=0.01, indices=[], silent=False):
+    def __call__(self, explanation, name, step_fraction=0.01, indices=None, silent=False):
         """Run this benchmark on the given explanation."""
         if isinstance(explanation, np.ndarray):
             attributions = explanation
@@ -102,6 +102,15 @@ class ExplanationError:
             emsg = "The explanation passed must have the same number of rows as the self.model_args that were passed!"
             raise DimensionError(emsg)
 
+        if indices is None:
+            indices = list(range(len(self.model_args[0])))
+        else:
+            indices = list(indices)
+            if not indices:
+                raise ValueError("indices must contain at least one row index when provided")
+            if any(i < 0 or i >= len(self.model_args[0]) for i in indices):
+                raise IndexError(f"indices contains out-of-range values (valid range: 0-{len(self.model_args[0]) - 1})")
+
         # it is important that we choose the same permutations for the different explanations we are comparing
         # so as to avoid needless noise
         old_seed = np.random.seed()
@@ -112,14 +121,15 @@ class ExplanationError:
         svals = []
         mask_vals = []
 
-        for i, args in enumerate(zip(*self.model_args)):
-            if len(args[0].shape) != len(attributions[i].shape):
+        for loop_idx, row_i in enumerate(indices):
+            args = tuple(arr[row_i] for arr in self.model_args)
+            if len(args[0].shape) != len(attributions[row_i].shape):
                 raise ValueError(
                     "The passed explanation must have the same dim as the model_args and must not have a vector output!"
                 )
 
-            feature_size = np.prod(attributions[i].shape)
-            sample_attributions = attributions[i].flatten()
+            feature_size = np.prod(attributions[row_i].shape)
+            sample_attributions = attributions[row_i].flatten()
 
             # compute any custom clustering for this row
             row_clustering = None
@@ -173,10 +183,8 @@ class ExplanationError:
             svals.append(total_values)
 
             if pbar is None and time.time() - start_time > 5:
-                pbar = tqdm(
-                    total=len(self.model_args[0]), disable=silent, leave=False, desc=f"ExplanationError for {name}"
-                )
-                pbar.update(i + 1)
+                pbar = tqdm(total=len(indices), disable=silent, leave=False, desc=f"ExplanationError for {name}")
+                pbar.update(loop_idx + 1)
             if pbar is not None:
                 pbar.update(1)
 
