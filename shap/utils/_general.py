@@ -178,9 +178,11 @@ def encode_array_if_needed(arr: npt.NDArray[Any], dtype: type[Any] = np.float64)
     try:
         return arr.astype(dtype)
     except ValueError:
-        unique_values = np.unique(arr)
+        mask = pd.isna(arr)
+        unique_values = np.unique(arr[~mask])
         encoding_dict = {string: index for index, string in enumerate(unique_values)}
-        encoded_array = np.array([encoding_dict[string] for string in arr], dtype=dtype)
+        encoded_array = np.full(arr.shape, np.nan, dtype=dtype)
+        encoded_array[~mask] = [encoding_dict[v] for v in arr[~mask]]
         return encoded_array
 
 
