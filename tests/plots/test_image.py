@@ -125,3 +125,68 @@ def test_image_to_text_single():
 
     shap_values_test = MockImageExplanation(test_data, test_values, test_output_names)
     shap.plots.image_to_text(shap_values_test)
+
+
+# ── New tests for plot overhaul (#3801) ──────────────────────────────────────
+
+
+def test_image_returns_figure(explanation_multi_example):
+    """image() returns a matplotlib Figure when show=False."""
+    import matplotlib.pyplot as plt
+
+    fig = shap.plots.image(explanation_multi_example, show=False)
+    assert isinstance(fig, plt.Figure)
+    plt.close("all")
+
+
+def test_image_returns_figure_numpy():
+    """image() returns a Figure when passed numpy arrays."""
+    import matplotlib.pyplot as plt
+
+    shap_vals = np.random.randn(2, 8, 8, 1).astype(np.float32)
+    pixel_vals = np.random.rand(2, 8, 8, 1).astype(np.float32)
+    fig = shap.plots.image(shap_vals, pixel_values=pixel_vals, show=False)
+    assert isinstance(fig, plt.Figure)
+    plt.close("all")
+
+
+def test_image_ax_is_keyword_only(explanation_multi_example):
+    """ax cannot be passed positionally — must be keyword-only."""
+    with pytest.raises(TypeError):
+        # passing 12 positional args — the 12th would hit ax positionally
+        shap.plots.image(explanation_multi_example, None, None, None, 20, 0.2, 0.2, None, None, None, True, None)
+
+
+def test_image_hspace_auto():
+    """image() works with hspace='auto'."""
+    import matplotlib.pyplot as plt
+
+    shap_vals = np.random.randn(2, 8, 8, 1).astype(np.float32)
+    pixel_vals = np.random.rand(2, 8, 8, 1).astype(np.float32)
+    fig = shap.plots.image(shap_vals, pixel_values=pixel_vals, hspace="auto", show=False)
+    assert isinstance(fig, plt.Figure)
+    plt.close("all")
+
+
+def test_image_with_vmax():
+    """image() works with a custom vmax."""
+    import matplotlib.pyplot as plt
+
+    shap_vals = np.random.randn(2, 8, 8, 1).astype(np.float32)
+    pixel_vals = np.random.rand(2, 8, 8, 1).astype(np.float32)
+    fig = shap.plots.image(shap_vals, pixel_values=pixel_vals, vmax=1.0, show=False)
+    assert isinstance(fig, plt.Figure)
+    plt.close("all")
+
+
+def test_image_legacy_deprecated():
+    """image_legacy raises DeprecationWarning."""
+    from shap.plots._image import image_legacy
+
+    shap_vals = np.random.randn(2, 8, 8, 1).astype(np.float32)
+    pixel_vals = np.random.rand(2, 8, 8, 1).astype(np.float32)
+    with pytest.warns(DeprecationWarning):
+        image_legacy(shap_vals, pixel_values=pixel_vals, show=False)
+    import matplotlib.pyplot as plt
+
+    plt.close("all")
