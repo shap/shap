@@ -391,6 +391,24 @@ def test_explainer_non_number_dtype(dt):
     np.testing.assert_allclose(shap_values.values.max(), 0.26548, rtol=1e-2)
 
 
+def test_kernel_even_feature_middle_subset_is_paired():
+    """For even feature counts, random sampling should pair middle-size subsets with complements."""
+    X_background = np.zeros((1, 6))
+    X_eval = np.ones((1, 6))
+
+    # Use a fixed seed that naturally samples the even middle subset size (M/2) in random sampling.
+    np.random.seed(4)
+
+    explainer = shap.KernelExplainer(lambda data: data.sum(axis=1), X_background)
+    explainer.shap_values(X_eval, nsamples=2, silent=True)
+
+    masks = explainer.maskMatrix[: explainer.nsamplesAdded]
+    middle_masks = masks[np.sum(masks, axis=1) == 3]
+
+    np.testing.assert_allclose(middle_masks.shape[0], 2)
+    np.testing.assert_allclose(middle_masks[1], 1.0 - middle_masks[0])
+
+
 @compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_serialization():
     model, data = common.basic_sklearn_scenario()
