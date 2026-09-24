@@ -76,8 +76,8 @@ def potential_interactions(shap_values_column: Any, shap_values_matrix: Any) -> 
     This just bins the SHAP values for a feature along that feature's value. For true Shapley interaction
     index values for SHAP see the interaction_contribs option implemented in XGBoost.
     """
-    # ignore inds that are identical to the column
-    ignore_inds = np.where((shap_values_matrix.values.T - shap_values_column.values).T.std(0) < 1e-8)
+    # ignore inds that are identical to the column; np.where returns a tuple, index [0] to get the array
+    ignore_inds = np.where((shap_values_matrix.values.T - shap_values_column.values).T.std(0) < 1e-8)[0]
 
     X = shap_values_matrix.data
 
