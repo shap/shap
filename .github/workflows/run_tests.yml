@@ -141,7 +141,7 @@ jobs:
         run: |
           uv pip install --system . --group ${{matrix.extras}} --group plots
       - name: Download pre-cached datasets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: test-data-cache
           path: /tmp/test_data_cache

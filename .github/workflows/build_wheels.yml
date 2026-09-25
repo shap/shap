@@ -110,7 +110,7 @@ jobs:
         run: git fetch --tags
 
       - name: Download pre-cached datasets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: test-data-cache
           path: ${{ runner.temp }}/test_data_cache
@@ -197,13 +197,13 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           pattern: bdist_files_*
           merge-multiple: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: sdist_files
           path: dist
@@ -226,13 +226,13 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           pattern: bdist_files_*
           merge-multiple: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: sdist_files
           path: dist
@@ -248,7 +248,7 @@ jobs:
     if: github.event_name == 'schedule' && github.repository == 'shap/shap'
     steps:
       # The upload action only handles *.whl, so the sdist is not downloaded here
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           pattern: bdist_files_*

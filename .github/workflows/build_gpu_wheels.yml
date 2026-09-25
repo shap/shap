@@ -138,7 +138,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: gpu_wheel_files
           path: dist
@@ -152,7 +152,7 @@ jobs:
           uv pip install --system -r /tmp/test-requirements.txt
 
       - name: Download pre-cached datasets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: gpu-wheel-test-data-cache
           path: /tmp/test_data_cache
@@ -218,7 +218,7 @@ jobs:
       - name: GPU sanity check
         run: nvidia-smi
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: gpu_wheel_files
           path: dist
@@ -272,11 +272,11 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: gpu_wheel_files
           path: dist
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: gpu_sdist_files
           path: dist
@@ -298,11 +298,11 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: gpu_wheel_files
           path: dist
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: gpu_sdist_files
           path: dist
