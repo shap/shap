@@ -621,7 +621,11 @@ class Explanation(metaclass=MetaExplanation):
         rng = np.random.RandomState(random_state)
         length = self.shape[0]
         assert length is not None
-        inds = rng.choice(length, size=min(max_samples, length), replace=replace)
+        # Without replacement we cannot draw more rows than exist, so cap the
+        # count. With replacement, oversampling beyond the row count is valid
+        # (e.g. bootstrapping) and must return the requested number of rows.
+        size = max_samples if replace else min(max_samples, length)
+        inds = rng.choice(length, size=size, replace=replace)
         prev_shape = self.shape
         new_self = self[list(inds)]
         # Replace the __getitem__ entry with "sample" so op_history
