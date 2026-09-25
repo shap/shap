@@ -3,7 +3,7 @@
     "project": "shap",
     "project_url": "https://github.com/shap/shap",
     "repo": ".",
-    "branches": ["master"],
+    "branches": ["main"],
     "environment_type": "uv",
     "build_command": [
         "python -m build --wheel --outdir {build_cache_dir} {build_dir}"

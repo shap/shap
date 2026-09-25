@@ -24,12 +24,12 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
       - run: git fetch --tags
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
       - name: Compute version
         id: version
         run: |
@@ -40,7 +40,7 @@ jobs:
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-  # For the nightly schedule, skip the whole build if master has not changed since
+  # For the nightly schedule, skip the whole build if main has not changed since
   # the last successful nightly run. Release and manual runs always build.
   check_changes:
     name: Check for new commits
@@ -85,30 +85,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.12"
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
       - name: Install dependencies for dataset download
         run: |
           uv pip install --system . --group download-datasets
       - name: Pre-download datasets
-        run: python tests/datasets_to_cache.py
+        run: python -P tests/datasets_to_cache.py
       - name: Create unified cache directory
         run: |
           mkdir -p /tmp/test_data_cache
           cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
-          cp -r shap/cached_data /tmp/test_data_cache/ || true
+          SHAP_DATA_DIR=$(python -P -c "import pathlib, shap; print(pathlib.Path(shap.__file__).parent / 'cached_data')")
+          cp -r "$SHAP_DATA_DIR" /tmp/test_data_cache/
           ls -la /tmp/test_data_cache/
       - name: Upload cached datasets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
           retention-days: 1
+
+  build_wasm:
+    needs: prepare_data
+    uses: ./.github/workflows/build_pyodide_wheel.yml
 
   build_wheels:
     name: Build ${{ matrix.os }} wheels
@@ -116,7 +121,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-14, macos-15-intel, windows-latest]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-14, macos-15-intel, windows-latest, windows-11-arm]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -126,14 +131,14 @@ jobs:
       # when the workflow is triggered by a tag!
       # https://github.com/actions/checkout/issues/1467
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Fetch all tags
         run: git fetch --tags
 
       - name: Download pre-cached datasets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: test-data-cache
           path: ${{ runner.temp }}/test_data_cache
@@ -148,7 +153,7 @@ jobs:
           unset _libomp_path
 
       - name: "Install uv"
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       - name: Pin the cuda extra to this exact release
         shell: python
@@ -161,10 +166,11 @@ jobs:
           ))
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v4.2.0
+        uses: pypa/cibuildwheel@e090b81e30c4d855ea63bf4b6e59204c09a101ae # v4.2.1
         env:
           CIBW_ARCHS_LINUX: ${{ contains(matrix.os, '-arm') && 'aarch64' || 'x86_64' }}
           CIBW_ARCHS_MACOS: ${{ matrix.os == 'macos-14' && 'arm64' || 'x86_64' }}
+          CIBW_ARCHS_WINDOWS: ${{ contains(matrix.os, '-arm') && 'ARM64' || 'AMD64' }}
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_MUSLLINUX_AARCH64_IMAGE: musllinux_1_2
           # Pass the cache location to cibuildwheel tests
@@ -177,7 +183,7 @@ jobs:
           CIBW_TEST_COMMAND_WINDOWS: |
             python -c "import shap, os, shutil; cache_path = r'${{ runner.temp }}\test_data_cache'; shap_cache = os.path.join(os.path.dirname(shap.__file__), 'cached_data'); os.makedirs(shap_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'cached_data'), shap_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'cached_data')) else None" && pytest -v {project}/tests --import-mode=append
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           path: ./wheelhouse/*.whl
           name: bdist_files_${{ matrix.os }}
@@ -194,19 +200,19 @@ jobs:
       # when the workflow is triggered by a tag!
       # https://github.com/actions/checkout/issues/1467
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Fetch all tags
         run: git fetch --tags
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.12'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       - name: Pin the cuda extra to this exact release
         shell: python
@@ -223,14 +229,14 @@ jobs:
           uv build --sdist
 
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sdist_files
           path: dist/*.tar.gz
 
   publish_test_pypi:
     name: Publish wheels to TestPyPI
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels, build_wasm, build_sdist]
     runs-on: ubuntu-latest
     if: github.event_name != 'schedule'
     environment:
@@ -239,26 +245,26 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           path: dist
           pattern: bdist_files_*
           merge-multiple: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: sdist_files
           path: dist
 
       - name: Publish package to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
         with:
           verbose: true
           repository-url: https://test.pypi.org/legacy/
 
   publish_pypi:
     name: Publish wheels to PyPI
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels, build_wasm, build_sdist]
     runs-on: ubuntu-latest
     # Only publish tagged releases to PyPI
     if: startsWith(github.ref, 'refs/tags')
@@ -268,29 +274,29 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           path: dist
           pattern: bdist_files_*
           merge-multiple: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: sdist_files
           path: dist
 
       - name: Publish package to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
 
   upload_nightly:
     name: Upload nightly wheels to Anaconda.org
-    needs: [build_wheels]
+    needs: [build_wheels, build_wasm]
     runs-on: ubuntu-latest
     # Only upload nightlies from the scheduled run on the main repository, never from forks
     if: github.event_name == 'schedule' && github.repository == 'shap/shap'
     steps:
       # The upload action only handles *.whl, so the sdist is not downloaded here
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           path: dist
           pattern: bdist_files_*
@@ -301,7 +307,7 @@ jobs:
 
       # Pinned to the SHA of release 0.6.4, as recommended by the action's README
       - name: Upload wheels to scientific-python-nightly-wheels
-        uses: scientific-python/upload-nightly-action@e76cfec8a4611fd02808a801b0ff5a7d7c1b2d99
+        uses: scientific-python/upload-nightly-action@16fa02eacee1655195143de09f03676e60ef2bf5
         with:
           artifacts_path: dist
           anaconda_nightly_upload_token: ${{ secrets.SHAP_NIGHTLY_BUILD_UPLOAD_TOKEN }}

@@ -2,6 +2,11 @@
 cmake_minimum_required(VERSION 3.15...3.27)
 project(shap_extensions LANGUAGES CXX)
 
+if(EMSCRIPTEN)
+  # nanobind uses stderr without including its declaration in this build.
+  add_compile_options(-include cstdio)
+endif()
+
 if (NOT SKBUILD)
   message(FATAL_ERROR "\
   This CMakeLists.txt is meant to be used with scikit-build.
@@ -49,23 +54,26 @@ nanobind_add_module(
   shap/cutils/cutils.cpp
 )
 
-nanobind_add_stub(
-  _cutils_stub
-  MODULE _cutils
-  OUTPUT _cutils.pyi
-  PYTHON_PATH $<TARGET_FILE_DIR:_cutils>
-  MARKER_FILE py.typed
-  DEPENDS _cutils
-)
+# Stub generation imports the extension and cannot run on the cross-build host.
+if(NOT EMSCRIPTEN)
+  nanobind_add_stub(
+    _cutils_stub
+    MODULE _cutils
+    OUTPUT _cutils.pyi
+    PYTHON_PATH $<TARGET_FILE_DIR:_cutils>
+    MARKER_FILE py.typed
+    DEPENDS _cutils
+  )
 
-# Keep generated typing artifacts visible to language servers during local/editable
-# development. VS Code/Pylance resolves this workspace package from source.
-add_custom_command(
-  TARGET _cutils_stub POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${CMAKE_CURRENT_BINARY_DIR}/_cutils.pyi
-    ${CMAKE_CURRENT_SOURCE_DIR}/shap/_cutils.pyi
-)
+  # Keep generated typing artifacts visible to language servers during local/editable
+  # development. VS Code/Pylance resolves this workspace package from source.
+  add_custom_command(
+    TARGET _cutils_stub POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      ${CMAKE_CURRENT_BINARY_DIR}/_cutils.pyi
+      ${CMAKE_CURRENT_SOURCE_DIR}/shap/_cutils.pyi
+  )
+endif()
 
 install(TARGETS _cutils LIBRARY DESTINATION shap)
 
