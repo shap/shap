@@ -214,10 +214,36 @@ class Explainer(Serializable):
 
                 # if we get here then we don't know how to handle what was given to us
                 else:
-                    raise TypeError(
-                        "The passed model is not callable and cannot be analyzed directly with the given masker! Model: "
-                        + str(model)
-                    )
+                    # Check if model is an interpret EBM — wrap into a callable and retry
+                    if safe_isinstance(self.model, "interpret.glassbox.ExplainableBoostingClassifier"):
+                        return self.__init__(
+                            self.model.decision_function,
+                            self.masker,
+                            link=link,
+                            algorithm=algorithm,
+                            output_names=output_names,
+                            feature_names=feature_names,
+                            linearize_link=linearize_link,
+                            seed=seed,
+                            **kwargs,
+                        )
+                    elif safe_isinstance(self.model, "interpret.glassbox.ExplainableBoostingRegressor"):
+                        return self.__init__(
+                            self.model.predict,
+                            self.masker,
+                            link=link,
+                            algorithm=algorithm,
+                            output_names=output_names,
+                            feature_names=feature_names,
+                            linearize_link=linearize_link,
+                            seed=seed,
+                            **kwargs,
+                        )
+                    else:
+                        raise TypeError(
+                            "The passed model is not callable and cannot be analyzed directly with the given masker! Model: "
+                            + str(model)
+                        )
 
             # build the right subclass
             if algorithm == "exact":
