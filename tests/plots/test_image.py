@@ -141,7 +141,7 @@ def test_image_to_text_max_display():
 def test_image_to_text_requires_explanation():
     """image_to_text should raise TypeError for non-Explanation input."""
     with pytest.raises(TypeError, match="Explanation"):
-        shap.plots.image_to_text(np.random.randn(20, 20, 3, 4))
+        shap.plots.image_to_text(np.random.randn(20, 20, 3, 4))  # type: ignore[arg-type]
 
 
 def test_image_to_text_grayscale():
