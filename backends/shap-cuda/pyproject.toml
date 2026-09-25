@@ -1,0 +1,86 @@
+[build-system]
+requires = [
+  "scikit-build-core>=0.10.0",
+  "setuptools-scm>=8.0",
+  "numpy>=2.0",
+  "packaging>20.9",
+]
+build-backend = "_build_backend"
+backend-path = ["."]
+
+[project]
+name = "shap-cuda"
+description = "CUDA-accelerated GPUTreeExplainer backend for shap."
+readme = "README.md"
+license = {text = "MIT License"}
+authors = [
+  {name = "Scott Lundberg", email = "slund1@cs.washington.edu"},
+]
+requires-python = ">=3.12"
+dependencies = [
+  "shap",
+  "numpy>=2,<2.5",
+  "packaging>20.9",
+]
+classifiers = [
+  "Operating System :: POSIX",
+  "Operating System :: Unix",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
+]
+dynamic = ["version"]
+
+[project.entry-points."shap.tree_backends"]
+cuda = "shap_cuda:GPUTreeExplainer"
+
+[project.urls]
+Repository = 'http://github.com/shap/shap'
+
+[dependency-groups]
+test = ["pytest", "pytest-mpl", "pytest-cov", "xgboost", "lightgbm", "matplotlib", "ipython"]
+
+[tool.uv.sources]
+shap = {workspace = true}
+
+[tool.uv]
+cache-keys = [
+  { file = "shap_cuda/cext/*.cc" },
+  { file = "shap_cuda/cext/*.cu" },
+  { file = "shap_cuda/cext/*.h" },
+  { file = "CMakeLists.txt" },
+]
+
+[tool.setuptools_scm]
+root = "../.."
+version_file = "shap_cuda/_version.py"
+local_scheme = "no-local-version"
+
+[tool.scikit-build]
+wheel.packages = ["shap_cuda"]
+
+metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
+sdist.include = ["shap_cuda/_version.py"]
+
+minimum-version = "build-system.requires"
+build-dir = "build/{wheel_tag}"
+
+# Exclude C/C++/CUDA source files from the wheel (compiled .so is sufficient)
+wheel.exclude = ["**/*.cc", "**/*.cpp", "**/*.h", "**/*.cu"]
+
+wheel.py-api = "cp312"
+
+[tool.ruff]
+extend = "../../pyproject.toml"
+
+[tool.pytest.ini_options]
+addopts = "--mpl -m 'not xslow'"
+mpl-default-style = "default"
+testpaths = ["tests"]
+markers = ["xslow: mark test as extremely slow (not run unless explicitly requested)"]
