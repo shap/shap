@@ -513,7 +513,7 @@ def __score_method(
         X_train, X_test, y_train, y_test = train_test_split(__toarray(X), y, test_size=test_size, random_state=i)
 
         # define the model we are going to explain, caching so we onlu build it once
-        model_id = "model_cache__v" + "__".join([__version__, data_hash, model_generator.__name__]) + ".pickle"
+        model_id = "model_cache__v" + "__".join([__version__, data_hash, model_generator.__name__, str(i)]) + ".pickle"
         cache_file = os.path.join(cache_dir, model_id + ".pickle")
         if os.path.isfile(cache_file):
             with open(cache_file, "rb") as f:
