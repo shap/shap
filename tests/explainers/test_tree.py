@@ -3016,3 +3016,171 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+# ---------------------------------------------------------------------------
+# Interventional (marginal) SHAP interaction values -- GH#1824
+#
+# Before this path existed, ``TreeExplainer(model, background,
+# feature_perturbation="interventional").shap_interaction_values(...)`` hit the
+# ``independent + interactions`` branch of the C extension, which printed a note
+# to stderr and returned an all-zero tensor. These tests cover the new marginal
+# interaction path (order 2, ``model_output="raw"``).
+# ---------------------------------------------------------------------------
+
+
+def _interv_marginal_predict(model, S, x, r):
+    """model.predict on the reference r with the features in S taken from x."""
+    z = r.copy()
+    for i in S:
+        z[i] = x[i]
+    return model.predict(z.reshape(1, -1))[0]
+
+
+def _interv_brute_shapley(model, x, bg, M):
+    """Exact marginal (interventional) Shapley values by coalition enumeration."""
+    phi = np.zeros(M)
+    for r in bg:
+        for i in range(M):
+            others = [f for f in range(M) if f != i]
+            for k in range(len(others) + 1):
+                for S in itertools.combinations(others, k):
+                    S = list(S)
+                    w = math.factorial(len(S)) * math.factorial(M - len(S) - 1) / math.factorial(M)
+                    phi[i] += w * (
+                        _interv_marginal_predict(model, S + [i], x, r) - _interv_marginal_predict(model, S, x, r)
+                    )
+    return phi / len(bg)
+
+
+def _interv_brute_sii_pair(model, x, bg, M):
+    """Exact marginal Shapley-interaction (SII) pair values by enumeration."""
+    inter = np.zeros((M, M))
+    for r in bg:
+        for i in range(M):
+            for j in range(i + 1, M):
+                others = [f for f in range(M) if f not in (i, j)]
+                for k in range(len(others) + 1):
+                    for S in itertools.combinations(others, k):
+                        S = list(S)
+                        s = len(S)
+                        w = math.factorial(s) * math.factorial(M - s - 2) / math.factorial(M - 1)
+                        d = (
+                            _interv_marginal_predict(model, S + [i, j], x, r)
+                            - _interv_marginal_predict(model, S + [i], x, r)
+                            - _interv_marginal_predict(model, S + [j], x, r)
+                            + _interv_marginal_predict(model, S, x, r)
+                        )
+                        inter[i, j] += w * d
+                inter[j, i] = inter[i, j]
+    return inter / len(bg)
+
+
+def _interv_classic_matrix(single, pair, M):
+    """Assemble shap's classic interaction matrix from SII single/pair values:
+    off-diagonal = SII_pair / 2, diagonal absorbs the remainder so each row sums
+    to the single SHAP value."""
+    Phi = np.zeros((M, M))
+    for i in range(M):
+        for j in range(i + 1, M):
+            Phi[i, j] = Phi[j, i] = pair[i, j] / 2.0
+    for i in range(M):
+        Phi[i, i] = single[i] - (Phi[i].sum() - Phi[i, i])
+    return Phi
+
+
+def _interv_small_rf():
+    from sklearn.ensemble import RandomForestRegressor
+
+    rng = np.random.RandomState(0)
+    X = rng.rand(200, 4)
+    y = X[:, 0] * X[:, 1] + X[:, 2] - 0.5 * X[:, 0] * X[:, 3] + 0.1 * rng.rand(200)
+    model = RandomForestRegressor(n_estimators=6, max_depth=4, random_state=0).fit(X, y)
+    return model, X[:20], X[:3]
+
+
+def test_interventional_interaction_values_nonzero():
+    """Regression test for GH#1824: interventional interaction values were
+    silently returned as all zeros."""
+    model, bg, x = _interv_small_rf()
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    iv = np.asarray(explainer.shap_interaction_values(x))
+    assert np.abs(iv).sum() > 0
+
+
+def test_interventional_interaction_values_symmetric():
+    model, bg, x = _interv_small_rf()
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    iv = np.asarray(explainer.shap_interaction_values(x))
+    assert np.allclose(iv, np.swapaxes(iv, 1, 2), atol=1e-12)
+
+
+def test_interventional_interaction_values_reconcile():
+    model, bg, x = _interv_small_rf()
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    iv = np.asarray(explainer.shap_interaction_values(x))
+    sv = np.asarray(explainer.shap_values(x))
+    # each row sums to the interventional single SHAP value
+    assert np.allclose(iv.sum(axis=2), sv, atol=1e-6)
+    # the full matrix plus the expected value reconstructs the prediction
+    assert np.allclose(iv.sum(axis=(1, 2)) + explainer.expected_value, model.predict(x), atol=1e-4)
+
+
+def test_interventional_interaction_values_match_brute_force():
+    """The classic interaction matrix must equal an exact brute-force marginal
+    Shapley-interaction computation built only from model.predict."""
+    model, bg, x = _interv_small_rf()
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    iv = np.asarray(explainer.shap_interaction_values(x))
+    M = x.shape[1]
+    for k in range(len(x)):
+        single = _interv_brute_shapley(model, x[k], bg, M)
+        pair = _interv_brute_sii_pair(model, x[k], bg, M)
+        expected = _interv_classic_matrix(single, pair, M)
+        assert np.allclose(iv[k], expected, atol=1e-4)
+
+
+def test_interventional_interaction_values_requires_background():
+    """Interventional interactions need a background dataset to marginalize
+    against; asking for them without one must error rather than return zeros."""
+    from sklearn.ensemble import RandomForestRegressor
+
+    rng = np.random.RandomState(0)
+    X = rng.rand(80, 4)
+    y = X[:, 0] * X[:, 1] + X[:, 2]
+    model = RandomForestRegressor(n_estimators=5, max_depth=3, random_state=0).fit(X, y)
+    explainer = shap.TreeExplainer(model, X[:16], feature_perturbation="interventional")
+    explainer.data = None  # simulate a missing background on an interventional explainer
+    with pytest.raises(ValueError, match="background dataset"):
+        explainer.shap_interaction_values(X[:2])
+
+
+@pytest.mark.parametrize("model_name", ["random_forest", "gradient_boosting", "lightgbm", "xgboost"])
+def test_interventional_interaction_values_additivity_across_models(model_name):
+    rng = np.random.RandomState(1)
+    X = rng.rand(300, 5).astype(np.float64)
+    y = X[:, 0] * X[:, 3] + np.sin(3 * X[:, 1]) + X[:, 2] - X[:, 0] * X[:, 4]
+
+    if model_name == "random_forest":
+        from sklearn.ensemble import RandomForestRegressor
+
+        model = RandomForestRegressor(n_estimators=10, max_depth=4, random_state=0).fit(X, y)
+    elif model_name == "gradient_boosting":
+        model = GradientBoostingRegressor(n_estimators=20, max_depth=3, random_state=0).fit(X, y)
+    elif model_name == "lightgbm":
+        lightgbm = pytest.importorskip("lightgbm")
+        model = lightgbm.LGBMRegressor(n_estimators=20, max_depth=3, random_state=0, verbose=-1).fit(X, y)
+    else:
+        xgboost = pytest.importorskip("xgboost")
+        model = xgboost.XGBRegressor(n_estimators=20, max_depth=3, random_state=0).fit(X, y)
+
+    bg = X[:32]
+    x = X[:5]
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    iv = np.asarray(explainer.shap_interaction_values(x))
+    sv = np.asarray(explainer.shap_values(x))
+
+    assert np.abs(iv).sum() > 0
+    assert np.allclose(iv, np.swapaxes(iv, 1, 2), atol=1e-6)
+    assert np.allclose(iv.sum(axis=2), sv, atol=1e-4)
+    assert np.allclose(iv.sum(axis=(1, 2)) + explainer.expected_value, model.predict(x), atol=1e-4)
