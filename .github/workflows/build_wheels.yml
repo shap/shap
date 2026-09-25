@@ -259,7 +259,7 @@ jobs:
 
       # Pinned to the SHA of release 0.6.4, as recommended by the action's README
       - name: Upload wheels to scientific-python-nightly-wheels
-        uses: scientific-python/upload-nightly-action@e76cfec8a4611fd02808a801b0ff5a7d7c1b2d99
+        uses: scientific-python/upload-nightly-action@16fa02eacee1655195143de09f03676e60ef2bf5
         with:
           artifacts_path: dist
           anaconda_nightly_upload_token: ${{ secrets.SHAP_NIGHTLY_BUILD_UPLOAD_TOKEN }}
