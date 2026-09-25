@@ -1612,6 +1612,48 @@ class TestExplainerXGBoost:
         assert explainer.model.tree_limit == ltr.n_estimators * 3
 
 
+def _fit_xgboost_categorical_classifier():
+    """Small adult model with one pandas categorical column (enable_categorical=True)."""
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.adult(n_points=300)
+    X = X.copy()
+    X["Workclass"] = X["Workclass"].astype("category")
+    clf = xgboost.XGBClassifier(
+        n_estimators=8,
+        enable_categorical=True,
+        max_depth=4,
+        tree_method="hist",
+        random_state=0,
+    )
+    clf.fit(X, y)
+    return clf, X.iloc[:20], X.iloc[20:120]
+
+
+class TestExplainerXGBoostCategorical:
+    """TreeExplainer with XGBoost sklearn enable_categorical models."""
+
+    def test_tree_path_dependent_background_additivity(self):
+        """Background forces _cext; categorical splits must satisfy SHAP additivity."""
+        clf, X_explain, X_bg = _fit_xgboost_categorical_classifier()
+        explainer = shap.TreeExplainer(clf, X_bg, feature_perturbation="tree_path_dependent")
+        assert np.any(explainer.model.threshold_types == 2)
+        shap_values = explainer.shap_values(X_explain, check_additivity=True)
+        margin = clf.predict(X_explain, output_margin=True)
+        np.testing.assert_allclose(
+            shap_values.sum(1) + explainer.expected_value,
+            margin,
+            rtol=1e-5,
+            atol=1e-5,
+        )
+
+    def test_interventional_raises(self):
+        """Interventional feature perturbation is not supported for XGBoost categorical splits."""
+        clf, X_explain, X_bg = _fit_xgboost_categorical_classifier()
+        explainer = shap.TreeExplainer(clf, X_bg, feature_perturbation="interventional")
+        with pytest.raises(NotImplementedError, match="interventional"):
+            explainer.shap_values(X_explain)
+
+
 class TestExplainerLightGBM:
     """Tests for the TreeExplainer when the model passed in is a LightGBM instance.
 
