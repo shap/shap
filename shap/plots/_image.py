@@ -249,9 +249,7 @@ def image_to_text(
     max_val = np.nanpercentile(np.abs(sv_per_token[:, :, :num_tokens]), 99.9) if vmax is None else vmax
 
     ncols = num_tokens + 1
-    fig_size = np.array([3 * ncols, 3.0])
-    if fig_size[0] > 20:
-        fig_size *= 20 / fig_size[0]
+    fig_size = np.array([min(3 * ncols, 20), 5.0])
 
     fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=fig_size, squeeze=False)
 
