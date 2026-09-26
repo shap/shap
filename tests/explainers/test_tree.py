@@ -1797,6 +1797,41 @@ class TestExplainerLightGBM:
             atol=1e-4,
         )
 
+    def test_lightgbm_tree_parsing_is_lazy(self, monkeypatch):
+        lightgbm = pytest.importorskip("lightgbm")
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(100, 4))
+        y = X[:, 0] * 2 - X[:, 1] + rng.normal(size=100)
+        model = lightgbm.LGBMRegressor(n_estimators=10, n_jobs=1, verbosity=-1).fit(X, y)
+
+        dump_model = lightgbm.basic.Booster.dump_model
+        dump_calls = 0
+
+        def count_dump_calls(booster, *args, **kwargs):
+            nonlocal dump_calls
+            dump_calls += 1
+            return dump_model(booster, *args, **kwargs)
+
+        monkeypatch.setattr(lightgbm.basic.Booster, "dump_model", count_dump_calls)
+        native_contributions = model.booster_.predict(X[:3], pred_contrib=True)
+
+        explainer = shap.Explainer(model)
+        assert isinstance(explainer, shap.TreeExplainer)
+        assert dump_calls == 0
+        np.testing.assert_allclose(explainer.expected_value, native_contributions[0, -1])
+
+        shap_values = explainer.shap_values(X[:3])
+        native_shap_values = native_contributions[:, :-1]
+        np.testing.assert_allclose(shap_values, native_shap_values)
+        assert dump_calls == 0
+
+        interaction_values = explainer.shap_interaction_values(X[:3])
+        np.testing.assert_allclose(interaction_values.sum(axis=2), shap_values, atol=1e-4)
+        assert dump_calls == 1
+
+        explainer.shap_interaction_values(X[:1])
+        assert dump_calls == 1
+
     def test_lightgbm_call_explanation(self):
         """Checks that __call__ runs without error and returns a valid Explanation object.
 
