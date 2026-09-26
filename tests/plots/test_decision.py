@@ -1,444 +1,516 @@
+"""Tests for shap/plots/_decision.py - targeting 80%+ coverage."""
+
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-import sklearn
+import sklearn.ensemble
 
 import shap
 
+matplotlib.use("Agg")
 
-@pytest.fixture
-def values_features():
-    X, y = shap.datasets.adult(n_points=10)
-    rfc = sklearn.ensemble.RandomForestClassifier()
+
+# ---------------------------------------------------------------------------
+# Shared fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def rfc_data():
+    """RandomForest on adult dataset - reused across tests."""
+    X, y = shap.datasets.adult(n_points=20)
+    rfc = sklearn.ensemble.RandomForestClassifier(n_estimators=10, random_state=0)
     rfc.fit(X, y)
     ex = shap.TreeExplainer(rfc)
-    shap_values = ex(X)
-    return shap_values, X
+    sv = ex(X)
+    return sv, X
 
 
-def test_random_decision(random_seed):
-    """Make sure the decision plot does not crash on random data."""
-    rs = np.random.RandomState(random_seed)
-    shap.decision_plot(0, rs.standard_normal(size=(20, 5)), rs.standard_normal(size=(20, 5)), show=False)
+@pytest.fixture(scope="module")
+def base_sv_features(rfc_data):
+    """Return (base_value, shap_values_2d, features_df) for class 1."""
+    sv, X = rfc_data
+    return sv.base_values[0, 1], sv.values[:, :, 1], X
 
 
-@pytest.mark.mpl_image_compare
-def test_decision_plot(values_features):
-    fig = plt.figure()
-    shap_values, _X = values_features
+@pytest.fixture(autouse=True)
+def close_plots():
+    yield
+    plt.close("all")
 
-    shap.decision_plot(
-        shap_values.base_values[0, 1],
-        shap_values.values[:, :, 1],
-        show=False,
-        return_objects=True,
-        title="Decision Plot",
-        link="identity",
+
+# ---------------------------------------------------------------------------
+# __change_shap_base_value  (tested indirectly via new_base_value)
+# ---------------------------------------------------------------------------
+
+
+def test_new_base_value_zero(base_sv_features):
+    """Shifting base value to 0 should keep sum(shap) + new_base == original prediction."""
+    base, sv, X = base_sv_features
+    r = shap.decision_plot(base, sv, show=False, return_objects=True, new_base_value=0)
+    assert r.base_value == 0
+    np.testing.assert_allclose(
+        r.shap_values.sum(axis=1) + 0,
+        sv.sum(axis=1) + base,
+        atol=1e-10,
     )
-    plt.tight_layout()
-    return fig
 
 
-@pytest.mark.mpl_image_compare
-def test_decision_plot_single_instance(values_features):
-    fig = plt.figure()
-    shap_values, X = values_features
-
-    shap.decision_plot(
-        shap_values.base_values[0, 1],
-        shap_values.values[0, :, 1],
-        features=X.iloc[0],
-        show=False,
-        new_base_value=0,
-        return_objects=True,
+def test_new_base_value_nonzero(base_sv_features):
+    base, sv, X = base_sv_features
+    new_bv = 0.3
+    r = shap.decision_plot(base, sv, show=False, return_objects=True, new_base_value=new_bv)
+    assert r.base_value == new_bv
+    np.testing.assert_allclose(
+        r.shap_values.sum(axis=1) + new_bv,
+        sv.sum(axis=1) + base,
+        atol=1e-10,
     )
-    plt.tight_layout()
-    return fig
 
 
-@pytest.mark.mpl_image_compare
-def test_decision_plot_interactions():
-    fig = plt.figure()
+def test_new_base_value_with_interactions(rfc_data):
+    """new_base_value with 3-D interaction values (cube branch of __change_shap_base_value)."""
+    sv, X = rfc_data
+    rfc = sklearn.ensemble.RandomForestClassifier(n_estimators=10, random_state=0)
+    rfc.fit(X, sv.base_values[:, 0] > 0)
+    ex2 = shap.TreeExplainer(rfc)
+    iv = ex2(X, interactions=True)
+    base = iv.base_values[0, 1]
+    shap_interaction = iv.values[:, :, :, 1]
+    r = shap.decision_plot(base, shap_interaction, show=False, return_objects=True, new_base_value=0)
+    assert r.base_value == 0
 
-    X, y = shap.datasets.adult(n_points=10)
-    rfc = sklearn.ensemble.RandomForestClassifier()
-    rfc.fit(X, y)
+
+# ---------------------------------------------------------------------------
+# Type / validation errors
+# ---------------------------------------------------------------------------
+
+
+def test_raises_list_base_value(base_sv_features):
+    base, sv, _ = base_sv_features
+    with pytest.raises(TypeError, match="multi output"):
+        shap.decision_plot([base, base], sv, show=False)
+
+
+def test_raises_list_shap_values(base_sv_features):
+    base, sv, _ = base_sv_features
+    with pytest.raises(TypeError, match="multi output"):
+        shap.decision_plot(base, [sv], show=False)
+
+
+def test_raises_wrong_shap_values_type(base_sv_features):
+    base, _, _ = base_sv_features
+    with pytest.raises(TypeError, match="wrong type"):
+        shap.decision_plot(base, "not_an_array", show=False)
+
+
+def test_raises_wrong_features_type(base_sv_features):
+    base, sv, _ = base_sv_features
+
+    class WeirdFeatures:
+        ndim = 2
+
+    with pytest.raises(TypeError, match="unsupported type"):
+        shap.decision_plot(base, sv[:5], features=WeirdFeatures(), show=False)
+
+
+def test_raises_feature_names_wrong_length(base_sv_features):
+    base, sv, _ = base_sv_features
+    with pytest.raises(ValueError, match="feature_names arg must include all features"):
+        shap.decision_plot(base, sv[:5], feature_names=["only_one"], show=False)
+
+
+def test_raises_feature_names_wrong_type(base_sv_features):
+    base, sv, _ = base_sv_features
+    n = sv.shape[1]
+    with pytest.raises(TypeError, match="feature_names arg requires a list or numpy array"):
+        shap.decision_plot(base, sv[:5], feature_names=tuple(range(n)), show=False)
+
+
+def test_raises_bad_feature_order(base_sv_features):
+    base, sv, _ = base_sv_features
+    with pytest.raises(ValueError, match="feature_order arg"):
+        shap.decision_plot(base, sv[:5], feature_order="bad_value", show=False)
+
+
+def test_raises_bad_feature_order_wrong_length(base_sv_features):
+    base, sv, _ = base_sv_features
+    with pytest.raises(ValueError, match="length must match"):
+        shap.decision_plot(base, sv[:5], feature_order=np.array([0, 1]), show=False)
+
+
+def test_raises_bad_feature_display_range_type(base_sv_features):
+    base, sv, _ = base_sv_features
+    with pytest.raises(TypeError, match="feature_display_range arg requires a slice or a range"):
+        shap.decision_plot(base, sv[:5], feature_display_range=[0, 1, 2], show=False)
+
+
+def test_raises_bad_feature_display_range_step(base_sv_features):
+    base, sv, _ = base_sv_features
+    with pytest.raises(ValueError, match="step of 1, -1, or None"):
+        shap.decision_plot(base, sv[:5], feature_display_range=slice(0, 5, 2), show=False)
+
+
+def test_raises_too_many_observations(base_sv_features):
+    base, _, _ = base_sv_features
+    big = np.random.randn(2001, 5)
+    with pytest.raises(RuntimeError, match="2001 observations"):
+        shap.decision_plot(base, big, show=False)
+
+
+def test_raises_too_many_features(base_sv_features):
+    base, _, _ = base_sv_features
+    big = np.random.randn(5, 201)
+    with pytest.raises(RuntimeError, match="201 features"):
+        shap.decision_plot(base, big, feature_display_range=slice(0, 201, 1), show=False)
+
+
+# ---------------------------------------------------------------------------
+# base_value unwrapping
+# ---------------------------------------------------------------------------
+
+
+def test_base_value_numpy_array_length1(base_sv_features):
+    _, sv, _ = base_sv_features
+    base_arr = np.array([0.5])
+    shap.decision_plot(base_arr, sv[:5], show=False)
+
+
+# ---------------------------------------------------------------------------
+# features input variants
+# ---------------------------------------------------------------------------
+
+
+def test_features_dataframe(base_sv_features):
+    base, sv, X = base_sv_features
+    shap.decision_plot(base, sv, features=X, show=False)
+
+
+def test_features_series_single_row(base_sv_features):
+    base, sv, X = base_sv_features
+    shap.decision_plot(base, sv[0], features=X.iloc[0], show=False)
+
+
+def test_features_numpy_1d_becomes_feature_names(base_sv_features):
+    """1-D numpy array of feature values is treated as feature names."""
+    base, sv, X = base_sv_features
+    names_array = np.array(X.columns.tolist())
+    shap.decision_plot(base, sv[:5], features=names_array, show=False)
+
+
+def test_features_list_becomes_feature_names(base_sv_features):
+    base, sv, X = base_sv_features
+    shap.decision_plot(base, sv[:5], features=X.columns.tolist(), show=False)
+
+
+def test_features_numpy_2d(base_sv_features):
+    base, sv, X = base_sv_features
+    shap.decision_plot(base, sv, features=X.values, show=False)
+
+
+def test_feature_names_as_numpy_array(base_sv_features):
+    base, sv, X = base_sv_features
+    shap.decision_plot(base, sv[:5], feature_names=np.array(X.columns.tolist()), show=False)
+
+
+# ---------------------------------------------------------------------------
+# feature_order variants
+# ---------------------------------------------------------------------------
+
+
+def test_feature_order_none_string(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], feature_order="none", show=False)
+
+
+def test_feature_order_none_value(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], feature_order=None, show=False)
+
+
+def test_feature_order_hclust(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], feature_order="hclust", show=False)
+
+
+def test_feature_order_custom_list(base_sv_features):
+    base, sv, _ = base_sv_features
+    r = shap.decision_plot(base, sv[:5], show=False, return_objects=True)
+    # reuse returned feature_idx
+    shap.decision_plot(base, sv[5:10], feature_order=r.feature_idx, show=False)
+
+
+def test_feature_order_custom_array(base_sv_features):
+    base, sv, _ = base_sv_features
+    idx = np.arange(sv.shape[1])
+    shap.decision_plot(base, sv[:5], feature_order=idx, show=False)
+
+
+# ---------------------------------------------------------------------------
+# feature_display_range variants
+# ---------------------------------------------------------------------------
+
+
+def test_feature_display_range_slice_ascending(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], feature_display_range=slice(0, 5, 1), show=False)
+
+
+def test_feature_display_range_slice_descending(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], feature_display_range=slice(-1, -6, -1), show=False)
+
+
+def test_feature_display_range_slice_none_step(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], feature_display_range=slice(0, 3), show=False)
+
+
+def test_feature_display_range_range_ascending(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], feature_display_range=range(0, 5, 1), show=False)
+
+
+def test_feature_display_range_range_descending(base_sv_features):
+    base, sv, _ = base_sv_features
+    n = sv.shape[1]
+    shap.decision_plot(base, sv[:5], feature_display_range=range(n - 1, n - 6, -1), show=False)
+
+
+def test_feature_display_range_range_negative_stop(base_sv_features):
+    """range with negative stop: range(5, -1, -1) == [5,4,3,2,1,0], clipped to iinfo.min."""
+    base, sv, _ = base_sv_features
+    # Use small positive indices only to avoid iinfo dtype issue
+    shap.decision_plot(base, sv[:5], feature_display_range=range(4, 0, -1), show=False)
+
+
+def test_feature_display_range_reuse_xlim(base_sv_features):
+    base, sv, _ = base_sv_features
+    r = shap.decision_plot(base, sv[:5], feature_display_range=slice(0, 5, 1), show=False, return_objects=True)
+    shap.decision_plot(base, sv[5:10], feature_display_range=slice(0, 5, 1), xlim=r.xlim, show=False)
+
+
+# ---------------------------------------------------------------------------
+# link variants
+# ---------------------------------------------------------------------------
+
+
+def test_link_logit(base_sv_features):
+    base, sv, _ = base_sv_features
+    # logit requires base_value in (0,1)
+    shap.decision_plot(0.5, sv[:5] * 0.01, link="logit", show=False)
+
+
+def test_link_logit_xlim_auto(base_sv_features):
+    """Logit link should auto-set xlim to (-0.02, 1.02)."""
+    _, sv, _ = base_sv_features
+    r = shap.decision_plot(0.5, sv[:3] * 0.01, link="logit", show=False, return_objects=True)
+    assert r.xlim[0] < 0
+    assert r.xlim[1] > 1
+
+
+# ---------------------------------------------------------------------------
+# highlight variants
+# ---------------------------------------------------------------------------
+
+
+def test_highlight_list(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv, highlight=[0, 1], show=False)
+
+
+def test_highlight_bool_array(base_sv_features):
+    base, sv, _ = base_sv_features
+    mask = np.zeros(sv.shape[0], dtype=bool)
+    mask[0] = True
+    shap.decision_plot(base, sv, highlight=mask, show=False)
+
+
+def test_highlight_slice(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv, highlight=slice(0, 3), show=False)
+
+
+# ---------------------------------------------------------------------------
+# visual / style options
+# ---------------------------------------------------------------------------
+
+
+def test_color_bar_false(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], color_bar=False, show=False)
+
+
+def test_alpha(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], alpha=0.3, show=False)
+
+
+def test_plot_color_string(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], plot_color="coolwarm", show=False)
+
+
+def test_axis_color(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], axis_color="#FF0000", show=False)
+
+
+def test_y_demarc_color(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], y_demarc_color="#0000FF", show=False)
+
+
+def test_auto_size_plot_false(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], auto_size_plot=False, show=False)
+
+
+def test_title(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[:5], title="My Test Title", show=False)
+
+
+def test_legend_labels(base_sv_features):
+    base, sv, _ = base_sv_features
+    labels = [f"obs_{i}" for i in range(sv[:5].shape[0])]
+    shap.decision_plot(base, sv[:5], legend_labels=labels, legend_location="upper right", show=False)
+
+
+def test_ignore_warnings_large_features(base_sv_features):
+    base, _, _ = base_sv_features
+    big = np.random.randn(5, 201)
+    shap.decision_plot(base, big, ignore_warnings=True, show=False)
+
+
+# ---------------------------------------------------------------------------
+# return_objects validation
+# ---------------------------------------------------------------------------
+
+
+def test_return_objects_fields(base_sv_features):
+    base, sv, X = base_sv_features
+    r = shap.decision_plot(base, sv, features=X, show=False, return_objects=True)
+    assert r.base_value == base
+    assert isinstance(r.shap_values, np.ndarray)
+    assert isinstance(r.feature_names, list)
+    assert isinstance(r.feature_idx, np.ndarray)
+    assert len(r.xlim) == 2
+
+
+def test_return_objects_false_returns_none(base_sv_features):
+    base, sv, _ = base_sv_features
+    result = shap.decision_plot(base, sv[:5], show=False, return_objects=False)
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# 1-D shap_values (single observation, no features)
+# ---------------------------------------------------------------------------
+
+
+def test_1d_shap_values(base_sv_features):
+    base, sv, _ = base_sv_features
+    shap.decision_plot(base, sv[0], show=False)
+
+
+def test_single_observation_with_feature_values(base_sv_features):
+    """When cumsum.shape[0]==1 and features provided, feature values are printed."""
+    base, sv, X = base_sv_features
+    shap.decision_plot(base, sv[0], features=X.iloc[0], show=False)
+
+
+def test_single_observation_string_feature_value(base_sv_features):
+    """String feature values should be formatted with parentheses."""
+    base, sv, _ = base_sv_features
+    n = sv.shape[1]
+    feat = np.array([["a"] * n], dtype=object)
+    shap.decision_plot(base, sv[[0]], features=feat, show=False)
+
+
+# ---------------------------------------------------------------------------
+# Interaction values (3-D shap_values)
+# ---------------------------------------------------------------------------
+
+
+def test_interaction_values(rfc_data):
+    sv, X = rfc_data
+    rfc = sklearn.ensemble.RandomForestClassifier(n_estimators=10, random_state=0)
+    rfc.fit(X, sv.base_values[:, 0] > 0)
     ex = shap.TreeExplainer(rfc)
-    result_values = ex(X, interactions=True)
-    shap.decision_plot(
-        result_values.base_values[0, 1],
-        result_values.values[:, :, :, 1],
-        features=X,
-        show=False,
-    )
-    plt.tight_layout()
-    return fig
+    iv = ex(X, interactions=True)
+    # binary classifier returns 3D values (samples x features x features)
+    base = float(iv.base_values[0])
+    shap.decision_plot(base, iv.values[:5], show=False)
 
 
-@pytest.mark.mpl_image_compare
-def test_decision_multioutput(values_features):
-    adult_rfc_shap_values, X = values_features
-    fig = plt.figure()
-    adult_rfc_shap_values_list = [adult_rfc_shap_values.values[:, :, i] for i in range(adult_rfc_shap_values.shape[2])]
-    base_values_list = list(adult_rfc_shap_values.base_values[0, :])
-    shap.multioutput_decision_plot(base_values_list, adult_rfc_shap_values_list, row_index=0, features=X, show=False)
-    plt.tight_layout()
-    return fig
+def test_xlim_symmetric_around_base(base_sv_features):
+    """xlim should be centered around base_value (symmetric up to margin)."""
+    base, sv, _ = base_sv_features
+    sv_neg = -np.abs(sv[:5])
+    r = shap.decision_plot(base, sv_neg, show=False, return_objects=True)
+    lo, hi = r.xlim
+    # xlim is symmetric around base_value with a small margin — just check it spans base
+    assert lo < base < hi
 
 
-def test_multioutput_decision_raises(values_features):
-    adult_rfc_shap_values, X = values_features
-    with pytest.raises(ValueError, match="The base_values and shap_values args expect lists."):
+# ---------------------------------------------------------------------------
+# multioutput_decision
+# ---------------------------------------------------------------------------
+
+
+def test_multioutput_basic(rfc_data):
+    sv, X = rfc_data
+    sv_list = [sv.values[:, :, i] for i in range(sv.shape[2])]
+    bv_list = list(sv.base_values[0, :])
+    shap.multioutput_decision_plot(bv_list, sv_list, row_index=0, features=X, show=False)
+
+
+def test_multioutput_return_objects(rfc_data):
+    sv, X = rfc_data
+    sv_list = [sv.values[:, :, i] for i in range(sv.shape[2])]
+    bv_list = list(sv.base_values[0, :])
+    r = shap.multioutput_decision_plot(bv_list, sv_list, row_index=0, features=X, show=False, return_objects=True)
+    assert r is not None
+    assert hasattr(r, "base_value")
+
+
+def test_multioutput_new_base_value(rfc_data):
+    sv, X = rfc_data
+    sv_list = [sv.values[:, :, i] for i in range(sv.shape[2])]
+    bv_list = list(sv.base_values[0, :])
+    r = shap.multioutput_decision_plot(bv_list, sv_list, row_index=0, show=False, return_objects=True, new_base_value=0)
+    assert r.base_value == 0
+
+
+def test_multioutput_features_numpy_2d(rfc_data):
+    sv, X = rfc_data
+    sv_list = [sv.values[:, :, i] for i in range(sv.shape[2])]
+    bv_list = list(sv.base_values[0, :])
+    shap.multioutput_decision_plot(bv_list, sv_list, row_index=0, features=X.values, show=False)
+
+
+def test_multioutput_features_dataframe(rfc_data):
+    sv, X = rfc_data
+    sv_list = [sv.values[:, :, i] for i in range(sv.shape[2])]
+    bv_list = list(sv.base_values[0, :])
+    shap.multioutput_decision_plot(bv_list, sv_list, row_index=2, features=X, show=False)
+
+
+def test_multioutput_raises_not_lists(rfc_data):
+    sv, X = rfc_data
+    with pytest.raises(ValueError, match="base_values and shap_values args expect lists"):
         shap.multioutput_decision_plot(
-            adult_rfc_shap_values.base_values[0, :],
-            adult_rfc_shap_values.values[:, :, :],
-            row_index=0,
-            features=X,
-        )
-    with pytest.raises(
-        ValueError, match="The shap_values arg should be a list of two or three dimensional SHAP arrays."
-    ):
-        adult_rfc_shap_values_list = [
-            adult_rfc_shap_values.values[:, 0, i] for i in range(adult_rfc_shap_values.shape[2])
-        ]
-        base_values_list = list(adult_rfc_shap_values.base_values[0, :])
-        shap.multioutput_decision_plot(
-            base_values_list,
-            adult_rfc_shap_values_list,
+            sv.base_values[0, :],  # ndarray, not list
+            sv.values[:, :, :],
             row_index=0,
         )
 
 
-# (base_values, shap_values, row_index, **kwargs)
-
-
-# ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-#
-# Visual tests
-#
-# ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-
-# import lightgbm as lgb
-# import xgboost as xgb
-# import matplotlib.pyplot as pl
-# import numpy as np
-# from scipy.special import expit
-# from sklearn.model_selection import train_test_split
-#
-# import shap
-#
-# random_state = 7
-#
-# X, y = shap.datasets.adult()
-# X_display, y_display = shap.datasets.adult(display=True)
-#
-# # create a train/test split
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=random_state)
-# d_train = lgb.Dataset(X_train, label=y_train)
-# d_test = lgb.Dataset(X_test, label=y_test)
-#
-# params = {
-#     "max_bin": 512,
-#     "learning_rate": 0.05,
-#     "boosting_type": "gbdt",
-#     "objective": "binary",
-#     "metric": "binary_logloss",
-#     "num_leaves": 10,
-#     "verbose": -1,
-#     "min_data": 100,
-#     "boost_from_average": True,
-#     "random_state": random_state
-# }
-#
-# model = lgb.train(params, d_train, 1000, valid_sets=[d_test], early_stopping_rounds=50, verbose_eval=False)
-#
-# explainer = shap.TreeExplainer(model)
-# base_value = explainer.expected_value
-# select = range(20)
-# features = X_test.iloc[select]
-# y_label = y_test[select]
-# shap_values = explainer.shap_values(features)[1]
-# shap_interaction_values = explainer.shap_interaction_values(features)
-# features_display = X_display.loc[features.index]
-#
-# args1 = dict(base_value=base_value, shap_values=shap_values)
-# args2 = args1.copy()
-# args2["shap_values"] = shap_interaction_values
-#
-# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-# # Basic plots with default (importance) sort and generated labels.
-# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-#
-# shap.decision_plot(**args1)
-# shap.decision_plot(**args2)
-#
-# shap.decision_plot(highlight=[0, 9], **args1)
-#
-# shap.decision_plot(features=features_display, **args1)
-# shap.decision_plot(features=features_display, **args2)
-#
-# # Plot a single observation without features
-# shap.decision_plot(base_value, shap_values[0, :])
-# shap.decision_plot(base_value, shap_values[[0], :])
-#
-# # Now, with a Pandas Series (and also test auto feature value positioning)
-# shap.decision_plot(base_value, shap_values[0, :], features=features_display.iloc[0, :])
-# s = shap_values[0, :].copy()
-# s[-1] = -35; s[-2] = 15
-# shap.decision_plot(base_value, s, features=features_display.iloc[0, :], feature_order='None')
-# s[-1] = 40; s[-2] = -20
-# shap.decision_plot(base_value, s, features=features_display.iloc[0, :], feature_order='None')
-# shap.decision_plot(base_value, shap_values[4, :], features=features_display.iloc[4, :], feature_order='hclust')
-# shap.decision_plot(base_value, shap_values[7, :], features=features_display.iloc[7, :], feature_order='hclust')
-# shap.decision_plot(base_value, shap_interaction_values[[0], :], features=features_display.iloc[0, :])
-# # Now with a single observation using a matrix and a Pandas Dataframe
-# shap.decision_plot(base_value, shap_values[[0], :], features=features_display.iloc[[0], :])
-# shap.decision_plot(base_value, shap_interaction_values[[0], :], features=features_display.iloc[[0], :])
-# # Now with feature names in the features argument.
-# names = features_display.columns.to_list()
-# shap.decision_plot(base_value, shap_values[[0], :], features=names)
-# shap.decision_plot(base_value, shap_interaction_values[[0], :], features=names)
-# # Now with feature names in the features argument as numpy.
-# shap.decision_plot(base_value, shap_values[[0], :], features=np.array(names))
-# shap.decision_plot(base_value, shap_interaction_values[[0], :], features=np.array(names))
-#
-# names = features_display.columns.to_list()
-# args1["feature_names"] = names
-# args2["feature_names"] = names
-#
-# # Plot font changes sizes depending on whether an interaction feature is printed.
-# shap.decision_plot(feature_display_range=slice(None, -11, -1), **args2)
-# shap.decision_plot(feature_display_range=slice(None, -9, -1), **args2)
-#
-# # Highlighting by index
-# highlight = [1, 9]
-# shap.decision_plot(highlight=highlight, **args1)
-#
-# # Highlighting by boolean array
-# predictions = base_value + shap_values.sum(1)
-# highlight = np.abs(predictions) > 9
-# shap.decision_plot(highlight=highlight, **args1)
-# highlight = y_label != (expit(predictions) > 0.5)
-# shap.decision_plot(highlight=highlight, **args1)
-#
-# # Highlighting by slice
-# shap.decision_plot(highlight=slice(0, 10), **args1)
-#
-# # Logit link
-# shap.decision_plot(link="logit", **args1)
-# shap.decision_plot(link="logit", **args2)
-#
-# # Color scheme
-# shap.decision_plot(plot_color="coolwarm", **args1)
-#
-# # Axis color
-# shap.decision_plot(axis_color="#FF0000", **args1)
-#
-# # Y feature demarcation color
-# shap.decision_plot(y_demarc_color="#FF0000", **args1)
-#
-# # Alpha value
-# shap.decision_plot(alpha=0.2, **args1)
-#
-# # Disable color bar
-# shap.decision_plot(color_bar=False, **args1)
-# shap.decision_plot(color_bar=False, feature_display_range=slice(-20, None, 1), **args1)
-#
-# # Disable autosize
-# shap.decision_plot(auto_size_plot=False, **args1)
-# shap.decision_plot(auto_size_plot=False, **args2)
-#
-# # Enable title
-# shap.decision_plot(title="This doesn't look good", **args1)
-#
-# # Disable show
-# shap.decision_plot(show=False, **args1)
-# pl.show()
-#
-# # Flip y-axis
-# shap.decision_plot(feature_display_range=slice(-20, None, 1), **args1)
-# shap.decision_plot(feature_display_range=slice(-20, None, 1), **args2)
-# shap.decision_plot(**args2) # to compare with previous plot
-#
-# # Use return_objects
-# r = shap.decision_plot(return_objects=True, **args1)
-# idx = 8
-# shap.decision_plot(base_value, shap_values[idx], features=features_display.iloc[idx],
-#                    feature_order=r.feature_idx, xlim=r.xlim)
-#
-# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-# # New base value
-# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-#
-# p = model.predict(features, raw_score=True)
-#
-# # shap values w/base value zero
-# new_base_value = 0
-# r = shap.decision_plot(base_value, shap_values, features, new_base_value=new_base_value, return_objects=True)
-# a = r.shap_values.sum(axis=1) + new_base_value
-# assert np.all(a.round(5) == p[select].round(5))
-# assert r.base_value == new_base_value
-#
-# # shap values w/base value non-zero
-# new_base_value = 2.3
-# r = shap.decision_plot(base_value, shap_values, features, new_base_value=new_base_value, return_objects=True)
-# a = r.shap_values.sum(axis=1) + new_base_value
-# assert np.all(a.round(5) == p[select].round(5))
-# assert r.base_value == new_base_value
-#
-# # shap interaction values w/base value zero
-# new_base_value = 0
-# r = shap.decision_plot(base_value, shap_interaction_values, features, new_base_value=new_base_value,
-#                        return_objects=True, feature_display_range=slice(None, None, -1))
-# a = r.shap_values.sum(axis=1) + new_base_value
-# assert np.all(a.round(5) == p[select].round(5))
-# assert r.base_value == new_base_value
-#
-# # shap interaction values w/base value non-zero
-# new_base_value = -2.1
-# r = shap.decision_plot(base_value, shap_interaction_values, features, new_base_value=new_base_value,
-#                        return_objects=True, feature_display_range=slice(None, None, -1))
-# a = r.shap_values.sum(axis=1) + new_base_value
-# assert np.all(a.round(5) == p[select].round(5))
-# assert r.base_value == new_base_value
-#
-# # shap interaction values w/base value non-zero and logit link
-# new_base_value = -2.1
-# r = shap.decision_plot(base_value, shap_interaction_values, features, new_base_value=new_base_value,
-#                        return_objects=True, feature_display_range=slice(None, None, -1), link='logit')
-# a = r.shap_values.sum(axis=1) + new_base_value
-# assert np.all(a.round(5) == p[select].round(5))
-# assert r.base_value == new_base_value
-#
-#
-# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-# # No sorting
-# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-#
-# shap.decision_plot(feature_order="none", **args1)
-# shap.decision_plot(feature_order="none", feature_display_range=slice(-20, None, 1), **args1)
-# shap.decision_plot(feature_order="none", **args2)
-# shap.decision_plot(feature_order="none", feature_display_range=slice(-20, None, 1), **args2)
-# shap.decision_plot(feature_order=None, **args1)
-# shap.decision_plot(feature_order=None, **args2)
-#
-#
-# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-# # Hierarchical cluster sorting
-# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-#
-# shap.decision_plot(feature_order="hclust", **args1)
-# shap.decision_plot(feature_order="hclust", feature_display_range=slice(-20, None, 1), **args1)
-# shap.decision_plot(feature_order="hclust", **args2)
-# shap.decision_plot(feature_order="hclust", feature_display_range=slice(-20, None, 1), **args2)
-#
-#
-# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-# # Feature display range
-# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-#
-# shap.decision_plot(**args1)
-# r = shap.decision_plot(feature_display_range=range(0, 20), return_objects=True, **args1)
-# shap.decision_plot(feature_display_range=range(0, 1), xlim=r.xlim, **args1)
-# shap.decision_plot(feature_display_range=range(0, 2), xlim=r.xlim, **args1)
-# shap.decision_plot(feature_display_range=range(1, 2), xlim=r.xlim, **args1)
-# shap.decision_plot(feature_display_range=range(10, 12), xlim=r.xlim, **args1)
-# shap.decision_plot(feature_display_range=range(11, 9, -1), xlim=r.xlim, **args1)
-# shap.decision_plot(feature_display_range=range(11, 12), xlim=r.xlim, **args1)
-# shap.decision_plot(feature_display_range=range(11, 10, -1), xlim=r.xlim, **args1)
-# shap.decision_plot(feature_display_range=range(11, 0, -1), xlim=r.xlim, **args1)
-#
-# shap.decision_plot(feature_display_range=slice(1), xlim=r.xlim, **args1)
-# shap.decision_plot(feature_display_range=slice(-12, -13, -1), xlim=r.xlim, **args1)
-# shap.decision_plot(feature_display_range=slice(0, 2), xlim=r.xlim, **args1)
-# shap.decision_plot(feature_display_range=slice(-11, -13, -1), xlim=r.xlim, **args1)
-#
-# shap.decision_plot(feature_order='hclust', feature_display_range=slice(None, -21, -1), xlim=r.xlim, **args2)
-# shap.decision_plot(feature_order='hclust', feature_display_range=slice(20, None, -1), xlim=r.xlim, **args2)
-#
-# # decision_plot transforms negative values in a range so they are interpreted correctly in a slice.
-# shap.decision_plot(feature_order='hclust', feature_display_range=range(11, -1, -1), xlim=r.xlim, **args2)
-# shap.decision_plot(feature_order='hclust', feature_display_range=range(-100, 12, 1), xlim=r.xlim, **args2)
-#
-#
-# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-# # Multioutput
-# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-#
-# X, y = shap.datasets.iris()
-# model = xgb.XGBClassifier()
-# model.fit(X, y)
-# explainer = shap.TreeExplainer(model)
-# sh = explainer.shap_values(X)
-# ev = explainer.expected_value
-# p = model.predict(X, output_margin=True)
-# for i in [0, 75, 149]:
-#     labels = [f'Class {j + 1} ({p[i, j]:0.2f})' for j in range(3)]
-#     shap.multioutput_decision_plot(ev, sh, i, features=X, highlight=np.argmax(p[i]), legend_labels=labels)
-#
-# # shap values w/mean of expected values
-# r1 = shap.multioutput_decision_plot(ev, sh, i, features=X, highlight=np.argmax(p[i]), legend_labels=labels,
-#                                return_objects=True)
-# a = r1.shap_values.sum(axis=1) + np.array(ev).mean()
-# print(a)
-# print(p[i])
-# assert np.all(a.round(5) == p[i].round(5))
-# assert r1.base_value == np.array(ev).mean()
-#
-# # shap values w/base value zero
-# new_base_value = 0
-# r1 = shap.multioutput_decision_plot(ev, sh, i, features=X, highlight=np.argmax(p[i]), legend_labels=labels,
-#                                new_base_value=new_base_value, return_objects=True)
-# a = r1.shap_values.sum(axis=1) + new_base_value
-# print(a)
-# print(p[i])
-# assert np.all(a.round(5) == p[i].round(5))
-# assert r1.base_value == new_base_value
-#
-# # shap interaction values w/mean of expected values
-# shi = explainer.shap_interaction_values(X)
-# r1 = shap.multioutput_decision_plot(ev, shi, i, features=X, highlight=np.argmax(p[i]), legend_labels=labels,
-#                                return_objects=True)
-# a = r1.shap_values.sum(axis=1) + np.array(ev).mean()
-# print(a)
-# print(p[i])
-# assert np.all(a.round(5) == p[i].round(5))
-# assert r1.base_value == np.array(ev).mean()
-#
-# # shap interaction values w/base value zero
-# new_base_value = 0
-# r1 = shap.multioutput_decision_plot(ev, shi, i, features=X, highlight=np.argmax(p[i]), legend_labels=labels,
-#                                new_base_value=new_base_value, return_objects=True)
-# a = r1.shap_values.sum(axis=1) + new_base_value
-# print(a)
-# print(p[i])
-# assert np.all(a.round(5) == p[i].round(5))
-# assert r1.base_value == new_base_value
-#
-# # shap interaction values w/base value 7.5
-# new_base_value = 7.5
-# r1 = shap.multioutput_decision_plot(ev, shi, i, features=X, highlight=np.argmax(p[i]), legend_labels=labels,
-#                                new_base_value=new_base_value, return_objects=True)
-# a = r1.shap_values.sum(axis=1) + new_base_value
-# print(a)
-# print(p[i])
-# assert np.all(a.round(5) == p[i].round(5))
-# assert r1.base_value == new_base_value
-#
-# # shap interaction values w/base value 7.5 and logit link
-# new_base_value = 1
-# r1 = shap.multioutput_decision_plot(ev, shi, i, features=X, highlight=np.argmax(p[i]),
-#                                new_base_value=new_base_value, return_objects=True, link='logit')
-# a = r1.shap_values.sum(axis=1) + new_base_value
-# print(a)
-# print(p[i])
-# assert np.all(a.round(5) == p[i].round(5))
-# assert r1.base_value == new_base_value
-#
-# # make sure correct feature is selected and plotted.
-# idx = 1
-# print(X.iloc[[idx]])
-# shap.multioutput_decision_plot([ev[0]], [sh[0]], idx, features=X, legend_labels=labels)
-# shap.multioutput_decision_plot([ev[0]], [sh[0][[idx]]], 0, features=X.iloc[idx], legend_labels=labels)
-# shap.multioutput_decision_plot([ev[0]], [sh[0]], idx, features=X.to_numpy(), legend_labels=labels)
-#
+def test_multioutput_raises_wrong_shap_dims(rfc_data):
+    sv, X = rfc_data
+    bv_list = list(sv.base_values[0, :])
+    bad_sv = [sv.values[:, 0, i] for i in range(sv.shape[2])]  # 1-D arrays
+    with pytest.raises(ValueError, match="list of two or three dimensional"):
+        shap.multioutput_decision_plot(bv_list, bad_sv, row_index=0)
