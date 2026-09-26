@@ -157,3 +157,53 @@ def test_image_to_text_grayscale():
     )
     shap.plots.image_to_text(shap_values_test, show=False)
     plt.close("all")
+
+
+@pytest.mark.mpl_image_compare
+def test_image_to_text(imagenet50_example):
+    """Single image, three output tokens with tokenizer prefixes in their names"""
+    set_reproducible_mpl_rcparams()
+    images, _ = imagenet50_example
+    # downsample to keep the baseline image small
+    image = images[0, ::8, ::8]
+    shap_values_single = (image - image.mean()) / image.max(keepdims=True)
+    shap_values = np.stack([shap_values_single, -shap_values_single, shap_values_single[::-1]], axis=-1)
+    explanation = shap.Explanation(
+        values=shap_values,
+        data=image,
+        output_names=np.array(["▁a", "Ġdog", " ##s"]),
+    )
+    shap.plots.image_to_text(explanation, show=False)
+    return plt.gcf()
+
+
+def test_image_to_text_batch():
+    """A batch of explanations should give one figure per instance."""
+    test_data = np.ones((2, 20, 20, 3)) * 50
+    test_values = np.random.rand(2, 20, 20, 3, 3)
+    test_output_names = np.array(["tok_" + str(i) for i in range(3)])
+    shap_values_test = shap.Explanation(
+        values=test_values,
+        data=test_data,
+        output_names=test_output_names,
+    )
+    plt.close("all")
+    shap.plots.image_to_text(shap_values_test, show=False)
+    assert len(plt.get_fignums()) == 2
+    plt.close("all")
+
+
+def test_image_to_text_vmax_and_token_labels():
+    """vmax should set the color scale and tokenizer prefixes should be stripped from the titles."""
+    test_data = np.ones((20, 20, 3)) * 50
+    test_values = np.random.rand(20, 20, 3, 3)
+    shap_values_test = shap.Explanation(
+        values=test_values,
+        data=test_data,
+        output_names=np.array(["▁a", "Ġdog", " ##s"]),
+    )
+    shap.plots.image_to_text(shap_values_test, vmax=0.5, show=False)
+    token_axes = plt.gcf().axes[1:4]
+    assert [ax.get_title() for ax in token_axes] == ["a", "dog", "s"]
+    assert all(ax.images[-1].get_clim() == (-0.5, 0.5) for ax in token_axes)
+    plt.close("all")
