@@ -3016,3 +3016,28 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+def test_tree_ensemble_predict_log_loss_validates_labels():
+    """TreeEnsemble.predict validates the labels when model_output="log_loss".
+
+    The check compared against the misspelled "logloss", so it never ran:
+    without ``y`` the C extension silently used labels of 0, and a too short
+    ``y`` was read out of bounds. Addresses #4828.
+    """
+    xgboost = pytest.importorskip("xgboost")
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(20, 3))
+    y = rng.normal(size=20)
+    model = xgboost.XGBRegressor(n_estimators=5, max_depth=2, random_state=0).fit(X, y)
+    explainer = shap.TreeExplainer(model, X[:10], model_output="log_loss")
+    assert explainer.model.model_output == "log_loss"
+    assert explainer.model.objective == "squared_error"
+
+    with pytest.raises(ValueError, match="labels must be provided"):
+        explainer.model.predict(X[:5])
+    with pytest.raises(ValueError, match="does not match the number of samples"):
+        explainer.model.predict(X[:5], y=y[:2])
+
+    # valid labels are unaffected: squared loss of the raw prediction
+    np.testing.assert_allclose(explainer.model.predict(X[:5], y=y[:5]), (model.predict(X[:5]) - y[:5]) ** 2, atol=1e-6)
