@@ -317,7 +317,8 @@ class TreeExplainer(Explainer):
             # without round-tripping through an external model object.
             self.model = model
         else:
-            self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
+            lazy_load = self.data is None and feature_perturbation == "tree_path_dependent" and model_output == "raw"
+            self.model = TreeEnsemble(model, self.data, self.data_missing, model_output, lazy_load=lazy_load)
         self.model_output = model_output
         # self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
 
@@ -366,6 +367,20 @@ class TreeExplainer(Explainer):
             self.expected_value += self.model.base_offset
             if self.model.model_output != "raw":
                 self.expected_value = None  # we don't handle transforms in this case right now...
+        elif self.model.model_type == "lightgbm" and getattr(self.model, "_lazy_model", None) is not None:
+            num_features = self.model.original_model.num_feature()
+            # LightGBM returns the path-dependent baseline in the last column for any input.
+            phi = self.model.original_model.predict(
+                np.zeros((1, num_features), dtype=self.model.input_dtype),
+                num_iteration=-1,
+                pred_contrib=True,
+            )
+            if phi.shape[1] != num_features + 1:
+                phi = phi.reshape(1, phi.shape[1] // (num_features + 1), num_features + 1)
+            if len(phi.shape) == 3:
+                self.expected_value = [phi[0, i, -1] for i in range(phi.shape[1])]
+            else:
+                self.expected_value = phi[0, -1]
 
         # if our output format requires binary classification to be represented as two outputs then we do that here
         if self.model.model_output == "probability_doubled" and self.expected_value is not None:
@@ -480,6 +495,8 @@ class TreeExplainer(Explainer):
         tree_limit: int | None,
         check_additivity: bool,
     ) -> tuple[npt.NDArray[Any], npt.NDArray[Any] | pd.Series | None, npt.NDArray[np.bool_], bool, int, bool]:
+        self.model._ensure_trees_loaded()
+
         # see if we have a default tree_limit in place.
         if tree_limit is None:
             tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
@@ -921,7 +938,8 @@ class TreeExplainer(Explainer):
         """Pull off the last column and keep it as our expected_value"""
         if self.model.num_outputs == 1:
             # get expected value only if not already set
-            self.expected_value = getattr(self, "expected_value", phi[0, -1, -1, 0])
+            if self.expected_value is None:
+                self.expected_value = phi[0, -1, -1, 0]
             if flat_output:
                 out = phi[0, :-1, :-1, 0]
             else:
@@ -972,7 +990,9 @@ class TreeExplainer(Explainer):
             return False
 
         try:
-            TreeEnsemble(model)
+            # Model support checks should not parse every LightGBM tree: the
+            # native predictor is used for the default tree-path-dependent path.
+            TreeEnsemble(model, lazy_load=True)
         except Exception:
             return False
         return True
@@ -1011,6 +1031,7 @@ class TreeEnsemble:
     max_depth: int
     _xgboost_n_outputs: int
     _xgb_dmatrix_props: dict[str, Any]
+    _lazy_model: Any | None
 
     def __init__(
         self,
@@ -1018,6 +1039,7 @@ class TreeEnsemble:
         data: npt.NDArray[Any] | None = None,
         data_missing: npt.NDArray[np.bool_] | None = None,
         model_output: str | None = None,
+        lazy_load: bool = False,
     ) -> None:
         self.model_type = "internal"
         self.trees = None
@@ -1037,6 +1059,7 @@ class TreeEnsemble:
         self.tree_limit = None  # used for limiting the number of trees we use by default (like from early stopping)
         self.num_stacked_models = 1  # If this is greater than 1 it means we have multiple stacked models with the same number of trees in each model (XGBoost multi-output style)
         self.cat_feature_indices = None  # If this is set it tells us which features are treated categorically
+        self._lazy_model = None
         self._xgb_enable_categorical = False
 
         # we use names like keras
@@ -1425,11 +1448,7 @@ class TreeEnsemble:
             assert_import("lightgbm")
             self.model_type = "lightgbm"
             self.original_model = model
-            tree_info = self.original_model.dump_model()["tree_info"]
-            try:
-                self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
-            except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
+            self._set_lightgbm_trees(model, data, data_missing, lazy_load)
 
             self.objective = objective_name_map.get(model.params.get("objective", "regression"), None)
             self.tree_output = tree_output_name_map.get(model.params.get("objective", "regression"), None)
@@ -1451,11 +1470,7 @@ class TreeEnsemble:
             assert_import("lightgbm")
             self.model_type = "lightgbm"
             self.original_model = model.booster_
-            tree_info = self.original_model.dump_model()["tree_info"]
-            try:
-                self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
-            except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
+            self._set_lightgbm_trees(model, data, data_missing, lazy_load)
             self.objective = objective_name_map.get(model.objective, None)
             self.tree_output = tree_output_name_map.get(model.objective, None)
             if model.objective is None:
@@ -1465,11 +1480,7 @@ class TreeEnsemble:
             assert_import("lightgbm")
             self.model_type = "lightgbm"
             self.original_model = model.booster_
-            tree_info = self.original_model.dump_model()["tree_info"]
-            try:
-                self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
-            except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
+            self._set_lightgbm_trees(model, data, data_missing, lazy_load)
             # Note: for ranker, leaving tree_output and objective as None as they
             # are not implemented in native code yet
         elif safe_isinstance(model, "lightgbm.sklearn.LGBMClassifier"):
@@ -1478,11 +1489,7 @@ class TreeEnsemble:
             if model.n_classes_ > 2:
                 self.num_stacked_models = model.n_classes_
             self.original_model = model.booster_
-            tree_info = self.original_model.dump_model()["tree_info"]
-            try:
-                self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
-            except Exception:
-                self.trees = None  # we get here because the cext can't handle categorical splits yet
+            self._set_lightgbm_trees(model, data, data_missing, lazy_load)
             self.objective = objective_name_map.get(model.objective, None)
             self.tree_output = tree_output_name_map.get(model.objective, None)
             if model.objective is None:
@@ -1631,6 +1638,33 @@ class TreeEnsemble:
             self.base_offset = self.base_offset.flatten()
             assert len(self.base_offset) == self.num_outputs
 
+    def _set_lightgbm_trees(
+        self,
+        model: Any,
+        data: npt.NDArray[Any] | None,
+        data_missing: npt.NDArray[np.bool_] | None,
+        lazy_load: bool,
+    ) -> None:
+        if lazy_load and data is None:
+            self._lazy_model = model
+            return
+
+        tree_info = self.original_model.dump_model()["tree_info"]
+        try:
+            self.trees = [SingleTree(tree, data=data, data_missing=data_missing) for tree in tree_info]
+        except Exception:
+            self.trees = None  # we get here because the cext can't handle categorical splits yet
+
+    def _ensure_trees_loaded(self) -> None:
+        lazy_model = getattr(self, "_lazy_model", None)
+        if lazy_model is None:
+            return
+
+        # Reuse the regular parser and dense-array setup so the lazy path has
+        # exactly the same behavior as an eagerly parsed LightGBM model.
+        loaded_model = TreeEnsemble(lazy_model, self.data, self.data_missing, self.model_output)
+        self.__dict__.update(loaded_model.__dict__)
+
     def _set_xgboost_model_attributes(
         self,
         data: npt.NDArray[Any] | None,
@@ -1658,6 +1692,8 @@ class TreeEnsemble:
 
     @property
     def num_outputs(self) -> int:
+        self._ensure_trees_loaded()
+
         # Currently, XGBoost models derive the num_outputs attribute from the input
         # models, which is set during model load.
         if self.model_type == "xgboost":
@@ -1721,6 +1757,8 @@ class TreeEnsemble:
             original model, and -1 means no limit.
 
         """
+        self._ensure_trees_loaded()
+
         if output is None:
             output = self.model_output
 
