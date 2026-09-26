@@ -81,18 +81,19 @@ class PyTorchDeep(Explainer):
         """Removes the x and y attributes which were added by the forward handles
         Recursively searches for non-container layers
         """
-        for child in model.children():
-            if "nn.modules.container" in str(type(child)):
+        children = list(model.children())
+        if children:
+            for child in children:
                 self.remove_attributes(child)
-            else:
-                try:
-                    del child.x
-                except AttributeError:
-                    pass
-                try:
-                    del child.y
-                except AttributeError:
-                    pass
+        else:
+            try:
+                del model.x
+            except AttributeError:
+                pass
+            try:
+                del model.y
+            except AttributeError:
+                pass
 
     def gradient(self, idx, inputs):
         import torch
