@@ -30,15 +30,16 @@ def test_unsupported_model_raises_error():
         _ = shap.TreeExplainer(CustomEstimator())
 
 
-def test_unfitted_model_raises_valueerror():
+@pytest.mark.parametrize(
+    "model_class",
+    [sklearn.ensemble.RandomForestRegressor, sklearn.ensemble.ExtraTreesRegressor, RandomForestClassifier],
+)
+def test_unfitted_model_raises_valueerror(model_class):
     """Passing an unfitted model to TreeEnsemble should give ValueError, not AssertionError."""
-    from sklearn.ensemble import ExtraTreesRegressor
-
     from shap.explainers._tree import TreeEnsemble
 
-    model = ExtraTreesRegressor()
     with pytest.raises(ValueError, match="Have you called `model.fit`"):
-        TreeEnsemble(model)
+        TreeEnsemble(model_class())
 
 
 def test_catboost_unsupported_args():
@@ -55,6 +56,39 @@ def test_catboost_unsupported_args():
 
     with pytest.raises(ValueError, match="tree_limit is not yet supported for CatBoost"):
         explainer.shap_values(X[:3], tree_limit=5)
+
+    with pytest.raises(ValueError, match="tree_limit is not yet supported for CatBoost"):
+        explainer.shap_interaction_values(X[:3], tree_limit=5)
+
+
+def test_lightgbm_unsupported_args():
+    """LightGBM doesn't support approximate, check we get ValueError."""
+    lightgbm = pytest.importorskip("lightgbm")
+
+    model = lightgbm.LGBMRegressor(n_estimators=10, verbose=-1)
+    X = np.random.randn(50, 4)
+    model.fit(X, np.random.randn(50))
+    explainer = shap.TreeExplainer(model)
+
+    with pytest.raises(ValueError, match="approximate=True is not supported for LightGBM"):
+        explainer.shap_values(X[:3], approximate=True)
+
+
+def test_ngboost_unsupported_models():
+    """Unfitted NGBoost models and non-tree base learners should give ValueError."""
+    from sklearn.linear_model import Ridge
+
+    ngboost = pytest.importorskip("ngboost")
+
+    with pytest.raises(ValueError, match="empty `base_models`"):
+        shap.TreeExplainer(ngboost.NGBRegressor())
+
+    model = ngboost.NGBRegressor(Base=Ridge(), n_estimators=2, verbose=False)
+    X = np.random.randn(50, 4)
+    model.fit(X, np.random.randn(50))
+
+    with pytest.raises(ValueError, match="You must use default_tree_learner"):
+        shap.TreeExplainer(model, model_output=0)  # type: ignore[arg-type]
 
 
 def test_mismatched_tree_output_dims():
@@ -87,6 +121,54 @@ def test_mismatched_tree_output_dims():
 
     with pytest.raises(ValueError, match="same output dimension"):
         TreeEnsemble(model_dict)
+
+
+def test_mismatched_base_offset_length():
+    """TreeEnsemble should reject a base_offset that doesn't match the number of outputs."""
+    from shap.explainers._tree import TreeEnsemble
+
+    # one single-node tree with 1 output, but 2 base offsets
+    model_dict = {
+        "trees": [
+            {
+                "children_left": np.array([-1], dtype=np.int32),
+                "children_right": np.array([-1], dtype=np.int32),
+                "children_default": np.array([-1], dtype=np.int32),
+                "features": np.array([-2], dtype=np.int32),
+                "thresholds": np.array([0.0]),
+                "values": np.array([[1.0]]),
+                "node_sample_weight": np.array([10.0]),
+            },
+        ],
+        "base_offset": np.array([0.0, 1.0]),
+    }
+
+    with pytest.raises(ValueError, match="does not match num_outputs"):
+        TreeEnsemble(model_dict)
+
+
+def test_interaction_values_require_raw_output():
+    """SHAP interaction values only support model_output="raw", check we get ValueError otherwise."""
+    X = np.random.randn(50, 4)
+    model = RandomForestClassifier(n_estimators=5, random_state=0).fit(X, X[:, 0] > 0)
+    explainer = shap.TreeExplainer(model, X, model_output="probability")
+
+    with pytest.raises(ValueError, match='Only model_output = "raw" is supported'):
+        explainer.shap_interaction_values(X[:3])
+
+
+def test_3d_input_raises_valueerror():
+    """3D input should give ValueError from both TreeExplainer and TreeEnsemble.predict."""
+    X = np.random.randn(50, 4)
+    model = DecisionTreeRegressor(max_depth=3).fit(X, np.random.randn(50))
+    explainer = shap.TreeExplainer(model)
+    X_3d = X.reshape(10, 5, 4)
+
+    with pytest.raises(ValueError, match="must have 1 or 2 dimensions"):
+        explainer.shap_values(X_3d)
+
+    with pytest.raises(ValueError, match="must have 1 or 2 dimensions"):
+        explainer.model.predict(X_3d)
 
 
 def test_large_background_dataset_warning():
