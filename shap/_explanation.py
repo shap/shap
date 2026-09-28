@@ -673,19 +673,27 @@ class Explanation(metaclass=MetaExplanation):
         if not np.allclose(self.base_values, other.base_values, atol=1e-6):
             raise ValueError("Can't hstack explanations with different base values!")
 
+        def _hstack_or_none(a, b):
+            # per-feature attributes can only be stacked if both explanations have them
+            if a is None or b is None:
+                return None
+            return np.hstack([a, b])
+
         new_exp = Explanation(
             values=np.hstack([self.values, other.values]),
             base_values=self.base_values,
-            data=self.data,
-            display_data=self.display_data,
+            data=_hstack_or_none(self.data, other.data),
+            display_data=_hstack_or_none(self.display_data, other.display_data),
             instance_names=self.instance_names,
-            feature_names=self.feature_names,
+            feature_names=None
+            if self.feature_names is None or other.feature_names is None
+            else list(self.feature_names) + list(other.feature_names),
             output_names=self.output_names,
             output_indexes=self.output_indexes,
-            lower_bounds=self.lower_bounds,
-            upper_bounds=self.upper_bounds,
-            error_std=self.error_std,
-            main_effects=self.main_effects,
+            lower_bounds=_hstack_or_none(self.lower_bounds, other.lower_bounds),
+            upper_bounds=_hstack_or_none(self.upper_bounds, other.upper_bounds),
+            error_std=_hstack_or_none(self.error_std, other.error_std),
+            main_effects=_hstack_or_none(self.main_effects, other.main_effects),
             hierarchical_values=self.hierarchical_values,
             clustering=self.clustering,
         )
