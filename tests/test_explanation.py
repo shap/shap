@@ -64,6 +64,30 @@ def test_explanation_hstack(random_seed):
     assert new_exp.values.shape == (20, 12)
 
 
+def test_explanation_hstack_data_and_feature_names(random_seed):
+    """Checks that `hstack` also stacks the data and feature names of both Explanation objects."""
+    rs = np.random.RandomState(random_seed)
+    base_vals = np.ones(20) * 0.123
+    exp1 = shap.Explanation(
+        values=rs.randn(20, 2),
+        base_values=base_vals,
+        data=rs.randn(20, 2),
+        feature_names=["a", "b"],
+    )
+    exp2 = shap.Explanation(
+        values=rs.randn(20, 3),
+        base_values=base_vals,
+        data=rs.randn(20, 3),
+        feature_names=["c", "d", "e"],
+    )
+    new_exp = exp1.hstack(exp2)
+
+    assert new_exp.data.shape == (20, 5)
+    assert new_exp.feature_names == ["a", "b", "c", "d", "e"]
+    np.testing.assert_array_equal(new_exp[:, "d"].values, exp2.values[:, 1])
+    np.testing.assert_array_equal(new_exp[:, "d"].data, exp2.data[:, 1])
+
+
 def test_explanation_hstack_errors(random_seed):
     """Checks that `hstack` throws errors on invalid input."""
     # generate 2 Explanation objects for stacking

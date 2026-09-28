@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0          # setuptools_scm needs full history/tags
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
       - name: Override package name to shap-gpu
         run: sed -i 's/^name = "shap"/name = "shap-gpu"/' pyproject.toml
       - name: Build sdist
@@ -26,7 +26,7 @@ jobs:
           SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.1.dev0"
         run: uv build --sdist
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
 
   publish-testpypi:
     runs-on: ubuntu-latest
@@ -38,7 +38,7 @@ jobs:
         with:
           fetch-depth: 0          # setuptools_scm needs full history/tags
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
       - name: Override package name to shap-gpu
         run: sed -i 's/^name = "shap"/name = "shap-gpu"/' pyproject.toml
       - name: Build sdist
@@ -46,6 +46,6 @@ jobs:
           SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.1.dev0"
         run: uv build --sdist
       - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
         with:
           repository-url: https://test.pypi.org/legacy/

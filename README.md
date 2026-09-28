@@ -1,7 +1,7 @@
 
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/shap_header.svg" width="800" />
+  <img src="https://raw.githubusercontent.com/shap/shap/main/docs/artwork/shap_header.svg" width="800" />
 </p>
 
 ---
@@ -9,7 +9,7 @@
 [![Conda](https://img.shields.io/conda/vn/conda-forge/shap)](https://anaconda.org/conda-forge/shap)
 ![License](https://img.shields.io/github/license/shap/shap)
 ![Tests](https://github.com/shap/shap/actions/workflows/run_tests.yml/badge.svg)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/shap/shap/master)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/shap/shap/main)
 [![Documentation Status](https://readthedocs.org/projects/shap/badge/?version=latest)](https://shap.readthedocs.io/en/latest/?badge=latest)
 ![Downloads](https://img.shields.io/pypi/dm/shap)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/shap)](https://pypi.org/pypi/shap/)
@@ -149,7 +149,7 @@ shap.plots.text(shap_values[0, :, "POSITIVE"])
 ```
 
 <p align="center">
-  <img width="811" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/sentiment_analysis_plot.png" />
+  <img width="811" src="https://raw.githubusercontent.com/shap/shap/main/docs/artwork/sentiment_analysis_plot.png" />
 </p>
 
 ## Deep learning example with DeepExplainer (TensorFlow/Keras models)
@@ -176,7 +176,7 @@ shap.image_plot(shap_values, -x_test[1:5])
 ```
 
 <p align="center">
-  <img width="820" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/mnist_image_plot.png" />
+  <img width="820" src="https://raw.githubusercontent.com/shap/shap/main/docs/artwork/mnist_image_plot.png" />
 </p>
 
 The plot above explains ten outputs (digits 0-9) for four different images. Red pixels increase the model's output while blue pixels decrease the output. The input images are shown on the left, and as nearly transparent grayscale backings behind each of the explanations. The sum of the SHAP values equals the difference between the expected model output (averaged over the background dataset) and the current model output. Note that for the 'zero' image the blank middle is important, while for the 'four' image the lack of a connection on top makes it a four instead of a nine.
@@ -224,7 +224,7 @@ shap.image_plot(shap_values, to_explain, index_names)
 ```
 
 <p align="center">
-  <img width="500" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/gradient_imagenet_plot.png" />
+  <img width="500" src="https://raw.githubusercontent.com/shap/shap/main/docs/artwork/gradient_imagenet_plot.png" />
 </p>
 
 Predictions for two input images are explained in the plot above. Red pixels represent positive SHAP values that increase the probability of the class, while blue pixels represent negative SHAP values the reduce the probability of the class. By using `ranked_outputs=2` we explain only the two most likely classes for each input (this spares us from explaining all 1,000 classes).
@@ -254,7 +254,7 @@ shap_values = explainer.shap_values(X_test, nsamples=100)
 shap.force_plot(explainer.expected_value[0], shap_values[0][0,:], X_test.iloc[0,:], link="logit")
 ```
 <p align="center">
-  <img width="810" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/iris_instance.png" />
+  <img width="810" src="https://raw.githubusercontent.com/shap/shap/main/docs/artwork/iris_instance.png" />
 </p>
 
 The above explanation shows four features each contributing to push the model output from the base value (the average model output over the training dataset we passed) towards zero. If there were any features pushing the class label higher they would be shown in red.
@@ -266,7 +266,7 @@ If we take many explanations such as the one shown above, rotate them 90 degrees
 shap.force_plot(explainer.expected_value[0], shap_values[0], X_test, link="logit")
 ```
 <p align="center">
-  <img width="813" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/iris_dataset.png" />
+  <img width="813" src="https://raw.githubusercontent.com/shap/shap/main/docs/artwork/iris_dataset.png" />
 </p>
 
 ## SHAP Interaction Values
@@ -274,7 +274,7 @@ shap.force_plot(explainer.expected_value[0], shap_values[0], X_test, link="logit
 SHAP interaction values are a generalization of SHAP values to higher order interactions. Fast exact computation of pairwise interactions are implemented for tree models with `shap.TreeExplainer(model).shap_interaction_values(X)`. This returns a matrix for every prediction, where the main effects are on the diagonal and the interaction effects are off-diagonal. These values often reveal interesting hidden relationships, such as how the increased risk of death peaks for men at age 60 (see the NHANES notebook for details):
 
 <p align="center">
-  <img width="483" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/nhanes_age_sex_interaction.png" />
+  <img width="483" src="https://raw.githubusercontent.com/shap/shap/main/docs/artwork/nhanes_age_sex_interaction.png" />
 </p>
 
 ## Sample notebooks
@@ -349,9 +349,9 @@ These notebooks comprehensively demonstrate how to use specific functions and ob
 
 The algorithms and visualizations used in this package came primarily out of research in [Su-In Lee's lab](https://suinlee.cs.washington.edu) at the University of Washington, and Microsoft Research. If you use SHAP in your research we would appreciate a citation to the appropriate paper(s):
 
-- For general use of SHAP you can read/cite our [NeurIPS paper](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions) ([bibtex](https://raw.githubusercontent.com/shap/shap/master/docs/references/shap_nips.bib)).
-- For TreeExplainer you can read/cite our [Nature Machine Intelligence paper](https://www.nature.com/articles/s42256-019-0138-9) ([bibtex](https://raw.githubusercontent.com/shap/shap/master/docs/references/tree_explainer.bib); [free access](https://rdcu.be/b0z70)).
+- For general use of SHAP you can read/cite our [NeurIPS paper](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions) ([bibtex](https://raw.githubusercontent.com/shap/shap/main/docs/references/shap_nips.bib)).
+- For TreeExplainer you can read/cite our [Nature Machine Intelligence paper](https://www.nature.com/articles/s42256-019-0138-9) ([bibtex](https://raw.githubusercontent.com/shap/shap/main/docs/references/tree_explainer.bib); [free access](https://rdcu.be/b0z70)).
 - For GPUTreeExplainer you can read/cite [this article](https://arxiv.org/abs/2010.13972).
-- For `force_plot` visualizations and medical applications you can read/cite our [Nature Biomedical Engineering paper](https://www.nature.com/articles/s41551-018-0304-0) ([bibtex](https://raw.githubusercontent.com/shap/shap/master/docs/references/nature_bme.bib); [free access](https://rdcu.be/baVbR)).
+- For `force_plot` visualizations and medical applications you can read/cite our [Nature Biomedical Engineering paper](https://www.nature.com/articles/s41551-018-0304-0) ([bibtex](https://raw.githubusercontent.com/shap/shap/main/docs/references/nature_bme.bib); [free access](https://rdcu.be/baVbR)).
 
 <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=189147091855991&ev=PageView&noscript=1" />
