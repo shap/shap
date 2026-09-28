@@ -70,10 +70,10 @@ Reports](https://matthewrocklin.com/minimal-bug-reports).
 ## Installing the latest version
 
 To get the very latest version of shap, you can pip-install the library directly
-from the `master` branch:
+from the `main` branch:
 
 ```bash
-pip install git+https://github.com/shap/shap.git@master
+pip install git+https://github.com/shap/shap.git@main
 ```
 
 This can be useful to test if a particular issue or bug has been fixed since the
@@ -235,7 +235,7 @@ Use a descriptive title, such as:
 Before marking your PR as "ready for review" (by removing the `Draft` status),
 please ensure:
 
-- Your feature branch is up-to-date with the master branch,
+- Your feature branch is up-to-date with the main branch,
 - All [pre-commit hooks](#code-checks-with-precommit) pass, and
 - Unit tests have been added (if your PR adds any new features or fixes a bug).
 

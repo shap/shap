@@ -31,6 +31,14 @@ def test_style_context():
     assert get_style().text_color == original_text_color
 
 
+def test_style_context_restores_style_on_error():
+    original_text_color = get_style().text_color
+    with pytest.raises(ValueError):
+        with _style.style_context(text_color="green"):
+            raise ValueError("plotting failed")
+    assert get_style().text_color == original_text_color
+
+
 def test_set_style_raises_on_invalid_options():
     with pytest.raises(InvalidStyleOptionError, match="Invalid style config option"):
         _style.set_style(foo="bar")  # type: ignore

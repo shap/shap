@@ -120,8 +120,10 @@ def style_context(**options: Unpack[StyleOptions]):
     """
     old_style = get_style()
     set_style(**options)
-    yield
-    set_style(**old_style.asdict())
+    try:
+        yield
+    finally:
+        set_style(**old_style.asdict())
 
 
 def _apply_options(style: StyleConfig, changes: StyleOptions) -> StyleConfig:
