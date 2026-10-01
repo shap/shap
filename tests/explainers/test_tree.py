@@ -2,6 +2,7 @@
 
 import itertools
 import math
+import os
 import pickle
 import sys
 
@@ -1350,6 +1351,39 @@ class TestExplainerXGBoost:
         shap_values = explainer.shap_values(X_nan)
         # check that SHAP values sum to model output
         np.testing.assert_allclose(margin, explainer.expected_value + shap_values.sum(axis=1), atol=1e-4, rtol=1e-4)
+        # check that interaction values sum to SHAP values and model output
+        # XGBoost computes interactions in float32 (HostDeviceVector<float>),
+        # so summing features accumulates ~1e-6 rounding error
+        interaction_values = explainer.shap_interaction_values(X_nan)
+        np.testing.assert_allclose(shap_values, interaction_values.sum(axis=2), atol=1e-5)
+        np.testing.assert_allclose(margin, explainer.expected_value + interaction_values.sum(axis=(1, 2)), atol=1e-5)
+
+    @pytest.mark.parametrize("Clf", classifiers)
+    def test_xgboost_mixed_category_and_nan(self, Clf):
+        """Test that xgboost explanations can handle categorical data with missing values.
+
+        Adapted from PR #4091 by @cedricdonie.
+        """
+        X, y = shap.datasets.adult(n_points=100)
+        # convert to category type (int/string for XGBoost 2.x+ compatibility)
+        X["Education-Num"] = X["Education-Num"].astype(int).astype("category")
+        X["Workclass"] = X["Workclass"].astype("category")
+        X["Country"] = X["Country"].astype("category")
+        # add a few missing values
+        X.loc[X.sample(frac=0.3, random_state=42).index, "Country"] = np.nan
+
+        clf = Clf(random_state=42, enable_categorical=True)
+        clf.fit(X, y)
+        margin = clf.predict(X, output_margin=True)
+        explainer = shap.TreeExplainer(clf)
+        shap_values = explainer.shap_values(X)
+        # check that SHAP values sum to model output
+        # XGBoost computes SHAP in float32, atol=1e-5 for accumulation noise
+        np.testing.assert_allclose(margin, explainer.expected_value + shap_values.sum(axis=1), atol=1e-5)
+        # check that interaction values sum to SHAP values and model output
+        interaction_values = explainer.shap_interaction_values(X)
+        np.testing.assert_allclose(shap_values, interaction_values.sum(axis=2), atol=1e-5)
+        np.testing.assert_allclose(margin, explainer.expected_value + interaction_values.sum(axis=(1, 2)), atol=1e-5)
 
     @pytest.mark.parametrize("Reg", regressors)
     def test_xgboost_direct(self, Reg):
@@ -3016,3 +3050,416 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+# --- Interventional SHAP interaction values tests ---
+
+
+@pytest.mark.parametrize("n_features", [3, 4, 5, 6])
+def test_interventional_interaction_values_brute_force(n_features):
+    """Verify interventional interactions match brute-force Shapley computation.
+
+    Computes exact Shapley interaction indices by definition (O(2^n) per pair)
+    and compares against our C++ implementation. Parametrized over feature counts
+    to test different set-interval configurations.
+    """
+    from itertools import combinations
+    from math import comb
+
+    np.random.seed(42)
+    X_train = np.random.randn(200, n_features)
+    y_train = X_train[:, 0] * X_train[:, 1] + X_train[:, 2 % n_features]
+    model = DecisionTreeRegressor(max_depth=3, random_state=42)
+    model.fit(X_train, y_train)
+
+    X_test = np.random.randn(2, n_features)
+    bg = X_train[:50]
+
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    interactions = explainer.shap_interaction_values(X_test)
+    sv = explainer.shap_values(X_test)
+
+    N = list(range(n_features))
+    for idx in range(len(X_test)):
+        x = X_test[idx]
+        phi_bf = np.zeros((n_features, n_features))
+
+        for i in range(n_features):
+            for j in range(i + 1, n_features):
+                rest = [f for f in N if f != i and f != j]
+                val = 0.0
+                for size in range(len(rest) + 1):
+                    for S_tuple in combinations(rest, size):
+                        S = set(S_tuple)
+                        feats = np.arange(n_features)
+                        v_S = np.mean(
+                            [model.predict(np.where(np.isin(feats, list(S)), x, r).reshape(1, -1))[0] for r in bg]
+                        )
+                        v_Si = np.mean(
+                            [model.predict(np.where(np.isin(feats, list(S | {i})), x, r).reshape(1, -1))[0] for r in bg]
+                        )
+                        v_Sj = np.mean(
+                            [model.predict(np.where(np.isin(feats, list(S | {j})), x, r).reshape(1, -1))[0] for r in bg]
+                        )
+                        v_Sij = np.mean(
+                            [
+                                model.predict(np.where(np.isin(feats, list(S | {i, j})), x, r).reshape(1, -1))[0]
+                                for r in bg
+                            ]
+                        )
+
+                        weight = 1.0 / ((n_features - 1) * comb(n_features - 2, len(S)))
+                        val += weight * (v_Sij - v_Si - v_Sj + v_S)
+                # SHAP library convention: off-diagonal stores half
+                phi_bf[i, j] = val / 2
+                phi_bf[j, i] = val / 2
+
+        # Diagonal = SHAP value - sum of off-diagonal
+        for i in range(n_features):
+            phi_bf[i, i] = sv[idx, i] - phi_bf[i, :].sum() + phi_bf[i, i]
+
+        np.testing.assert_allclose(interactions[idx], phi_bf, atol=1e-4)
+
+
+def test_interventional_interaction_values_symmetry():
+    """Verify phi[i,j] == phi[j,i]."""
+    np.random.seed(42)
+    X_train = np.random.randn(200, 8)
+    y_train = X_train[:, 0] * X_train[:, 1] + X_train[:, 2] ** 2
+    model = GradientBoostingRegressor(n_estimators=20, max_depth=3, random_state=42)
+    model.fit(X_train, y_train)
+
+    X_test = np.random.randn(5, 8)
+    bg = X_train[:50]
+
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    interactions = explainer.shap_interaction_values(X_test)
+    np.testing.assert_allclose(interactions, np.swapaxes(interactions, 1, 2), atol=1e-10)
+
+
+def test_interventional_interaction_values_additivity():
+    """Verify sum_j phi[i,j] == shap_value[i]."""
+    np.random.seed(42)
+    X_train = np.random.randn(200, 8)
+    y_train = X_train[:, 0] * X_train[:, 1] + X_train[:, 2] ** 2
+    model = GradientBoostingRegressor(n_estimators=20, max_depth=3, random_state=42)
+    model.fit(X_train, y_train)
+
+    X_test = np.random.randn(5, 8)
+    bg = X_train[:50]
+
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    interactions = explainer.shap_interaction_values(X_test)
+    sv = explainer.shap_values(X_test)
+    np.testing.assert_allclose(interactions.sum(axis=2), sv, atol=1e-4)
+
+
+def test_interventional_interaction_values_prediction():
+    """Verify interactions sum to prediction - expected_value."""
+    np.random.seed(42)
+    X_train = np.random.randn(200, 8)
+    y_train = X_train[:, 0] * X_train[:, 1] + X_train[:, 2] ** 2
+    model = GradientBoostingRegressor(n_estimators=20, max_depth=3, random_state=42)
+    model.fit(X_train, y_train)
+
+    X_test = np.random.randn(5, 8)
+    bg = X_train[:50]
+
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    interactions = explainer.shap_interaction_values(X_test)
+    preds = model.predict(X_test)
+    total = interactions.sum(axis=(1, 2)) + explainer.expected_value
+    np.testing.assert_allclose(total, preds, atol=1e-4)
+
+
+@pytest.mark.parametrize(
+    "model_name",
+    [
+        "GradientBoostingRegressor",
+        "RandomForestRegressor",
+        "lightgbm",
+        "xgboost",
+        "catboost",
+    ],
+)
+def test_interventional_interaction_values_models(model_name):
+    """Verify interventional interactions work for multiple tree model types."""
+    np.random.seed(42)
+    X_train = np.random.randn(200, 6)
+    y_train = X_train[:, 0] * X_train[:, 1] + X_train[:, 2]
+    X_test = np.random.randn(3, 6)
+    bg = X_train[:50]
+
+    if model_name == "lightgbm":
+        lightgbm = pytest.importorskip("lightgbm")
+        model = lightgbm.LGBMRegressor(n_estimators=20, max_depth=3, verbose=-1, random_state=42)
+    elif model_name == "xgboost":
+        xgboost = pytest.importorskip("xgboost")
+        model = xgboost.XGBRegressor(n_estimators=20, max_depth=3, random_state=42)
+    elif model_name == "catboost":
+        catboost = pytest.importorskip("catboost")
+        model = catboost.CatBoostRegressor(n_estimators=20, max_depth=3, random_seed=42, verbose=0)
+    elif model_name == "GradientBoostingRegressor":
+        model = GradientBoostingRegressor(n_estimators=20, max_depth=3, random_state=42)
+    elif model_name == "RandomForestRegressor":
+        from sklearn.ensemble import RandomForestRegressor
+
+        model = RandomForestRegressor(n_estimators=20, max_depth=3, random_state=42)
+    else:
+        raise ValueError(f"Unknown model: {model_name}")
+
+    model.fit(X_train, y_train)
+
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    interactions = explainer.shap_interaction_values(X_test)
+    sv = explainer.shap_values(X_test)
+
+    # Shape check
+    assert interactions.shape == (3, 6, 6)
+    # Symmetry
+    np.testing.assert_allclose(interactions, np.swapaxes(interactions, 1, 2), atol=1e-4)
+    # Row-sum additivity
+    np.testing.assert_allclose(interactions.sum(axis=2), sv, atol=1e-4)
+    # Non-zero
+    assert np.abs(interactions).max() > 0
+
+
+def test_interventional_interaction_values_nonzero():
+    """Verify interventional interactions are NOT all zeros (Issue #1824)."""
+    np.random.seed(42)
+    X_train = np.random.randn(200, 6)
+    y_train = X_train[:, 0] * X_train[:, 1] + X_train[:, 2]
+    model = GradientBoostingRegressor(n_estimators=20, max_depth=3, random_state=42)
+    model.fit(X_train, y_train)
+
+    X_test = np.random.randn(3, 6)
+    bg = X_train[:50]
+
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    interactions = explainer.shap_interaction_values(X_test)
+    assert np.abs(interactions).max() > 0.01, "Interactions are all zeros (Issue #1824 not fixed)"
+
+
+def test_interventional_interaction_values_multiclass():
+    """Verify interventional interactions work for multi-class models."""
+    from sklearn.datasets import load_iris
+
+    iris = load_iris()
+    model = RandomForestClassifier(n_estimators=10, max_depth=3, random_state=42)
+    model.fit(iris.data, iris.target)
+
+    X_test = iris.data[:5]
+    bg = iris.data[:50]
+
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    interactions = explainer.shap_interaction_values(X_test)
+
+    # Multi-class: should be 4D array (n_samples, n_features, n_features, n_classes)
+    # or a list of 3D arrays
+    if isinstance(interactions, list):
+        for cls_interactions in interactions:
+            assert cls_interactions.shape == (5, 4, 4)
+            np.testing.assert_allclose(cls_interactions, np.swapaxes(cls_interactions, 1, 2), atol=1e-4)
+    else:
+        assert interactions.shape == (5, 4, 4, 3) or interactions.shape == (5, 4, 4)
+        if interactions.ndim == 4:
+            for c in range(interactions.shape[3]):
+                np.testing.assert_allclose(
+                    interactions[:, :, :, c],
+                    np.swapaxes(interactions[:, :, :, c], 1, 2),
+                    atol=1e-4,
+                )
+
+
+def test_interventional_categorical():
+    """Verify interventional SHAP values and interactions work with categorical splits."""
+    lightgbm = pytest.importorskip("lightgbm")
+
+    np.random.seed(42)
+    n = 200
+    # Two categorical features (0-based, verifying category 0 works correctly)
+    # and one continuous feature
+    cat0 = np.random.randint(0, 4, n).astype(np.float64)
+    cat1 = np.random.randint(0, 3, n).astype(np.float64)
+    cont = np.random.randn(n)
+    y = (cat0 == 1).astype(float) * 2 + cont * 0.5 + (cat1 == 2).astype(float)
+    X = np.column_stack([cat0, cat1, cont])
+
+    ds = lightgbm.Dataset(X, label=y, categorical_feature=[0, 1], free_raw_data=False)
+    model = lightgbm.train(
+        {"objective": "regression", "verbose": -1, "n_estimators": 20, "max_depth": 4},
+        ds,
+        num_boost_round=20,
+    )
+
+    X_test = X[:10]
+    bg = X[:50]
+
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+
+    # --- SHAP values ---
+    sv = explainer.shap_values(X_test)
+    preds = model.predict(X_test)
+    # Prediction additivity: sum of SHAP values + expected value ≈ prediction
+    np.testing.assert_allclose(sv.sum(axis=1) + explainer.expected_value, preds, atol=1e-4)
+
+    # --- Interaction values ---
+    interactions = explainer.shap_interaction_values(X_test)
+    n_feats = X_test.shape[1]
+
+    # Symmetry
+    np.testing.assert_allclose(interactions, np.swapaxes(interactions, 1, 2), atol=1e-6)
+
+    # Row-sum additivity: interactions[i, j, :].sum() == sv[i, j]
+    row_sums = interactions.sum(axis=2)
+    np.testing.assert_allclose(row_sums[:, :n_feats], sv, atol=1e-4)
+
+    # Prediction additivity
+    total = interactions.sum(axis=(1, 2))
+    np.testing.assert_allclose(total + explainer.expected_value, preds, atol=1e-4)
+
+
+def test_interventional_vs_path_dependent_uncorrelated():
+    """On uncorrelated data, both modes should approximately agree."""
+    np.random.seed(42)
+    X = np.random.randn(500, 5)
+    y = X[:, 0] * X[:, 1] + X[:, 2]
+    model = DecisionTreeRegressor(max_depth=3, random_state=42)
+    model.fit(X, y)
+
+    X_test = X[:5]
+    bg = X[:100]
+
+    explainer_iv = shap.TreeExplainer(model, bg, feature_perturbation="interventional")
+    interactions_iv = explainer_iv.shap_interaction_values(X_test)
+
+    explainer_pd = shap.TreeExplainer(model, feature_perturbation="tree_path_dependent")
+    interactions_pd = explainer_pd.shap_interaction_values(X_test)
+
+    # Loose tolerance since finite-sample effects and slight correlation in random data
+    np.testing.assert_allclose(interactions_iv, interactions_pd, atol=0.15, rtol=0.3)
+
+
+def test_interventional_interaction_values_with_transform():
+    """Interventional interaction values with logistic transform (probability output).
+
+    Verifies that interaction values in probability space satisfy:
+    1. Row-sum additivity: sum_j(phi[i,j]) == shap_value[i]
+    2. Prediction additivity: sum(phi) + expected_value == predict_proba
+    3. Symmetry: phi[i,j] == phi[j,i]
+    """
+    np.random.seed(42)
+    X = np.random.randn(200, 5)
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+    model = GradientBoostingClassifier(n_estimators=10, max_depth=3, random_state=42)
+    model.fit(X, y)
+
+    bg = X[:50]
+    X_test = X[50:55]
+
+    explainer = shap.TreeExplainer(model, bg, feature_perturbation="interventional", model_output="probability")
+    iv = explainer.shap_interaction_values(X_test)
+    sv = explainer.shap_values(X_test)
+
+    # Row-sum: interaction values sum to SHAP values per feature
+    np.testing.assert_allclose(iv.sum(axis=2), sv, atol=1e-4)
+
+    # Prediction additivity
+    pred = model.predict_proba(X_test)[:, 1]
+    total = iv.sum(axis=(1, 2)) + explainer.expected_value
+    np.testing.assert_allclose(total, pred, atol=1e-4)
+
+    # Symmetry
+    np.testing.assert_allclose(iv, np.swapaxes(iv, 1, 2), atol=1e-10)
+
+
+def _compute_shap_with_threads(model, X, background, n_threads, **kwargs):
+    """Helper to compute SHAP values with a specific thread count."""
+    old_val = os.environ.get("OMP_NUM_THREADS")
+    os.environ["OMP_NUM_THREADS"] = str(n_threads)
+    try:
+        explainer = shap.TreeExplainer(model, data=background, feature_perturbation="interventional", **kwargs)
+        result = explainer.shap_values(X)
+    finally:
+        if old_val is None:
+            del os.environ["OMP_NUM_THREADS"]
+        else:
+            os.environ["OMP_NUM_THREADS"] = old_val
+    return result, explainer.expected_value
+
+
+def test_openmp_interventional_shap_values():
+    """Multi-threaded interventional SHAP values should match single-threaded."""
+    from sklearn.ensemble import RandomForestRegressor
+
+    X, y = shap.datasets.california(n_points=200)
+    model = RandomForestRegressor(n_estimators=20, max_depth=5, random_state=42)
+    model.fit(X, y)
+
+    background = X[:50]
+    X_test = X[50:80]
+
+    sv_1, ev_1 = _compute_shap_with_threads(model, X_test, background, n_threads=1)
+    sv_4, ev_4 = _compute_shap_with_threads(model, X_test, background, n_threads=4)
+
+    # Results should be identical (same accumulation order)
+    np.testing.assert_allclose(sv_1, sv_4, atol=1e-10, err_msg="SHAP values differ between 1 and 4 threads")
+
+    # Verify additivity: sum of shap values + expected_value == prediction
+    pred = model.predict(X_test.values)
+    shap_sum = ev_4 + sv_4.sum(axis=1)
+    np.testing.assert_allclose(shap_sum, pred, atol=1e-6)
+
+
+def test_openmp_interventional_interaction_values():
+    """Multi-threaded interventional interaction values should match single-threaded."""
+    X, y = shap.datasets.iris()
+    model = GradientBoostingRegressor(n_estimators=10, max_depth=3, random_state=42)
+    model.fit(X.values, y)
+
+    background = X.values[:30]
+    X_test = X.values[:10]
+
+    old_val = os.environ.get("OMP_NUM_THREADS")
+    try:
+        os.environ["OMP_NUM_THREADS"] = "1"
+        ex1 = shap.TreeExplainer(model, data=background, feature_perturbation="interventional")
+        iv_1 = ex1.shap_interaction_values(X_test)
+
+        os.environ["OMP_NUM_THREADS"] = "4"
+        ex4 = shap.TreeExplainer(model, data=background, feature_perturbation="interventional")
+        iv_4 = ex4.shap_interaction_values(X_test)
+    finally:
+        if old_val is None:
+            os.environ.pop("OMP_NUM_THREADS", None)
+        else:
+            os.environ["OMP_NUM_THREADS"] = old_val
+
+    np.testing.assert_allclose(iv_1, iv_4, atol=1e-10, err_msg="Interaction values differ between 1 and 4 threads")
+
+    # Verify symmetry
+    for i in range(iv_4.shape[0]):
+        np.testing.assert_allclose(iv_4[i], iv_4[i].T, atol=1e-10)
+
+
+def test_openmp_interventional_with_transform():
+    """Multi-threaded interventional SHAP with transform should match single-threaded."""
+    pytest.importorskip("xgboost")
+    import xgboost as xgb
+
+    X, y = shap.datasets.adult()
+    X = X[:200]
+    y = y[:200]
+
+    model = xgb.XGBClassifier(
+        n_estimators=10, max_depth=3, random_state=42, use_label_encoder=False, eval_metric="logloss"
+    )
+    model.fit(X, y)
+
+    background = X[:50]
+    X_test = X[50:70]
+
+    sv_1, ev_1 = _compute_shap_with_threads(model, X_test, background, n_threads=1, model_output="probability")
+    sv_4, ev_4 = _compute_shap_with_threads(model, X_test, background, n_threads=4, model_output="probability")
+
+    np.testing.assert_allclose(sv_1, sv_4, atol=1e-8, err_msg="SHAP values with transform differ between threads")
