@@ -146,6 +146,12 @@ class TreeExplainer(Explainer):
     feature dependence. It depends on fast C++ implementations either inside an
     external model package or in the local compiled C extension.
 
+    For raw, tree-path-dependent LightGBM explanations without background data,
+    tree parsing is deferred until an operation such as interaction values needs
+    the parsed arrays. That first operation pays the parsing cost. An explainer
+    serialized before parsing also pays this cost after each independent load
+    that requests such an operation.
+
     Examples
     --------
     See `Tree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Tree.html>`_

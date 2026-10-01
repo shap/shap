@@ -1797,7 +1797,8 @@ class TestExplainerLightGBM:
             atol=1e-4,
         )
 
-    def test_lightgbm_tree_parsing_is_lazy(self, monkeypatch):
+    @pytest.mark.parametrize("round_trip", [False, True])
+    def test_lightgbm_tree_parsing_is_lazy(self, monkeypatch, round_trip):
         lightgbm = pytest.importorskip("lightgbm")
         rng = np.random.default_rng(0)
         X = rng.normal(size=(100, 4))
@@ -1819,6 +1820,10 @@ class TestExplainerLightGBM:
         assert isinstance(explainer, shap.TreeExplainer)
         assert dump_calls == 0
         np.testing.assert_allclose(explainer.expected_value, native_contributions[0, -1])
+
+        if round_trip:
+            explainer = pickle.loads(pickle.dumps(explainer))
+            assert dump_calls == 0
 
         shap_values = explainer.shap_values(X[:3])
         native_shap_values = native_contributions[:, :-1]
