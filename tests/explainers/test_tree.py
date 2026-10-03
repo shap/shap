@@ -44,6 +44,20 @@ def test_large_background_dataset_warning():
         shap.TreeExplainer(model, background, feature_perturbation="interventional")
 
 
+def test_list_input_raises_type_error():
+    """Passing a plain Python list to shap_values should raise TypeError (not AttributeError)."""
+    X, y = shap.datasets.california(n_points=100)
+    model = DecisionTreeRegressor(max_depth=3, random_state=0)
+    model.fit(X, y)
+    explainer = shap.TreeExplainer(model)
+
+    with pytest.raises(TypeError, match="must be a numpy array"):
+        explainer.shap_values(list(X.iloc[0]))
+
+    with pytest.raises(TypeError, match="must be a numpy array"):
+        explainer.shap_values(X.values.tolist())
+
+
 def test_front_page_xgboost():
     xgboost = pytest.importorskip("xgboost")
 
