@@ -189,6 +189,10 @@ class TreeExplainer(Explainer):
             we can use the number of training samples that went down each tree
             path as our background dataset (this is recorded in the ``model``
             object).
+            Note: models with categorical splits (e.g. from XGBoost) are not
+            currently supported when a background dataset is provided.
+            If your model has categorical splits, use
+            ``feature_perturbation="tree_path_dependent"`` and omit ``data``.
 
         feature_perturbation : "auto" (default), "interventional" or "tree_path_dependent"
             Since SHAP values rely on conditional expectations, we need to
