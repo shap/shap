@@ -25,7 +25,6 @@
     "babel-loader": "^6",
     "babel-preset-es2015": "^6",
     "babel-preset-react": "^6",
-    "webpack": "^2",
-    "webpack-dev-server": "^2"
+    "webpack": "^2"
   }
 }

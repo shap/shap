@@ -16,7 +16,7 @@ def remove_retrain(
     If you want to know how important a set of features is you can ask how the model would be
     different if those features had never existed. To determine this we can mask those features
     across the entire training and test datasets, then retrain the model. If we apply compare the
-    output of this retrained model to the original model we can see the effect produced by knowning
+    output of this retrained model to the original model we can see the effect produced by knowing
     the features we masked. Since for individualized explanation methods each test sample has a
     different set of most important features we need to retrain the model for every test sample
     to get the change in model performance when a specified fraction of the most important features
@@ -216,7 +216,7 @@ def keep_retrain(
     different if only those features had existed. To determine this we can mask the other features
     across the entire training and test datasets, then retrain the model. If we apply compare the
     output of this retrained model to the original model we can see the effect produced by only
-    knowning the important features. Since for individualized explanation methods each test sample
+    knowing the important features. Since for individualized explanation methods each test sample
     has a different set of most important features we need to retrain the model for every test sample
     to get the change in model performance when a specified fraction of the most important features
     are retained.

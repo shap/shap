@@ -36,7 +36,7 @@ def record_import_error(package_name: str, msg: str, e: ImportError) -> None:
 
 
 def shapley_coefficients(n: int) -> npt.NDArray[Any]:
-    out = np.zeros(n)
+    out = np.zeros(n, dtype=np.float64)
     for i in range(n):
         out[i] = 1 / (n * scipy.special.comb(n - 1, i))
     return out

@@ -117,3 +117,36 @@ def test_force_plot_positive_sign():
         show=False,
     )
     return plt.gcf()
+
+
+def test_flipud_reverses_clust_order():
+    """Regression test for GH-4342: np.flipud(clustOrder) was a no-op."""
+    from shap.plots._force import AdditiveExplanation, AdditiveForceArrayVisualizer
+    from shap.utils._legacy import DenseData, IdentityLink, Instance, Model
+
+    feature_names = ["f0", "f1"]
+    base_value = 0.0
+    link = IdentityLink()
+    data = DenseData(np.zeros((1, 2)), feature_names)
+    model = Model(lambda x: x, ["f(x)"])
+
+    def _make_exp(effects):
+        effects = np.array(effects, dtype=float)
+        out_value = base_value + effects.sum()
+        instance = Instance(np.ones((1, len(feature_names))), np.zeros(len(feature_names)))
+        return AdditiveExplanation(base_value, out_value, effects, None, instance, link, model, data)
+
+    # Sample 0: low total  (sum = 1.0)
+    # Sample 1: high total (sum = 10.0)
+    exp_low = _make_exp([0.5, 0.5])
+    exp_high = _make_exp([5.0, 5.0])
+
+    viz = AdditiveForceArrayVisualizer([exp_low, exp_high])
+
+    sim_low = viz.data["explanations"][0]["simIndex"]
+    sim_high = viz.data["explanations"][1]["simIndex"]
+
+    assert sim_high < sim_low, (
+        f"Higher-prediction sample should come first (lower simIndex), "
+        f"got simIndex_high={sim_high}, simIndex_low={sim_low}"
+    )

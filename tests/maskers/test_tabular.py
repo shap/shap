@@ -8,6 +8,32 @@ import numpy as np
 import shap
 
 
+def test_delta_masking_with_multiple_numeric_dtypes():
+    """Test that delta masking preserves the NumPy implementation's behavior across numeric dtypes."""
+    delta_masks = np.array([shap.utils.MaskedModel.delta_mask_noop_value, 0, -2, 2], dtype=np.int32)
+    expected_masked_inputs = np.array(
+        [
+            [1, 10, 40],
+            [2, 20, 50],
+            [3, 10, 40],
+            [3, 20, 50],
+            [3, 30, 60],
+            [3, 30, 60],
+        ],
+        dtype=float,
+    )
+    expected_varying_rows = np.ones((3, 2), dtype=bool)
+
+    for dtype in (np.int8, np.uint16, np.int64, np.float32, np.float64):
+        data = np.array([[1, 10, 40], [2, 20, 50]], dtype=dtype)
+        x = np.array([3, 30, 60], dtype=dtype)
+
+        (masked_inputs,), varying_rows = shap.maskers.Independent(data)(delta_masks, x)
+
+        np.testing.assert_array_equal(masked_inputs, expected_masked_inputs)
+        np.testing.assert_array_equal(varying_rows, expected_varying_rows)
+
+
 def test_serialization_independent_masker_dataframe():
     """Test the serialization of an Independent masker based on a data frame."""
     X, _ = shap.datasets.california(n_points=500)

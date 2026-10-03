@@ -234,7 +234,7 @@ def scatter(
     if x_jitter == "auto":
         x_jitter = _suggest_x_jitter(features[:, ind])
 
-    # guess what other feature as the stongest interaction with the plotted feature
+    # guess what other feature as the strongest interaction with the plotted feature
     if interaction_index == "auto":
         interaction_index = approximate_interactions(ind, shap_values_arr, features)[0]
     interaction_index = convert_name(interaction_index, shap_values_arr, feature_names)
@@ -566,7 +566,7 @@ def dependence_legacy(
     interaction_index : "auto", None, int, or string
         The index of the feature used to color the plot. The name of a feature can also be passed
         as a string. If "auto" then shap.common.approximate_interactions is used to pick what
-        seems to be the strongest interaction (note that to find to true stongest interaction you
+        seems to be the strongest interaction (note that to find to true strongest interaction you
         need to compute the SHAP interaction values).
 
     x_jitter : float (0 - 1)
@@ -628,7 +628,7 @@ def dependence_legacy(
 
     ind = convert_name(ind, shap_values, feature_names)
 
-    # guess what other feature as the stongest interaction with the plotted feature
+    # guess what other feature as the strongest interaction with the plotted feature
     if not hasattr(ind, "__len__"):
         if interaction_index == "auto":
             interaction_index = approximate_interactions(ind, shap_values, features)[0]

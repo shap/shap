@@ -513,7 +513,7 @@ def shorten_text(text, length_limit):
 
 
 def is_color_map(color):
-    safe_isinstance(color, "matplotlib.colors.Colormap")
+    return safe_isinstance(color, "matplotlib.colors.Colormap")
 
 
 # TODO: remove unused title argument / use title argument
@@ -826,6 +826,7 @@ def summary_legacy(
             ys *= 0.9 * (row_height / np.max(ys + 1))
 
             if features is not None and colored_feature:
+                assert values is not None
                 # trim the color range, but prevent the color range from collapsing
                 vmin = np.nanpercentile(values, 5)
                 vmax = np.nanpercentile(values, 95)

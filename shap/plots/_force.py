@@ -541,7 +541,7 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
 
         # make sure that we put the higher predictions first...just for consistency
         if sum(arr[clustOrder[0]].effects) < sum(arr[clustOrder[-1]].effects):
-            np.flipud(clustOrder)  # reverse
+            clustOrder = np.flipud(clustOrder)  # reverse
 
         # build the json data
         clustOrder = np.argsort(clustOrder)  # inverse permutation

@@ -622,7 +622,12 @@ class Explanation(metaclass=MetaExplanation):
         length = self.shape[0]
         assert length is not None
         inds = rng.choice(length, size=min(max_samples, length), replace=replace)
-        return self[list(inds)]
+        prev_shape = self.shape
+        new_self = self[list(inds)]
+        # Replace the __getitem__ entry with "sample" so op_history
+        # reflects the high-level operation the user actually called.
+        new_self.op_history[-1] = OpHistoryItem(name="sample", args=(max_samples,), prev_shape=prev_shape)
+        return new_self
 
     def hclust(self, metric: str = "sqeuclidean", axis: Literal[0, 1] = 0) -> npt.NDArray[np.int64]:
         """Computes an optimal leaf ordering sort order using hclustering.

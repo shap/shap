@@ -154,16 +154,23 @@ def heatmap(
     # plot the f(x) line chart above the heat map
     ax.axhline(-1.5, color="#aaaaaa", linestyle="--", linewidth=0.5)
     fx = values.T.sum(0)
+    fx_max = np.abs(fx).max()
+    if fx_max > 0:
+        fx_normalized = fx / fx_max
+    else:
+        fx_normalized = fx  # all zeros, flat line — no division needed
     ax.plot(
-        -fx / np.abs(fx).max() - 1.5,
+        -fx_normalized - 1.5,
         color="#000000",
         linewidth=1,
     )
 
     # plot the bar plot on the right spine of the heat map
+    fv_max = np.abs(feature_values).max()
+    bar_widths = (feature_values / fv_max) * values.shape[0] / 20 if fv_max > 0 else np.zeros_like(feature_values)
     bar_container = ax.barh(
         heatmap_yticks_pos,
-        (feature_values / np.abs(feature_values).max()) * values.shape[0] / 20,
+        bar_widths,
         height=0.7,
         align="center",
         color="#000000",

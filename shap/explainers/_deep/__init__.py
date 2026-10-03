@@ -69,7 +69,7 @@ class DeepExplainer(Explainer):
 
         """
         # first, we need to find the framework
-        if type(model) is tuple:
+        if isinstance(model, tuple):
             a, b = model
             try:
                 a.named_parameters()

@@ -38,7 +38,7 @@ class PyTorchDeep(Explainer):
             with torch.no_grad():
                 _ = model(*data)
                 interim_inputs = self.layer.target_input
-                if type(interim_inputs) is tuple:
+                if isinstance(interim_inputs, tuple):
                     # this should always be true, but just to be safe
                     self.interim_inputs_shape = [i.shape for i in interim_inputs]
                 else:
@@ -279,17 +279,17 @@ def add_interim_values(module, input, output):
         else:
             # check only the 0th input varies
             for i in range(len(input)):
-                if i != 0 and type(output) is tuple:
+                if i != 0 and isinstance(output, tuple):
                     assert input[i] == output[i], "Only the 0th input may vary!"
             # if a new method is added, it must be added here too. This ensures tensors
             # are only saved if necessary
             if func_name in ["maxpool", "nonlinear_1d"]:
                 # only save tensors if necessary
-                if type(input) is tuple:
+                if isinstance(input, tuple):
                     module.x = torch.nn.Parameter(input[0].detach())
                 else:
                     module.x = torch.nn.Parameter(input.detach())
-                if type(output) is tuple:
+                if isinstance(output, tuple):
                     module.y = torch.nn.Parameter(output[0].detach())
                 else:
                     module.y = torch.nn.Parameter(output.detach())

@@ -5,13 +5,77 @@
 
 const float inf = std::numeric_limits<tfloat>::infinity();
 
+struct CategoryConstraint {
+  CategoryConstraint() = default;
+
+  __host__ __device__ static CategoryConstraint All() {
+    return CategoryConstraint{};
+  }
+
+  __host__ __device__ static CategoryConstraint Include(int categories) {
+    CategoryConstraint constraint;
+    constraint.has_include_categories = true;
+    constraint.include_categories = categories;
+    return constraint;
+  }
+
+  __host__ __device__ static CategoryConstraint Exclude(int categories) {
+    CategoryConstraint constraint;
+    constraint.exclude_categories = categories;
+    return constraint;
+  }
+
+  __host__ __device__ static bool CategoryInMask(int categories,
+                                                 float category) {
+    int category_int = static_cast<int>(category);
+    if (category_int < 1) {
+      return false;
+    }
+    int category_flag = 1 << (category_int - 1);
+    return (categories & category_flag) != 0;
+  }
+
+  __host__ __device__ bool Contains(float category) const {
+    bool included = !has_include_categories ||
+                    CategoryInMask(include_categories, category);
+    return included && !CategoryInMask(exclude_categories, category);
+  }
+
+  __host__ __device__ void Intersect(const CategoryConstraint &other) {
+    if (other.has_include_categories) {
+      include_categories = has_include_categories
+                               ? include_categories & other.include_categories
+                               : other.include_categories;
+      has_include_categories = true;
+    }
+    exclude_categories |= other.exclude_categories;
+    if (has_include_categories) {
+      include_categories &= ~exclude_categories;
+    }
+  }
+
+  bool has_include_categories = false;
+  int include_categories = 0;
+  int exclude_categories = 0;
+};
+
 struct ShapSplitCondition {
   ShapSplitCondition() = default;
   ShapSplitCondition(tfloat feature_lower_bound, tfloat feature_upper_bound,
                      bool is_missing_branch)
       : feature_lower_bound(feature_lower_bound),
         feature_upper_bound(feature_upper_bound),
-        is_missing_branch(is_missing_branch) {
+        is_missing_branch(is_missing_branch),
+        categories(CategoryConstraint::All()) {
+    assert(feature_lower_bound <= feature_upper_bound);
+  }
+  ShapSplitCondition(tfloat feature_lower_bound, tfloat feature_upper_bound,
+                     bool is_missing_branch,
+                     CategoryConstraint category_constraint)
+      : feature_lower_bound(feature_lower_bound),
+        feature_upper_bound(feature_upper_bound),
+        is_missing_branch(is_missing_branch),
+        categories(category_constraint) {
     assert(feature_lower_bound <= feature_upper_bound);
   }
 
@@ -20,12 +84,16 @@ struct ShapSplitCondition {
   tfloat feature_upper_bound;
   /*! Do missing values flow down this path? */
   bool is_missing_branch;
+  CategoryConstraint categories;
 
   // Does this instance flow down this path?
   __host__ __device__ bool EvaluateSplit(float x) const {
     // is nan
     if (isnan(x)) {
       return is_missing_branch;
+    }
+    if (!categories.Contains(x)) {
+      return false;
     }
     return x > feature_lower_bound && x <= feature_upper_bound;
   }
@@ -35,6 +103,7 @@ struct ShapSplitCondition {
   Merge(const ShapSplitCondition &other) {  // Combine duplicate features
     feature_lower_bound = max(feature_lower_bound, other.feature_lower_bound);
     feature_upper_bound = min(feature_upper_bound, other.feature_upper_bound);
+    categories.Intersect(other.categories);
     is_missing_branch = is_missing_branch && other.is_missing_branch;
   }
 };
@@ -74,21 +143,34 @@ void RecurseTree(
     return;
   }
 
-  // Add left split to the path
   unsigned left_child = tree.children_left[pos];
+  bool is_left_default = tree.children_default[pos] == left_child;
   double left_zero_fraction =
       tree.node_sample_weights[left_child] / tree.node_sample_weights[pos];
-  // Encode the range of feature values that flow down this path
-  tmp_path->emplace_back(0, tree.features[pos], 0,
-                         ShapSplitCondition{-inf, tree.thresholds[pos], false},
+  auto threshold_type = tree.threshold_types[pos];
+  auto threshold = tree.thresholds[pos];
+
+  ShapSplitCondition left_condition{-inf, threshold, is_left_default};
+  ShapSplitCondition right_condition{threshold, inf, !is_left_default};
+  if (threshold_type == 1) {
+    int categories = static_cast<int>(threshold);
+    left_condition =
+        ShapSplitCondition{-inf, inf, is_left_default,
+                           CategoryConstraint::Include(categories)};
+    right_condition =
+        ShapSplitCondition{-inf, inf, !is_left_default,
+                           CategoryConstraint::Exclude(categories)};
+  }
+
+  // Add left split to the path
+  tmp_path->emplace_back(0, tree.features[pos], 0, left_condition,
                          left_zero_fraction, 0.0f);
 
   RecurseTree(left_child, tree, tmp_path, paths, path_idx, num_outputs);
 
-  // Add left split to the path
+  // Add right split to the path
   tmp_path->back() = gpu_treeshap::PathElement<ShapSplitCondition>(
-      0, tree.features[pos], 0,
-      ShapSplitCondition{tree.thresholds[pos], inf, false},
+      0, tree.features[pos], 0, right_condition,
       1.0 - left_zero_fraction, 0.0f);
 
   RecurseTree(tree.children_right[pos], tree, tmp_path, paths, path_idx,
@@ -320,19 +402,6 @@ void dense_tree_shap_gpu(const TreeEnsemble &trees,
                          const ExplanationDataset &data, tfloat *out_contribs,
                          const int feature_dependence, unsigned model_transform,
                          bool interactions) {
-  // Check for categorical features
-  bool has_categorical = false;
-  for (unsigned i = 0; i < trees.tree_limit * trees.max_nodes; i++) {
-    if (trees.threshold_types[i] != 0) {
-      has_categorical = true;
-      break;
-    }
-  }
-  if (has_categorical) {
-    std::cerr << "Warning: Categorical features detected. GPU TreeSHAP currently "
-                 "only supports numerical features. Results may be incorrect.\n";
-  }
-
   // see what transform (if any) we have
   transform_f transform = get_transform(model_transform);
 

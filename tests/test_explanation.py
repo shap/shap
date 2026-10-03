@@ -136,7 +136,7 @@ def test_populating_op_history():
     exp += 2
     expected_op_names = [
         "abs",
-        "__getitem__",
+        "sample",
         "flip",
         "__getitem__",
         "mean",

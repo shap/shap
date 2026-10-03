@@ -99,7 +99,7 @@ def set_style(_style: StyleConfig | None = None, /, **options: Unpack[StyleOptio
     Pass keyword arguments to set individual options, or pass a StyleConfig dataclass to replace all options.
     """
     if _style is not None:
-        # Unpack the dataclass; any keyword arguments take precendence.
+        # Unpack the dataclass; any keyword arguments take precedence.
         options = _style.asdict() | options
     global _STYLE
     _STYLE = _apply_options(_STYLE, options)

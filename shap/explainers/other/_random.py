@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Literal
+
 import numpy as np
 
 from shap import links
@@ -5,6 +9,11 @@ from shap.models import Model
 from shap.utils import MaskedModel
 
 from .._explainer import Explainer
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from numpy.typing import NDArray
 
 
 class Random(Explainer):
@@ -15,26 +24,42 @@ class Random(Explainer):
     """
 
     def __init__(
-        self, model, masker, link=links.identity, feature_names=None, linearize_link=True, constant=False, **call_args
-    ):
+        self,
+        model: Any,
+        masker: Any,
+        link: Callable[..., Any] = links.identity,
+        feature_names: list[str] | list[list[str]] | None = None,
+        linearize_link: bool = True,
+        constant: bool = False,
+        **call_args: Any,
+    ) -> None:
         super().__init__(model, masker, link=link, linearize_link=linearize_link, feature_names=feature_names)
 
         if not isinstance(model, Model):
             self.model = Model(model)
 
         for arg in call_args:
-            self.__call__.__kwdefaults__[arg] = call_args[arg]
+            self.__call__.__kwdefaults__[arg] = call_args[arg]  # type: ignore[index]
 
-        self.constant = constant
-        self.constant_attributions = None
+        self.constant: bool = constant
+        self.constant_attributions: NDArray[np.floating[Any]] | None = None
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
-        """Explains a single row."""
+    def explain_row(
+        self,
+        *row_args: Any,
+        max_evals: int | Literal["auto"],
+        main_effects: bool,
+        error_bounds: bool,
+        outputs: Any,
+        silent: bool,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Explain a single row and return feature attributions."""
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
 
         # compute any custom clustering for this row
-        row_clustering = None
+        row_clustering: NDArray[np.floating[Any]] | None = None
         if getattr(self.masker, "clustering", None) is not None:
             if isinstance(self.masker.clustering, np.ndarray):
                 row_clustering = self.masker.clustering
@@ -45,14 +70,14 @@ class Random(Explainer):
                     "The masker passed has a .clustering attribute that is not yet supported by the Permutation explainer!"
                 )
 
-        # compute the correct expected value
+        # compute the correct expected values
         masks = np.zeros(1, dtype=int)
         outputs = fm(masks, zero_index=0, batch_size=1)
         expected_value = outputs[0]
 
         # generate random feature attributions
         # we produce small values so our explanation errors are similar to a constant function
-        row_values = np.random.randn(*((len(fm),) + outputs.shape[1:])) * 0.001
+        row_values: NDArray[np.floating[Any]] = np.random.randn(*((len(fm),) + outputs.shape[1:])) * 0.001
 
         return {
             "values": row_values,
@@ -63,20 +88,3 @@ class Random(Explainer):
             "error_std": None,
             "output_names": self.model.output_names if hasattr(self.model, "output_names") else None,
         }
-
-    # def __call__(self, X):
-    #     start_time = time.time()
-    #     if self.constant:
-    #         if self.constant_attributions is None:
-    #             self.constant_attributions = np.random.randn(X.shape[1])
-    #         return Explanation(np.tile(self.constant_attributions, (X.shape[0],1)), X, compute_time=time.time() - start_time)
-    #     else:
-    #         return Explanation(np.random.randn(*X.shape), X, compute_time=time.time() - start_time)
-
-    # def attributions(self, X):
-    #     if self.constant:
-    #         if self.constant_attributions is None:
-    #             self.constant_attributions = np.random.randn(X.shape[1])
-    #         return np.tile(self.constant_attributions, (X.shape[0],1))
-    #     else:
-    #         return np.random.randn(*X.shape)
