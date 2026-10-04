@@ -1,3 +1,7 @@
+import sys
+import types
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -122,3 +126,61 @@ def test_format_value_string_input():
     # Test with string that starts with minus
     result = shap.utils._general.format_value("-123", "%0.03f")
     assert result == "\u2212" + "123"
+
+
+def test_safe_isinstance_does_not_trigger_module_getattr():
+    """Regression test for lazy-imported modules (see GH #3662)."""
+
+    module_name = "dummy_lazy_module"
+    module = types.ModuleType(module_name)
+
+    class LocalClass:
+        pass
+
+    setattr(module, "LocalClass", LocalClass)
+
+    def _module_getattr(_name: str) -> Any:
+        raise RuntimeError("module __getattr__ should not be called")
+
+    setattr(module, "__getattr__", _module_getattr)
+    sys.modules[module_name] = module
+    try:
+        obj = LocalClass()
+        assert shap.utils.safe_isinstance(obj, f"{module_name}.LocalClass")
+        assert not shap.utils.safe_isinstance(obj, f"{module_name}.MissingClass")
+    finally:
+        del sys.modules[module_name]
+
+
+def test_safe_isinstance_no_import_for_unloaded_module():
+    module_name = "definitely_not_loaded_dummy_module"
+    assert module_name not in sys.modules
+    assert not shap.utils.safe_isinstance(object(), f"{module_name}.SomeClass")
+
+
+def test_safe_isinstance_matches_lazy_exported_class_via_mro():
+    package_name = "dummy_lazy_package"
+
+    package = types.ModuleType(package_name)
+
+    class PreTrainedModel:
+        pass
+
+    # Mimic a class defined in a submodule but exposed lazily from top-level.
+    PreTrainedModel.__module__ = f"{package_name}.submodule"
+
+    class ConcreteModel(PreTrainedModel):
+        pass
+
+    ConcreteModel.__module__ = f"{package_name}.impl"
+
+    def _module_getattr(_name: str) -> Any:
+        raise RuntimeError("module __getattr__ should not be called")
+
+    setattr(package, "__getattr__", _module_getattr)
+    sys.modules[package_name] = package
+    try:
+        obj = ConcreteModel()
+        assert shap.utils.safe_isinstance(obj, f"{package_name}.PreTrainedModel")
+    finally:
+        del sys.modules[package_name]
