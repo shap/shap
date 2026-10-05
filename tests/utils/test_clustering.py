@@ -6,6 +6,38 @@ from shap.utils._exceptions import DimensionError
 
 
 @pytest.mark.parametrize("linkage", ["single", "complete", "average"])
+@pytest.mark.parametrize("metric", ["cosine", "euclidean"])
+def test_hclust_distance_random_state(linkage, metric):
+    X = np.zeros((20, 5))
+    first = hclust(X, linkage=linkage, metric=metric, random_state=42)
+    second = hclust(X, linkage=linkage, metric=metric, random_state=42)
+    np.testing.assert_array_equal(first, second)
+
+
+def test_hclust_distance_preserves_global_random_state():
+    old_state = np.random.get_state()
+    try:
+        np.random.seed(17)
+        state = np.random.get_state()
+        hclust(np.zeros((20, 5)), random_state=42)
+        actual = np.random.get_state()
+        assert actual[0] == state[0]
+        np.testing.assert_array_equal(actual[1], state[1])
+        assert actual[2:] == state[2:]
+    finally:
+        np.random.set_state(old_state)
+
+
+def test_hclust_distance_random_state_object():
+    X = np.zeros((20, 5))
+    expected = hclust(X, random_state=42)
+    rng = np.random.RandomState(42)
+    actual = hclust(X, random_state=rng)
+    np.testing.assert_array_equal(actual, expected)
+    assert not np.array_equal(rng.get_state()[1], np.random.RandomState(42).get_state()[1])
+
+
+@pytest.mark.parametrize("linkage", ["single", "complete", "average"])
 def test_hclust_runs(linkage):
     # GH #3290
     pytest.importorskip("xgboost")
