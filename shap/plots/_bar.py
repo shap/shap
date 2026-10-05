@@ -78,7 +78,14 @@ def bar(
     style = get_style()
     # convert Explanation objects to dictionaries
     if isinstance(shap_values, Explanation):
-        cohorts = {"": shap_values}
+        if len(shap_values.shape) == 3:
+            # Unpack 3D multi-class explanations into a dictionary of 2D cohorts
+            cohort_names = getattr(shap_values, "output_names", None)
+            if cohort_names is None:
+                cohort_names = [f"Class {i}" for i in range(shap_values.shape[2])]
+            cohorts = {str(cohort_names[i]): shap_values[:, :, i] for i in range(shap_values.shape[2])}
+        else:
+            cohorts = {"": shap_values}
     elif isinstance(shap_values, Cohorts):
         cohorts = shap_values.cohorts
     elif isinstance(shap_values, dict):
