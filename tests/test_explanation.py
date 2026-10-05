@@ -38,6 +38,8 @@ def test_reduction_keeps_unreduced_instance_names():
     reduced = exp.sum(axis=1)
 
     assert list(reduced.instance_names) == ["first", "second"]
+
+
 from shap._explanation import OpHistoryItem
 
 
