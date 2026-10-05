@@ -10,6 +10,7 @@ from sklearn.datasets import load_wine
 from sklearn.ensemble import RandomForestClassifier
 
 import shap
+from shap._explanation import OpHistoryItem
 
 
 @pytest.mark.parametrize("method", ["mean", "min", "max", "sum"])
@@ -28,19 +29,17 @@ def test_reduction_indexes_reduced_axis(method, shape, axis):
     assert exp.op_history == []
 
 
-def test_reduction_keeps_unreduced_instance_names():
+@pytest.mark.parametrize("axis", [1, -1])
+def test_reduction_keeps_unreduced_instance_names(axis):
     exp = shap.Explanation(
         np.arange(6).reshape(2, 3),
         instance_names=["first", "second"],
         feature_names=["a", "b", "c"],
     )
 
-    reduced = exp.sum(axis=1)
+    reduced = exp.sum(axis=axis)
 
     assert list(reduced.instance_names) == ["first", "second"]
-
-
-from shap._explanation import OpHistoryItem
 
 
 def test_explanation_repr():
