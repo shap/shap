@@ -1,12 +1,12 @@
-"""Run CPU/GPU benchmarks with process timeouts.
+"""Run CPU/GPU benchmarks on complete synthetic trees with process timeouts.
 
 Run from the repository root with the same environment as the original script:
     python gputree_benchmarks/benchmark_gputreeexplainer_timeout.py
 
-Edit TIMEOUT_SECONDS and sizes below to change the workloads. Timings include
+Edit TIMEOUT_SECONDS and the workload grid in run() to change the workloads. Timings include
 explainer construction and exp(X), but exclude process startup and data creation.
 After a backend times out, subsequent workloads with more samples at the same
-feature count are recorded as timeouts without starting a worker.
+feature count and model configuration are recorded as timeouts without starting a worker.
 """
 
 import logging
@@ -21,7 +21,7 @@ from time import perf_counter
 
 logger = logging.getLogger(__name__)
 TIMEOUT_SECONDS = 1_200
-SETUP_TIMEOUT_SECONDS = 60
+SETUP_TIMEOUT_SECONDS = 180
 benchmark_dict = {}
 run_id = 0
 
@@ -101,7 +101,62 @@ def run_worker(target, args, timeout_seconds=TIMEOUT_SECONDS, setup_timeout_seco
         receiver.close()
 
 
+def build_complete_forest(max_depth, n_trees, n_features, seed=0):
+    """Construct balanced trees whose leaves are all exactly max_depth deep.
+
+    Each level uses a distinct feature along a path, with threshold zero.
+    Unit leaf cover gives equal branch probability and consistent node cover.
+    Independent random leaf values are scaled to represent an ensemble average.
+    Trees share the same topology but rotate the feature assignment by tree.
+    """
+    import numpy as np
+
+    if not 1 <= max_depth <= n_features or n_trees < 1:
+        raise ValueError("Require 1 <= max_depth <= n_features and n_trees >= 1")
+    n_leaves = 2**max_depth
+    n_nodes = 2 * n_leaves - 1
+    n_internal = n_leaves - 1
+    indices = np.arange(n_nodes)
+    depths = np.floor(np.log2(indices + 1)).astype(np.int32)
+    children_left = np.full(n_nodes, -1, dtype=np.int32)
+    children_right = children_left.copy()
+    children_left[:n_internal] = 2 * indices[:n_internal] + 1
+    children_right[:n_internal] = 2 * indices[:n_internal] + 2
+    weights = np.exp2(max_depth - depths)
+    rng = np.random.default_rng(seed)
+    trees = []
+    for tree_id in range(n_trees):
+        features = np.full(n_nodes, -1, dtype=np.int32)
+        features[:n_internal] = (depths[:n_internal] + tree_id) % n_features
+        values = np.zeros((n_nodes, 1), dtype=np.float64)
+        values[n_internal:, 0] = rng.standard_normal(n_leaves) / n_trees
+        trees.append({
+            "children_left": children_left,
+            "children_right": children_right,
+            "children_default": children_left,
+            "features": features,
+            "thresholds": np.zeros(n_nodes, dtype=np.float64),
+            "values": values,
+            "node_sample_weight": weights,
+        })
+    return {
+        "trees": trees,
+        "tree_output": "raw_value",
+        "base_offset": 0.0,
+        "benchmark": {
+            "max_depth": max_depth,
+            "n_trees": n_trees,
+            "min_tree_depth": max_depth,
+            "max_tree_depth": max_depth,
+            "mean_tree_depth": float(max_depth),
+            "mean_leaves_per_tree": float(n_leaves),
+            "total_nodes": n_nodes * n_trees,
+        },
+    }
+
+
 def benchmark_function(model, class_name, n_samples, n_features):
+    model_details = model["benchmark"]
     global run_id
     run_id += 1
     logger.info("Starting run %d: %s with data shape (%d, %d)", run_id, class_name, n_samples, n_features)
@@ -109,6 +164,8 @@ def benchmark_function(model, class_name, n_samples, n_features):
         if (
             previous["class"] == class_name
             and previous["status"] == "timeout"
+            and previous["phase"] == "explanation"
+            and all(previous.get(key) == value for key, value in model_details.items())
             and n_samples > previous["data_shape"][0]
             and n_features == previous["data_shape"][1]
         ):
@@ -123,7 +180,7 @@ def benchmark_function(model, class_name, n_samples, n_features):
     else:
         result = run_worker(explanation_worker, (model, class_name, n_samples, n_features))
     values = result.pop("values", None)
-    result.update({"class": class_name, "data_shape": [n_samples, n_features]})
+    result.update({"class": class_name, "data_shape": [n_samples, n_features], **model_details})
     benchmark_dict[run_id] = result
     if result["status"] == "success":
         logger.info("Run %d: %s took %.3f seconds", run_id, class_name, result["time"])
@@ -183,7 +240,7 @@ def save_results(cpu, gpu, metadata=None):
         "Explanation timeout (seconds)": TIMEOUT_SECONDS,
         "Setup timeout (seconds)": SETUP_TIMEOUT_SECONDS,
         "Timing scope": "Explainer construction and exp(X); excludes process startup and data creation",
-        "Skip rule": "More samples at the same feature count, for the same explainer type",
+        "Skip rule": "More samples at the same feature count and model configuration, for the same explainer type, after an explanation timeout",
         **(metadata or {}),
     }
     gpu_names = [gpu] if isinstance(gpu, str) else gpu
@@ -196,8 +253,8 @@ def save_results(cpu, gpu, metadata=None):
     lines.extend(f"- **{key}:** {markdown_cell(value)}" for key, value in metadata.items())
     lines.extend([
         "", "## Results", "",
-        "| run_id | explainer_type | n_samples | n_features | time (s) | status | validation | details |",
-        "| ---: | --- | ---: | ---: | ---: | --- | --- | --- |",
+        "| run_id | explainer_type | n_samples | n_features | max_depth | n_trees | min–max tree depth | mean tree depth | mean leaves/tree | total_nodes | time (s) | status | validation | details |",
+        "| ---: | --- | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: | --- | --- | --- |",
     ])
     for result_id, result in benchmark_dict.items():
         details = ""
@@ -209,6 +266,10 @@ def save_results(cpu, gpu, metadata=None):
             details = result["error"]
         cells = [
             result_id, result["class"], *result["data_shape"],
+            result["max_depth"], result["n_trees"],
+            f"{result['min_tree_depth']}–{result['max_tree_depth']}",
+            f"{result['mean_tree_depth']:.2f}", f"{result['mean_leaves_per_tree']:.2f}",
+            result["total_nodes"],
             f"{result['time']:.6f}" if result["status"] == "success" else "—",
             result["status"], result.get("validation", "—"), details,
         ]
@@ -219,25 +280,28 @@ def save_results(cpu, gpu, metadata=None):
 
 
 def run():
-    from sklearn.datasets import make_regression
-    from sklearn.ensemble import RandomForestRegressor
-
     from benchmark_gputreeexplainer import hardware_names
 
-    sizes = {
-        10: [1_000, 10_000, 100_000, 1_000_000],
-        50: [1_000, 10_000, 100_000, 1_000_000],
-        100: [1_000, 10_000, 100_000, 1_000_000],
-    }
+    # Hold the data shape fixed to isolate tree depth and ensemble size.
+    n_features = 50
+    n_samples = 20_000
+    max_depths = [12, 20, 28, 36]
+    tree_counts = [10, 100, 500]
     cpu, gpu = hardware_names()
     metadata = {
         "Started (UTC)": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "Model": "RandomForestRegressor(n_estimators=100, random_state=0); other parameters use sklearn defaults",
-        "Training data": "make_regression: 800 samples, 1 target, noise=0.0, random_state=0",
+        "Model": "Synthetic complete balanced binary forest; all leaves at the requested depth",
+        "Depth convention": "Root depth is 0; max_depth is exact for every tree and every leaf",
+        "Tree depth statistics": "Min, max and mean of each tree's maximum path depth across the forest",
+        "Training data": "None; trees are constructed directly using SHAP custom model dictionaries",
+        "Tree construction": "Thresholds=0; distinct features per path, rotated by tree; unit leaf cover; normal leaf values, seed=0, averaged across trees",
+        "Interpretation": "Synthetic scaling benchmark; leaves per tree = 2**depth, so depth also changes model size",
         "Explanation data": "Standard normal, numpy default_rng seed=1",
         "Feature perturbation": "tree_path_dependent",
         "Validation": "First 100 samples; CPU/GPU assert_allclose with rtol=1e-4, atol=1e-4",
-        "Workloads (features → samples)": sizes,
+        "Exact tree depths": max_depths,
+        "Tree counts": tree_counts,
+        "Explanation shape (samples, features)": [n_samples, n_features],
         "Initial comparison samples": 100,
     }
     for package in ("shap", "numpy", "scikit-learn"):
@@ -245,18 +309,13 @@ def run():
             metadata[f"{package} version"] = version(package)
         except PackageNotFoundError:
             metadata[f"{package} version"] = "unavailable"
-    for n_features, sample_sizes in sizes.items():
-        logger.info("Training model with 800 samples and %d features", n_features)
-        X_train, y_train = make_regression(
-            n_samples=800, n_features=n_features, n_targets=1, noise=0.0, random_state=0
-        )
-        model = RandomForestRegressor(n_estimators=100, random_state=0)
-        model.fit(X_train, y_train)
-        # A small independent comparison remains available if larger CPU runs
-        # time out. These two runs are also recorded in the output.
-        compare_by_size(model, 100, n_features)
-        save_results(cpu, gpu, metadata)
-        for n_samples in sample_sizes:
+    for max_depth in max_depths:
+        for n_trees in tree_counts:
+            logger.info("Building complete forest with depth=%d and n_trees=%d", max_depth, n_trees)
+            model = build_complete_forest(max_depth, n_trees, n_features)
+            # Keep a small correctness comparison even if the full batch times out.
+            compare_by_size(model, 100, n_features)
+            save_results(cpu, gpu, metadata)
             compare_by_size(model, n_samples, n_features)
             save_results(cpu, gpu, metadata)
 
