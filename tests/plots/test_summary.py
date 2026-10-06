@@ -31,6 +31,19 @@ def test_summary_with_data():
     return fig
 
 
+def test_summary_plot_applies_title():
+    title = "Custom summary title"
+
+    shap.summary_plot(
+        np.random.randn(20, 5),
+        np.random.randn(20, 5),
+        title=title,
+        show=False,
+    )
+
+    assert plt.gca().get_title() == title
+
+
 @pytest.mark.mpl_image_compare
 def test_summary_multi_class():
     """Check a multiclass run."""
