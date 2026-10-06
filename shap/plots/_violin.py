@@ -20,7 +20,6 @@ else:
     ORIENTATION_KWARG = dict(vert=False)  # type: ignore[dict-item]
 
 
-# TODO: remove unused title argument / use title argument
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
 def violin(
     shap_values,
@@ -30,7 +29,6 @@ def violin(
     plot_type="violin",
     color=None,
     axis_color="#333333",
-    title=None,
     alpha=1,
     show=True,
     sort=True,
@@ -66,8 +64,6 @@ def violin(
         Color or colormap to use for the plot. If None, a default is chosen.
     axis_color : str, optional
         Color for the plot axes.
-    title : str or None, optional
-        Plot title (currently unused).
     alpha : float, optional
         Opacity of the plot elements.
     show : bool, optional
@@ -103,8 +99,6 @@ def violin(
     See `violin plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/violin.html>`_.
 
     """
-    if title is not None:
-        warnings.warn("The `title` argument is unused and will be removed in a future release.", DeprecationWarning)
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
