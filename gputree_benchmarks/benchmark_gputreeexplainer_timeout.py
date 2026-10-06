@@ -1,4 +1,4 @@
-"""Run CPU/GPU benchmarks on complete synthetic trees with process timeouts.
+"""Run CPU/GPU benchmarks on trained random forests with process timeouts.
 
 Run from the repository root with the same environment as the original script:
     python gputree_benchmarks/benchmark_gputreeexplainer_timeout.py
@@ -101,62 +101,23 @@ def run_worker(target, args, timeout_seconds=TIMEOUT_SECONDS, setup_timeout_seco
         receiver.close()
 
 
-def build_complete_forest(max_depth, n_trees, n_features, seed=0):
-    """Construct balanced trees whose leaves are all exactly max_depth deep.
-
-    Each level uses a distinct feature along a path, with threshold zero.
-    Unit leaf cover gives equal branch probability and consistent node cover.
-    Independent random leaf values are scaled to represent an ensemble average.
-    Trees share the same topology but rotate the feature assignment by tree.
-    """
-    import numpy as np
-
-    if not 1 <= max_depth <= n_features or n_trees < 1:
-        raise ValueError("Require 1 <= max_depth <= n_features and n_trees >= 1")
-    n_leaves = 2**max_depth
-    n_nodes = 2 * n_leaves - 1
-    n_internal = n_leaves - 1
-    indices = np.arange(n_nodes)
-    depths = np.floor(np.log2(indices + 1)).astype(np.int32)
-    children_left = np.full(n_nodes, -1, dtype=np.int32)
-    children_right = children_left.copy()
-    children_left[:n_internal] = 2 * indices[:n_internal] + 1
-    children_right[:n_internal] = 2 * indices[:n_internal] + 2
-    weights = np.exp2(max_depth - depths)
-    rng = np.random.default_rng(seed)
-    trees = []
-    for tree_id in range(n_trees):
-        features = np.full(n_nodes, -1, dtype=np.int32)
-        features[:n_internal] = (depths[:n_internal] + tree_id) % n_features
-        values = np.zeros((n_nodes, 1), dtype=np.float64)
-        values[n_internal:, 0] = rng.standard_normal(n_leaves) / n_trees
-        trees.append({
-            "children_left": children_left,
-            "children_right": children_right,
-            "children_default": children_left,
-            "features": features,
-            "thresholds": np.zeros(n_nodes, dtype=np.float64),
-            "values": values,
-            "node_sample_weight": weights,
-        })
+def forest_statistics(model):
+    """Summarize actual fitted tree sizes; depths count edges from the root."""
+    trees = [estimator.tree_ for estimator in model.estimators_]
+    depths = [tree.max_depth for tree in trees]
     return {
-        "trees": trees,
-        "tree_output": "raw_value",
-        "base_offset": 0.0,
-        "benchmark": {
-            "max_depth": max_depth,
-            "n_trees": n_trees,
-            "min_tree_depth": max_depth,
-            "max_tree_depth": max_depth,
-            "mean_tree_depth": float(max_depth),
-            "mean_leaves_per_tree": float(n_leaves),
-            "total_nodes": n_nodes * n_trees,
-        },
+        "max_depth": model.max_depth,
+        "n_trees": len(trees),
+        "min_tree_depth": min(depths),
+        "max_tree_depth": max(depths),
+        "mean_tree_depth": sum(depths) / len(trees),
+        "mean_leaves_per_tree": sum(tree.n_leaves for tree in trees) / len(trees),
+        "total_nodes": sum(tree.node_count for tree in trees),
     }
 
 
 def benchmark_function(model, class_name, n_samples, n_features):
-    model_details = model["benchmark"]
+    model_details = forest_statistics(model)
     global run_id
     run_id += 1
     logger.info("Starting run %d: %s with data shape (%d, %d)", run_id, class_name, n_samples, n_features)
@@ -280,26 +241,28 @@ def save_results(cpu, gpu, metadata=None):
 
 
 def run():
+    from sklearn.datasets import make_regression
+    from sklearn.ensemble import RandomForestRegressor
+
     from benchmark_gputreeexplainer import hardware_names
 
     # Hold the data shape fixed to isolate tree depth and ensemble size.
     n_features = 50
-    n_samples = 20_000
+    n_samples = 1_000
+    n_training_samples = 20_000
     max_depths = [12, 20, 28, 36]
     tree_counts = [10, 100, 500]
     cpu, gpu = hardware_names()
     metadata = {
         "Started (UTC)": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "Model": "Synthetic complete balanced binary forest; all leaves at the requested depth",
-        "Depth convention": "Root depth is 0; max_depth is exact for every tree and every leaf",
+        "Model": "RandomForestRegressor(max_depth=grid, n_estimators=grid, random_state=0); other parameters use sklearn defaults",
+        "Depth convention": "Root depth is 0; max_depth is a configured limit, actual depths are measured after fitting",
         "Tree depth statistics": "Min, max and mean of each tree's maximum path depth across the forest",
-        "Training data": "None; trees are constructed directly using SHAP custom model dictionaries",
-        "Tree construction": "Thresholds=0; distinct features per path, rotated by tree; unit leaf cover; normal leaf values, seed=0, averaged across trees",
-        "Interpretation": "Synthetic scaling benchmark; leaves per tree = 2**depth, so depth also changes model size",
+        "Training data": f"One shared make_regression invocation: {n_training_samples} samples, {n_features} features, 10 informative features, 1 target, noise=0.0, random_state=0",
         "Explanation data": "Standard normal, numpy default_rng seed=1",
         "Feature perturbation": "tree_path_dependent",
         "Validation": "First 100 samples; CPU/GPU assert_allclose with rtol=1e-4, atol=1e-4",
-        "Exact tree depths": max_depths,
+        "Max depth limits": max_depths,
         "Tree counts": tree_counts,
         "Explanation shape (samples, features)": [n_samples, n_features],
         "Initial comparison samples": 100,
@@ -309,10 +272,17 @@ def run():
             metadata[f"{package} version"] = version(package)
         except PackageNotFoundError:
             metadata[f"{package} version"] = "unavailable"
+    X_train, y_train = make_regression(
+        n_samples=n_training_samples, n_features=n_features, n_informative=10,
+        n_targets=1, noise=0.0, random_state=0,
+    )
     for max_depth in max_depths:
         for n_trees in tree_counts:
-            logger.info("Building complete forest with depth=%d and n_trees=%d", max_depth, n_trees)
-            model = build_complete_forest(max_depth, n_trees, n_features)
+            logger.info("Training forest with max_depth=%d and n_trees=%d", max_depth, n_trees)
+            model = RandomForestRegressor(
+                max_depth=max_depth, n_estimators=n_trees, random_state=0
+            )
+            model.fit(X_train, y_train)
             # Keep a small correctness comparison even if the full batch times out.
             compare_by_size(model, 100, n_features)
             save_results(cpu, gpu, metadata)
