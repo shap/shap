@@ -106,6 +106,20 @@ def test_bar_raises_error_for_invalid_clustering(explainer):
         shap.plots.bar(shap_values, clustering=clustering, show=False)
 
 
+def test_bar_string_feature_values_in_labels():
+    """Categorical (string) feature values should appear unchanged in the y-tick labels.
+
+    Previously, trailing zeros were stripped from string values, so "2020" was shown as "202".
+    """
+    values = np.array([0.3, -0.2, 0.1])
+    data = np.array(["2020", "00", 1.5], dtype=object)
+    exp = shap.Explanation(values=values, base_values=0.0, data=data, feature_names=["year", "code", "num"])
+    ax = shap.plots.bar(exp, show=False)
+    labels = [t.get_text() for t in ax.get_yticklabels()][: len(values)]
+    plt.close()
+    assert labels == ["2020 = year", "00 = code", "1.5 = num"]
+
+
 def test_bar_raises_error_for_empty_explanation(explainer):
     shap_values = explainer(explainer.data)
     with pytest.raises(ValueError, match="The passed Explanation is empty"):
