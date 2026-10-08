@@ -4,7 +4,7 @@ from ._fixed_composite import FixedComposite
 from ._image import Image
 from ._masker import Masker
 from ._output_composite import OutputComposite
-from ._tabular import Impute, Independent, Partition
+from ._tabular import Causal, Impute, Independent, Partition
 from ._text import Text
 
 __all__ = [
@@ -17,5 +17,6 @@ __all__ = [
     "Impute",
     "Independent",
     "Partition",
+    "Causal",
     "Text",
 ]
