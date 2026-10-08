@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -13,12 +15,12 @@ def heatmap(
     instance_order=Explanation.hclust(),  # type: ignore
     feature_values=Explanation.abs.mean(0),  # type: ignore
     feature_order=None,
-    max_display=10,
+    max_display: int = 10,
     cmap=colors.red_white_blue,
-    show=True,
-    plot_width=8,
-    ax=None,
-):
+    show: bool = True,
+    plot_width: int = 8,
+    ax: plt.Axes | None = None,
+) -> plt.Axes:
     """Create a heatmap plot of a set of SHAP values.
 
     This plot is designed to show the population substructure of a dataset using supervised
@@ -184,7 +186,7 @@ def heatmap(
 
     m = cm.ScalarMappable(cmap=cmap)
     m.set_array([min(vmin, -vmax), max(-vmin, vmax)])
-    cb = plt.colorbar(
+    cb = ax.get_figure().colorbar(
         m,
         ticks=[min(vmin, -vmax), max(-vmin, vmax)],
         ax=ax,
