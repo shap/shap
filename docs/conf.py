@@ -195,10 +195,14 @@ todo_include_todos = False
 
 def get_latest_tag() -> str:
     """Query GitHub API to get the most recent git tag"""
-    url = "https://api.github.com/repos/shap/shap/releases/latest"
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.json()["tag_name"]
+    try:
+        url = "https://api.github.com/repos/shap/shap/releases/latest"
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        return response.json()["tag_name"]
+    except Exception:
+        # Fallback when API is unavailable (e.g., rate limit exceeded)
+        return "latest"
 
 
 _latest_tag = get_latest_tag()

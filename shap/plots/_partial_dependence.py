@@ -49,7 +49,23 @@ def partial_dependence(
     ax=None,
     show=True,
 ):
-    """A basic partial dependence plot function."""
+    """A basic partial dependence plot function.
+
+    Parameters
+    ----------
+    ax : matplotlib Axes
+        Axes object to draw the plot onto, otherwise uses the current Axes.
+    show : bool
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
+        Setting this to ``False`` allows the plot
+        to be customized further after it has been created.
+
+    Returns
+    -------
+    ax : matplotlib Axes
+        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it. Only
+        returned if ``show=False``.
+    """
     if isinstance(data, Explanation):
         features = data.data
         shap_values = data
@@ -84,10 +100,6 @@ def partial_dependence(
                     ice_vals[i, :] = model(pd.DataFrame(features_tmp, columns=feature_names))
                 else:
                     ice_vals[i, :] = model(features_tmp)
-            # if linewidth is None:
-            #     linewidth = 1
-            # if opacity is None:
-            #     opacity = 0.5
 
         features_tmp = features.copy()
         vals = np.zeros(npoints)
@@ -99,19 +111,15 @@ def partial_dependence(
                 vals[i] = model(features_tmp).mean()
 
         if ax is None:
-            fig = plt.figure()
             ax1 = plt.gca()
         else:
-            fig = plt.gcf()
-            ax1 = plt.gca()
+            ax1 = ax
 
-        # fig, ax1 = plt.subplots(figsize)
         ax2 = ax1.twinx()
         ax2 = typing.cast("plt.Axes", ax2)  # fix for matplotlib typing
 
         # the histogram of the data
         if hist:
-            # n, bins, patches =
             ax2.hist(xv, 50, density=False, facecolor="black", alpha=0.1, range=(xmin, xmax))
 
         # ice line plot
@@ -175,19 +183,6 @@ def partial_dependence(
             ax1.axhline(model_expected_value, color="#999999", zorder=-1, linestyle="--", linewidth=1)
 
         if shap_values is not None:
-            # vals = shap_values.values[:, ind]
-            # if shap_value_features is None:
-            #     shap_value_features = features
-            #     assert shap_values.shape == features.shape
-            # #sample_ind = 18
-            # vals = shap_values[:, ind]
-            # if type(model_expected_value) is bool:
-            #     if use_dataframe:
-            #         model_expected_value = model(pd.DataFrame(features, columns=feature_names)).mean()
-            #     else:
-            #         model_expected_value = model(features).mean()
-            # if isinstance(shap_value_features, pd.DataFrame):
-            #     shap_value_features = shap_value_features.values
             markerline, stemlines, _ = ax1.stem(
                 shap_values.data[:, ind],
                 shap_values.base_values + shap_values.values[:, ind],
@@ -196,15 +191,15 @@ def partial_dependence(
                 basefmt=" ",
             )
             stemlines.set_edgecolors([red_rgb if v > 0 else blue_rgb for v in vals])
-            plt.setp(stemlines, "zorder", -1)
-            plt.setp(stemlines, "linewidth", 2)
-            plt.setp(markerline, "color", "black")
-            plt.setp(markerline, "markersize", 4)
+            stemlines.set_zorder(-1)
+            stemlines.set_linewidth(2)
+            markerline.set_color("black")
+            markerline.set_markersize(4)
 
         if show:
             plt.show()
         else:
-            return fig, ax1
+            return ax1
 
     # this is for a 2D partial dependence plot
     else:
@@ -236,13 +231,9 @@ def partial_dependence(
                 x1[i, j] = xs1[j]
                 vals[i, j] = model(features_tmp).mean()
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection="3d")
-
-        #         x = y = np.arange(-3.0, 3.0, 0.05)
-        #         X, Y = np.meshgrid(x, y)
-        #         zs = np.array(fun(np.ravel(X), np.ravel(Y)))
-        #         Z = zs.reshape(X.shape)
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection="3d")
 
         ax.plot_surface(x0, x1, vals, cmap=red_blue_transparent)
 
@@ -253,4 +244,4 @@ def partial_dependence(
         if show:
             plt.show()
         else:
-            return fig, ax
+            return ax
