@@ -260,6 +260,7 @@ class TreeExplainer(Explainer):
             self.data_feature_names = feature_names
         elif isinstance(data, pd.DataFrame):
             self.data_feature_names = list(data.columns)
+            data = data.to_numpy(dtype=float, na_value=np.nan)
 
         masker = data
         super().__init__(model, masker, feature_names=feature_names)
@@ -274,9 +275,7 @@ class TreeExplainer(Explainer):
                 "TreeExplainer does not support clustered data inputs! Please use shap.Explainer or pass an unclustered masker!"
             )
 
-        if isinstance(data, pd.DataFrame):
-            self.data = data.values
-        elif isinstance(data, DenseData):
+        if isinstance(data, DenseData):
             self.data = data.data
         else:
             self.data = data
@@ -445,7 +444,7 @@ class TreeExplainer(Explainer):
         # cf. GH dsgibbons#66, this conversion to numpy array should be done AFTER
         # calculation of shap values
         if isinstance(X, pd.DataFrame):
-            X_data = X.values
+            X_data = X.to_numpy(dtype=float, na_value=np.nan)
         elif safe_isinstance(X, "xgboost.core.DMatrix"):
             import xgboost
 
