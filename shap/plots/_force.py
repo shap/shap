@@ -179,7 +179,16 @@ def force(
                     " You might be using an old format shap_values array with the base value "
                     "as the last column. In this case, just pass the array without the last column."
                 )
-            raise DimensionError(emsg)
+            raise DimensionError(
+                f"{emsg}\n\n"
+                f"Details:\n"
+                f"- Number of features provided: {len(features)}\n"
+                f"- Number of SHAP values: {shap_values.shape[1]}\n\n"
+                f"Possible fixes:\n"
+                f"- Ensure features match the same sample used to compute SHAP values\n"
+                f"- For multi-class models, select the correct class index (e.g., shap_values[i])\n"
+                f"- Ensure you are passing a single sample (not the full dataset)\n"
+            )
 
         instance = Instance(np.zeros((1, len(feature_names))), features)
         e = AdditiveExplanation(
