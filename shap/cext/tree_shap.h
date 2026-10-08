@@ -728,7 +728,8 @@ inline void build_merged_tree(TreeEnsemble &out_tree, const ExplanationDataset &
 struct Node {
     int cl, cr, cd, pnode; // was int16; node indices can exceed 2^15 - 1, see GH#3486
     long feat, pfeat;
-    float thres, value;
+    tfloat thres;
+    float value;
     char from_flag;
 };
 
@@ -768,7 +769,8 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
     long feat, pfeat = -1;
     int next_xnode = -1, next_rnode = -1;
     int next_node = -1, from_child = -1;
-    float thres, pos_x = 0, neg_x = 0, pos_r = 0, neg_r = 0;
+    tfloat thres;
+    float pos_x = 0, neg_x = 0, pos_r = 0, neg_r = 0;
     char from_flag;
     unsigned M = 0, N = 0;
 
