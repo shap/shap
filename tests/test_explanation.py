@@ -245,3 +245,50 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_getitem_fast_path(random_seed):
+    """Checks that common numeric __getitem__ patterns return correct results.
+
+    Verifies values, feature_names, base_values, and op_history for the fast
+    numpy slice path that bypasses Slicer for plain 2D explanations.
+    """
+    rng = np.random.RandomState(random_seed)
+    N, M = 30, 8
+    vals = rng.randn(N, M)
+    dat = rng.randn(N, M)
+    bv = rng.randn(N)
+    fnames = [f"f{i}" for i in range(M)]
+    exp = shap.Explanation(values=vals, base_values=bv, data=dat, feature_names=fnames)
+
+    # integer column select
+    r = exp[:, 3]
+    assert np.allclose(r.values, vals[:, 3])
+    assert np.allclose(r.base_values, bv)
+    assert r.feature_names == "f3"
+    assert len(r.op_history) == 1 and r.op_history[0].name == "__getitem__"
+
+    # column slice
+    r = exp[:, 2:5]
+    assert np.allclose(r.values, vals[:, 2:5])
+    assert r.feature_names == fnames[2:5]
+    assert np.allclose(r.base_values, bv)
+
+    # row slice
+    r = exp[5:15]
+    assert np.allclose(r.values, vals[5:15])
+    assert np.allclose(r.base_values, bv[5:15])
+    assert r.feature_names == fnames
+
+    # boolean row filter
+    mask = rng.randint(0, 2, size=N).astype(bool)
+    r = exp[mask]
+    assert np.allclose(r.values, vals[mask])
+    assert np.allclose(r.base_values, bv[mask])
+    assert r.feature_names == fnames
+
+    # integer list row select
+    rows = [0, 5, 10, 15]
+    r = exp[rows]
+    assert np.allclose(r.values, vals[rows])
+    assert np.allclose(r.base_values, bv[rows])
