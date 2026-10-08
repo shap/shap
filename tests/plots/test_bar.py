@@ -1,5 +1,8 @@
 """This file contains tests for the bar plot."""
 
+from unittest.mock import patch
+
+import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -24,6 +27,34 @@ def test_input_shap_values_type(unsupported_inputs):
     )
     with pytest.raises(TypeError, match=emsg):
         shap.plots.bar(unsupported_inputs, show=False)
+
+
+def test_bar_does_not_pass_text_props_to_set_yticks(explainer):
+    """Regression test for https://github.com/shap/shap/issues/3673.
+
+    matplotlib < 3.5.0 does not accept text-property kwargs (e.g. ``fontsize``)
+    on ``Axes.set_yticks`` / ``set_ticks``. shap.plots.bar previously passed
+    ``fontsize=13`` directly, causing a TypeError on older matplotlib. This
+    test captures the actual kwargs handed to ``set_yticks`` and asserts no
+    text-property kwargs leak through.
+    """
+    shap_values = explainer(explainer.data)
+
+    captured_kwargs = []
+    real_set_yticks = matplotlib.axes.Axes.set_yticks
+
+    def capturing_set_yticks(self, *args, **kwargs):
+        captured_kwargs.append(kwargs)
+        return real_set_yticks(self, *args, **kwargs)
+
+    with patch.object(matplotlib.axes.Axes, "set_yticks", capturing_set_yticks):
+        shap.plots.bar(shap_values, show=False)
+
+    text_props = {"fontsize", "color", "rotation", "size", "weight", "family", "fontfamily", "fontweight"}
+    offending = sorted({k for call in captured_kwargs for k in call} & text_props)
+    assert not offending, (
+        f"shap.plots.bar passed text-property kwargs to Axes.set_yticks, which breaks matplotlib < 3.5.0: {offending}"
+    )
 
 
 def test_input_shap_values_type_2():
