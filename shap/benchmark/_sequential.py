@@ -17,8 +17,7 @@ class SequentialMasker:
     def __init__(self, mask_type, sort_order, masker, model, *model_args, batch_size=500):
         for arg in model_args:
             if isinstance(arg, pd.DataFrame):
-                raise TypeError("DataFrame arguments dont iterate correctly, pass numpy arrays instead!")
-
+                raise TypeError("DataFrame arguments do not iterate correctly. Please convert inputs to NumPy arrays.")
         # convert any DataFrames to numpy arrays
         # self.model_arg_cols = []
         # self.model_args = []
@@ -53,6 +52,12 @@ class SequentialMasker:
 
 
 class SequentialPerturbation:
+    """
+    Applies sequential perturbations to evaluate model explanations.
+
+    Handles feature masking and computes performance curves based on feature importance.
+    """
+
     def __init__(self, model, masker, sort_order, perturbation, linearize_link=False):
         # self.f = lambda masked, x, index: model.predict(masked)
         self.model = model if callable(model) else model.predict
@@ -91,13 +96,15 @@ class SequentialPerturbation:
         explanation,
         *model_args,
         percent=0.01,
-        indices=[],
+        indices=None,
         y=None,
         label=None,
         silent=False,
         debug_mode=False,
         batch_size=10,
     ):
+        if indices is None:
+            indices = []
         # if explainer is already the attributions
         if isinstance(explanation, np.ndarray):
             attributions = explanation
