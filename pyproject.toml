@@ -346,7 +346,7 @@ test-groups = ["test-core", "plots"]
 #   https://github.com/scikit-learn/scikit-learn/issues/34652 (Python 3.15 support)
 #   https://github.com/pandas-dev/pandas/issues/66740 (Python 3.15 tracker)
 #   https://github.com/scikit-learn/scikit-learn/issues/27004 (musllinux wheels)
-test-skip = "cp315* *-musllinux*"
+# test-skip = "cp315* *-musllinux*"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
