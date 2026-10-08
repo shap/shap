@@ -48,14 +48,11 @@ models
 ======
 .. Examples for members of :ref:`shap.models <models_api>`.
 
-Work in progress.
+.. toctree::
+    :glob:
+    :maxdepth: 1
 
-.. TODO: Uncomment this toctree once we have at least one example to share
-    .. toctree::
-        :glob:
-        :maxdepth: 1
-
-        example_notebooks/api_examples/models/*
+    example_notebooks/api_examples/models/*
 
 
 .. _plots_examples:
