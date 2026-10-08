@@ -531,7 +531,7 @@ def corrgroups60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
 
     """
     # set a constant seed
-    old_seed = np.random.seed()
+    old_state = np.random.get_state()
     np.random.seed(0)
 
     # generate dataset with known correlation
@@ -567,7 +567,7 @@ def corrgroups60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
     y = f(X) + np.random.randn(N) * 1e-2
 
     # restore the previous numpy random seed
-    np.random.seed(old_seed)
+    np.random.set_state(old_state)
 
     return pd.DataFrame(X), y
 
@@ -602,7 +602,7 @@ def independentlinear60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray
 
     """
     # set a constant seed
-    old_seed = np.random.seed()
+    old_state = np.random.get_state()
     np.random.seed(0)
 
     # generate dataset with known correlation
@@ -621,7 +621,7 @@ def independentlinear60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray
     y = f(X) + np.random.randn(N) * 1e-2
 
     # restore the previous numpy random seed
-    np.random.seed(old_seed)
+    np.random.set_state(old_state)
 
     return pd.DataFrame(X), y
 
