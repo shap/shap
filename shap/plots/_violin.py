@@ -12,6 +12,7 @@ from scipy.stats import gaussian_kde
 from ..utils._exceptions import DimensionError
 from . import colors
 from ._labels import labels
+from ._show import resolve_show
 
 # TODO: simplify this when we drop support for matplotlib 3.9
 if version.parse(matplotlib.__version__) >= version.parse("3.10"):
@@ -32,7 +33,7 @@ def violin(
     axis_color="#333333",
     title=None,
     alpha=1,
-    show=True,
+    show=None,
     sort=True,
     color_bar=True,
     plot_size="auto",
@@ -103,6 +104,8 @@ def violin(
     See `violin plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/violin.html>`_.
 
     """
+    show = resolve_show(show, plot_name="violin")
+
     if title is not None:
         warnings.warn("The `title` argument is unused and will be removed in a future release.", DeprecationWarning)
     # support passing an explanation object
