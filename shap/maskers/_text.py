@@ -178,6 +178,8 @@ class Text(Masker):
         """Returns the substrings associated with each token in the given string."""
         try:
             token_data = self.tokenizer(s, return_offsets_mapping=True)
+            if "offset_mapping" not in token_data:
+                raise NotImplementedError
             offsets = token_data["offset_mapping"]
             offsets = [(0, 0) if o is None else o for o in offsets]
             parts = [s[offsets[i][0] : max(offsets[i][1], offsets[i + 1][0])] for i in range(len(offsets) - 1)]
