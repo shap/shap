@@ -1,9 +1,6 @@
-# TODO: heapq in numba does not yet support Typed Lists so we can move to them yet...
 import heapq
 
-import numba.typed
 import numpy as np
-from numba import njit
 
 from .._serializable import Deserializer, Serializer
 from ..utils import assert_import, record_import_error, safe_isinstance
@@ -143,7 +140,7 @@ class Image(Masker):
         # total_xwidth = xmax - xmin
         total_ywidth = ymax - ymin
         total_zwidth = zmax - zmin
-        q = numba.typed.List([(0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False)])
+        q = list([(0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False)])
         M = int((xmax - xmin) * (ymax - ymin) * (zmax - zmin))
         clustering = np.zeros((M - 1, 4))
         _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q)
@@ -171,7 +168,6 @@ class Image(Masker):
         return kwargs
 
 
-@njit  # pragma: no cover
 def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q):
     """This partitions an image into a hierarchical clustering based on axis-aligned splits."""
     # heapq.heappush(q, (0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))

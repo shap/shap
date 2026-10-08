@@ -1,12 +1,14 @@
 """This defines some common colors."""
 
+from collections.abc import Sequence
+
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
 from ._colorconv import lab2rgb, lch2lab
 
 
-def lch2rgb(x: list[float]) -> np.ndarray:
+def lch2rgb(x: Sequence[float]) -> np.ndarray:
     return lab2rgb(lch2lab([[x]]))[0][0]
 
 
@@ -36,7 +38,7 @@ l_vals = list(np.linspace(blue_lch[0], l_mid, nsteps // 2)) + list(np.linspace(l
 c_vals = np.linspace(blue_lch[1], red_lch[1], nsteps)
 h_vals = np.linspace(blue_lch[2], red_lch[2], nsteps)
 for pos, l, c, h in zip(np.linspace(0, 1, nsteps), l_vals, c_vals, h_vals):  # noqa: E741
-    lch = [l, c, h]
+    lch: list[float] = [l, c, h]
     rgb = lch2rgb(lch)
     reds.append((pos, rgb[0], rgb[0]))
     greens.append((pos, rgb[1], rgb[1]))
@@ -105,14 +107,12 @@ transparent_red = LinearSegmentedColormap.from_list("transparent_red", colors)
 old_blue_rgb = np.array([30, 136, 229]) / 255
 old_red_rgb = np.array([255, 13, 87]) / 255
 
-colors = []
+rgb_colors: list[np.ndarray] = []
 for alpha in np.linspace(1, 0, 100):
-    c = blue_rgb * alpha + (1 - alpha) * white_rgb
-    colors.append(c)
+    rgb_colors.append(blue_rgb * alpha + (1 - alpha) * white_rgb)
 for alpha in np.linspace(0, 1, 100):
-    c = red_rgb * alpha + (1 - alpha) * white_rgb
-    colors.append(c)
-red_white_blue = LinearSegmentedColormap.from_list("red_white_blue", colors)
+    rgb_colors.append(red_rgb * alpha + (1 - alpha) * white_rgb)
+red_white_blue = LinearSegmentedColormap.from_list("red_white_blue", rgb_colors)
 
 
 # default_colors = ["#1E88E5", "#ff0d57", "#13B755", "#7C52FF", "#FFC000", "#00AEEF"]

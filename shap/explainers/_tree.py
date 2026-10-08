@@ -104,10 +104,34 @@ def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
     return n_iterations
 
 
+_XGBOOST_ENABLE_CATEGORICAL_DEFAULT_TRUE_VERSION = "3.3"
+
+
 def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
-    if model.model_type == "xgboost" and (
-        model.cat_feature_indices is not None or getattr(model, "_xgb_enable_categorical", False)
-    ):
+    # XGBoost's own internal SHAP calculation (used for feature_perturbation=
+    # "tree_path_dependent") has natively supported categorical splits since
+    # XGBoost 1.5.0, so no guard is needed there. This guard only applies to
+    # shap's own C extension (used for "interventional" and by GPUTreeExplainer),
+    # which still cannot interpret XGBoost's categorical split encoding.
+    if model.model_type != "xgboost":
+        return
+
+    has_cat_columns = model.cat_feature_indices is not None
+    enable_categorical_flag = getattr(model, "_xgb_enable_categorical", False)
+
+    # Before XGBoost 3.3, `enable_categorical` defaulted to False, so a user
+    # setting it to True was a meaningful signal on its own (even before we can
+    # see any actual categorical columns, e.g. a Booster loaded without data).
+    # From 3.3 onward it defaults to True regardless of the data, so it's no
+    # longer trustworthy on its own -- only the actually-detected categorical
+    # columns (cat_feature_indices) are.
+    if enable_categorical_flag:
+        import xgboost
+
+        if version.parse(xgboost.__version__) < version.parse(_XGBOOST_ENABLE_CATEGORICAL_DEFAULT_TRUE_VERSION):
+            has_cat_columns = True
+
+    if has_cat_columns:
         raise NotImplementedError(
             "Categorical split is not yet supported. You can still use"
             " TreeExplainer with `feature_perturbation=tree_path_dependent`."
@@ -512,6 +536,84 @@ class TreeExplainer(Explainer):
 
         return X, y, X_missing, flat_output, tree_limit, check_additivity  # type: ignore[return-value]
 
+    def _short_circuit_tree_path_dependent_to_external_shap_calculation(
+        self,
+        X: Any,
+        tree_limit: int,
+        approximate: bool,
+        check_additivity: bool,
+        from_call: bool,
+    ) -> npt.NDArray[Any] | None:
+        # shortcut using the C++ version of Tree SHAP in XGBoost, LightGBM, and CatBoost
+        model_output_vals = None
+        phi = None
+        if self.model.model_type == "xgboost":
+            import xgboost
+
+            n_iterations = _xgboost_n_iterations(tree_limit, self.model.num_stacked_models)
+            if not isinstance(X, xgboost.core.DMatrix):
+                # Retrieve any DMatrix properties if they have been set on the TreeEnsemble Class
+                dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
+                X = xgboost.DMatrix(X, **dmatrix_props)
+            phi = self.model.original_model.predict(
+                X,
+                iteration_range=(0, n_iterations),
+                pred_contribs=True,
+                approx_contribs=approximate,
+                validate_features=False,
+            )
+            if check_additivity and self.model.model_output == "raw":
+                model_output_vals = self.model.original_model.predict(
+                    X, iteration_range=(0, n_iterations), output_margin=True, validate_features=False
+                )
+
+        elif self.model.model_type == "lightgbm":
+            assert not approximate, "approximate=True is not supported for LightGBM models!"
+            phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
+            # Note: the data must be joined on the last axis
+            if (
+                "objective" in self.model.original_model.params
+                and self.model.original_model.params["objective"] == "binary"
+            ):
+                if not from_call:
+                    warnings.warn(
+                        "LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray"
+                    )
+            if phi.shape[1] != X.shape[1] + 1:
+                try:
+                    phi = phi.reshape(X.shape[0], phi.shape[1] // (X.shape[1] + 1), X.shape[1] + 1)
+                except ValueError as e:
+                    emsg = (
+                        "This reshape error is often caused by passing a bad data matrix to SHAP. "
+                        "See https://github.com/shap/shap/issues/580."
+                    )
+                    raise ValueError(emsg) from e
+
+        elif self.model.model_type == "catboost":  # thanks to the CatBoost team for implementing this...
+            assert not approximate, "approximate=True is not supported for CatBoost models!"
+            assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
+            import catboost
+
+            if not isinstance(X, catboost.Pool):
+                X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
+            phi = self.model.original_model.get_feature_importance(data=X, fstr_type="ShapValues")
+
+        # note we pull off the last column and keep it as our expected_value
+        if phi is not None:
+            if len(phi.shape) == 3:
+                self.expected_value = [phi[0, i, -1] for i in range(phi.shape[1])]
+                out = [phi[:, i, :-1] for i in range(phi.shape[1])]
+            else:
+                self.expected_value = phi[0, -1]
+                out = phi[:, :-1]
+
+            if check_additivity and model_output_vals is not None:
+                self.assert_additivity(out, model_output_vals)
+            if isinstance(out, list):
+                out = np.stack(out, axis=-1)  # type: ignore[assignment]
+            return out  # type: ignore[return-value]
+        return None
+
     def shap_values(
         self,
         X: Any,
@@ -599,79 +701,17 @@ class TreeExplainer(Explainer):
         if tree_limit is None:
             tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
 
-        # shortcut using the C++ version of Tree SHAP in XGBoost, LightGBM, and CatBoost
+        # check if we can use a faster implementation of the algorithm for this model type
         if (
             self.feature_perturbation == "tree_path_dependent"
             and self.model.model_type != "internal"
             and self.data is None
         ):
-            model_output_vals = None
-            phi = None
-            if self.model.model_type == "xgboost":
-                import xgboost
-
-                n_iterations = _xgboost_n_iterations(tree_limit, self.model.num_stacked_models)
-                if not isinstance(X, xgboost.core.DMatrix):
-                    # Retrieve any DMatrix properties if they have been set on the TreeEnsemble Class
-                    dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
-                    X = xgboost.DMatrix(X, **dmatrix_props)
-                phi = self.model.original_model.predict(
-                    X,
-                    iteration_range=(0, n_iterations),
-                    pred_contribs=True,
-                    approx_contribs=approximate,
-                    validate_features=False,
-                )
-                if check_additivity and self.model.model_output == "raw":
-                    model_output_vals = self.model.original_model.predict(
-                        X, iteration_range=(0, n_iterations), output_margin=True, validate_features=False
-                    )
-
-            elif self.model.model_type == "lightgbm":
-                assert not approximate, "approximate=True is not supported for LightGBM models!"
-                phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
-                # Note: the data must be joined on the last axis
-                if (
-                    "objective" in self.model.original_model.params
-                    and self.model.original_model.params["objective"] == "binary"
-                ):
-                    if not from_call:
-                        warnings.warn(
-                            "LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray"
-                        )
-                if phi.shape[1] != X.shape[1] + 1:
-                    try:
-                        phi = phi.reshape(X.shape[0], phi.shape[1] // (X.shape[1] + 1), X.shape[1] + 1)
-                    except ValueError as e:
-                        emsg = (
-                            "This reshape error is often caused by passing a bad data matrix to SHAP. "
-                            "See https://github.com/shap/shap/issues/580."
-                        )
-                        raise ValueError(emsg) from e
-
-            elif self.model.model_type == "catboost":  # thanks to the CatBoost team for implementing this...
-                assert not approximate, "approximate=True is not supported for CatBoost models!"
-                assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
-                import catboost
-
-                if not isinstance(X, catboost.Pool):
-                    X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
-                phi = self.model.original_model.get_feature_importance(data=X, fstr_type="ShapValues")
-
-            # note we pull off the last column and keep it as our expected_value
+            phi = self._short_circuit_tree_path_dependent_to_external_shap_calculation(
+                X, tree_limit, approximate, check_additivity, from_call
+            )
             if phi is not None:
-                if len(phi.shape) == 3:
-                    self.expected_value = [phi[0, i, -1] for i in range(phi.shape[1])]
-                    out = [phi[:, i, :-1] for i in range(phi.shape[1])]
-                else:
-                    self.expected_value = phi[0, -1]
-                    out = phi[:, :-1]
-
-                if check_additivity and model_output_vals is not None:
-                    self.assert_additivity(out, model_output_vals)
-                if isinstance(out, list):
-                    out = np.stack(out, axis=-1)  # type: ignore[assignment]
-                return out  # type: ignore[return-value]
+                return phi
 
         X, y, X_missing, flat_output, tree_limit, check_additivity = self._validate_inputs(
             X, y, tree_limit, check_additivity

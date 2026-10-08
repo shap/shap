@@ -9,6 +9,7 @@
   - [Installing from source](#installing-from-source)
   - [Code checks with precommit](#code-checks-with-precommit)
   - [Unit tests with pytest](#unit-tests-with-pytest)
+  - [Performance monitoring with asv](#performance-monitoring-with-asv)
 - [Pull Requests (PRs)](#pull-requests-prs)
   - [Etiquette for creating PRs](#etiquette-for-creating-prs)
   - [Checklist for publishing PRs](#checklist-for-publishing-prs)
@@ -69,10 +70,10 @@ Reports](https://matthewrocklin.com/minimal-bug-reports).
 ## Installing the latest version
 
 To get the very latest version of shap, you can pip-install the library directly
-from the `master` branch:
+from the `main` branch:
 
 ```bash
-pip install git+https://github.com/shap/shap.git@master
+pip install git+https://github.com/shap/shap.git@main
 ```
 
 This can be useful to test if a particular issue or bug has been fixed since the
@@ -178,6 +179,35 @@ uv run pytest
 
 For info about matplotlib tests, see `tests/plots/__init__.py`.
 
+### Performance monitoring with asv
+
+We use [airspeed velocity (asv)](https://asv.readthedocs.io/) to monitor the
+performance of time-sensitive explainers. If you are contributing to the performance of these explainers or modifying C++ extensions, please run the monitoring suite and report the results to ensure that your changes do not introduce any regressions.
+
+Install the test dependencies, which
+include asv, and run the monitoring suite with:
+
+```bash
+pip install -e . --group test --group plots
+asv run
+# or using uv
+uv sync --group test --group plots
+uv run asv run
+```
+
+To generate and view an HTML report of the results, run:
+
+```bash
+asv publish && asv preview
+# or using uv
+uv run asv publish && asv preview
+```
+
+The monitoring definitions are in the `monitoring` directory. Generated results
+and HTML reports are written to `monitoring/results` and `monitoring/html`,
+respectively, and are excluded from version control. The monitoring suite is
+currently run locally rather than in CI.
+
 ## Pull Requests (PRs)
 
 ### Etiquette for creating PRs
@@ -205,7 +235,7 @@ Use a descriptive title, such as:
 Before marking your PR as "ready for review" (by removing the `Draft` status),
 please ensure:
 
-- Your feature branch is up-to-date with the master branch,
+- Your feature branch is up-to-date with the main branch,
 - All [pre-commit hooks](#code-checks-with-precommit) pass, and
 - Unit tests have been added (if your PR adds any new features or fixes a bug).
 

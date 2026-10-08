@@ -680,7 +680,8 @@ def test_provided_background_tree_path_dependent():
     pred_scores = bst.predict(dtrain, output_margin=True)
 
     explainer = shap.TreeExplainer(bst, data=X, feature_perturbation="tree_path_dependent")
-    diffs = explainer.expected_value + explainer.shap_values(X).sum(axis=1) - pred_scores
+    shap_values = explainer.shap_values(X)
+    diffs = explainer.expected_value + shap_values.sum(axis=1) - pred_scores
     assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
     assert np.abs(explainer.expected_value - pred_scores.mean()) < 1e-6, "Bad expected_value!"
 
@@ -1989,7 +1990,7 @@ def test_lightgbm_interactions():
 
     model = lightgbm.LGBMClassifier(n_estimators=10, max_depth=3).fit(X, y)
     explainer = shap.TreeExplainer(model)
-    predicted = model.predict(pd.DataFrame(X, columns=model.feature_names_in_), raw_score=True)
+    predicted = model.predict(pd.DataFrame(X), raw_score=True)
     explanation = explainer(X, interactions=False)
     np.testing.assert_allclose(explanation.values.sum(axis=(1)) + explanation.base_values, predicted)
 
@@ -1998,7 +1999,7 @@ def test_lightgbm_interactions():
 
     # test flat input
     explanation_flat = explainer(X[0, :], interactions=True)
-    predicted_flat = model.predict(pd.DataFrame(X[[0], :], columns=model.feature_names_in_), raw_score=True)
+    predicted_flat = model.predict(pd.DataFrame(X[[0], :]), raw_score=True)
 
     np.testing.assert_allclose(
         explanation_flat.values.sum((0, 1)) + explanation_flat.base_values[0], predicted_flat[0], atol=1e-4
@@ -2526,7 +2527,7 @@ def test_tree_explainer_single_sample():
     prediction = model.predict_proba(single_sample.reshape(1, -1))[0, 1]
     if shap_values.ndim == 3:
         shap_sum = shap_values[0, :, 1].sum() + explainer.expected_value[1]
-    elif shap_values.ndim == 2 and shap_values.shape[1] == 2:
+    elif shap_values.ndim == 2 and shap_values.shape[1] == 2:  # type: ignore[misc]
         shap_sum = shap_values[:, 1].sum() + explainer.expected_value[1]
     elif shap_values.ndim == 2:
         shap_sum = shap_values[0].sum() + explainer.expected_value
@@ -2593,7 +2594,7 @@ def test_tree_explainer_with_lightgbm_regressor():
     assert shap_values.shape == (10, 5)
 
     # Check additivity
-    predictions = model.predict(pd.DataFrame(X[:10], columns=model.feature_names_in_))
+    predictions = model.predict(pd.DataFrame(X[:10]))
     assert np.abs(shap_values.sum(1) + explainer.expected_value - predictions).max() < 1e-4
 
 
@@ -2614,7 +2615,7 @@ def test_tree_explainer_with_lightgbm_classifier():
     assert shap_values.shape == (10, 4) or (isinstance(shap_values, list) and len(shap_values) == 2)
 
     # Check additivity (SHAP values are in raw score space, not probability space)
-    predictions = model.predict(pd.DataFrame(X[:10], columns=model.feature_names_in_), raw_score=True)
+    predictions = model.predict(pd.DataFrame(X[:10]), raw_score=True)
     if isinstance(shap_values, list):
         shap_sum = shap_values[1].sum(1) + explainer.expected_value[1]
     else:
