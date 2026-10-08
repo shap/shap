@@ -326,7 +326,9 @@ def text(
     # fx_str = str(shap_values.base_values + values.sum())
 
     # uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
-    encoded_tokens = [t.replace("<", "&lt;").replace(">", "&gt;").replace(" ##", "") for t in tokens]
+    encoded_tokens = [
+        t.replace("<", "&lt;").replace(">", "&gt;").replace(" ##", "").replace("▁", "").replace("Ġ", "") for t in tokens
+    ]
     output_name = shap_values.output_names if isinstance(shap_values.output_names, str) else ""
     out += svg_force_plot(
         values,
@@ -375,7 +377,7 @@ def text(
             }}"
             onmouseover="document.getElementById('_fb_{uuid}_ind_{i}').style.opacity = 1; document.getElementById('_fs_{uuid}_ind_{i}').style.opacity = 1;"
             onmouseout="document.getElementById('_fb_{uuid}_ind_{i}').style.opacity = 0; document.getElementById('_fs_{uuid}_ind_{i}').style.opacity = 0;"
-        >{token.replace("<", "&lt;").replace(">", "&gt;").replace(" ##", "")}</div></div>"""
+        >{token.replace("<", "&lt;").replace(">", "&gt;").replace(" ##", "").replace("▁", "").replace("Ġ", "")}</div></div>"""
     out += "</div>"
 
     if display:
@@ -900,7 +902,7 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
             + "}"
             + '"'
             + ">"
-            + tokens[i].replace("<", "&lt;").replace(">", "&gt;").replace(" ##", "")
+            + tokens[i].replace("<", "&lt;").replace(">", "&gt;").replace(" ##", "").replace("▁", "").replace("Ġ", "")
             + "</div>"
             + "</div>"
         )
