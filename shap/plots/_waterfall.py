@@ -417,7 +417,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     lower_bounds = None
     if str(type(expected_value)).endswith("Explanation'>"):
         shap_exp = expected_value
-        expected_value = shap_exp.expected_value
+        expected_value = shap_exp.base_values
         shap_values = shap_exp.values
         features = shap_exp.data
         feature_names = shap_exp.feature_names
