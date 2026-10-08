@@ -179,7 +179,7 @@ class SamplingExplainer(KernelExplainer):
 
             # convert from the variance of the differences to the variance of the mean (phi)
             for i, ind in enumerate(self.varyingInds):
-                phi_var[ind, :] /= np.sqrt(nsamples_each1[i] + nsamples_each2[i])
+                phi_var[ind, :] /= nsamples_each1[i] + nsamples_each2[i]
 
             # correct the sum of the SHAP values to equal the output of the model using a linear
             # regression model with priors of the coefficients equal to the estimated variances for each
