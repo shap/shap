@@ -56,11 +56,18 @@ def partial_dependence(
     else:
         features = data
 
-    # convert from DataFrames if we got any
+    # convert from DataFrames if we got any. Keep a reference to the
+    # original DataFrame so we can reconstruct with the same per-column
+    # dtypes — see GH #3670: rebuilding via ``pd.DataFrame(arr, columns=...)``
+    # drops categorical dtypes, which causes XGBoost (and other frameworks
+    # that care about column types) to reject the prediction input when
+    # ``enable_categorical=True``.
     use_dataframe = False
+    features_df: pd.DataFrame | None = None
     if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
+        features_df = features
         features = features.values
         use_dataframe = True
 
@@ -81,7 +88,11 @@ def partial_dependence(
             for i in range(npoints):
                 features_tmp[:, ind] = xs[i]
                 if use_dataframe:
-                    ice_vals[i, :] = model(pd.DataFrame(features_tmp, columns=feature_names))
+                    # Preserve dtypes of non-target columns (GH #3670).
+                    assert features_df is not None
+                    df = features_df.copy()
+                    df.iloc[:, ind] = xs[i]
+                    ice_vals[i, :] = model(df)
                 else:
                     ice_vals[i, :] = model(features_tmp)
             # if linewidth is None:
@@ -94,7 +105,10 @@ def partial_dependence(
         for i in range(npoints):
             features_tmp[:, ind] = xs[i]
             if use_dataframe:
-                vals[i] = model(pd.DataFrame(features_tmp, columns=feature_names)).mean()
+                assert features_df is not None
+                df = features_df.copy()
+                df.iloc[:, ind] = xs[i]
+                vals[i] = model(df).mean()
             else:
                 vals[i] = model(features_tmp).mean()
 
@@ -159,7 +173,10 @@ def partial_dependence(
         if model_expected_value is not False or shap_values is not None:
             if model_expected_value is True:
                 if use_dataframe:
-                    model_expected_value = model(pd.DataFrame(features, columns=feature_names)).mean()
+                    # Use the original DataFrame directly; rebuilding from
+                    # ``features`` would drop categorical dtypes (GH #3670).
+                    assert features_df is not None
+                    model_expected_value = model(features_df).mean()
                 else:
                     model_expected_value = model(features).mean()
             else:
