@@ -236,13 +236,7 @@ class PermutationExplainer(Explainer):
             expected_value = outputs[0]
             row_values = np.zeros((len(fm),) + outputs.shape[1:])
             if error_bounds:
-                row_values_history = np.zeros(
-                    (
-                        2 * npermutations,
-                        len(fm),
-                    )
-                    + outputs.shape[1:]
-                )
+                row_values_history = None  # No varying inputs, no history to track
 
         return {
             "values": row_values / (2 * npermutations),  # type: ignore[operator]
