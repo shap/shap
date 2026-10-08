@@ -771,7 +771,7 @@ op_handlers["SquaredDifference"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda 
 op_handlers["Minimum"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.minimum(x, y))
 op_handlers["Maximum"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.maximum(x, y))
 
-# ops that allow up to two inputs to vary are are linear when only one input varies
+# ops that allow up to two inputs to vary are linear when only one input varies
 op_handlers["Mul"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: x * y)
 op_handlers["RealDiv"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: x / y)
 op_handlers["MatMul"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.matmul(x, y))

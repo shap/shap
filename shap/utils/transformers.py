@@ -72,7 +72,7 @@ def parse_prefix_suffix_for_tokenizer(tokenizer):
 
 
 def getattr_silent(obj, attr):
-    """This turns of verbose logging of missing attributes for huggingface transformers.
+    """This turns off verbose logging of missing attributes for huggingface transformers.
 
     This is motivated by huggingface transformers objects that print error warnings
     when we access unset properties.
