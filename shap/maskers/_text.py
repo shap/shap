@@ -141,7 +141,7 @@ class Text(Masker):
                         is_previous_appended_token_mask_token = True
             out = "".join(out_parts)
 
-            # tokenizers which treat spaces like parts of the tokens and dont replace the special token while decoding need further postprocessing
+            # tokenizers which treat spaces like parts of the tokens and don't replace the special token while decoding need further postprocessing
             # by replacing whitespace encoded as '_' for sentencepiece tokenizer or 'Ġ' for sentencepiece like encoding (GPT2TokenizerFast)
             # with ' '
             if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
