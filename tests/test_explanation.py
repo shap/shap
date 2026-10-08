@@ -127,6 +127,31 @@ def test_feature_names_slicing_for_square_arrays(random_seed, N):
     assert column_e.feature_names == "e"
 
 
+def test_feature_names_preserved_when_slicing_by_output_name():
+    """Regression test: feature_names must not be overwritten with data when slicing
+    a multi-output Explanation by output name string.
+
+    """
+    rs = np.random.RandomState(0)
+    n_samples = 3
+    n_features = 4
+    feature_names = ["f0", "f1", "f2", "f3"]
+    output_names = [["pos", "neg"], ["pos", "neg"], ["pos", "neg"]]
+
+    exp = shap.Explanation(
+        values=[rs.rand(n_features, 2) for _ in range(n_samples)],
+        base_values=[rs.rand(2) for _ in range(n_samples)],
+        data=[rs.rand(n_features) for _ in range(n_samples)],
+        feature_names=feature_names,
+        output_names=output_names,
+    )
+
+    sliced = exp["pos"]
+    assert list(sliced.feature_names) == feature_names, (
+        f"feature_names corrupted: got {sliced.feature_names!r}, expected {feature_names!r}"
+    )
+
+
 def test_populating_op_history():
     """Tests whether the Explanation.op_history attribute is populated properly after operations have been applied."""
     values = np.arange(-18, 17).reshape(7, 5)
