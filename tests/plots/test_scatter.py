@@ -1,8 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import pytest
 
 import shap
+from shap.plots._scatter import _suggest_x_jitter
 
 
 @pytest.mark.mpl_image_compare
@@ -97,6 +99,32 @@ def test_scatter_categorical(categorical_explanation):
     shap.plots.scatter(categorical_explanation[:, "sex"], ax=ax, show=False)
     plt.tight_layout()
     return fig
+
+
+def test_suggest_x_jitter_mixed_str_and_nan():
+    """Regression for GH #4584: categorical feature with missing values mixes
+    strings with NaN floats, which Python's `<` can't order. _suggest_x_jitter
+    must not raise TypeError on such input."""
+    values = np.array(["a", "b", np.nan, "a", "c", np.nan, "b", "c"], dtype=object)
+    jitter = _suggest_x_jitter(values)
+    assert jitter >= 0
+    assert np.isfinite(jitter)
+
+
+def test_scatter_categorical_with_missing_values():
+    """Regression for GH #4584: scatter on a categorical feature with NaN entries
+    used to fail with `TypeError: '<' not supported between instances of 'str'
+    and 'float'`. The call must now complete without error."""
+    data = np.asarray(pd.Series(["a", "b", None, "a", "c", None, "b", "c"], dtype="category")).astype(object)
+    n = len(data)
+    explanation = shap.Explanation(
+        values=np.linspace(-0.5, 0.5, n).reshape(n, 1),
+        data=data.reshape(n, 1),
+        feature_names=["cat"],
+    )
+    fig, ax = plt.subplots()
+    shap.plots.scatter(explanation[:, "cat"], ax=ax, alpha=0.5, show=False)
+    plt.close(fig)
 
 
 @pytest.mark.mpl_image_compare
