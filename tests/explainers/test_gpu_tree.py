@@ -272,7 +272,7 @@ def test_gpu_tree_explainer_shap_interactions(task, feature_perturbation):
 @pytest.mark.parametrize("use_interactions", [False, True])
 def test_lightgbm_categorical_split(use_interactions):
     # GH 480
-    """Checks that shap interaction values are computed without error when the LightGBM model has categorical splits."""
+    """Checks LightGBM categorical splits: computed correctly on CPU, explicitly rejected on GPU."""
     lightgbm = pytest.importorskip("lightgbm")
     X, y = shap.datasets.california(n_points=10000)
     # Add HouseAgeGroup categorical variable
@@ -289,20 +289,27 @@ def test_lightgbm_categorical_split(use_interactions):
     )  # Set HouseAgeGroup as categorical variable
     preds = model.predict(X, raw_score=True)
 
-    explainer = shap.GPUTreeExplainer(model)
+    cpu_explainer = shap.TreeExplainer(model, feature_perturbation="tree_path_dependent")
+    gpu_explainer = shap.GPUTreeExplainer(model)
 
     if use_interactions:
         # Check SHAP interaction values sum to model output
-        shap_interaction_values = explainer.shap_interaction_values(X.iloc[:10, :])
-        assert np.allclose(shap_interaction_values.sum(axis=(1, 2)) + explainer.expected_value, preds[:10], atol=1e-4)
+        shap_interaction_values = cpu_explainer.shap_interaction_values(X.iloc[:10, :])
+        assert np.allclose(
+            shap_interaction_values.sum(axis=(1, 2)) + cpu_explainer.expected_value, preds[:10], atol=1e-4
+        )
+        with pytest.raises(ValueError, match="GPU TreeExplainer does not support categorical splits"):
+            gpu_explainer.shap_interaction_values(X.iloc[:10, :])
     else:
-        shap_values = explainer.shap_values(X.iloc[:10, :])
-        assert np.allclose(shap_values.sum(axis=1) + explainer.expected_value, preds[:10], atol=1e-4)
+        shap_values = cpu_explainer.shap_values(X.iloc[:10, :])
+        assert np.allclose(shap_values.sum(axis=1) + cpu_explainer.expected_value, preds[:10], atol=1e-4)
+        with pytest.raises(ValueError, match="GPU TreeExplainer does not support categorical splits"):
+            gpu_explainer.shap_values(X.iloc[:10, :])
 
 
-def test_categorical_split_cpu_gpu_equivalence():
+def test_categorical_split_gpu_rejected():
     """
-    Check consistency with a dummy tree that a single categorical split yields the same results on GPU and CPU.
+    Check that legacy custom-tree masks are migrated for CPU and explicitly rejected on GPU.
     """
     tree = {
         "children_left": np.array([1, -1, -1], dtype=np.int32),
@@ -323,8 +330,10 @@ def test_categorical_split_cpu_gpu_equivalence():
     cpu_explainer = shap.TreeExplainer(ensemble, feature_perturbation="tree_path_dependent")
     gpu_explainer = shap.GPUTreeExplainer(ensemble)
     shap_values_cpu = cpu_explainer.shap_values(X, check_additivity=False)
-    shap_values_gpu = gpu_explainer.shap_values(X, check_additivity=False)
-    np.testing.assert_allclose(shap_values_gpu, shap_values_cpu, atol=1e-5)
+    assert shap_values_cpu.shape == X.shape
+    np.testing.assert_array_equal(ensemble.cat_bitsets, np.array([2, 4, 0], dtype=np.uint32))
+    with pytest.raises(ValueError, match="GPU TreeExplainer does not support categorical splits"):
+        gpu_explainer.shap_values(X, check_additivity=False)
 
 
 def test_categorical_split_matches_binary_feature():
@@ -373,13 +382,12 @@ def test_categorical_split_matches_binary_feature():
     cat_cpu = shap.TreeExplainer(cat_ensemble, feature_perturbation="tree_path_dependent").shap_values(
         X_cat, check_additivity=False
     )
-    cat_gpu = shap.GPUTreeExplainer(cat_ensemble).shap_values(X_cat, check_additivity=False)
-    np.testing.assert_allclose(cat_gpu, cat_cpu, atol=1e-5)
+    with pytest.raises(ValueError, match="GPU TreeExplainer does not support categorical splits"):
+        shap.GPUTreeExplainer(cat_ensemble).shap_values(X_cat, check_additivity=False)
 
     bin_cpu = shap.TreeExplainer(bin_ensemble, feature_perturbation="tree_path_dependent").shap_values(
         X_bin, check_additivity=False
     )
     bin_gpu = shap.GPUTreeExplainer(bin_ensemble).shap_values(X_bin, check_additivity=False)
     np.testing.assert_allclose(bin_gpu, bin_cpu, atol=1e-5)
-    np.testing.assert_allclose(cat_gpu, bin_gpu, atol=1e-5)
-    np.testing.assert_allclose(cat_cpu, cat_gpu, atol=1e-5)
+    np.testing.assert_allclose(cat_cpu, bin_gpu, atol=1e-5)
