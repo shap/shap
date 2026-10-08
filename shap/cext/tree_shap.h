@@ -189,23 +189,24 @@ inline transform_f get_transform(unsigned model_transform) {
 
 inline bool category_in_threshold(const unsigned int *cat_bitsets, const size_t num_cat_bitsets,
                                   const tfloat threshold, const tfloat category) {
-    // Invalid model offsets and non-integral category values do not match. In particular,
-    // validate all floating-point values before narrowing them to an array index.
+    // LightGBM converts categorical values to integers by truncating toward zero.
+    // Validate floating-point values before narrowing them to an array index.
+    const tfloat category_code = std::trunc(category);
     if (cat_bitsets == NULL || !std::isfinite(threshold) || threshold < 0 ||
         std::trunc(threshold) != threshold || threshold >= static_cast<tfloat>(num_cat_bitsets) ||
-        !std::isfinite(category) || category < 0 || std::trunc(category) != category ||
-        category >= static_cast<tfloat>(std::numeric_limits<size_t>::max())) {
+        !std::isfinite(category) || category_code < 0 ||
+        category_code >= static_cast<tfloat>(std::numeric_limits<size_t>::max())) {
         return false;
     }
 
     const size_t start = static_cast<size_t>(threshold);
     const size_t n_words = cat_bitsets[start];
     const size_t words_available = num_cat_bitsets - start - 1;
-    if (n_words == 0 || n_words > words_available || category / 32 >= static_cast<tfloat>(n_words)) {
+    if (n_words == 0 || n_words > words_available || category_code / 32 >= static_cast<tfloat>(n_words)) {
         return false;
     }
 
-    const size_t c = static_cast<size_t>(category);
+    const size_t c = static_cast<size_t>(category_code);
     const size_t word = c / 32;
     return (cat_bitsets[start + 1 + word] & (1u << (c % 32))) != 0;
 }

@@ -104,6 +104,52 @@ def test_lightgbm_native_categorical_missing_routing():
     _assert_interaction_additivity(model, X_missing)
 
 
+@pytest.mark.parametrize("n_categories", [8, 33, 300])
+@pytest.mark.parametrize("include_missing", [False, True])
+def test_lightgbm_fractional_categorical_routing(n_categories, include_missing):
+    lightgbm = pytest.importorskip("lightgbm")
+    model, X = _train_categorical_booster(lightgbm, n_categories, include_missing=include_missing)
+    # LightGBM truncates categorical values toward zero, including -0.5 -> 0.
+    codes = np.array([0.5, 1.5, 31.5, 32.5, n_categories - 0.25, -0.5, -1.0, np.nan])
+    X_test = np.column_stack([codes, np.zeros(codes.size)])
+    explainer = _assert_interaction_additivity(model, X_test)
+    np.testing.assert_allclose(explainer.model.predict(X_test), model.predict(X_test), atol=1e-6, rtol=0)
+
+    # Fractional background values must also take the same branches when updating
+    # node weights, and Saabas must reconstruct the same predictions.
+    background = X.copy()
+    background[:, 0] += 0.5
+    explainer = shap.TreeExplainer(model, data=background, feature_perturbation="tree_path_dependent")
+    for approximate in [False, True]:
+        values = explainer.shap_values(X_test, approximate=approximate)
+        np.testing.assert_allclose(
+            values.sum(axis=1) + explainer.expected_value, model.predict(X_test), atol=1e-6, rtol=0
+        )
+
+
+@pytest.mark.parametrize("check_additivity", [False, True])
+def test_interventional_rejects_categorical_splits(check_additivity):
+    lightgbm = pytest.importorskip("lightgbm")
+    model, X = _train_categorical_booster(lightgbm, n_categories=8)
+    explainer = shap.TreeExplainer(model, data=X)
+    with pytest.raises(ValueError, match="interventional.*does not support categorical splits"):
+        explainer.shap_values(X[:2], check_additivity=check_additivity)
+    with pytest.raises(ValueError, match="interventional.*does not support categorical splits"):
+        explainer.shap_interaction_values(X[:2])
+
+
+@pytest.mark.parametrize("offset, block", [(2, [1, 2]), (0, [2, 2]), (0, [0, 2])])
+def test_invalid_local_categorical_bitset_cannot_read_next_tree(offset, block):
+    first = _legacy_categorical_tree(offset)
+    first.cat_bitsets = np.array(block, dtype=np.uint32)
+    second = _legacy_categorical_tree(0)
+    second.cat_bitsets = np.array([1, 4], dtype=np.uint32)
+    # A global-only bounds check would allow the first tree to read the second
+    # tree's header or words. Reject the malformed local block before rebasing.
+    with pytest.raises(ValueError, match="invalid bitset (offset|length)"):
+        TreeEnsemble([first, second], model_output="raw")
+
+
 def test_lightgbm_mixed_categorical_and_continuous_trees():
     lightgbm = pytest.importorskip("lightgbm")
     X, y = _categorical_training_data(33)

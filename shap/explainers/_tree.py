@@ -1636,7 +1636,10 @@ class TreeEnsemble:
                 if cat_node_idx.size:
                     local_offsets = tree_thresholds[cat_node_idx]
                     invalid_offsets = (
-                        ~np.isfinite(local_offsets) | (local_offsets < 0) | (local_offsets != np.trunc(local_offsets))
+                        ~np.isfinite(local_offsets)
+                        | (local_offsets < 0)
+                        | (local_offsets != np.trunc(local_offsets))
+                        | (local_offsets >= tree_cat_bitsets.size)
                     )
                     if np.any(invalid_offsets):
                         node_idx = cat_node_idx[np.flatnonzero(invalid_offsets)[0]]
@@ -1644,6 +1647,13 @@ class TreeEnsemble:
                             f"Categorical node {node_idx} in tree {i} has an invalid bitset offset "
                             f"{tree_thresholds[node_idx]!r}."
                         )
+                    for node_idx, local_offset in zip(cat_node_idx, local_offsets):
+                        start = int(local_offset)
+                        n_words = int(tree_cat_bitsets[start])
+                        if n_words == 0 or n_words > tree_cat_bitsets.size - start - 1:
+                            raise ValueError(
+                                f"Categorical node {node_idx} in tree {i} has an invalid bitset length {n_words}."
+                            )
                     if cat_bitset_offset + int(np.max(local_offsets)) > max_exact_bitset_offset:
                         raise ValueError(
                             "Categorical bitset offsets exceed the exact-integer range of the model threshold dtype."

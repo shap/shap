@@ -198,11 +198,15 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    if (feature_dependence == FEATURE_DEPENDENCE::global_path_dependent &&
+    if ((feature_dependence == FEATURE_DEPENDENCE::global_path_dependent ||
+         feature_dependence == FEATURE_DEPENDENCE::independent) &&
         has_categorical_splits(threshold_types_array)) {
         PyErr_SetString(
             PyExc_ValueError,
-            "feature_perturbation='global_path_dependent' does not support categorical splits."
+            feature_dependence == FEATURE_DEPENDENCE::independent
+                ? "feature_perturbation='interventional' does not support categorical splits. "
+                  "Use feature_perturbation='tree_path_dependent' or approximate=True."
+                : "feature_perturbation='global_path_dependent' does not support categorical splits."
         );
         Py_XDECREF((PyObject*)children_left_array);
         Py_XDECREF((PyObject*)children_right_array);
