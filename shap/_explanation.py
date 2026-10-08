@@ -501,6 +501,9 @@ class Explanation(metaclass=MetaExplanation):
     def __truediv__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
         return self._apply_binary_operator(other, operator.truediv, "__truediv__")
 
+    def __rtruediv__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
+        return self._apply_binary_operator(other, lambda a, b: b / a, "__rtruediv__")
+
     def _numpy_func(self, fname: str, **kwargs: Any) -> Explanation:
         """Apply a numpy-style function to this Explanation."""
         new_self = copy.copy(self)
