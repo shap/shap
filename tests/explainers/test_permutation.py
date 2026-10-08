@@ -3,6 +3,7 @@
 import pickle
 
 import numpy as np
+import pytest
 
 import shap
 
@@ -102,3 +103,37 @@ def test_serialization_custom_model_save():
         atol=0.05,
         max_evals=100000,
     )
+
+
+def test_permutation_explainer_output_names_passthrough():
+
+    # Simple dummy model that returns 2 columns
+    def dummy_model(x):
+        return np.ones((x.shape[0], 2))
+
+    X = np.zeros((5, 3))
+    names = ["Class A", "Class B"]
+
+    # Initialize with output_names
+    explainer = shap.PermutationExplainer(dummy_model, X, output_names=names)
+    explanation = explainer(X[:1])
+
+    assert list(explanation.output_names) == names, f"Expected {names}, but got {explanation.output_names}"
+
+
+def test_permutation_explainer_slicing_by_output_name():
+
+    def dummy_model(x):
+        return np.random.rand(x.shape[0], 3)
+
+    X = np.random.rand(10, 4)
+    names = ["Setosa", "Versicolor", "Virginica"]
+
+    explainer = shap.PermutationExplainer(dummy_model, X, output_names=names)
+    explanation = explainer(X[:2])
+
+    try:
+        sliced_ext = explanation[:, :, "Versicolor"]
+        assert sliced_ext.shape == (2, 4)
+    except KeyError:
+        pytest.fail("Explanation could not be sliced by output_name. Metadata mapping failed.")
