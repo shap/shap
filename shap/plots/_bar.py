@@ -11,7 +11,14 @@ from ..utils import format_value, ordinal_str
 from ..utils._exceptions import DimensionError
 from ._labels import labels
 from ._style import get_style
-from ._utils import convert_ordering, dendrogram_coords, get_sort_order, merge_nodes, sort_inds
+from ._utils import (
+    aggregate_features_into_coalitions,
+    convert_ordering,
+    dendrogram_coords,
+    get_sort_order,
+    merge_nodes,
+    sort_inds,
+)
 
 if TYPE_CHECKING:
     from .._explanation import OpHistoryItem
@@ -25,6 +32,7 @@ def bar(
     order=Explanation.abs,
     clustering=None,
     clustering_cutoff=0.5,
+    coalition=False,
     show_data="auto",
     ax=None,
     show=True,
@@ -54,6 +62,10 @@ def bar(
         A partition tree, as returned by :func:`shap.utils.hclust`
     clustering_cutoff: float
         Controls how much of the clustering structure is displayed.
+    coalition: bool
+        Controls if shap values for features should be display (default behavior),
+        or if shap values for the coalition (when Owen's values are computed) should be
+        displayed.
     show_data: bool or str
         Controls if data values are shown as part of the y tick labels. If
         "auto", we show the data only when there are no transforms.
@@ -76,6 +88,9 @@ def bar(
 
     """
     style = get_style()
+    if not isinstance(coalition, bool):
+        emsg = "The coalition argument must be an boolean value!"
+        raise TypeError(emsg)
     # convert Explanation objects to dictionaries
     if isinstance(shap_values, Explanation):
         cohorts = {"": shap_values}
@@ -140,7 +155,7 @@ def bar(
         feature_names = [ordinal_str(i) + " " + feature_names for i in range(len(values[0]))]
 
     # build our auto xlabel based on the transform history of the Explanation object
-    xlabel = "SHAP value"
+    xlabel = "SHAP value" if coalition is not True else "Owen value"
     for op in op_history:
         if op.name == "abs":
             xlabel = f"|{xlabel}|"
@@ -166,6 +181,22 @@ def bar(
     # ensure we at least have default feature names
     if feature_names is None:
         feature_names = np.array([labels["FEATURE"] % str(i) for i in range(len(values[0]))])
+
+    if coalition:
+        values, feature_names = aggregate_features_into_coalitions(
+            values=values,
+            feature_names=feature_names,
+            partition_tree=partition_tree,
+            clustering_cutoff=clustering_cutoff,
+        )
+
+        # Features values are not well-defined for coalitions
+        show_data = False
+
+        # Originial parititon tree no longer match the values format
+        # since we have extracted flat coalitions and we no longer have leaves
+
+        partition_tree = None
 
     # determine how many top features we will plot
     if max_display is None:
@@ -238,7 +269,8 @@ def bar(
         else:
             yticklabels.append(feature_names[i])
     if num_features < len(values[0]):
-        yticklabels[-1] = f"Sum of {num_cut} other features"
+        unit_name = "coalitions" if coalition else "features"
+        yticklabels[-1] = f"Sum of {num_cut} other {unit_name}"
 
     if ax is None:
         ax = plt.gca()
