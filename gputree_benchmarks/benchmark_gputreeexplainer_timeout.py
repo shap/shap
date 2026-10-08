@@ -9,6 +9,7 @@ After a backend times out, subsequent workloads with more samples at the same
 feature count and model configuration are recorded as timeouts without starting a worker.
 """
 
+import argparse
 import logging
 import multiprocessing as mp
 import platform
@@ -192,7 +193,7 @@ def hardware_abbreviation(name):
     return " ".join(name.split()) or "unknown"
 
 
-def save_results(cpu, gpu, metadata=None):
+def save_results(cpu, gpu, metadata=None, output_path=None):
     metadata = {
         "CPU": cpu,
         "GPU": gpu,
@@ -235,12 +236,12 @@ def save_results(cpu, gpu, metadata=None):
             result["status"], result.get("validation", "—"), details,
         ]
         lines.append("| " + " | ".join(markdown_cell(cell) for cell in cells) + " |")
-    output_path = Path(__file__).with_name("benchmarks_timeout.md")
+    output_path = Path(output_path) if output_path is not None else Path(__file__).with_name("benchmarks_timeout.md")
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     logger.info("Saved benchmark results to %s", output_path)
 
 
-def run():
+def run(n_samples=1_000, output_path=None):
     from sklearn.datasets import make_regression
     from sklearn.ensemble import RandomForestRegressor
 
@@ -248,7 +249,6 @@ def run():
 
     # Hold the data shape fixed to isolate tree depth and ensemble size.
     n_features = 50
-    n_samples = 1_000
     n_training_samples = 20_000
     max_depths = [12, 20, 28, 36]
     tree_counts = [10, 100, 500]
@@ -285,11 +285,17 @@ def run():
             model.fit(X_train, y_train)
             # Keep a small correctness comparison even if the full batch times out.
             compare_by_size(model, 100, n_features)
-            save_results(cpu, gpu, metadata)
+            save_results(cpu, gpu, metadata, output_path=output_path)
             compare_by_size(model, n_samples, n_features)
-            save_results(cpu, gpu, metadata)
+            save_results(cpu, gpu, metadata, output_path=output_path)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    run()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--n-samples", type=int, default=1_000, help="Rows in the main explanation batch")
+    parser.add_argument("--output", type=Path, default=Path(__file__).with_name("benchmarks_timeout.md"))
+    args = parser.parse_args()
+    if args.n_samples < 1:
+        parser.error("--n-samples must be positive")
+    run(n_samples=args.n_samples, output_path=args.output)
