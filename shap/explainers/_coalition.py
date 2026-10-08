@@ -174,6 +174,7 @@ class CoalitionExplainer(Explainer):
                 "For automatic hierarchical clustering, please use `shap.PartitionExplainer`."
             )
         self.partition_tree = partition_tree
+        _validate_partition_tree(partition_tree)
 
         if not callable(self.masker.clustering):
             self._clustering = self.masker.clustering
@@ -507,6 +508,34 @@ def _create_combined_masks(
                 combined_mask_with_last_key = _combine_masks([combined_mask, masks_dict[last_key]])
                 combined_masks.append((last_key, combined_mask_with_last_key, weights))
     return combined_masks
+
+
+def _validate_partition_tree(partition_tree: dict[str, Any]) -> None:
+    """Raise ValueError if any feature appears in more than one leaf group."""
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+
+    def _collect_leaves(node: dict[str, Any] | list[Any] | str) -> None:
+        if isinstance(node, str):
+            if node in seen:
+                duplicates.add(node)
+            seen.add(node)
+        elif isinstance(node, list):
+            for item in node:
+                _collect_leaves(item)
+        elif isinstance(node, dict):
+            for value in node.values():
+                _collect_leaves(value)
+
+    _collect_leaves(partition_tree)
+
+    if duplicates:
+        raise ValueError(
+            f"partition_tree contains overlapping features: {duplicates}. "
+            "Each feature must appear in exactly one leaf group. "
+            "Overlapping features cause incorrect OFF/ON mask pairing "
+            "and produce wrong SHAP attributions silently."
+        )
 
 
 def _map_combinations_to_unique_masks(
