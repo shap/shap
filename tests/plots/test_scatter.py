@@ -112,3 +112,36 @@ def test_scatter_plot_value_input(input):
     shap.plots.scatter(explanations, show=False)
     plt.tight_layout()
     return plt.gcf()
+
+
+def test_scatter_mismatched_rows_raises_dimension_error():
+    """Mismatched row counts should raise DimensionError, not AssertionError (closes #4465)."""
+    from shap.plots._scatter import dependence_legacy
+    from shap.utils._exceptions import DimensionError
+
+    # Exercise the legacy dependence_legacy path where DimensionError was previously a bare assert
+    with pytest.raises(DimensionError, match="same number of rows"):
+        dependence_legacy(
+            0,
+            shap_values=np.array([[1.0], [2.0], [3.0]]),
+            features=np.array([[0.5], [0.6]]),
+            feature_names=["f1"],
+            show=False,
+        )
+    plt.close("all")
+
+
+def test_scatter_mismatched_cols_raises_dimension_error():
+    """Mismatched column counts should raise DimensionError, not AssertionError (closes #4465)."""
+    from shap.plots._scatter import dependence_legacy
+    from shap.utils._exceptions import DimensionError
+
+    with pytest.raises(DimensionError, match="same number of columns"):
+        dependence_legacy(
+            0,
+            shap_values=np.array([[1.0, 2.0]]),
+            features=np.array([[0.5]]),
+            feature_names=["f1", "f2"],
+            show=False,
+        )
+    plt.close("all")
