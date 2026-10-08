@@ -9,6 +9,17 @@ import shap
 from shap.plots import _style
 
 
+def test_waterfall_ax_parameter(explainer):
+    """Test that passing ax draws the waterfall onto the given axes."""
+    fig, axes = plt.subplots(1, 2)
+    explanation = explainer(explainer.data)
+    returned = shap.plots.waterfall(explanation[0], show=False, ax=axes[0])
+    assert returned is axes[0]
+    # The second subplot must be untouched (no waterfall content)
+    assert len(axes[1].patches) == 0
+    plt.close(fig)
+
+
 def test_waterfall_input_is_explanation():
     """Checks an error is raised if a non-Explanation object is passed as input."""
     with pytest.raises(
