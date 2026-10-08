@@ -39,7 +39,9 @@ class Explainer(Serializable):
         model: Any,
         masker: Any = None,
         link: Callable[..., Any] = links.identity,
-        algorithm: Literal["auto", "permutation", "partition", "tree", "linear", "deep", "exact", "additive"] = "auto",
+        algorithm: Literal[
+            "auto", "permutation", "partition", "tree", "linear", "deep", "exact", "additive", "kernel"
+        ] = "auto",
         output_names: list[str] | None = None,
         feature_names: list[str] | list[list[str]] | None = None,
         linearize_link: bool = True,
@@ -74,7 +76,7 @@ class Explainer(Serializable):
             units. For more details on how link functions work see any overview of link functions for generalized
             linear models.
 
-        algorithm : "auto", "permutation", "partition", "tree", or "linear"
+        algorithm : "auto", "permutation", "partition", "tree", "linear", "deep", "exact", "additive", or "kernel"
             The algorithm used to estimate the Shapley values. There are many different algorithms that
             can be used to estimate the Shapley values (and the related value for constrained games), each
             of these algorithms have various tradeoffs and are preferable in different situations. By
@@ -297,6 +299,18 @@ class Explainer(Serializable):
                     link=self.link,
                     feature_names=self.feature_names,  # type: ignore[arg-type]
                     linearize_link=linearize_link,
+                    **kwargs,
+                )
+            elif algorithm == "kernel":
+                # KernelExplainer has a narrower signature (model, data, ...)
+                # and does not take a linearize_link kwarg. GH #3996.
+                self.__class__ = explainers.KernelExplainer
+                explainers.KernelExplainer.__init__(  # type: ignore[call-arg]
+                    self,  # type: ignore[arg-type]
+                    self.model,
+                    self.masker,
+                    link=self.link,
+                    feature_names=self.feature_names,  # type: ignore[arg-type]
                     **kwargs,
                 )
             else:
