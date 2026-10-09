@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 import shap
+from shap.plots._bar import round_off_trailing_zeros
 from shap.utils._exceptions import DimensionError
 
 
@@ -110,3 +111,39 @@ def test_bar_raises_error_for_empty_explanation(explainer):
     shap_values = explainer(explainer.data)
     with pytest.raises(ValueError, match="The passed Explanation is empty"):
         shap.plots.bar(shap_values[0:0], show=False)
+
+
+def test_round_off_trailing_zeros():
+    """Whole-number feature values are rounded to ints, other values are left alone."""
+    assert round_off_trailing_zeros([1.0, 2.0, 3.0]) == [1, 2, 3]
+    assert round_off_trailing_zeros([1.5, 2.25]) == [1.5, 2.25]
+
+
+@pytest.mark.parametrize("value", ["100", "abc", None])
+def test_round_off_trailing_zeros_ignores_non_numeric(value):
+    """Values that cannot be interpreted as numbers are passed through unchanged."""
+    assert round_off_trailing_zeros([value]) == [value]
+
+
+def test_round_off_trailing_zeros_ignores_unroundable():
+    """Values raising on round() are passed through rather than propagating the error.
+
+    This is the behaviour shap.plots.bar already had; bar_legacy used to raise instead.
+    """
+
+    class Unroundable:
+        def __round__(self):
+            raise ValueError("cannot round me")
+
+        def __eq__(self, other):
+            return False
+
+    unroundable = Unroundable()
+    assert round_off_trailing_zeros([1.0, unroundable]) == [1, unroundable]
+
+
+def test_round_off_trailing_zeros_does_not_mutate_input():
+    """The caller's feature values are left untouched."""
+    features = [1.0, 2.0]
+    round_off_trailing_zeros(features)
+    assert features == [1.0, 2.0]
