@@ -17,7 +17,7 @@ from sklearn.utils import check_array
 import shap
 from shap.explainers._explainer import Explanation
 from shap.explainers._tree import SingleTree
-from shap.utils._exceptions import InvalidModelError
+from shap.utils._exceptions import ExplainerError, InvalidModelError
 
 
 def test_unsupported_model_raises_error():
@@ -1851,6 +1851,22 @@ class TestExplainerLightGBM:
 
         shap_values = explainer.shap_values(X.iloc[:10, :])
         assert np.allclose(shap_values.sum(axis=1) + explainer.expected_value, preds[:10], atol=1e-4)
+
+    def test_lightgbm_categorical_log_loss_raises(self):
+        # GH 5132 (case 3): model_output="log_loss" is only supported with
+        # feature_perturbation="interventional", which native categorical
+        # splits cannot support, so this combination should raise a clear error.
+        lightgbm = pytest.importorskip("lightgbm")
+        X, y = shap.datasets.adult(n_points=300)
+        X["categ"] = pd.Categorical(
+            [p for p in ("M", "F") for _ in range(150)],
+            ordered=False,
+        )
+        model = lightgbm.LGBMClassifier(n_estimators=7, n_jobs=1)
+        model.fit(X, y)
+
+        with pytest.raises(ExplainerError, match="log_loss"):
+            shap.TreeExplainer(model, data=X, model_output="log_loss")
 
 
 def test_check_consistent_outputs_binary_classification():
