@@ -17,6 +17,23 @@ if TYPE_CHECKING:
     from .._explanation import OpHistoryItem
 
 
+def round_off_trailing_zeros(features):
+    """Round feature values that are whole numbers, leaving anything non-numeric untouched.
+
+    Rounding avoids displaying values such as ``1.0`` when ``1`` is enough. Values that
+    cannot be interpreted as numbers (strings, ``None``, objects raising on ``round``)
+    are passed through unchanged.
+    """
+    rounded = list(features)
+    for i in range(len(rounded)):
+        try:
+            if round(rounded[i]) == rounded[i]:
+                rounded[i] = int(rounded[i])
+        except Exception:
+            pass  # features[i] must not be a number
+    return rounded
+
+
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
 # TODO: Have the Explanation object track enough data so that we can tell (and so show) how many instances are in each cohort
 def bar(
@@ -312,15 +329,7 @@ def bar(
         ax.axhline(i + 1, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
 
     if features is not None:
-        features = list(features)
-
-        # try and round off any trailing zeros after the decimal point in the feature values
-        for i in range(len(features)):
-            try:
-                if round(features[i]) == features[i]:
-                    features[i] = int(features[i])
-            except Exception:
-                pass  # features[i] must not be a number
+        features = round_off_trailing_zeros(features)
 
     ax.xaxis.set_ticks_position("bottom")
     ax.yaxis.set_ticks_position("none")
@@ -434,15 +443,7 @@ def bar_legacy(shap_values, features=None, feature_names=None, max_display=None,
     )
     plt.yticks(y_pos, fontsize=13)
     if features is not None:
-        features = list(features)
-
-        # try and round off any trailing zeros after the decimal point in the feature values
-        for i in range(len(features)):
-            try:
-                if round(features[i]) == features[i]:
-                    features[i] = int(features[i])
-            except TypeError:
-                pass  # features[i] must not be a number
+        features = round_off_trailing_zeros(features)
     yticklabels = []
     for i in feature_inds:
         if features is not None:
