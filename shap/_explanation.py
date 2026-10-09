@@ -676,16 +676,16 @@ class Explanation(metaclass=MetaExplanation):
         new_exp = Explanation(
             values=np.hstack([self.values, other.values]),
             base_values=self.base_values,
-            data=self.data,
-            display_data=self.display_data,
+            data=_hstack_feature_attr(self.data, other.data),
+            display_data=_hstack_feature_attr(self.display_data, other.display_data),
             instance_names=self.instance_names,
-            feature_names=self.feature_names,
+            feature_names=_hstack_feature_attr(self.feature_names, other.feature_names),
             output_names=self.output_names,
             output_indexes=self.output_indexes,
-            lower_bounds=self.lower_bounds,
-            upper_bounds=self.upper_bounds,
-            error_std=self.error_std,
-            main_effects=self.main_effects,
+            lower_bounds=_hstack_feature_attr(self.lower_bounds, other.lower_bounds),
+            upper_bounds=_hstack_feature_attr(self.upper_bounds, other.upper_bounds),
+            error_std=_hstack_feature_attr(self.error_std, other.error_std),
+            main_effects=_hstack_feature_attr(self.main_effects, other.main_effects),
             hierarchical_values=self.hierarchical_values,
             clustering=self.clustering,
         )
@@ -823,6 +823,19 @@ def compute_output_dims(values, base_values, data, output_names) -> tuple[int, .
 
 def is_1d(val: Sequence[Any] | npt.NDArray[Any]) -> bool:
     return not (isinstance(val[0], (list, np.ndarray)))
+
+
+def _hstack_feature_attr(a: Any, b: Any) -> Any:
+    """Concatenates a per-feature attribute of two explanations along the feature axis.
+
+    Returns ``None`` when either side is missing it, since a partial attribute cannot be aligned
+    with the stacked values.
+    """
+    if a is None or b is None:
+        return None
+    if isinstance(a, list) and isinstance(b, list):
+        return a + b
+    return np.hstack([a, b])
 
 
 def _compute_shape(x) -> tuple[int | None, ...]:
