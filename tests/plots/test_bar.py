@@ -147,3 +147,32 @@ def test_round_off_trailing_zeros_does_not_mutate_input():
     features = [1.0, 2.0]
     round_off_trailing_zeros(features)
     assert features == [1.0, 2.0]
+
+
+def test_bar_rounds_off_trailing_zeros_in_labels():
+    """shap.plots.bar rounds whole-number feature values in its labels."""
+    exp = shap.Explanation(
+        values=np.array([[1.0, -2.0, 3.0]]),
+        base_values=np.array([0.0]),
+        data=np.array([[1.0, 2.5, 3.0]]),
+        feature_names=["Feature 0", "Feature 1", "Feature 2"],
+    )
+    shap.plots.bar(exp, show_data=True, show=False)
+    try:
+        labels = [t.get_text() for t in plt.gcf().axes[0].get_yticklabels()]
+    finally:
+        plt.close("all")
+    assert "1 = Feature 0" in labels
+    assert "2.5 = Feature 1" in labels
+    assert "3 = Feature 2" in labels
+
+
+def test_bar_legacy_rounds_off_trailing_zeros_in_labels():
+    """shap.bar_plot rounds whole-number feature values in its labels, as shap.plots.bar does."""
+    with pytest.warns(DeprecationWarning):
+        shap.bar_plot(np.array([1.0, -2.0, 3.0]), features=[1.0, 2.5, 3.0], show=False)
+    try:
+        labels = [t.get_text() for t in plt.gcf().axes[0].get_yticklabels()]
+    finally:
+        plt.close("all")
+    assert sorted(labels) == sorted(["Feature 0 = 1", "Feature 1 = 2.5", "Feature 2 = 3"])
