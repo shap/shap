@@ -6,6 +6,8 @@ import json
 import os
 import time
 import warnings
+from collections.abc import Callable
+from functools import partial
 from typing import Any, Literal
 
 import numpy as np
@@ -107,7 +109,7 @@ def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
 _XGBOOST_ENABLE_CATEGORICAL_DEFAULT_TRUE_VERSION = "3.3"
 
 
-def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
+def _xgboost_cat_unsupported(model: TreeEnsemble, feature_perturbation: str | None = None) -> None:
     # XGBoost's own internal SHAP calculation (used for feature_perturbation=
     # "tree_path_dependent") has natively supported categorical splits since
     # XGBoost 1.5.0, so no guard is needed there. This guard only applies to
@@ -131,7 +133,17 @@ def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
         if version.parse(xgboost.__version__) < version.parse(_XGBOOST_ENABLE_CATEGORICAL_DEFAULT_TRUE_VERSION):
             has_cat_columns = True
 
-    if has_cat_columns:
+    if not has_cat_columns:
+        return
+
+    if feature_perturbation == "interventional":
+        raise NotImplementedError(
+            "Categorical split is not yet supported with feature_perturbation="
+            '"interventional". You can use feature_perturbation="tree_path_dependent".'
+        )
+
+    threshold_types = getattr(model, "threshold_types", None)
+    if threshold_types is None or not np.any(threshold_types == 2):
         raise NotImplementedError(
             "Categorical split is not yet supported. You can still use"
             " TreeExplainer with `feature_perturbation=tree_path_dependent`."
@@ -274,9 +286,7 @@ class TreeExplainer(Explainer):
                 "TreeExplainer does not support clustered data inputs! Please use shap.Explainer or pass an unclustered masker!"
             )
 
-        if isinstance(data, pd.DataFrame):
-            self.data = data.values
-        elif isinstance(data, DenseData):
+        if isinstance(data, DenseData):
             self.data = data.data
         else:
             self.data = data
@@ -318,6 +328,8 @@ class TreeExplainer(Explainer):
             self.model = model
         else:
             self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
+            self.data = self.model.data
+            self.data_missing = self.model.data_missing
         self.model_output = model_output
         # self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
 
@@ -486,9 +498,7 @@ class TreeExplainer(Explainer):
 
         if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
             tree_limit = self.model.values.shape[0]
-        # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
-        if isinstance(X, (pd.Series, pd.DataFrame)):
-            X = X.to_numpy(dtype=self.model.input_dtype, na_value=np.nan)
+        X = self.model._to_input_array(X)
         flat_output = False
         if len(X.shape) == 1:
             flat_output = True
@@ -717,7 +727,7 @@ class TreeExplainer(Explainer):
             X, y, tree_limit, check_additivity
         )
         transform = self.model.get_transform()
-        _xgboost_cat_unsupported(self.model)
+        _xgboost_cat_unsupported(self.model, self.feature_perturbation)
 
         # run the core algorithm using the C extension
         assert_import("cext")
@@ -1037,6 +1047,7 @@ class TreeEnsemble:
         self.tree_limit = None  # used for limiting the number of trees we use by default (like from early stopping)
         self.num_stacked_models = 1  # If this is greater than 1 it means we have multiple stacked models with the same number of trees in each model (XGBoost multi-output style)
         self.cat_feature_indices = None  # If this is set it tells us which features are treated categorically
+        self.input_transform: Callable[..., npt.NDArray[Any]] | None = None
         self._xgb_enable_categorical = False
 
         # we use names like keras
@@ -1631,15 +1642,37 @@ class TreeEnsemble:
             self.base_offset = self.base_offset.flatten()
             assert len(self.base_offset) == self.num_outputs
 
+    def _to_input_array(self, X: npt.NDArray[Any] | pd.Series | pd.DataFrame) -> npt.NDArray[Any]:
+        """Convert user input to the ndarray format expected by the C extension."""
+        if isinstance(X, pd.Series):
+            if self.input_transform is not None:
+                return self.input_transform(X.to_frame().T, dtype=self.input_dtype).reshape(-1)
+            return X.to_numpy(dtype=self.input_dtype, na_value=np.nan)
+        if isinstance(X, pd.DataFrame):
+            if self.input_transform is not None:
+                return self.input_transform(X, dtype=self.input_dtype)
+            return X.to_numpy(dtype=self.input_dtype, na_value=np.nan)
+        return X
+
     def _set_xgboost_model_attributes(
         self,
-        data: npt.NDArray[Any] | None,
+        data: npt.NDArray[Any] | pd.Series | pd.DataFrame | None,
         data_missing: npt.NDArray[np.bool_] | None,
         objective_name_map: dict[str, str],
         tree_output_name_map: dict[str, str],
     ) -> None:
         self.model_type = "xgboost"
         loader = XGBTreeModelLoader(self.original_model)
+        if loader.cat_feature_indices is not None:
+            self.input_transform = partial(
+                XGBTreeModelLoader.transform_input,
+                cat_feature_indices=loader.cat_feature_indices,
+            )
+        if data is not None and isinstance(data, (pd.Series, pd.DataFrame)):
+            data = self._to_input_array(data)
+            data_missing = np.isnan(data, dtype=bool)
+            self.data = data
+            self.data_missing = data_missing
 
         self.trees = loader.get_trees(data=data, data_missing=data_missing)
         self.base_offset = loader.base_score
@@ -1738,9 +1771,7 @@ class TreeEnsemble:
         if tree_limit is None:
             tree_limit = -1 if self.tree_limit is None else self.tree_limit
 
-        # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
-        if isinstance(X, (pd.Series, pd.DataFrame)):
-            X = X.to_numpy(dtype=self.input_dtype, na_value=np.nan)
+        X = self._to_input_array(X)
         flat_output = False
         if len(X.shape) == 1:
             flat_output = True
@@ -1904,7 +1935,10 @@ class SingleTree:
             self.children_default = tree["children_default"].astype(np.int32)
             self.features = tree["feature"].astype(np.int32)
             self.thresholds = tree["threshold"]
-            self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
+            if "threshold_type" in tree:
+                self.threshold_types = np.asarray(tree["threshold_type"], dtype=np.int32)
+            else:
+                self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = tree["value"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
@@ -2273,6 +2307,30 @@ class XGBTreeModelLoader:
     categories: list[list[list[int]]]
     cat_feature_indices: npt.NDArray[Any] | None
 
+    @staticmethod
+    def transform_input(
+        X: npt.NDArray[Any] | pd.Series | pd.DataFrame,
+        *,
+        cat_feature_indices: npt.NDArray[np.intp] | None,
+        dtype: npt.DTypeLike = np.float64,
+    ) -> npt.NDArray[Any]:
+        """Convert pandas categorical columns to integer codes for XGBoost tree traversal."""
+        if isinstance(X, pd.Series):
+            X = X.to_frame().T
+
+        if isinstance(X, pd.DataFrame):
+            arr = X.to_numpy(dtype=dtype, na_value=np.nan).copy()
+            if cat_feature_indices is not None:
+                for idx in cat_feature_indices:
+                    col = X.iloc[:, int(idx)]
+                    if isinstance(col.dtype, pd.CategoricalDtype):
+                        codes = col.cat.codes.to_numpy(dtype=arr.dtype, copy=True)
+                        codes[codes < 0] = np.nan
+                        arr[:, int(idx)] = codes
+            return arr
+
+        return X
+
     def __init__(self, xgb_model: Any) -> None:
         import xgboost as xgb
 
@@ -2434,6 +2492,13 @@ class XGBTreeModelLoader:
 
             tree_categories = self.parse_categories(cat_nodes, cat_segments, cat_sizes, cats, self.node_cleft[-1])
             self.categories.append(tree_categories)
+            for node_id, node_cats in enumerate(tree_categories):
+                if node_cats:
+                    threshold_types[node_id] = 2
+                    threshold = 0.0
+                    for cat in node_cats:
+                        threshold += 2 ** int(cat)
+                    thresholds[node_id] = threshold
 
     @staticmethod
     def parse_categories(
