@@ -19,6 +19,7 @@
 #
 import os
 import shutil
+import subprocess
 import sys
 
 import requests
@@ -194,11 +195,28 @@ todo_include_todos = False
 
 
 def get_latest_tag() -> str:
-    """Query GitHub API to get the most recent git tag"""
+    """Get the most recent release tag without making docs depend on GitHub."""
     url = "https://api.github.com/repos/shap/shap/releases/latest"
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.json()["tag_name"]
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        return response.json()["tag_name"]
+    except requests.RequestException:
+        # Read the tag from the checkout when GitHub rate-limits Read the Docs.
+        # A source checkout without tags can still build successfully; in that
+        # case, linking master to itself is preferable to failing the build.
+        try:
+            return (
+                subprocess.check_output(
+                    ["git", "describe", "--tags", "--abbrev=0"],
+                    cwd=os.path.dirname(__file__),
+                    text=True,
+                    stderr=subprocess.DEVNULL,
+                ).strip()
+                or "master"
+            )
+        except (OSError, subprocess.CalledProcessError):
+            return "master"
 
 
 _latest_tag = get_latest_tag()
