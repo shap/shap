@@ -10,7 +10,6 @@
 #ifndef SHAP_QUADRATURE_TREE_SHAP_H
 #define SHAP_QUADRATURE_TREE_SHAP_H
 
-#include <array>
 #include <vector>
 
 namespace shap_quadrature {
@@ -101,24 +100,10 @@ inline void RootMean(const TreeEnsemble &tree, const std::vector<double> &ratios
     RootMean(tree, ratios, right, weight * ratios[right], mean);
 }
 
-// Specialize the small exact rules for vectorization; N=0 handles larger rules.
-template <unsigned N> struct Buffer {
-    std::array<double, N> values{};
-    explicit Buffer(unsigned) {}
-    double &operator[](unsigned i) { return values[i]; }
-    double operator[](unsigned i) const { return values[i]; }
-};
-template <> struct Buffer<0> {
-    std::vector<double> values;
-    explicit Buffer(unsigned n) : values(n) {}
-    double &operator[](unsigned i) { return values[i]; }
-    double operator[](unsigned i) const { return values[i]; }
-};
-
 // Upstream's return-edge recurrence, with SHAP's split semantics and output layout.
 // Fold w_prod into the basis (as the upstream GPU does), avoiding large basis
 // products multiplied by vanishing leaf probabilities.
-template <unsigned N, bool Interactions> struct Runner {
+template <bool Interactions> struct Runner {
     const TreeEnsemble &tree;
     const Rule &rule;
     const std::vector<double> &ratios;
@@ -132,7 +117,7 @@ template <unsigned N, bool Interactions> struct Runner {
     Runner(const TreeEnsemble &tree, const Rule &rule, const std::vector<double> &ratios,
            const double *x, const bool *missing, unsigned features, unsigned output, double *phi)
         : tree(tree), rule(rule), ratios(ratios), x(x), missing(missing), features(features),
-          output(output), n(N ? N : static_cast<unsigned>(rule.nodes.size())), phi(phi),
+          output(output), n(static_cast<unsigned>(rule.nodes.size())), phi(phi),
           probability(features, -1) { path.reserve(tree.max_depth); }
 
     double &Value(unsigned feature) {
@@ -141,14 +126,14 @@ template <unsigned N, bool Interactions> struct Runner {
     }
 
     void Visit(unsigned split, unsigned child, bool satisfies,
-               const Buffer<N> &basis, Buffer<N> &result) {
+               const std::vector<double> &basis, std::vector<double> &result) {
         unsigned feature = tree.features[split];
         double old = probability[feature];
         bool first = old < 0;
         double previous = first ? 1 : old;
         double weight = ratios[child];
         double enter = satisfies ? previous / weight : 0;
-        Buffer<N> next(n);
+        std::vector<double> next(n);
         for (unsigned i = 0; i < n; ++i) {
             next[i] = basis[i] * weight * (1 + (enter - 1) * rule.nodes[i])
                       / (1 + (previous - 1) * rule.nodes[i]);
@@ -156,7 +141,7 @@ template <unsigned N, bool Interactions> struct Runner {
         probability[feature] = enter;
         if (Interactions && first) path.push_back(feature);
         RunNode(child, next, result);
-        Buffer<N> edge(n);
+        std::vector<double> edge(n);
         double delta = 0;
         for (unsigned i = 0; i < n; ++i) {
             double t = rule.nodes[i];
@@ -181,7 +166,7 @@ template <unsigned N, bool Interactions> struct Runner {
         probability[feature] = old;
     }
 
-    void RunNode(unsigned node, const Buffer<N> &basis, Buffer<N> &result) {
+    void RunNode(unsigned node, const std::vector<double> &basis, std::vector<double> &result) {
         if (tree.is_leaf(node)) {
             double value = tree.values[static_cast<size_t>(node) * tree.num_outputs + output];
             for (unsigned i = 0; i < n; ++i) result[i] = basis[i] * value;
@@ -191,14 +176,14 @@ template <unsigned N, bool Interactions> struct Runner {
         bool left = missing[feature] ? tree.children_default[node] == tree.children_left[node] :
             (tree.threshold_types[node] == 1 ? category_in_threshold(tree.thresholds[node], x[feature]) :
                                              x[feature] <= tree.thresholds[node]);
-        Buffer<N> right(n);
+        std::vector<double> right(n);
         Visit(node, tree.children_left[node], left, basis, result);
         Visit(node, tree.children_right[node], !left, basis, right);
         for (unsigned i = 0; i < n; ++i) result[i] += right[i];
     }
 
     void Run(double root_mean) {
-        Buffer<N> basis(n), result(n);
+        std::vector<double> basis(n), result(n);
         for (unsigned i = 0; i < n; ++i) basis[i] = 1;
         RunNode(0, basis, result);
         Value(features) += root_mean;
@@ -224,12 +209,12 @@ inline void FinalizeInteractions(double *phi, unsigned features, unsigned output
     }
 }
 
-template <unsigned N, bool Interactions>
+template <bool Interactions>
 inline void ExplainTree(const TreeEnsemble &tree, const Rule &rule,
                         const std::vector<double> &ratios, const std::vector<double> &mean,
                         const ExplanationDataset &data, double *phi, size_t stride) {
     for (unsigned output = 0; output < tree.num_outputs; ++output) {
-        Runner<N, Interactions> runner(tree, rule, ratios, nullptr, nullptr, data.M, output, nullptr);
+        Runner<Interactions> runner(tree, rule, ratios, nullptr, nullptr, data.M, output, nullptr);
         // Rewind restores the probability/path state. Reuse the feature workspace
         // across rows instead of allocating O(num_features) storage for every row.
         for (unsigned row = 0; row < data.num_X; ++row) {
@@ -253,20 +238,7 @@ inline void Explain(const TreeEnsemble &trees, const ExplanationDataset &data, d
         auto ratios = CoverRatios(tree);
         std::vector<double> mean(tree.num_outputs, 0);
         RootMean(tree, ratios, 0, 1, mean);
-        switch (rule.nodes.size()) {
-#define SHAP_QUADRATURE_RUN(N) \
-    ExplainTree<N, Interactions>(tree, rule, ratios, mean, data, phi, stride)
-            case 1: SHAP_QUADRATURE_RUN(1); break;
-            case 2: SHAP_QUADRATURE_RUN(2); break;
-            case 3: SHAP_QUADRATURE_RUN(3); break;
-            case 4: SHAP_QUADRATURE_RUN(4); break;
-            case 5: SHAP_QUADRATURE_RUN(5); break;
-            case 6: SHAP_QUADRATURE_RUN(6); break;
-            case 7: SHAP_QUADRATURE_RUN(7); break;
-            case 8: SHAP_QUADRATURE_RUN(8); break;
-            default: SHAP_QUADRATURE_RUN(0); break;
-#undef SHAP_QUADRATURE_RUN
-        }
+        ExplainTree<Interactions>(tree, rule, ratios, mean, data, phi, stride);
     }
     for (unsigned row = 0; row < data.num_X; ++row) {
         double *out = phi + row * stride;
