@@ -1,0 +1,12 @@
+Quadrature TreeSHAP
+Copyright 2017-2026, XGBoost Contributors
+Copyright 2026, SHAP contributors
+
+Adapted from dmlc/xgboost revision 51b132efe13cb39e6cb424394980ac4610cbe8e9:
+src/predictor/interpretability/quadrature.h
+src/predictor/interpretability/shap.cc
+https://github.com/dmlc/xgboost/tree/51b132efe13cb39e6cb424394980ac4610cbe8e9/src/predictor/interpretability
+
+The adapted files are licensed under Apache-2.0; see quadrature_tree_shap.LICENSE.
+Changes: SHAP dense tree adapters, double precision, depth-dependent quadrature
+order, leaf-derived root means, and SHAP output and categorical split conventions.

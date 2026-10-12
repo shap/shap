@@ -536,6 +536,47 @@ class TreeExplainer(Explainer):
 
         return X, y, X_missing, flat_output, tree_limit, check_additivity  # type: ignore[return-value]
 
+    def _can_use_quadrature_tree_shap(self, X: Any, approximate: bool = False) -> bool:
+        """Use SHAP's quadrature backend when the model and input have dense adapters.
+
+        Native containers, categorical encodings not understood by our loader, and
+        approximate explanations retain the model library's implementation.
+        """
+        if self.model.model_type == "catboost":
+            # Native prediction also applies CatBoost scale/bias and category metadata
+            # that are not fully represented by the dense adapter.
+            return False
+        if approximate or self.model.trees is None or not self.model.fully_defined_weighting:
+            return False
+        if isinstance(X, pd.DataFrame):
+            if any(dtype.kind not in "biuf" for dtype in X.dtypes):
+                return False
+        elif isinstance(X, (np.ndarray, pd.Series)):
+            if X.dtype.kind not in "biuf":
+                return False
+        else:
+            return False
+        if self.model.model_type == "lightgbm":
+            params = self.model.original_model.params
+            if params.get("zero_as_missing", False) or not params.get("use_missing", True):
+                return False
+            if np.any(self.model.threshold_types == 1):
+                return False
+        if self.model.model_type == "xgboost":
+            if getattr(self.model, "_xgboost_has_tree_weights", False):
+                return False
+            if self.model.num_stacked_models != self.model.num_outputs:
+                return False
+            # Preserve native handling of custom missing-value sentinels.
+            missing = getattr(self.model, "_xgb_dmatrix_props", {}).get("missing", np.nan)
+            if missing is not None and not np.isnan(missing):
+                return False
+            try:
+                _xgboost_cat_unsupported(self.model)
+            except NotImplementedError:
+                return False
+        return True
+
     def _short_circuit_tree_path_dependent_to_external_shap_calculation(
         self,
         X: Any,
@@ -706,6 +747,7 @@ class TreeExplainer(Explainer):
             self.feature_perturbation == "tree_path_dependent"
             and self.model.model_type != "internal"
             and self.data is None
+            and not self._can_use_quadrature_tree_shap(X, approximate)
         ):
             phi = self._short_circuit_tree_path_dependent_to_external_shap_calculation(
                 X, tree_limit, approximate, check_additivity, from_call
@@ -765,9 +807,15 @@ class TreeExplainer(Explainer):
                 phi,
             )
 
-        out = self._get_shap_output(phi, flat_output)
+        out = self._get_shap_output(
+            phi,
+            flat_output,
+            update_expected_value=not approximate
+            and self.feature_perturbation == "tree_path_dependent"
+            and len(phi) > 0,
+        )
         if check_additivity and self.model.model_output == "raw":
-            self.assert_additivity(out, self.model.predict(X))  # type: ignore[arg-type]
+            self.assert_additivity(out, self.model.predict(X, tree_limit=tree_limit))  # type: ignore[arg-type]
 
         # This statements handles the case of multiple outputs
         # e.g. a multi-class classification problem, multi-target regression problem
@@ -776,17 +824,17 @@ class TreeExplainer(Explainer):
             out = np.stack(out, axis=-1)  # type: ignore[assignment]
         return out  # type: ignore[return-value]
 
-    def _get_shap_output(self, phi: npt.NDArray[Any], flat_output: bool) -> Any:
+    def _get_shap_output(self, phi: npt.NDArray[Any], flat_output: bool, *, update_expected_value: bool = False) -> Any:
         """Pull off the last column of ``phi`` and keep it as our expected_value."""
         if self.model.num_outputs == 1:
-            if self.expected_value is None and self.model.model_output != "log_loss":
+            if (self.expected_value is None or update_expected_value) and self.model.model_output != "log_loss":
                 self.expected_value = phi[0, -1, 0]
             if flat_output:
                 out = phi[0, :-1, 0]
             else:
                 out = phi[:, :-1, 0]
         else:
-            if self.expected_value is None and self.model.model_output != "log_loss":
+            if (self.expected_value is None or update_expected_value) and self.model.model_output != "log_loss":
                 self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
             if flat_output:
                 out = [phi[0, :-1, i] for i in range(self.model.num_outputs)]  # type: ignore[assignment]
@@ -849,7 +897,11 @@ class TreeExplainer(Explainer):
             tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
 
         # shortcut using the C++ version of Tree SHAP in XGBoost
-        if self.model.model_type == "xgboost" and self.feature_perturbation == "tree_path_dependent":
+        if (
+            self.model.model_type == "xgboost"
+            and self.feature_perturbation == "tree_path_dependent"
+            and not self._can_use_quadrature_tree_shap(X)
+        ):
             import xgboost
 
             if not isinstance(X, xgboost.core.DMatrix):
@@ -915,13 +967,18 @@ class TreeExplainer(Explainer):
             True,
         )
 
-        return self._get_shap_interactions_output(phi, flat_output)
+        return self._get_shap_interactions_output(phi, flat_output, update_expected_value=True)
 
-    def _get_shap_interactions_output(self, phi: npt.NDArray[Any], flat_output: bool) -> npt.NDArray[Any]:
+    def _get_shap_interactions_output(
+        self, phi: npt.NDArray[Any], flat_output: bool, *, update_expected_value: bool = False
+    ) -> npt.NDArray[Any]:
         """Pull off the last column and keep it as our expected_value"""
         if self.model.num_outputs == 1:
-            # get expected value only if not already set
-            self.expected_value = getattr(self, "expected_value", phi[0, -1, -1, 0])
+            # The selected tree limit determines the baseline for this call.
+            if update_expected_value:
+                self.expected_value = phi[0, -1, -1, 0]
+            else:
+                self.expected_value = getattr(self, "expected_value", phi[0, -1, -1, 0])
             if flat_output:
                 out = phi[0, :-1, :-1, 0]
             else:
@@ -1642,6 +1699,7 @@ class TreeEnsemble:
         loader = XGBTreeModelLoader(self.original_model)
 
         self.trees = loader.get_trees(data=data, data_missing=data_missing)
+        self._xgboost_has_tree_weights = loader.has_tree_weights
         self.base_offset = loader.base_score
         self.objective = objective_name_map.get(loader.name_obj, None)
         self.tree_output = tree_output_name_map.get(loader.name_obj, None)
@@ -2288,6 +2346,11 @@ class XGBTreeModelLoader:
         objective = learner["objective"]
 
         booster = learner["gradient_booster"]
+        # XGBoost 3.4 stores dropout weights on gbtree's model; older DART
+        # models keep them alongside the nested gbtree. The dense adapter
+        # does not apply these weights, so retain native SHAP dispatch.
+        weights = booster.get("weight_drop", booster.get("model", {}).get("weight_drop", []))
+        self.has_tree_weights = booster["name"] == "dart" or any(weight != 1.0 for weight in weights)
         n_classes = max(int(learner_model_param["num_class"]), 1)
         n_targets = max(int(learner_model_param["num_target"]), 1)
         n_targets = max(n_targets, n_classes)

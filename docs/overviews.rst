@@ -9,3 +9,4 @@ These overviews are generated from Jupyter notebooks that are
     :maxdepth: 1
 
     example_notebooks/overviews/*
+    quadrature_tree_shap
