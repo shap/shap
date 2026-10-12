@@ -90,6 +90,45 @@ def test_violin_does_not_resize_supplied_figure():
     plt.close("all")
 
 
+def test_violin_use_log_scale():
+    """use_log_scale=True applies a symmetric log scale to the x-axis."""
+    rs = np.random.RandomState(0)
+    plt.figure()
+    ax = shap.plots.violin(rs.standard_normal(size=(20, 5)), use_log_scale=True, show=False)
+    assert ax.get_xscale() == "symlog"
+    plt.close("all")
+
+
+@pytest.mark.parametrize(
+    ("plot_size", "expected"),
+    [
+        # "auto" scales the height by row_height (0.4) for the 5 features plotted
+        ("auto", (8, 5 * 0.4 + 1.5)),
+        # a (width, height) pair is used as-is
+        ((7, 2), (7, 2)),
+        # a single float is the height of each row
+        (0.5, (8, 5 * 0.5 + 1.5)),
+    ],
+)
+def test_violin_plot_size(plot_size, expected):
+    """plot_size resizes the figure when the plot picks the Axes itself."""
+    rs = np.random.RandomState(0)
+    fig = plt.figure()
+    shap.plots.violin(rs.standard_normal(size=(20, 5)), plot_size=plot_size, show=False)
+    assert tuple(fig.get_size_inches()) == pytest.approx(expected)
+    plt.close("all")
+
+
+def test_violin_plot_size_none_leaves_figure_alone():
+    """plot_size=None leaves the size of the figure unchanged."""
+    rs = np.random.RandomState(0)
+    fig = plt.figure(figsize=(3, 3))
+    size_before = tuple(fig.get_size_inches())
+    shap.plots.violin(rs.standard_normal(size=(20, 5)), plot_size=None, show=False)
+    assert tuple(fig.get_size_inches()) == size_before
+    plt.close("all")
+
+
 @pytest.mark.mpl_image_compare
 def test_violin(explainer):
     """Make sure the violin plot is unchanged."""
