@@ -92,9 +92,13 @@ def exhaustive(model, row, tree_limit):
 @pytest.mark.parametrize("seed", range(5))
 @pytest.mark.parametrize("categorical", [False, True])
 @pytest.mark.parametrize("tree_limit", [1, 2])
-def test_quadrature_exhaustive(seed, categorical, tree_limit):
+@pytest.mark.parametrize("outputs", [2, 3, 8])
+def test_quadrature_exhaustive(seed, categorical, tree_limit, outputs):
     model = TreeEnsemble(
-        {"trees": [random_tree(seed), random_tree(seed + 20)], "base_offset": np.array([0.25, -0.5])},
+        {
+            "trees": [random_tree(seed, outputs), random_tree(seed + 20, outputs)],
+            "base_offset": np.linspace(0.25, -0.5, outputs),
+        },
         model_output="raw",
     )
     if categorical:
