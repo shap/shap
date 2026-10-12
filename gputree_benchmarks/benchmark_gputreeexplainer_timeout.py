@@ -14,6 +14,7 @@ import logging
 import multiprocessing as mp
 import platform
 import re
+import subprocess
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from multiprocessing.connection import wait
@@ -25,6 +26,29 @@ TIMEOUT_SECONDS = 1_200
 SETUP_TIMEOUT_SECONDS = 180
 benchmark_dict = {}
 run_id = 0
+
+
+def hardware_names():
+    """Detect hardware locally, tolerating unavailable GPU tooling."""
+    cpu = platform.processor() or platform.machine()
+    try:
+        for line in Path("/proc/cpuinfo").read_text().splitlines():
+            if line.startswith("model name"):
+                cpu = line.split(":", 1)[1].strip()
+                break
+    except OSError:
+        pass
+
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+            check=True, capture_output=True, text=True, timeout=10,
+        )
+        gpu = result.stdout.strip().splitlines()
+    except (OSError, subprocess.SubprocessError):
+        logger.warning("Could not determine GPU names using nvidia-smi")
+        gpu = []
+    return cpu, gpu
 
 
 def explain(model, explainer_class, data):
@@ -121,7 +145,12 @@ def benchmark_function(model, class_name, n_samples, n_features):
     model_details = forest_statistics(model)
     global run_id
     run_id += 1
-    logger.info("Starting run %d: %s with data shape (%d, %d)", run_id, class_name, n_samples, n_features)
+    context = (
+        f"Run {run_id}: {class_name} "
+        f"(n_trees={model_details['n_trees']}, max_depth={model_details['max_depth']}, "
+        f"n_samples={n_samples}, n_features={n_features})"
+    )
+    logger.info("%s starting", context)
     for previous_run_id, previous in benchmark_dict.items():
         if (
             previous["class"] == class_name
@@ -145,16 +174,16 @@ def benchmark_function(model, class_name, n_samples, n_features):
     result.update({"class": class_name, "data_shape": [n_samples, n_features], **model_details})
     benchmark_dict[run_id] = result
     if result["status"] == "success":
-        logger.info("Run %d: %s took %.3f seconds", run_id, class_name, result["time"])
+        logger.info("%s took %.3f seconds", context, result["time"])
     elif result.get("skipped"):
         logger.warning(
-            "Run %d: skipping %s with data shape (%d, %d) because run %d timed out",
-            run_id, class_name, n_samples, n_features, result["timeout_run_id"],
+            "%s skipped because run %d timed out",
+            context, result["timeout_run_id"],
         )
     elif result["status"] == "timeout":
-        logger.warning("Run %d: %s timed out during %s after %s seconds", run_id, class_name, result["phase"], result["timeout_seconds"])
+        logger.warning("%s timed out during %s after %s seconds", context, result["phase"], result["timeout_seconds"])
     else:
-        logger.error("Run %d: %s failed: %s", run_id, class_name, result["error"])
+        logger.error("%s failed: %s", context, result["error"])
     return values
 
 
@@ -241,17 +270,18 @@ def save_results(cpu, gpu, metadata=None, output_path=None):
     logger.info("Saved benchmark results to %s", output_path)
 
 
-def run(n_samples=1_000, output_path=None):
+def run(n_samples=(100, 1_000, 10_000), output_path=None):
     from sklearn.datasets import make_regression
     from sklearn.ensemble import RandomForestRegressor
 
-    from benchmark_gputreeexplainer import hardware_names
+    sample_sizes = sorted(set([n_samples] if isinstance(n_samples, int) else n_samples))
+    logger.info("Benchmark grid: samples=%s, trees=%s, depths=%s", sample_sizes, [10, 50, 100], [12, 20, 28, 36])
 
-    # Hold the data shape fixed to isolate tree depth and ensemble size.
+    # Hold feature count fixed to isolate batch size, depth and ensemble size.
     n_features = 50
     n_training_samples = 20_000
     max_depths = [12, 20, 28, 36]
-    tree_counts = [10, 100, 500]
+    tree_counts = [10, 50, 100]
     cpu, gpu = hardware_names()
     metadata = {
         "Started (UTC)": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -264,8 +294,8 @@ def run(n_samples=1_000, output_path=None):
         "Validation": "First 100 samples; CPU/GPU assert_allclose with rtol=1e-4, atol=1e-4",
         "Max depth limits": max_depths,
         "Tree counts": tree_counts,
-        "Explanation shape (samples, features)": [n_samples, n_features],
-        "Initial comparison samples": 100,
+        "Explanation sample counts": sample_sizes,
+        "Explanation feature count": n_features,
     }
     for package in ("shap", "numpy", "scikit-learn"):
         try:
@@ -283,19 +313,18 @@ def run(n_samples=1_000, output_path=None):
                 max_depth=max_depth, n_estimators=n_trees, random_state=0
             )
             model.fit(X_train, y_train)
-            # Keep a small correctness comparison even if the full batch times out.
-            compare_by_size(model, 100, n_features)
-            save_results(cpu, gpu, metadata, output_path=output_path)
-            compare_by_size(model, n_samples, n_features)
-            save_results(cpu, gpu, metadata, output_path=output_path)
+            for batch_samples in sample_sizes:
+                compare_by_size(model, batch_samples, n_features)
+                save_results(cpu, gpu, metadata, output_path=output_path)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--n-samples", type=int, default=1_000, help="Rows in the main explanation batch")
+    parser.add_argument("--n-samples", type=int, nargs="+", default=[100, 1_000, 10_000],
+                        help="Explanation batch sizes (default: 100 1000 10000)")
     parser.add_argument("--output", type=Path, default=Path(__file__).with_name("benchmarks_timeout.md"))
     args = parser.parse_args()
-    if args.n_samples < 1:
+    if any(samples < 1 for samples in args.n_samples):
         parser.error("--n-samples must be positive")
     run(n_samples=args.n_samples, output_path=args.output)
