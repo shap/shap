@@ -113,35 +113,47 @@ template <bool Interactions> struct Runner {
     double *phi;
     std::vector<double> probability;
     std::vector<unsigned> path;
+    std::vector<double> scratch;
 
     Runner(const TreeEnsemble &tree, const Rule &rule, const std::vector<double> &ratios,
            const double *x, const bool *missing, unsigned features, unsigned output, double *phi)
         : tree(tree), rule(rule), ratios(ratios), x(x), missing(missing), features(features),
           output(output), n(static_cast<unsigned>(rule.nodes.size())), phi(phi),
-          probability(features, -1) { path.reserve(tree.max_depth); }
+          probability(features, -1),
+          scratch((3 * static_cast<size_t>(tree.max_depth) + 2) * n) {
+        path.reserve(tree.max_depth);
+        std::fill(scratch.begin(), scratch.begin() + n, 1);
+    }
 
     double &Value(unsigned feature) {
         return phi[(Interactions ? static_cast<size_t>(feature) * (features + 2) : feature)
                    * tree.num_outputs + output];
     }
 
-    void Visit(unsigned split, unsigned child, bool satisfies,
-               const std::vector<double> &basis, std::vector<double> &result) {
+    // Each recursion level owns three point buffers: right, next, and edge.
+    // Siblings reuse the same level after returning; descendants use later levels.
+    // The first two buffers hold the root basis and result, reused across rows.
+    double *Workspace(unsigned depth) {
+        return scratch.data() + (2 + 3 * static_cast<size_t>(depth)) * n;
+    }
+
+    void Visit(unsigned split, unsigned child, bool satisfies, unsigned depth,
+               const double *basis, double *result) {
         unsigned feature = tree.features[split];
         double old = probability[feature];
         bool first = old < 0;
         double previous = first ? 1 : old;
         double weight = ratios[child];
         double enter = satisfies ? previous / weight : 0;
-        std::vector<double> next(n);
+        double *next = Workspace(depth) + n;
         for (unsigned i = 0; i < n; ++i) {
             next[i] = basis[i] * weight * (1 + (enter - 1) * rule.nodes[i])
                       / (1 + (previous - 1) * rule.nodes[i]);
         }
         probability[feature] = enter;
         if (Interactions && first) path.push_back(feature);
-        RunNode(child, next, result);
-        std::vector<double> edge(n);
+        RunNode(child, depth + 1, next, result);
+        double *edge = Workspace(depth) + 2 * n;
         double delta = 0;
         for (unsigned i = 0; i < n; ++i) {
             double t = rule.nodes[i];
@@ -166,7 +178,7 @@ template <bool Interactions> struct Runner {
         probability[feature] = old;
     }
 
-    void RunNode(unsigned node, const std::vector<double> &basis, std::vector<double> &result) {
+    void RunNode(unsigned node, unsigned depth, const double *basis, double *result) {
         if (tree.is_leaf(node)) {
             double value = tree.values[static_cast<size_t>(node) * tree.num_outputs + output];
             for (unsigned i = 0; i < n; ++i) result[i] = basis[i] * value;
@@ -176,16 +188,14 @@ template <bool Interactions> struct Runner {
         bool left = missing[feature] ? tree.children_default[node] == tree.children_left[node] :
             (tree.threshold_types[node] == 1 ? category_in_threshold(tree.thresholds[node], x[feature]) :
                                              x[feature] <= tree.thresholds[node]);
-        std::vector<double> right(n);
-        Visit(node, tree.children_left[node], left, basis, result);
-        Visit(node, tree.children_right[node], !left, basis, right);
+        double *right = Workspace(depth);
+        Visit(node, tree.children_left[node], left, depth, basis, result);
+        Visit(node, tree.children_right[node], !left, depth, basis, right);
         for (unsigned i = 0; i < n; ++i) result[i] += right[i];
     }
 
     void Run(double root_mean) {
-        std::vector<double> basis(n), result(n);
-        for (unsigned i = 0; i < n; ++i) basis[i] = 1;
-        RunNode(0, basis, result);
+        RunNode(0, 0, scratch.data(), scratch.data() + n);
         Value(features) += root_mean;
     }
 };
