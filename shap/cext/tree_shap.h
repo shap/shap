@@ -533,19 +533,22 @@ template <bool Interactions, bool SingleOutput = false> struct Runner {
     }
 };
 
-inline void FinalizeInteractions(double *phi, unsigned features, unsigned outputs) {
+inline void FinalizeInteractions(double *phi, unsigned features, unsigned outputs,
+                                 const std::vector<unsigned> &active_features) {
     size_t columns = features + 1;
     for (unsigned output = 0; output < outputs; ++output) {
-        for (unsigned i = 0; i < features; ++i) {
-            for (unsigned j = i + 1; j < features; ++j) {
+        for (size_t a_idx = 0; a_idx < active_features.size(); ++a_idx) {
+            unsigned i = active_features[a_idx];
+            for (size_t b_idx = a_idx + 1; b_idx < active_features.size(); ++b_idx) {
+                unsigned j = active_features[b_idx];
                 double &a = phi[(i * columns + j) * outputs + output];
                 double &b = phi[(j * columns + i) * outputs + output];
                 a = b = 0.5 * (a + b);
             }
         }
-        for (unsigned i = 0; i < features; ++i) {
+        for (unsigned i : active_features) {
             double &diag = phi[(i * columns + i) * outputs + output];
-            for (unsigned j = 0; j < features; ++j) {
+            for (unsigned j : active_features) {
                 if (i != j) diag -= phi[(i * columns + j) * outputs + output];
             }
         }
@@ -571,10 +574,17 @@ template <bool Interactions>
 inline void Explain(const TreeEnsemble &trees, const ExplanationDataset &data, double *phi) {
     const size_t columns = data.M + 1;
     const size_t stride = columns * (Interactions ? columns : 1) * trees.num_outputs;
+    // Unused features have zero interactions; avoid scanning their matrix entries.
+    std::vector<bool> used_features(Interactions ? data.M : 0, false);
     // Prepare cover ratios and quadrature once per tree, not once per explained row.
     for (unsigned t = 0; t < trees.tree_limit; ++t) {
         TreeEnsemble tree;
         trees.get_tree(tree, t);
+        if (Interactions) {
+            for (unsigned node = 0; node < tree.max_nodes; ++node) {
+                if (!tree.is_leaf(node)) used_features[tree.features[node]] = true;
+            }
+        }
         Rule rule(RuleSize(tree, data.M));
         auto ratios = CoverRatios(tree);
         std::vector<double> mean(tree.num_outputs, 0);
@@ -586,12 +596,18 @@ inline void Explain(const TreeEnsemble &trees, const ExplanationDataset &data, d
             ExplainTree<Interactions, false>(tree, rule, ratios, mean, data, phi, stride);
         }
     }
+    std::vector<unsigned> active_features;
+    if (Interactions) {
+        for (unsigned feature = 0; feature < data.M; ++feature) {
+            if (used_features[feature]) active_features.push_back(feature);
+        }
+    }
     for (unsigned row = 0; row < data.num_X; ++row) {
         double *out = phi + row * stride;
         for (unsigned output = 0; output < trees.num_outputs; ++output) {
             out[stride - trees.num_outputs + output] += trees.base_offset[output];
         }
-        if (Interactions) FinalizeInteractions(out, data.M, trees.num_outputs);
+        if (Interactions) FinalizeInteractions(out, data.M, trees.num_outputs, active_features);
     }
 }
 }  // namespace shap_quadrature
