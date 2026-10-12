@@ -51,6 +51,45 @@ def test_violin_wrong_features_shape():
         )
 
 
+def test_violin_returns_axes():
+    """The violin plot returns the Axes it drew onto."""
+    rs = np.random.RandomState(0)
+    plt.figure()
+    ax = shap.plots.violin(rs.standard_normal(size=(20, 5)), show=False)
+    assert ax is plt.gca()
+    plt.close("all")
+
+
+@pytest.mark.parametrize(
+    ("plot_type", "with_features"),
+    [
+        ("violin", True),
+        ("violin", False),
+        # layered_violin indexes into `features`, so it requires feature values
+        ("layered_violin", True),
+    ],
+)
+def test_violin_draws_onto_supplied_axes(plot_type, with_features):
+    """The violin plot draws onto, and returns, a caller-supplied Axes."""
+    rs = np.random.RandomState(0)
+    features = rs.standard_normal(size=(20, 5)) if with_features else None
+    fig, ax = plt.subplots()
+    assert shap.plots.violin(rs.standard_normal(size=(20, 5)), features, plot_type=plot_type, show=False, ax=ax) is ax
+    # something was actually drawn onto the supplied axes
+    assert ax.collections or ax.patches
+    plt.close("all")
+
+
+def test_violin_does_not_resize_supplied_figure():
+    """A caller-supplied Axes keeps its own figure size, unlike the implicit-axes path."""
+    rs = np.random.RandomState(0)
+    fig, ax = plt.subplots(figsize=(3, 3))
+    size_before = tuple(fig.get_size_inches())
+    shap.plots.violin(rs.standard_normal(size=(20, 5)), show=False, ax=ax)
+    assert tuple(fig.get_size_inches()) == size_before
+    plt.close("all")
+
+
 @pytest.mark.mpl_image_compare
 def test_violin(explainer):
     """Make sure the violin plot is unchanged."""
