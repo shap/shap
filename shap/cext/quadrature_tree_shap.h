@@ -103,7 +103,7 @@ inline void RootMean(const TreeEnsemble &tree, const std::vector<double> &ratios
 // Upstream's return-edge recurrence, with SHAP's split semantics and output layout.
 // Fold w_prod into the basis (as the upstream GPU does), avoiding large basis
 // products multiplied by vanishing leaf probabilities.
-template <bool Interactions, unsigned Outputs = 0> struct Runner {
+template <bool Interactions, bool SingleOutput = false> struct Runner {
     const TreeEnsemble &tree;
     const Rule &rule;
     const std::vector<double> &ratios;
@@ -128,8 +128,8 @@ template <bool Interactions, unsigned Outputs = 0> struct Runner {
     }
 
     // A fixed scalar extent lets the compiler remove output loops and indexing.
-    // Zero denotes vector leaves whose output count is only known at runtime.
-    unsigned NumOutputs() const { return Outputs == 0 ? tree.num_outputs : Outputs; }
+    // Otherwise the vector leaf output count is only known at runtime.
+    unsigned NumOutputs() const { return SingleOutput ? 1 : tree.num_outputs; }
 
     double *Value(unsigned feature) {
         return phi + (Interactions ? static_cast<size_t>(feature) * (features + 2) : feature)
@@ -168,7 +168,7 @@ template <bool Interactions, unsigned Outputs = 0> struct Runner {
         // Vector leaves reuse coefficients across outputs. Scalar leaves compute
         // them directly in the reduction, avoiding a separate pass and buffer read.
         // The child's basis is no longer needed, so next can hold the coefficients.
-        if (Outputs != 1) {
+        if (!SingleOutput) {
             for (unsigned i = 0; i < n; ++i) next[i] = coefficient(i);
         }
         double *value = Value(feature);
@@ -176,7 +176,7 @@ template <bool Interactions, unsigned Outputs = 0> struct Runner {
             size_t offset = static_cast<size_t>(o) * n;
             double delta = 0;
             for (unsigned i = 0; i < n; ++i) {
-                double factor = Outputs == 1 ? coefficient(i) : next[i];
+                double factor = SingleOutput ? coefficient(i) : next[i];
                 edge[offset + i] = rule.weights[i] * result[offset + i] * factor;
                 delta += edge[offset + i];
             }
@@ -187,7 +187,7 @@ template <bool Interactions, unsigned Outputs = 0> struct Runner {
                 if (partner == feature) continue;
                 double alpha = probability[partner] - 1;
                 auto denominator = [&](unsigned i) { return 1 + alpha * rule.nodes[i]; };
-                if (Outputs != 1) {
+                if (!SingleOutput) {
                     for (unsigned i = 0; i < n; ++i) next[i] = denominator(i);
                 }
                 double *pair = phi + (static_cast<size_t>(feature) * (features + 1) + partner)
@@ -196,7 +196,7 @@ template <bool Interactions, unsigned Outputs = 0> struct Runner {
                     size_t offset = static_cast<size_t>(o) * n;
                     double delta = 0;
                     for (unsigned i = 0; i < n; ++i) {
-                        double divisor = Outputs == 1 ? denominator(i) : next[i];
+                        double divisor = SingleOutput ? denominator(i) : next[i];
                         delta += edge[offset + i] * alpha / divisor;
                     }
                     pair[o] += delta;
@@ -253,11 +253,11 @@ inline void FinalizeInteractions(double *phi, unsigned features, unsigned output
     }
 }
 
-template <bool Interactions, unsigned Outputs = 0>
+template <bool Interactions, bool SingleOutput = false>
 inline void ExplainTree(const TreeEnsemble &tree, const Rule &rule,
                         const std::vector<double> &ratios, const std::vector<double> &mean,
                         const ExplanationDataset &data, double *phi, size_t stride) {
-    Runner<Interactions, Outputs> runner(tree, rule, ratios, nullptr, nullptr, data.M, nullptr);
+    Runner<Interactions, SingleOutput> runner(tree, rule, ratios, nullptr, nullptr, data.M, nullptr);
     // Rewind restores the probability/path state. Reuse all workspace across rows,
     // and traverse once per row with shared path arithmetic for every output.
     for (unsigned row = 0; row < data.num_X; ++row) {
@@ -282,9 +282,9 @@ inline void Explain(const TreeEnsemble &trees, const ExplanationDataset &data, d
         RootMean(tree, ratios, 0, 1, mean);
         // Dispatch once per tree; quadrature point counts remain runtime-sized.
         if (tree.num_outputs == 1) {
-            ExplainTree<Interactions, 1>(tree, rule, ratios, mean, data, phi, stride);
+            ExplainTree<Interactions, true>(tree, rule, ratios, mean, data, phi, stride);
         } else {
-            ExplainTree<Interactions, 0>(tree, rule, ratios, mean, data, phi, stride);
+            ExplainTree<Interactions, false>(tree, rule, ratios, mean, data, phi, stride);
         }
     }
     for (unsigned row = 0; row < data.num_X; ++row) {
