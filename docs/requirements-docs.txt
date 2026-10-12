@@ -234,7 +234,7 @@ threadpoolctl==3.6.0
     # via scikit-learn
 tinycss2==1.4.0
     # via bleach
-tornado==6.5.8
+tornado==6.5.9
     # via jupyter-client
 tqdm==4.67.3
     # via shap (pyproject.toml)
@@ -253,7 +253,7 @@ typing-extensions==4.15.0
     # via
     #   beautifulsoup4
     #   referencing
-urllib3==2.7.0
+urllib3==2.8.0
     # via requests
 wcwidth==0.6.0
     # via prompt-toolkit
