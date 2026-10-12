@@ -841,7 +841,19 @@ class TreeExplainer(Explainer):
         assert self.model.model_output == "raw", (
             'Only model_output = "raw" is supported for SHAP interaction values right now!'
         )
-        # assert self.feature_perturbation == "tree_path_dependent", "Only feature_perturbation = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
+        # Interaction values are supported for "tree_path_dependent" (conditional
+        # expectation) and, since the interventional-interaction C++ path was
+        # added, for "interventional" (marginal) as well -- but the latter needs
+        # a background dataset to marginalize against.
+        assert self.feature_perturbation in ("tree_path_dependent", "interventional"), (
+            'Only feature_perturbation in {"tree_path_dependent", "interventional"} is '
+            "supported for SHAP interaction values right now!"
+        )
+        if self.feature_perturbation == "interventional" and self.data is None:
+            raise ValueError(
+                'feature_perturbation="interventional" interaction values require a '
+                "background dataset; pass data=... to shap.TreeExplainer(...)."
+            )
         transform = "identity"
 
         # see if we have a default tree_limit in place.
