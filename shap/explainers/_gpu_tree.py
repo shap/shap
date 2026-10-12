@@ -71,6 +71,8 @@ class GPUTreeExplainer(TreeExplainer):
 
         model = self.model
         _xgboost_cat_unsupported(model)
+        if np.any(model.threshold_types == 1):
+            raise ValueError("GPU TreeExplainer does not support categorical splits.")
         transform = model.get_transform()
 
         # run the core algorithm using the C extension
@@ -151,6 +153,8 @@ class GPUTreeExplainer(TreeExplainer):
         transform = "identity"
 
         X, y, X_missing, flat_output, tree_limit, _ = self._validate_inputs(X, y, tree_limit, False)
+        if np.any(self.model.threshold_types == 1):
+            raise ValueError("GPU TreeExplainer does not support categorical splits.")
         # run the core algorithm using the C extension
         assert_import("cext_gpu")
         phi = np.zeros((X.shape[0], X.shape[1] + 1, X.shape[1] + 1, self.model.num_outputs))

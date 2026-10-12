@@ -7,6 +7,15 @@
 
 static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args);
 
+static bool has_categorical_splits(PyArrayObject *threshold_types_array) {
+    const int *threshold_types = (const int*)PyArray_DATA(threshold_types_array);
+    const npy_intp size = PyArray_SIZE(threshold_types_array);
+    for (npy_intp i = 0; i < size; ++i) {
+        if (threshold_types[i] == 1) return true;
+    }
+    return false;
+}
+
 static PyMethodDef module_methods[] = {
     {"dense_tree_shap", _cext_dense_tree_shap, METH_VARARGS, "C implementation of Tree SHAP for dense."},
     {NULL, NULL, 0, NULL}
@@ -126,6 +135,26 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
         return NULL;
     }
 
+    if (has_categorical_splits(threshold_types_array)) {
+        PyErr_SetString(PyExc_ValueError, "GPU TreeExplainer does not support categorical splits.");
+        Py_XDECREF((PyObject*)children_left_array);
+        Py_XDECREF((PyObject*)children_right_array);
+        Py_XDECREF((PyObject*)children_default_array);
+        Py_XDECREF((PyObject*)features_array);
+        Py_XDECREF((PyObject*)thresholds_array);
+        Py_XDECREF((PyObject*)threshold_types_array);
+        Py_XDECREF((PyObject*)values_array);
+        Py_XDECREF((PyObject*)node_sample_weights_array);
+        Py_XDECREF((PyObject*)X_array);
+        Py_XDECREF((PyObject*)X_missing_array);
+        Py_XDECREF((PyObject*)y_array);
+        Py_XDECREF((PyObject*)R_array);
+        Py_XDECREF((PyObject*)R_missing_array);
+        Py_XDECREF((PyObject*)out_contribs_array);
+        Py_XDECREF((PyObject*)base_offset_array);
+        return NULL;
+    }
+
     const unsigned num_X = PyArray_DIM(X_array, 0);
     const unsigned M = PyArray_DIM(X_array, 1);
     const unsigned max_nodes = PyArray_DIM(values_array, 1);
@@ -156,7 +185,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     // these are just a wrapper objects for all the pointers and numbers associated with
     // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
-        children_left, children_right, children_default, features, thresholds, threshold_types, values,
+        children_left, children_right, children_default, features, thresholds, threshold_types, NULL, 0, values,
         node_sample_weights, max_depth, tree_limit, base_offset,
         max_nodes, num_outputs
     );
