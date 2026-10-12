@@ -3,8 +3,7 @@
  * Copyright 2026, SHAP contributors
  *
  * Adapted from XGBoost's QuadratureTreeShapRunner and quadrature rule at
- * 51b132efe13cb39e6cb424394980ac4610cbe8e9 (Apache-2.0).
- * See quadrature_tree_shap.LICENSE and quadrature_tree_shap.NOTICE.
+ * 51b132efe13cb39e6cb424394980ac4610cbe8e9.
  *
  * This header is included after SHAP's TreeEnsemble/ExplanationDataset definitions.
  */
