@@ -52,7 +52,6 @@ output_transform_codes = {
 feature_perturbation_codes = {
     "interventional": 0,
     "tree_path_dependent": 1,
-    "global_path_dependent": 2,
 }
 
 
@@ -2233,7 +2232,7 @@ class SingleTree:
             # leaves, the fully_defined_weighting check raises ExplainerError,
             # blocking path-dependent mode entirely (#3574).
             #
-            # Root cause: tree_shap_recursive's unwind_path() divides by
+            # Historical cause: the original Tree SHAP unwind_path() divided by
             # zero_fraction. When a leaf has zero background coverage (w=0),
             # samples routing through that subtree encounter zero_fraction=0
             # on cold paths, producing NaN via 0/0. This also occurs with
