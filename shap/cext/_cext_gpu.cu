@@ -425,6 +425,9 @@ void dense_tree_shap_gpu(const TreeEnsemble &trees,
     }
     return;
 
+  case FEATURE_DEPENDENCE::global_path_dependent:
+    std::cerr << "FEATURE_DEPENDENCE::global_path_dependent not supported\n";
+    return;
   default:
     std::cerr << "Unknown feature dependence option\n";
     return;

@@ -52,6 +52,7 @@ output_transform_codes = {
 feature_perturbation_codes = {
     "interventional": 0,
     "tree_path_dependent": 1,
+    "global_path_dependent": 2,
 }
 
 
@@ -170,6 +171,7 @@ class TreeExplainer(Explainer):
         # FIXME: The `link` and `linearize_link` arguments are ignored. GH #3513
         link: Any = None,
         linearize_link: Any = None,
+        enable_quadrature: bool = False,
     ) -> None:
         """Build a new Tree explainer for the passed model.
 
@@ -242,6 +244,12 @@ class TreeExplainer(Explainer):
             Deprecated, will be deprecated in v0.47.0 and removed in version v0.49.0.
             Please use the ``approximate`` argument in the :meth:`.shap_values` or ``__call__`` methods instead.
 
+        enable_quadrature : bool, optional
+            Use Quadrature Tree SHAP for exact path-dependent values and interactions
+            computed by SHAP's CPU extension. Defaults to False, retaining the original
+            Tree SHAP algorithm. This flag does not change routing to model-native or
+            GPU implementations, interventional explanations, or approximate values.
+
         References
         ----------
         .. [1] Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum.
@@ -307,6 +315,7 @@ class TreeExplainer(Explainer):
         _safe_check_tree_instance_experimental(model)
 
         self.data_missing = None if self.data is None else pd.isna(self.data)
+        self.enable_quadrature = enable_quadrature
         self.feature_perturbation = feature_perturbation
         self.expected_value = None
         if isinstance(model, TreeEnsemble):
@@ -744,6 +753,7 @@ class TreeExplainer(Explainer):
                 feature_perturbation_codes[self.feature_perturbation],
                 output_transform_codes[transform],
                 False,
+                self.enable_quadrature,
             )
         else:
             _cext.dense_tree_saabas(
@@ -912,6 +922,7 @@ class TreeExplainer(Explainer):
             feature_perturbation_codes[self.feature_perturbation],
             output_transform_codes[transform],
             True,
+            self.enable_quadrature,
         )
 
         return self._get_shap_interactions_output(phi, flat_output)
@@ -2174,7 +2185,7 @@ class SingleTree:
             # leaves, the fully_defined_weighting check raises ExplainerError,
             # blocking path-dependent mode entirely (#3574).
             #
-            # Historical cause: the original Tree SHAP unwind_path() divided by
+            # Root cause: tree_shap_recursive's unwind_path() divides by
             # zero_fraction. When a leaf has zero background coverage (w=0),
             # samples routing through that subtree encounter zero_fraction=0
             # on cold paths, producing NaN via 0/0. This also occurs with

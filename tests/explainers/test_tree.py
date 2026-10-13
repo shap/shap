@@ -3016,3 +3016,42 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+@pytest.mark.parametrize("n_outputs", [1, 3])
+@pytest.mark.parametrize("interactions", [False, True])
+def test_quadrature_matches_original(n_outputs, interactions, monkeypatch):
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(100, 4))
+    y = rng.normal(size=(100, n_outputs))
+    model = DecisionTreeRegressor(max_depth=6, random_state=0).fit(X, y[:, 0] if n_outputs == 1 else y)
+    rows = X[:10].copy()
+    rows[0, 0] = np.nan
+    original = shap.TreeExplainer(model)
+    quadrature = shap.TreeExplainer(model, enable_quadrature=True)
+
+    # Check both the public result and that the flag reaches the CPU dispatcher.
+    calls = []
+    dense_tree_shap = shap.explainers._tree._cext.dense_tree_shap
+
+    def record_dispatch(*args):
+        calls.append(args[-1])
+        return dense_tree_shap(*args)
+
+    monkeypatch.setattr(shap.explainers._tree._cext, "dense_tree_shap", record_dispatch)
+    expected = original(rows, interactions=interactions)
+    actual = quadrature(rows, interactions=interactions)
+    assert calls == [False, True]
+    np.testing.assert_allclose(actual.values, expected.values, atol=1e-12, rtol=1e-12)
+    np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-12, rtol=1e-12)
+
+
+@pytest.mark.parametrize("approximate,with_background", [(True, False), (False, True), (True, True)])
+def test_quadrature_preserves_other_algorithms(approximate, with_background):
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(50, 3))
+    model = DecisionTreeRegressor(max_depth=4, random_state=0).fit(X, X[:, 0] * X[:, 1])
+    background = X if with_background else None
+    expected = shap.TreeExplainer(model, background).shap_values(X[:5], approximate=approximate)
+    actual = shap.TreeExplainer(model, background, enable_quadrature=True).shap_values(X[:5], approximate=approximate)
+    np.testing.assert_array_equal(actual, expected)
