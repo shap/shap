@@ -93,12 +93,44 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
-        id: filter
         with:
-          filters: |
-            js:
-              - 'javascript/**'
+          fetch-depth: 0
+      - name: Check for JavaScript changes
+        id: filter
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          # Manual runs and initial pushes rebuild the bundle unconditionally.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "js=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # A force-push can leave the previous tip outside the fetched history.
+          for commit in "$BASE_SHA" "$HEAD_SHA"; do
+            if ! git cat-file -e "$commit^{commit}"; then
+              git fetch --no-tags origin "$commit"
+            fi
+          done
+
+          # PRs compare against the merge base; pushes compare the two tips.
+          comparison="$BASE_SHA..$HEAD_SHA"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            comparison="$BASE_SHA...$HEAD_SHA"
+          fi
+          changed_files="$RUNNER_TEMP/shap-changed-files"
+          git diff --no-renames --name-only -z "$comparison" -- > "$changed_files"
+          js=false
+          while IFS= read -r -d '' path; do
+            if [[ "$path" == javascript/* ]]; then
+              js=true
+              break
+            fi
+          done < "$changed_files"
+          echo "js=$js" >> "$GITHUB_OUTPUT"
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
