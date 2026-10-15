@@ -383,3 +383,43 @@ def test_categorical_split_matches_binary_feature():
     np.testing.assert_allclose(bin_gpu, bin_cpu, atol=1e-5)
     np.testing.assert_allclose(cat_gpu, bin_gpu, atol=1e-5)
     np.testing.assert_allclose(cat_cpu, cat_gpu, atol=1e-5)
+
+
+@pytest.mark.parametrize("model_output", ["log_loss", "probability"])
+def test_gpu_cpu_match_with_transform_gh3655(model_output):
+    """GPU and CPU SHAP values should match when using output transforms.
+
+    Reproduces GitHub issue #3655: GPU TreeSHAP ignored the output transform
+    (model_output="log_loss", "probability"), producing values that differed
+    greatly from CPU TreeExplainer. The original report uses log_loss.
+    """
+    xgboost = pytest.importorskip("xgboost")
+
+    X, y = shap.datasets.adult()
+    X = X.iloc[:500]
+    y = y[:500]
+
+    model = xgboost.XGBClassifier(n_estimators=10, max_depth=3, random_state=42)
+    model.fit(X, y)
+
+    background = X.iloc[:100]
+    X_test = X.iloc[100:110]
+    y_test = y[100:110]
+
+    explainer_cpu = shap.TreeExplainer(
+        model, background, feature_perturbation="interventional", model_output=model_output
+    )
+    explainer_gpu = shap.GPUTreeExplainer(
+        model, background, feature_perturbation="interventional", model_output=model_output
+    )
+
+    if model_output == "log_loss":
+        sv_cpu = explainer_cpu.shap_values(X_test, y_test)
+        sv_gpu = explainer_gpu.shap_values(X_test, y_test)
+    else:
+        sv_cpu = explainer_cpu.shap_values(X_test)
+        sv_gpu = explainer_gpu.shap_values(X_test)
+
+    np.testing.assert_allclose(
+        sv_cpu, sv_gpu, atol=1e-4, err_msg=f"GPU vs CPU SHAP values differ with model_output='{model_output}'"
+    )
