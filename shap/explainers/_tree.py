@@ -495,6 +495,8 @@ class TreeExplainer(Explainer):
         if X.dtype != self.model.input_dtype:
             X = X.astype(self.model.input_dtype)
         X_missing = np.isnan(X, dtype=bool)
+        if y is not None:
+            y = np.asarray(y)
         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
@@ -1747,6 +1749,8 @@ class TreeEnsemble:
         if X.dtype.type != self.input_dtype:
             X = X.astype(self.input_dtype)
         X_missing = np.isnan(X, dtype=bool)
+        if y is not None:
+            y = np.asarray(y)
         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
@@ -2150,6 +2154,10 @@ class SingleTree:
             self.node_sample_weight = node_sample_weight
         else:
             raise TypeError("Unknown input to SingleTree constructor: " + str(tree))
+
+        # These buffers are updated in place by the native tree bindings.
+        self.values = np.require(self.values, dtype=np.float64, requirements=["C", "W"])
+        self.node_sample_weight = np.require(self.node_sample_weight, dtype=np.float64, requirements=["C", "W"])
 
         # Re-compute the number of samples that pass through each node if we are given data
         if data is not None and data_missing is not None:
