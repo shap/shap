@@ -53,7 +53,7 @@ def test_waterfall_bounds(explainer):
     explanation = explainer(explainer.data)
     explanation._s.lower_bounds = explanation.values - 0.1
     explanation._s.upper_bounds = explanation.values + 0.1
-    shap.plots.waterfall(explanation[0])
+    shap.plots.waterfall(explanation[0], show=False)
     plt.tight_layout()
     return fig
 
@@ -77,7 +77,7 @@ def test_waterfall_custom_style(explainer):
     ):
         fig = plt.figure()
         explanation = explainer(explainer.data)
-        shap.plots.waterfall(explanation[0])
+        shap.plots.waterfall(explanation[0], show=False)
         plt.tight_layout()
     return fig
 
