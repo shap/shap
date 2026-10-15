@@ -13,10 +13,7 @@ try:
 except Exception:
     pass
 
-try:
-    from sklearn.model_selection import train_test_split
-except Exception:
-    from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 
 
 def runtime(X, y, model_generator, method_name):
