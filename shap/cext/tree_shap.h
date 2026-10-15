@@ -1454,7 +1454,7 @@ inline void dense_global_path_dependent(const TreeEnsemble& trees, const Explana
  * The main method for computing Tree SHAP on models using dense data.
  */
 inline void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset &data, tfloat *out_contribs,
-                     const int feature_dependence, unsigned model_transform, bool interactions, bool enable_quadrature = false) {
+                     const int feature_dependence, unsigned model_transform, bool interactions, bool enable_experimental = false) {
 
     // see what transform (if any) we have
     transform_f transform = get_transform(model_transform);
@@ -1468,7 +1468,7 @@ inline void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset 
             return;
 
         case FEATURE_DEPENDENCE::tree_path_dependent:
-            if (enable_quadrature) {
+            if (enable_experimental) {
                 if (interactions) shap_quadrature::Explain<true>(trees, data, out_contribs);
                 else shap_quadrature::Explain<false>(trees, data, out_contribs);
                 return;

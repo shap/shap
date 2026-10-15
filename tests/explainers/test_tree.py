@@ -3028,7 +3028,7 @@ def test_quadrature_matches_original(n_outputs, interactions, monkeypatch):
     rows = X[:10].copy()
     rows[0, 0] = np.nan
     original = shap.TreeExplainer(model)
-    quadrature = shap.TreeExplainer(model, enable_quadrature=True)
+    quadrature = shap.TreeExplainer(model, enable_experimental=True)
 
     # Check both the public result and that the flag reaches the CPU dispatcher.
     calls = []
@@ -3053,5 +3053,5 @@ def test_quadrature_preserves_other_algorithms(approximate, with_background):
     model = DecisionTreeRegressor(max_depth=4, random_state=0).fit(X, X[:, 0] * X[:, 1])
     background = X if with_background else None
     expected = shap.TreeExplainer(model, background).shap_values(X[:5], approximate=approximate)
-    actual = shap.TreeExplainer(model, background, enable_quadrature=True).shap_values(X[:5], approximate=approximate)
+    actual = shap.TreeExplainer(model, background, enable_experimental=True).shap_values(X[:5], approximate=approximate)
     np.testing.assert_array_equal(actual, expected)
