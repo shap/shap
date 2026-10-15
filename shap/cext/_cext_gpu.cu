@@ -28,10 +28,10 @@ struct CategoryConstraint {
   __host__ __device__ static bool CategoryInMask(int categories,
                                                  float category) {
     int category_int = static_cast<int>(category);
-    if (category_int < 1) {
+    if (category_int < 0) {
       return false;
     }
-    int category_flag = 1 << (category_int - 1);
+    int category_flag = 1 << category_int;
     return (categories & category_flag) != 0;
   }
 
