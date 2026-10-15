@@ -739,11 +739,12 @@ class Explanation(metaclass=MetaExplanation):
 
 def group_features(shap_values: Explanation, feature_map: dict[str, str]) -> Explanation:
     # TODO: support and deal with clusterings
-    reverse_map: dict[Any, list[Any]] = {}
-    for name in feature_map:
-        reverse_map[feature_map[name]] = reverse_map.get(feature_map[name], []) + [name]
-
     curr_names = shap_values.feature_names
+    reverse_map: dict[Any, list[Any]] = {}
+    for name in curr_names:
+        group_name = feature_map.get(name, name)
+        reverse_map.setdefault(group_name, []).append(name)
+
     sv_new = copy.deepcopy(shap_values)
     found = {}
     i = 0
@@ -754,8 +755,7 @@ def group_features(shap_values: Explanation, feature_map: dict[str, str]) -> Exp
             continue
         found[new_name] = True
 
-        new_name = feature_map.get(name, name)
-        cols_to_sum = reverse_map.get(new_name, [new_name])
+        cols_to_sum = reverse_map[new_name]
         old_inds = [curr_names.index(v) for v in cols_to_sum]
 
         if rank1:
