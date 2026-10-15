@@ -318,8 +318,8 @@ class OpChain:
         """Update the args for the previous operation."""
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
-        new_self._ops[-1][1] = args
-        new_self._ops[-1][2] = kwargs
+        # replace the last op rather than mutating it, since it is shared with self
+        new_self._ops[-1] = [new_self._ops[-1][0], args, kwargs]
         return new_self
 
     def __getitem__(self, item: Any) -> OpChain:
