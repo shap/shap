@@ -65,6 +65,34 @@ def test_transformers_label_to_id_mapping_enforces_ints():
     assert all(isinstance(v, int) for v in explainer.model.label2id.values())
 
 
+def test_transformers_pipeline_with_tokenizer_kwargs():
+    """Test that TransformersPipeline forwards tokenizer kwargs like padding, truncation, max_length (issue #4051)."""
+    pytest.importorskip("torch")
+    transformers = pytest.importorskip("transformers")
+
+    name = "distilbert/distilbert-base-uncased-finetuned-sst-2-english"
+    pipe = transformers.pipeline("text-classification", name)
+
+    # Wrap the pipeline
+    wrapped_model = shap.models.TransformersPipeline(pipe, rescale_to_logits=False)
+
+    # Test data
+    test_texts = ["This is a test.", "Another test sentence."]
+
+    # Test calling without kwargs (should work)
+    results_no_kwargs = wrapped_model(test_texts)
+    assert results_no_kwargs.shape == (2, 2)  # 2 samples, 2 classes
+
+    # Test calling with tokenizer kwargs (should work after fix)
+    results_with_kwargs = wrapped_model(test_texts, padding="max_length", truncation=True, max_length=512)
+    assert results_with_kwargs.shape == (2, 2)
+
+    # Test with a long text that needs truncation
+    long_text = "This is a test. " * 100
+    results_long = wrapped_model([long_text], padding="max_length", truncation=True, max_length=512)
+    assert results_long.shape == (1, 2)
+
+
 def test_wrapping_for_topk_lm_model():
     """This tests using the Explainer class to auto wrap a masker in a language modelling scenario."""
     pytest.importorskip("torch")
