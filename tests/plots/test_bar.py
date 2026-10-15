@@ -110,3 +110,36 @@ def test_bar_raises_error_for_empty_explanation(explainer):
     shap_values = explainer(explainer.data)
     with pytest.raises(ValueError, match="The passed Explanation is empty"):
         shap.plots.bar(shap_values[0:0], show=False)
+
+
+def test_bar_plot_descending():
+    """Test that the new descending parameter correctly changes the order of features shown in the bar plot."""
+
+    # Creating a dummy dataset and passing shap values such that Feature_0 has the lowest importance and Feature_4 has the highest importance
+    np.random.seed(42)
+    X = np.random.randn(100, 5)
+    feature_names = [f"Feature_{i}" for i in range(5)]
+
+    # Training a simple model to get SHAP values
+    model = shap.Explanation(
+        values=np.repeat(np.array([[0.1, 1.0, 2.0, 3.0, 10.0]]), 100, axis=0),
+        base_values=np.zeros(100),
+        data=X,
+        feature_names=feature_names,
+    )
+
+    plt.figure()
+    shap.plots.bar(model, max_display=2, show=False)  # testing default behavior (Descending=True)
+    ax = plt.gca()
+    labels = [t.get_text() for t in ax.get_yticklabels()]
+    assert "Feature_4" in labels
+    plt.close()
+
+    plt.figure()
+    shap.plots.bar(model, max_display=2, descending=False, show=False)  # testing ascending order
+    ax = plt.gca()
+    labels_asc = [t.get_text() for t in ax.get_yticklabels()]
+
+    assert "Feature_0" in labels_asc
+    assert "Feature_4" not in labels_asc
+    plt.close()
