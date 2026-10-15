@@ -1,6 +1,12 @@
 import time
+import warnings
 
 import pytest
+
+# Suppress known third-party deprecation warnings that clutter test output
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="matplotlib")
+
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="numpy")
 
 
 def load_tokenizer_model(name: str, retries: int) -> tuple:
