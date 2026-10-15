@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from shap import _cext
+from shap import _cext  # type: ignore[attr-defined]
 
 
 @pytest.fixture
