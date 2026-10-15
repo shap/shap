@@ -4,9 +4,10 @@ import sklearn
 from ..utils import convert_name
 from . import colors
 from ._labels import labels
+from ._show import resolve_show
 
 
-def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, show=True):
+def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, show=None):
     """Use the SHAP values as an embedding which we project to 2D for visualization.
 
     Parameters
@@ -34,6 +35,8 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
         show the density of the data points when using a large dataset.
 
     """
+    show = resolve_show(show, plot_name="embedding")
+
     if feature_names is None:
         feature_names = [labels["FEATURE"] % str(i) for i in range(shap_values.shape[1])]
 

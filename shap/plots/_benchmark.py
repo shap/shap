@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from . import colors
+from ._show import resolve_show
 
 xlabel_names = {
     "remove absolute": "Fraction removed",
@@ -16,8 +17,10 @@ xlabel_names = {
 }
 
 
-def benchmark(benchmark, show=True):
+def benchmark(benchmark, show=None):
     """Plot a BenchmarkResult or list of such results."""
+    show = resolve_show(show, plot_name="benchmark")
+
     if hasattr(benchmark, "__iter__"):
         benchmark = list(benchmark)
 

@@ -10,6 +10,7 @@ from .. import Cohorts, Explanation
 from ..utils import format_value, ordinal_str
 from ..utils._exceptions import DimensionError
 from ._labels import labels
+from ._show import resolve_show
 from ._style import get_style
 from ._utils import convert_ordering, dendrogram_coords, get_sort_order, merge_nodes, sort_inds
 
@@ -27,7 +28,7 @@ def bar(
     clustering_cutoff=0.5,
     show_data="auto",
     ax=None,
-    show=True,
+    show=None,
 ):
     """Create a bar plot of a set of SHAP values.
 
@@ -75,6 +76,7 @@ def bar(
     See `bar plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/bar.html>`_.
 
     """
+    show = resolve_show(show, plot_name="bar")
     style = get_style()
     # convert Explanation objects to dictionaries
     if isinstance(shap_values, Explanation):

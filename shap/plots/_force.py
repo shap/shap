@@ -25,6 +25,7 @@ from ..utils import hclust_ordering
 from ..utils._exceptions import DimensionError
 from ..utils._legacy import Data, DenseData, Instance, Link, Model, convert_to_link
 from ._labels import labels
+from ._show import resolve_show
 
 
 def force(
@@ -36,7 +37,7 @@ def force(
     link="identity",
     plot_cmap="RdBu",
     matplotlib=False,
-    show=True,
+    show=None,
     figsize=(20, 3),
     ordering_keys=None,
     ordering_keys_time_format=None,
@@ -95,6 +96,8 @@ def force(
         will be displayed.
 
     """
+    show = resolve_show(show, plot_name="force")
+
     # support passing an explanation object
     if str(type(base_value)).endswith("Explanation'>"):
         shap_exp = base_value

@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from . import colors
+from ._show import resolve_show
 
 
 def group_difference(
@@ -13,7 +14,7 @@ def group_difference(
     xmax=None,
     max_display=None,
     sort=True,
-    show=True,
+    show=None,
     ax=None,
 ):
     """This plots the difference in mean SHAP values between two groups.
@@ -34,6 +35,8 @@ def group_difference(
         A list of feature names.
 
     """
+    show = resolve_show(show, plot_name="group_difference")
+
     # Compute confidence bounds for the group difference value
     vs = []
     gmean = group_mask.mean()
