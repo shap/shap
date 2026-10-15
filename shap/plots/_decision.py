@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import matplotlib.axes as axes
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
@@ -51,7 +52,7 @@ def __decision_plot_matplotlib(
     show,
     legend_labels,
     legend_location,
-):
+) -> axes.Axes:
     """Matplotlib rendering for decision_plot()"""
     # image size
     row_height = 0.4
@@ -164,6 +165,8 @@ def __decision_plot_matplotlib(
     if show:
         plt.show()
 
+    return ax
+
 
 class DecisionPlotResult:
     """The optional return value of decision_plot.
@@ -232,7 +235,7 @@ def decision(
     new_base_value=None,
     legend_labels=None,
     legend_location="best",
-) -> DecisionPlotResult | None:
+) -> DecisionPlotResult | axes.Axes:
     """Visualize model decisions using cumulative SHAP values.
 
     Each plotted line explains a single model prediction. If a single prediction is plotted, feature values will be
@@ -542,7 +545,7 @@ def decision(
     if plot_color is None:
         plot_color = colors.red_blue
 
-    __decision_plot_matplotlib(
+    ax = __decision_plot_matplotlib(
         base_value,
         cumsum,
         ascending,
@@ -564,7 +567,7 @@ def decision(
     )
 
     if not return_objects:
-        return None
+        return ax
 
     return DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
 
