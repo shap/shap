@@ -505,10 +505,12 @@ class Explanation(metaclass=MetaExplanation):
         """Apply a numpy-style function to this Explanation."""
         new_self = copy.copy(self)
         axis = kwargs.get("axis", None)
+        if isinstance(axis, int) and -len(self.shape) <= axis < len(self.shape):
+            axis %= len(self.shape)
 
         # collapse the slicer to right shape
         if axis in [0, 1, 2]:
-            new_self = new_self[axis]
+            new_self = new_self[(slice(None),) * axis + (0,)]
             new_self.op_history = new_self.op_history[:-1]  # pop off the slicing operation we just used
 
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
