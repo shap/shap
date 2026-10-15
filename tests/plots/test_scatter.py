@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 import shap
+from shap.utils._exceptions import DimensionError
 
 
 @pytest.mark.mpl_image_compare
@@ -112,3 +113,30 @@ def test_scatter_plot_value_input(input):
     shap.plots.scatter(explanations, show=False)
     plt.tight_layout()
     return plt.gcf()
+
+
+def test_scatter_mismatched_rows_raises():
+    """scatter() raises DimensionError when shap_values and features have different row counts."""
+    sv = shap.Explanation(
+        values=np.random.randn(10, 3),
+        data=np.random.randn(5, 3),
+        feature_names=["a", "b", "c"],
+    )
+    with pytest.raises(DimensionError, match="same number of rows"):
+        shap.plots.scatter(sv[:, 0], show=False)
+
+
+def test_dependence_legacy_mismatched_rows_raises():
+    """dependence_legacy() raises DimensionError when shap_values and features row counts differ."""
+    shap_values = np.random.randn(10, 3)
+    features = np.random.randn(5, 3)
+    with pytest.raises(DimensionError, match="same number of rows"):
+        shap.plots._scatter.dependence_legacy(0, shap_values=shap_values, features=features, show=False)
+
+
+def test_dependence_legacy_mismatched_cols_raises():
+    """dependence_legacy() raises DimensionError when shap_values and features column counts differ."""
+    shap_values = np.random.randn(10, 3)
+    features = np.random.randn(10, 2)
+    with pytest.raises(DimensionError, match="same number of columns"):
+        shap.plots._scatter.dependence_legacy(0, shap_values=shap_values, features=features, show=False)
