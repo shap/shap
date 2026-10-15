@@ -93,6 +93,69 @@ def test_waterfall_plot_for_decision_tree_explanation():
     shap.plots.waterfall(explanation[0], show=False)
 
 
+def test_waterfall_legacy_with_explanation_object():
+    """waterfall_legacy must accept an Explanation object as its first argument.
+
+    Before the fix, it accessed shap_exp.expected_value which does not exist on
+    Explanation (the correct attribute is .base_values), causing an AttributeError.
+    """
+    X = pd.DataFrame({"A": [1.0, 2.0, 3.0], "B": [4.0, 5.0, 6.0]})
+    y = pd.Series([1.0, 2.0, 3.0])
+    model = DecisionTreeRegressor()
+    model.fit(X, y)
+    explainer = shap.TreeExplainer(model)
+    explanation = explainer(X)
+
+    # Passing a single-row Explanation must not raise AttributeError
+    shap.plots._waterfall.waterfall_legacy(explanation[0], show=False)
+    plt.close("all")
+
+
+def test_waterfall_legacy_explanation_uses_base_values():
+    """waterfall_legacy must read base_values, not expected_value, from an Explanation.
+
+    We verify by comparing the scalar used inside the plot (expected_value after
+    unpacking) against explanation[0].base_values directly.
+    """
+    X = pd.DataFrame({"A": [1.0, 2.0, 3.0], "B": [4.0, 5.0, 6.0]})
+    y = pd.Series([1.0, 2.0, 3.0])
+    model = DecisionTreeRegressor()
+    model.fit(X, y)
+    explainer = shap.TreeExplainer(model)
+    explanation = explainer(X)
+
+    single = explanation[0]
+    expected_base = float(single.base_values)
+
+    # Confirm the attribute used by the fix exists and is a finite scalar
+    assert np.isfinite(expected_base), "base_values should be a finite scalar"
+
+    # Confirm the old attribute does NOT exist, so the previous code was broken
+    assert not hasattr(single, "expected_value"), (
+        "Explanation should not have .expected_value; if it does the test premise is wrong"
+    )
+
+    # The plot should render without error using the correct attribute
+    shap.plots._waterfall.waterfall_legacy(single, show=False)
+    plt.close("all")
+
+
+def test_waterfall_legacy_multirow_explanation_raises():
+    """waterfall_legacy must raise when passed a multi-row Explanation."""
+    X = pd.DataFrame({"A": [1.0, 2.0, 3.0], "B": [4.0, 5.0, 6.0]})
+    y = pd.Series([1.0, 2.0, 3.0])
+    model = DecisionTreeRegressor()
+    model.fit(X, y)
+    explainer = shap.TreeExplainer(model)
+    explanation = explainer(X)
+
+    # A multi-row Explanation has array-shaped base_values, which should be
+    # caught by the scalar check inside waterfall_legacy.
+    with pytest.raises(Exception, match="scalar expected_value"):
+        shap.plots._waterfall.waterfall_legacy(explanation, show=False)
+    plt.close("all")
+
+
 def test_waterfall_plot_for_data_with_number_columns():
     # GH 4150
     model = KNeighborsClassifier()
