@@ -130,14 +130,15 @@ jobs:
         run: |
           uv pip install "scikit-build-core>=0.10.0" "setuptools-scm>=8.0" "numpy>=2.0" "packaging>20.9" "nanobind>=2.0.0" cmake ninja
 
-      - name: Build shap with CUDA support
+      - name: Build shap and the CUDA backend (editable)
         env:
-          SHAP_ENABLE_CUDA: "1"
           # Skip `git describe` for the version lookup - on this runner's full
           # clone (fetch-depth: 0, ~100 tags) it's slow enough to flake past
           # vcs_versioning's hardcoded 40s subprocess timeout.
           SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.0"
-        run: uv pip install -e . -v --no-build-isolation
+        run: |
+          uv pip install -e . -v --no-build-isolation
+          uv pip install -e backends/shap-cuda -v --no-build-isolation
 
       - name: Install test dependencies
         run: uv pip install pytest pytest-mpl pytest-cov xgboost lightgbm matplotlib ipython
@@ -153,8 +154,10 @@ jobs:
           # Restore sklearn data
           cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
 
-          # Restore shap cached data to the installed package location
-          SHAP_CACHE_DIR=$(uv run python -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
+          # -P: cwd contains a real shap/ source dir, which `python -c` (unlike
+          # the `pytest` entrypoint below) prepends to sys.path, shadowing the
+          # actually-installed package - see project memory on this gotcha.
+          SHAP_CACHE_DIR=$(uv run python -P -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
           mkdir -p "$SHAP_CACHE_DIR"
           cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
 
@@ -164,7 +167,7 @@ jobs:
           ls -la "$SHAP_CACHE_DIR" 2>/dev/null || echo "No shap data"
 
       - name: Run GPU tests
-        run: uv run pytest tests/explainers/test_gpu_tree.py -v
+        run: uv run pytest backends/shap-cuda/tests/test_gpu_tree.py -v
 
   stop-runner:
     if: ${{ always() && needs.start-runner.result == 'success' }}
