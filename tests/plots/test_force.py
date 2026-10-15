@@ -150,3 +150,6 @@ def test_flipud_reverses_clust_order():
         f"Higher-prediction sample should come first (lower simIndex), "
         f"got simIndex_high={sim_high}, simIndex_low={sim_low}"
     )
+
+
+pytestmark = pytest.mark.filterwarnings("ignore:.*NumPy global RNG.*")
