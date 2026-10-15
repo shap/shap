@@ -715,7 +715,7 @@ class Explanation(metaclass=MetaExplanation):
             return _auto_cohorts(self, max_cohorts=cohorts)
         if isinstance(cohorts, (list, tuple, np.ndarray)):
             cohorts = np.array(cohorts)
-            return Cohorts(**{name: self[cohorts == name] for name in np.unique(cohorts)})
+            return Cohorts(**{str(name): self[cohorts == name] for name in np.unique(cohorts)})
         raise TypeError("The given set of cohort indicators is not recognized! Please give an array or int.")
 
     def _flatten_feature_names(self) -> dict[Any, list[Any]]:
