@@ -34,6 +34,13 @@ def group_difference(
         A list of feature names.
 
     """
+    # Normalize 1D input before computing confidence bounds to ensure
+    # xerr always has shape (2, n_features) instead of (2,)
+    if len(shap_values.shape) == 1:
+        shap_values = shap_values.reshape(-1, 1)
+        if feature_names is None:
+            feature_names = [""]
+
     # Compute confidence bounds for the group difference value
     vs = []
     gmean = group_mask.mean()
@@ -42,12 +49,6 @@ def group_difference(
         vs.append(shap_values[r].mean(0) - shap_values[~r].mean(0))
     vs_ = np.array(vs)
     xerr = np.vstack([np.percentile(vs_, 95, axis=0), np.percentile(vs_, 5, axis=0)])
-
-    # See if we were passed a single model output vector and not a matrix of SHAP values
-    if len(shap_values.shape) == 1:
-        shap_values = shap_values.reshape(1, -1).T
-        if feature_names is None:
-            feature_names = [""]
 
     # Fill in any missing feature names
     if feature_names is None:
