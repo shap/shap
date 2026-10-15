@@ -52,7 +52,6 @@ output_transform_codes = {
 feature_perturbation_codes = {
     "interventional": 0,
     "tree_path_dependent": 1,
-    "global_path_dependent": 2,
 }
 
 

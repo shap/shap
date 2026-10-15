@@ -1500,24 +1500,6 @@ class TestExplainerXGBoost:
             predicted[:, 1],
         )
 
-    # def test_front_page_xgboost_global_path_dependent():
-    #     try:
-    #         xgboost = pytest.importorskip("xgboost")
-    #     except Exception:
-    #         print("Skipping test_front_page_xgboost!")
-    #         return
-    #
-    #     # train XGBoost model
-    #     X, y = shap.datasets.california(n_points=500)
-    #     model = xgboost.XGBRegressor()
-    #     model.fit(X, y)
-
-    #     # explain the model's predictions using SHAP values
-    #     explainer = shap.TreeExplainer(model, X, feature_perturbation="global_path_dependent")
-    #     shap_values = explainer.shap_values(X)
-
-    #     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))
-
     def test_explanation_data_not_dmatrix(self, random_seed):
         """Checks that DMatrix is not stored in Explanation.data after TreeExplainer.__call__,
         since it is not supported by our plotting functions.
