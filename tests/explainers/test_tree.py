@@ -1779,6 +1779,69 @@ class TestExplainerLightGBM:
             atol=1e-4,
         )
 
+    @pytest.mark.parametrize("round_trip", [False, True])
+    def test_lightgbm_tree_parsing_is_lazy(self, monkeypatch, round_trip):
+        lightgbm = pytest.importorskip("lightgbm")
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(100, 4))
+        y = X[:, 0] * 2 - X[:, 1] + rng.normal(size=100)
+        model = lightgbm.LGBMRegressor(n_estimators=10, n_jobs=1, verbosity=-1).fit(X, y)
+
+        dump_model = lightgbm.basic.Booster.dump_model
+        dump_calls = 0
+
+        def count_dump_calls(booster, *args, **kwargs):
+            nonlocal dump_calls
+            dump_calls += 1
+            return dump_model(booster, *args, **kwargs)
+
+        monkeypatch.setattr(lightgbm.basic.Booster, "dump_model", count_dump_calls)
+        native_contributions = model.booster_.predict(X[:3], pred_contrib=True)
+
+        explainer = shap.Explainer(model)
+        assert isinstance(explainer, shap.TreeExplainer)
+        assert dump_calls == 0
+        np.testing.assert_allclose(explainer.expected_value, native_contributions[0, -1])
+
+        if round_trip:
+            explainer = pickle.loads(pickle.dumps(explainer))
+            assert dump_calls == 0
+
+        shap_values = explainer.shap_values(X[:3])
+        native_shap_values = native_contributions[:, :-1]
+        np.testing.assert_allclose(shap_values, native_shap_values)
+        assert dump_calls == 0
+
+        interaction_values = explainer.shap_interaction_values(X[:3])
+        np.testing.assert_allclose(interaction_values.sum(axis=2), shap_values, atol=1e-4)
+        assert dump_calls == 1
+
+        explainer.shap_interaction_values(X[:1])
+        assert dump_calls == 1
+
+    def test_lightgbm_early_stopping_uses_best_iteration_for_interactions(self):
+        lightgbm = pytest.importorskip("lightgbm")
+        rng = np.random.default_rng(4)
+        X = rng.normal(size=(300, 4))
+        y = (X[:, 0] + rng.normal(size=300) > 0.4).astype(int)
+
+        booster = lightgbm.train(
+            {"objective": "binary", "num_threads": 1, "verbosity": -1, "seed": 4},
+            lightgbm.Dataset(X, label=y),
+            num_boost_round=30,
+            valid_sets=[lightgbm.Dataset(X, label=1 - y)],
+            callbacks=[lightgbm.early_stopping(5, verbose=False)],
+            keep_training_booster=True,
+        )
+        assert 0 < booster.best_iteration < booster.current_iteration()
+
+        explainer = shap.TreeExplainer(booster)
+        interactions = explainer.shap_interaction_values(X[:3])
+        reconstructed = interactions.sum(axis=(1, 2)) + explainer.expected_value
+        predicted = booster.predict(X[:3], raw_score=True, num_iteration=booster.best_iteration)
+
+        np.testing.assert_allclose(reconstructed, predicted, rtol=1e-6, atol=1e-6)
+
     def test_lightgbm_call_explanation(self):
         """Checks that __call__ runs without error and returns a valid Explanation object.
 
