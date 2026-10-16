@@ -170,6 +170,184 @@ inline std::size_t Depth(const TreeEnsemble &tree, unsigned node) {
     return 1 + std::max(Depth(tree, tree.children_left[node]), Depth(tree, tree.children_right[node]));
 }
 
+/**
+ * Decision-pattern algorithm, after WOODELF's background SHAP:
+ * https://ron-wettenstein.github.io/TreeBranchMarks/benchmarks/resources/mn_background_explanation.html
+ *
+ * For a leaf, give each distinct feature on its path a bit, set for a row that satisfies
+ * all of that feature's splits on the path. A foreground pattern c and background
+ * pattern b reach the leaf only if c | b covers every bit. Then the foreground players
+ * are exactly the zero bits of b and the background players the zero bits of c, so a
+ * pair's shares depend only on the two popcounts. Rows with equal patterns share all
+ * work, costing unique foreground x unique background patterns per leaf instead of
+ * foreground x background rows. Attributions are summed over references, so this
+ * applies to raw outputs only.
+ */
+using Pattern = std::uint32_t;
+constexpr std::size_t kMaxPatternBits = 16;  // bounds the dense pattern lookup table
+
+template <bool SingleOutput> class Patterns {
+public:
+    Patterns(const Coefficients &coefficients, const ExplanationDataset &data, std::size_t outputs,
+             std::size_t depth)
+        : coefficients_(coefficients), data_(data), outputs_(outputs), bit_of_feature_(data.M, -1),
+          foreground_((depth + 1) * data.num_X), background_((depth + 1) * data.num_R),
+          x_left_(depth * data.num_X), r_left_(depth * data.num_R), row_slot_(data.num_X),
+          slot_(std::size_t(1) << kMaxPatternBits, -1) {
+        for (std::size_t i = 0; i < data.num_X; ++i) x_.push_back(ForegroundRow(data, i));
+        for (std::size_t j = 0; j < data.num_R; ++j) r_.push_back(BackgroundRow(data, j));
+    }
+
+    // Add one tree's attributions, summed rather than averaged over references, into phi.
+    void Run(const TreeEnsemble &tree, double *phi) {
+        tree_ = &tree;
+        phi_ = phi;
+        Visit(0, 0, 0);
+    }
+
+private:
+    std::size_t NumOutputs() const { return SingleOutput ? 1 : outputs_; }
+    std::size_t Stride() const { return (data_.M + 1) * NumOutputs(); }
+
+    // Patterns of every row at a depth; depth zero is the root, where no bits are in use.
+    Pattern *Foreground(std::size_t depth) { return foreground_.data() + depth * data_.num_X; }
+    Pattern *Background(std::size_t depth) { return background_.data() + depth * data_.num_R; }
+
+    // Each row's child pattern: a new feature takes the condition as its bit, and a
+    // repeated feature must also satisfy it.
+    static void Descend(const Pattern *parent, const std::uint8_t *left, bool to_left, Pattern bit, bool repeated,
+                        Pattern *child, std::size_t rows) {
+        for (std::size_t i = 0; i < rows; ++i) {
+            bool satisfied = left[i] == to_left;
+            child[i] = repeated ? (satisfied ? parent[i] : parent[i] & ~bit) : (satisfied ? parent[i] | bit : parent[i]);
+        }
+    }
+
+    void Visit(unsigned node, std::size_t depth, std::size_t bits) {
+        if (tree_->is_leaf(node)) return Leaf(node, depth, bits);
+        unsigned feature = tree_->features[node];
+        std::uint8_t *x_left = x_left_.data() + depth * data_.num_X, *r_left = r_left_.data() + depth * data_.num_R;
+        for (std::size_t i = 0; i < data_.num_X; ++i) x_left[i] = GoesLeft(*tree_, node, x_[i].values, x_[i].missing);
+        for (std::size_t j = 0; j < data_.num_R; ++j) r_left[j] = GoesLeft(*tree_, node, r_[j].values, r_[j].missing);
+        int &bit_index = bit_of_feature_[feature];
+        bool repeated = bit_index >= 0;
+        if (!repeated) {
+            bit_index = static_cast<int>(bits);
+            feature_of_bit_.push_back(feature);
+        }
+        Pattern bit = Pattern(1) << bit_index;
+        std::size_t child_bits = repeated ? bits : bits + 1;
+        for (bool to_left : {true, false}) {
+            Descend(Foreground(depth), x_left, to_left, bit, repeated, Foreground(depth + 1), data_.num_X);
+            Descend(Background(depth), r_left, to_left, bit, repeated, Background(depth + 1), data_.num_R);
+            Visit(to_left ? tree_->children_left[node] : tree_->children_right[node], depth + 1, child_bits);
+        }
+        if (!repeated) {
+            bit_index = -1;
+            feature_of_bit_.pop_back();
+        }
+    }
+
+    // Give each distinct pattern a slot, recording the slot of every row in slots.
+    std::size_t Unique(const Pattern *patterns, std::size_t rows, std::vector<Pattern> &unique,
+                       std::vector<double> *counts, std::int32_t *slots) {
+        unique.clear();
+        if (counts) counts->clear();
+        for (std::size_t i = 0; i < rows; ++i) {
+            std::int32_t &slot = slot_[patterns[i]];
+            if (slot < 0) {
+                slot = static_cast<std::int32_t>(unique.size());
+                unique.push_back(patterns[i]);
+                if (counts) counts->push_back(0);
+            }
+            if (counts) (*counts)[slot] += 1;
+            if (slots) slots[i] = slot;
+        }
+        for (auto pattern : unique) slot_[pattern] = -1;
+        return unique.size();
+    }
+
+    void Leaf(unsigned node, std::size_t depth, std::size_t bits) {
+        const double *values = tree_->values + node * NumOutputs();
+        const Pattern full = static_cast<Pattern>((std::uint64_t(1) << bits) - 1);
+        Unique(Background(depth), data_.num_R, r_unique_, &r_counts_, nullptr);
+        Unique(Foreground(depth), data_.num_X, x_unique_, nullptr, row_slot_.data());
+
+        // The baseline leaf is reached by references satisfying the whole path.
+        double baseline = 0;
+        for (std::size_t b = 0; b < r_unique_.size(); ++b) {
+            if (r_unique_[b] == full) baseline = r_counts_[b];
+        }
+
+        // Per foreground pattern and bit, the summed share of that feature's player.
+        // A foreground player (c_d = 1) gains the positive shares of references with
+        // b_d = 0; a background player (c_d = 0) gains every negative share, since
+        // valid references all have b_d = 1.
+        shares_.assign(x_unique_.size() * bits, 0);
+        positive_by_bit_.resize(bits);
+        for (std::size_t c = 0; c < x_unique_.size(); ++c) {
+            Pattern x_pattern = x_unique_[c];
+            std::size_t negatives = bits - Popcount(x_pattern);
+            double positive = 0, negative = 0;
+            std::fill(positive_by_bit_.begin(), positive_by_bit_.end(), 0);
+            for (std::size_t b = 0; b < r_unique_.size(); ++b) {
+                Pattern r_pattern = r_unique_[b];
+                if ((x_pattern | r_pattern) != full) continue;
+                const auto &share = coefficients_(bits - Popcount(r_pattern), negatives);
+                double positive_share = r_counts_[b] * share.positive;
+                positive += positive_share;
+                negative += r_counts_[b] * share.negative;
+                // Foreground bits that this reference also satisfies are dummies for it.
+                for (Pattern both = x_pattern & r_pattern; both; both &= both - 1) {
+                    positive_by_bit_[Ctz(both)] += positive_share;
+                }
+            }
+            double *share = shares_.data() + c * bits;
+            for (std::size_t d = 0; d < bits; ++d) {
+                share[d] = x_pattern >> d & 1 ? positive - positive_by_bit_[d] : negative;
+            }
+        }
+
+        for (std::size_t i = 0; i < data_.num_X; ++i) {
+            double *out = phi_ + i * Stride();
+            const double *share = shares_.data() + row_slot_[i] * bits;
+            for (std::size_t d = 0; d < bits; ++d) {
+                if (share[d] == 0) continue;
+                double *value = out + feature_of_bit_[d] * NumOutputs();
+                for (std::size_t o = 0; o < NumOutputs(); ++o) value[o] += values[o] * share[d];
+            }
+            double *bias = out + data_.M * NumOutputs();
+            for (std::size_t o = 0; o < NumOutputs(); ++o) bias[o] += values[o] * baseline;
+        }
+    }
+
+    static std::size_t Popcount(Pattern pattern) {
+        std::size_t count = 0;
+        for (; pattern; pattern &= pattern - 1) ++count;
+        return count;
+    }
+
+    static std::size_t Ctz(Pattern pattern) {
+        std::size_t index = 0;
+        for (; !(pattern & 1); pattern >>= 1) ++index;
+        return index;
+    }
+
+    const Coefficients &coefficients_;
+    const ExplanationDataset &data_;
+    std::size_t outputs_;
+    const TreeEnsemble *tree_ = nullptr;
+    double *phi_ = nullptr;
+    std::vector<Row> x_, r_;
+    std::vector<int> bit_of_feature_;
+    std::vector<unsigned> feature_of_bit_;
+    std::vector<Pattern> foreground_, background_;
+    std::vector<std::uint8_t> x_left_, r_left_;
+    std::vector<std::int32_t> row_slot_, slot_;
+    std::vector<Pattern> x_unique_, r_unique_;
+    std::vector<double> r_counts_, shares_, positive_by_bit_;
+};
+
 template <bool SingleOutput>
 inline void ExplainRows(const TreeEnsemble &trees, const std::vector<TreeEnsemble> &views,
                         const ExplanationDataset &data, double *phi, transform_f transform) {
@@ -231,13 +409,48 @@ inline void ExplainRows(const TreeEnsemble &trees, const std::vector<TreeEnsembl
     }
 }
 
+// Benchmark builds may force one algorithm: 1 for traversal, 2 for patterns.
+#ifndef SHAP_INTERVENTIONAL_FORCE
+#define SHAP_INTERVENTIONAL_FORCE 0
+#endif
+
+// Whether the pattern algorithm should explain a tree. On the GPUTreeShap model grid
+// (depths 3, 8 and 16; 10 to 100 references), patterns broke even at about 10, 20-25
+// and 40-60 references respectively, so this never chose the slower algorithm there.
+inline bool PreferPatterns(std::size_t depth, const ExplanationDataset &data) {
+    if (SHAP_INTERVENTIONAL_FORCE) return SHAP_INTERVENTIONAL_FORCE == 2;
+    return data.num_R >= 3 * depth;
+}
+
+template <bool SingleOutput>
+inline void ExplainPatterns(const TreeEnsemble &trees, const std::vector<TreeEnsemble> &views,
+                            const ExplanationDataset &data, double *phi) {
+    std::size_t depth = 0;
+    for (const auto &view : views) depth = std::max(depth, Depth(view, 0));
+    Coefficients coefficients(std::min<std::size_t>(depth, data.M));
+    Patterns<SingleOutput> patterns(coefficients, data, trees.num_outputs, depth);
+    for (const auto &view : views) patterns.Run(view, phi);
+}
+
 // Matches dense_independent's output layout, transforms and reference averaging,
 // computing every output in a single traversal per row/reference pair.
 inline void Explain(const TreeEnsemble &trees, const ExplanationDataset &data, double *phi,
                     transform_f transform) {
-    std::vector<TreeEnsemble> views(trees.tree_limit);
-    for (unsigned t = 0; t < trees.tree_limit; ++t) trees.get_tree(views[t], t);
-    if (trees.num_outputs == 1) ExplainRows<true>(trees, views, data, phi, transform);
-    else ExplainRows<false>(trees, views, data, phi, transform);
+    // Patterns sum each tree over references; the traversal then averages all trees.
+    std::vector<TreeEnsemble> traversal, patterns;
+    for (unsigned t = 0; t < trees.tree_limit; ++t) {
+        TreeEnsemble view;
+        trees.get_tree(view, t);
+        std::size_t depth = Depth(view, 0);
+        bool use_patterns = !transform && depth <= kMaxPatternBits && PreferPatterns(depth, data);
+        (use_patterns ? patterns : traversal).push_back(view);
+    }
+    if (trees.num_outputs == 1) {
+        if (!patterns.empty()) ExplainPatterns<true>(trees, patterns, data, phi);
+        ExplainRows<true>(trees, traversal, data, phi, transform);
+    } else {
+        if (!patterns.empty()) ExplainPatterns<false>(trees, patterns, data, phi);
+        ExplainRows<false>(trees, traversal, data, phi, transform);
+    }
 }
 }  // namespace shap_interventional

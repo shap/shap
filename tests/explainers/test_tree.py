@@ -3172,12 +3172,14 @@ def _brute_force_interventional(predict, x, background):
     return phi / len(background)
 
 
-def test_experimental_interventional_matches_brute_force():
+# Few references use the traversal; many references relative to depth use decision patterns.
+@pytest.mark.parametrize("max_depth,n_background", [(8, 6), (3, 12)])
+def test_experimental_interventional_matches_brute_force(max_depth, n_background):
     rng = np.random.default_rng(0)
     X = rng.normal(size=(200, 4))
     # Repeated features along paths exercise source reuse at later splits.
-    model = DecisionTreeRegressor(max_depth=8, random_state=0).fit(X, X[:, 0] * X[:, 1] + np.sin(3 * X[:, 0]))
-    background = X[:6]
+    model = DecisionTreeRegressor(max_depth=max_depth, random_state=0).fit(X, X[:, 0] * X[:, 1] + np.sin(3 * X[:, 0]))
+    background = X[:n_background]
     rows = np.vstack([X[50:53], background[:1]])
     explainer = shap.TreeExplainer(model, background, feature_perturbation="interventional", enable_experimental=True)
     explanation = explainer(rows)
