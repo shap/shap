@@ -1,6 +1,9 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <vector>
 
 // TreeEnsemble, ExplanationDataset and tree_predict are defined by tree_shap.h.
@@ -20,24 +23,34 @@
  */
 namespace shap_interventional {
 
-// Per-player coefficients indexed by (a, b), already divided by a or b.
-struct Coefficients {
-    unsigned size;
-    std::vector<double> positive, negative;
+// Per-player shares indexed by (a, b), already divided by a or b.
+class Coefficients {
+public:
+    struct Share {
+        double positive = 0, negative = 0;
+    };
 
-    explicit Coefficients(unsigned max_players)
-        : size(max_players + 1), positive(size * size, 0), negative(size * size, 0) {
-        for (unsigned a = 0; a < size; ++a) {
-            for (unsigned b = 0; a + b < size; ++b) {
+    explicit Coefficients(std::size_t max_players)
+        : size_(max_players + 1), shares_(size_ * size_) {
+        for (std::size_t a = 0; a < size_; ++a) {
+            for (std::size_t b = 0; a + b < size_; ++b) {
                 // 1 / C(a+b, a) by a short multiplicative recurrence, avoiding overflow.
-                unsigned small = std::min(a, b), large = std::max(a, b);
+                auto [small, large] = std::minmax(a, b);
                 double inverse = 1;
-                for (unsigned i = 1; i <= small; ++i) inverse *= static_cast<double>(i) / (large + i);
-                if (a > 0) positive[a * size + b] = inverse / a;
-                if (b > 0) negative[a * size + b] = -inverse / b;
+                for (std::size_t i = 1; i <= small; ++i) inverse *= static_cast<double>(i) / (large + i);
+                auto &share = shares_[a * size_ + b];
+                if (a > 0) share.positive = inverse / a;
+                if (b > 0) share.negative = -inverse / b;
             }
         }
     }
+
+    std::size_t MaxPlayers() const { return size_ - 1; }
+    const Share &operator()(std::size_t a, std::size_t b) const { return shares_[a * size_ + b]; }
+
+private:
+    std::size_t size_;
+    std::vector<Share> shares_;
 };
 
 inline bool GoesLeft(const TreeEnsemble &tree, unsigned node, const double *x, const bool *missing) {
@@ -47,75 +60,112 @@ inline bool GoesLeft(const TreeEnsemble &tree, unsigned node, const double *x, c
     return x[feature] <= tree.thresholds[node];
 }
 
-template <bool SingleOutput> struct Runner {
-    const Coefficients &coefficients;
-    unsigned features, outputs;
-    const TreeEnsemble *tree = nullptr;
-    const double *x = nullptr, *r = nullptr;
-    const bool *x_missing = nullptr, *r_missing = nullptr;
-    double *phi = nullptr;
-    // +1 when a feature is taken from x on the current path, -1 from r, 0 if unassigned.
-    // Every assignment is undone while unwinding, so this is shared across trees and pairs.
-    std::vector<signed char> source;
-    // Each player level owns its children's positive/negative sums; the root owns a sink.
-    std::vector<double> scratch;
+// One explained or background row, with its missing-value mask.
+struct Row {
+    const double *values;
+    const bool *missing;
+};
 
-    Runner(const Coefficients &coefficients, unsigned features, unsigned outputs)
-        : coefficients(coefficients), features(features), outputs(outputs), source(features, 0),
-          scratch(static_cast<size_t>(2 + 4 * coefficients.size) * outputs) {}
+inline Row ForegroundRow(const ExplanationDataset &data, std::size_t i) {
+    return {data.X + i * data.M, data.X_missing + i * data.M};
+}
 
-    unsigned NumOutputs() const { return SingleOutput ? 1 : outputs; }
+inline Row BackgroundRow(const ExplanationDataset &data, std::size_t j) {
+    return {data.R + j * data.M, data.R_missing + j * data.M};
+}
+
+// Where a feature on the current path takes its value from.
+enum class Source : std::int8_t { unassigned, foreground, background };
+
+template <bool SingleOutput> class Traversal {
+public:
+    Traversal(const Coefficients &coefficients, std::size_t features, std::size_t outputs)
+        : coefficients_(coefficients), features_(features), outputs_(outputs),
+          source_(features, Source::unassigned),
+          // A root slot, then foreground and background child slots for every player level.
+          scratch_((1 + 2 * coefficients.MaxPlayers()) * 2 * outputs) {}
+
+    // Add the attributions of one tree for (x, r) into phi, laid out as (features + 1, outputs).
+    void Run(const TreeEnsemble &tree, Row x, Row r, double *phi) {
+        tree_ = &tree;
+        x_ = x;
+        r_ = r;
+        phi_ = phi;
+        Visit(0, 0, 0, Slot(0));
+    }
+
+private:
+    // A subtree's summed shares for each foreground player and each background player.
+    struct Shares {
+        double *positive, *negative;
+    };
+
+    std::size_t NumOutputs() const { return SingleOutput ? 1 : outputs_; }
+
+    Shares Slot(std::size_t slot) {
+        double *begin = scratch_.data() + slot * 2 * NumOutputs();
+        return {begin, begin + NumOutputs()};
+    }
+
+    double *Phi(std::size_t feature) { return phi_ + feature * NumOutputs(); }
 
     // Every foreground player of a leaf receives the same share, as does every
     // background player. Sum these shares over a subtree and credit each player once
     // at its split, keeping the work per pair linear in the reachable nodes.
-    void Leaf(unsigned node, unsigned a, unsigned b, double *positive, double *negative) {
-        const double *values = tree->values + static_cast<size_t>(node) * NumOutputs();
-        size_t index = static_cast<size_t>(a) * coefficients.size + b;
-        for (unsigned o = 0; o < NumOutputs(); ++o) {
-            positive[o] = values[o] * coefficients.positive[index];
-            negative[o] = values[o] * coefficients.negative[index];
-            if (a == 0) phi[static_cast<size_t>(features) * NumOutputs() + o] += values[o];
+    void Leaf(unsigned node, std::size_t a, std::size_t b, Shares out) {
+        const double *values = tree_->values + node * NumOutputs();
+        const auto &share = coefficients_(a, b);
+        double *baseline = Phi(features_);
+        for (std::size_t o = 0; o < NumOutputs(); ++o) {
+            out.positive[o] = values[o] * share.positive;
+            out.negative[o] = values[o] * share.negative;
+            if (a == 0) baseline[o] += values[o];
         }
     }
 
     // Finish the foreground subtree before visiting its background sibling.
-    void Visit(unsigned node, unsigned a, unsigned b, double *positive, double *negative) {
-        while (!tree->is_leaf(node)) {
-            unsigned feature = tree->features[node];
-            bool x_left = GoesLeft(*tree, node, x, x_missing);
-            bool r_left = GoesLeft(*tree, node, r, r_missing);
-            if (x_left != r_left && source[feature] == 0) {
-                unsigned left = tree->children_left[node], right = tree->children_right[node];
-                double *x_sums = scratch.data() + static_cast<size_t>(2 + 4 * (a + b)) * NumOutputs();
-                double *r_sums = x_sums + 2 * NumOutputs();
-                source[feature] = 1;
-                Visit(x_left ? left : right, a + 1, b, x_sums, x_sums + NumOutputs());
-                source[feature] = -1;
-                Visit(r_left ? left : right, a, b + 1, r_sums, r_sums + NumOutputs());
-                source[feature] = 0;
-                double *value = phi + static_cast<size_t>(feature) * NumOutputs();
-                for (unsigned o = 0; o < NumOutputs(); ++o) {
-                    double x_positive = x_sums[o], x_negative = x_sums[NumOutputs() + o];
-                    double r_positive = r_sums[o], r_negative = r_sums[NumOutputs() + o];
-                    value[o] += x_positive + r_negative;
-                    positive[o] = x_positive + r_positive;
-                    negative[o] = x_negative + r_negative;
+    void Visit(unsigned node, std::size_t a, std::size_t b, Shares out) {
+        while (!tree_->is_leaf(node)) {
+            unsigned feature = tree_->features[node];
+            bool x_left = GoesLeft(*tree_, node, x_.values, x_.missing);
+            bool r_left = GoesLeft(*tree_, node, r_.values, r_.missing);
+            Source &source = source_[feature];
+            if (x_left != r_left && source == Source::unassigned) {
+                unsigned left = tree_->children_left[node], right = tree_->children_right[node];
+                std::size_t players = a + b;
+                Shares x_shares = Slot(1 + 2 * players), r_shares = Slot(2 + 2 * players);
+                source = Source::foreground;
+                Visit(x_left ? left : right, a + 1, b, x_shares);
+                source = Source::background;
+                Visit(r_left ? left : right, a, b + 1, r_shares);
+                source = Source::unassigned;
+                double *value = Phi(feature);
+                for (std::size_t o = 0; o < NumOutputs(); ++o) {
+                    value[o] += x_shares.positive[o] + r_shares.negative[o];
+                    out.positive[o] = x_shares.positive[o] + r_shares.positive[o];
+                    out.negative[o] = x_shares.negative[o] + r_shares.negative[o];
                 }
                 return;
             }
             // Agreement, or a repeated split following its feature's assigned source.
-            bool left = x_left == r_left || source[feature] > 0 ? x_left : r_left;
-            node = left ? tree->children_left[node] : tree->children_right[node];
+            bool go_left = x_left == r_left || source == Source::foreground ? x_left : r_left;
+            node = go_left ? tree_->children_left[node] : tree_->children_right[node];
         }
-        Leaf(node, a, b, positive, negative);
+        Leaf(node, a, b, out);
     }
 
-    void Run() { Visit(0, 0, 0, scratch.data(), scratch.data() + NumOutputs()); }
+    const Coefficients &coefficients_;
+    std::size_t features_, outputs_;
+    const TreeEnsemble *tree_ = nullptr;
+    Row x_{}, r_{};
+    double *phi_ = nullptr;
+    // Every assignment is undone while unwinding, so this is shared across trees and pairs.
+    std::vector<Source> source_;
+    std::vector<double> scratch_;
 };
 
 // Size the coefficient table from the trees rather than trusting max_depth metadata.
-inline unsigned Depth(const TreeEnsemble &tree, unsigned node) {
+inline std::size_t Depth(const TreeEnsemble &tree, unsigned node) {
     if (tree.is_leaf(node)) return 0;
     return 1 + std::max(Depth(tree, tree.children_left[node]), Depth(tree, tree.children_right[node]));
 }
@@ -123,63 +173,60 @@ inline unsigned Depth(const TreeEnsemble &tree, unsigned node) {
 template <bool SingleOutput>
 inline void ExplainRows(const TreeEnsemble &trees, const std::vector<TreeEnsemble> &views,
                         const ExplanationDataset &data, double *phi, transform_f transform) {
-    const unsigned outputs = trees.num_outputs;
-    const size_t stride = static_cast<size_t>(data.M + 1) * outputs;
-    unsigned depth = 0;
+    const std::size_t outputs = trees.num_outputs, features = data.M;
+    const std::size_t stride = (features + 1) * outputs;
+    std::size_t depth = 0;
     for (const auto &view : views) depth = std::max(depth, Depth(view, 0));
-    Coefficients coefficients(std::min(depth, data.M));
-    Runner<SingleOutput> runner(coefficients, data.M, outputs);
+    Coefficients coefficients(std::min<std::size_t>(depth, features));
+    Traversal<SingleOutput> traversal(coefficients, features, outputs);
+
     // Non-linear transforms rescale each reference's attributions by its own margins,
     // so they are accumulated per reference before being combined.
-    std::vector<double> pairs(transform != NULL ? data.num_R * stride : 0);
+    std::vector<double> pairs(transform ? data.num_R * stride : 0);
     std::vector<double> margin_x(outputs), margin_r(outputs);
-    auto margins = [&](const double *row, const bool *missing, std::vector<double> &margin) {
-        for (unsigned o = 0; o < outputs; ++o) margin[o] = trees.base_offset[o];
+    auto margins = [&](Row row, std::vector<double> &margin) {
+        std::copy_n(trees.base_offset, outputs, margin.begin());
         for (unsigned t = 0; t < trees.tree_limit; ++t) {
-            const double *values = tree_predict(t, trees, row, missing);
-            for (unsigned o = 0; o < outputs; ++o) margin[o] += values[o];
+            const double *values = tree_predict(t, trees, row.values, row.missing);
+            std::transform(margin.begin(), margin.end(), values, margin.begin(), std::plus<>());
         }
     };
 
-    for (unsigned i = 0; i < data.num_X; ++i) {
+    for (std::size_t i = 0; i < data.num_X; ++i) {
         double *out = phi + i * stride;
-        runner.x = data.X + static_cast<size_t>(i) * data.M;
-        runner.x_missing = data.X_missing + static_cast<size_t>(i) * data.M;
-        const double y = data.y == NULL ? 0 : data.y[i];
-        if (transform != NULL) margins(runner.x, runner.x_missing, margin_x);
+        const Row x = ForegroundRow(data, i);
+        const double y = data.y ? data.y[i] : 0;
+        if (transform) margins(x, margin_x);
 
         // Visit every reference within a tree, keeping that tree's nodes in cache
         // instead of streaming the whole ensemble once per reference.
         std::fill(pairs.begin(), pairs.end(), 0);
         for (const auto &view : views) {
-            runner.tree = &view;
-            for (unsigned j = 0; j < data.num_R; ++j) {
-                runner.r = data.R + static_cast<size_t>(j) * data.M;
-                runner.r_missing = data.R_missing + static_cast<size_t>(j) * data.M;
-                runner.phi = transform != NULL ? pairs.data() + j * stride : out;
-                runner.Run();
+            for (std::size_t j = 0; j < data.num_R; ++j) {
+                traversal.Run(view, x, BackgroundRow(data, j), transform ? pairs.data() + j * stride : out);
             }
         }
 
-        for (unsigned j = 0; transform != NULL && j < data.num_R; ++j) {
-            const double *pair = pairs.data() + j * stride;
-            margins(data.R + static_cast<size_t>(j) * data.M, data.R_missing + static_cast<size_t>(j) * data.M,
-                    margin_r);
-            for (unsigned o = 0; o < outputs; ++o) {
-                double rescale = 1;
-                if (margin_x[o] != margin_r[o]) {
-                    rescale = ((*transform)(margin_x[o], y) - (*transform)(margin_r[o], y)) /
-                              (margin_x[o] - margin_r[o]);
+        if (transform) {
+            for (std::size_t j = 0; j < data.num_R; ++j) {
+                const double *pair = pairs.data() + j * stride;
+                margins(BackgroundRow(data, j), margin_r);
+                for (std::size_t o = 0; o < outputs; ++o) {
+                    double rescale = 1;
+                    if (margin_x[o] != margin_r[o]) {
+                        rescale = (transform(margin_x[o], y) - transform(margin_r[o], y)) /
+                                  (margin_x[o] - margin_r[o]);
+                    }
+                    for (std::size_t k = 0; k < features; ++k) out[k * outputs + o] += pair[k * outputs + o] * rescale;
+                    out[features * outputs + o] += transform(trees.base_offset[o] + pair[features * outputs + o], 0);
                 }
-                for (unsigned k = 0; k < data.M; ++k) out[k * outputs + o] += pair[k * outputs + o] * rescale;
-                out[data.M * outputs + o] +=
-                    (*transform)(trees.base_offset[o] + pair[data.M * outputs + o], 0);
             }
         }
 
-        for (size_t k = 0; k < stride; ++k) out[k] /= data.num_R;
-        if (transform == NULL) {
-            for (unsigned o = 0; o < outputs; ++o) out[data.M * outputs + o] += trees.base_offset[o];
+        std::transform(out, out + stride, out, [&](double value) { return value / data.num_R; });
+        if (!transform) {
+            double *baseline = out + features * outputs;
+            std::transform(baseline, baseline + outputs, trees.base_offset, baseline, std::plus<>());
         }
     }
 }
