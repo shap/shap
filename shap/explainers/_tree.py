@@ -376,9 +376,12 @@ class TreeExplainer(Explainer):
         elif self.model.model_type == "lightgbm" and getattr(self.model, "_lazy_model", None) is not None:
             num_features = self.model.original_model.num_feature()
             # LightGBM returns the path-dependent baseline in the last column for any input.
+            num_iteration = (
+                -1 if self.model.tree_limit is None else self.model.tree_limit // self.model.num_stacked_models
+            )
             phi = self.model.original_model.predict(
                 np.zeros((1, num_features), dtype=self.model.input_dtype),
-                num_iteration=-1,
+                num_iteration=num_iteration,
                 pred_contrib=True,
             )
             if phi.shape[1] != num_features + 1:
@@ -1651,6 +1654,12 @@ class TreeEnsemble:
         data_missing: npt.NDArray[np.bool_] | None,
         lazy_load: bool,
     ) -> None:
+        best_iteration = getattr(model, "best_iteration", -1)
+        if best_iteration is not None and best_iteration > 0:
+            # LightGBM's best_iteration is one-based and counts boosting rounds,
+            # while the C extension's tree_limit counts all stacked trees.
+            self.tree_limit = best_iteration * self.num_stacked_models
+
         if lazy_load and data is None:
             self._lazy_model = model
             return

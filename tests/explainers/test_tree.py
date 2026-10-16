@@ -1837,6 +1837,29 @@ class TestExplainerLightGBM:
         explainer.shap_interaction_values(X[:1])
         assert dump_calls == 1
 
+    def test_lightgbm_early_stopping_uses_best_iteration_for_interactions(self):
+        lightgbm = pytest.importorskip("lightgbm")
+        rng = np.random.default_rng(4)
+        X = rng.normal(size=(300, 4))
+        y = (X[:, 0] + rng.normal(size=300) > 0.4).astype(int)
+
+        booster = lightgbm.train(
+            {"objective": "binary", "num_threads": 1, "verbosity": -1, "seed": 4},
+            lightgbm.Dataset(X, label=y),
+            num_boost_round=30,
+            valid_sets=[lightgbm.Dataset(X, label=1 - y)],
+            callbacks=[lightgbm.early_stopping(5, verbose=False)],
+            keep_training_booster=True,
+        )
+        assert 0 < booster.best_iteration < booster.current_iteration()
+
+        explainer = shap.TreeExplainer(booster)
+        interactions = explainer.shap_interaction_values(X[:3])
+        reconstructed = interactions.sum(axis=(1, 2)) + explainer.expected_value
+        predicted = booster.predict(X[:3], raw_score=True, num_iteration=booster.best_iteration)
+
+        np.testing.assert_allclose(reconstructed, predicted, rtol=1e-6, atol=1e-6)
+
     def test_lightgbm_call_explanation(self):
         """Checks that __call__ runs without error and returns a valid Explanation object.
 
