@@ -129,8 +129,9 @@ inline void ExplainRows(const TreeEnsemble &trees, const std::vector<TreeEnsembl
     for (const auto &view : views) depth = std::max(depth, Depth(view, 0));
     Coefficients coefficients(std::min(depth, data.M));
     Runner<SingleOutput> runner(coefficients, data.M, outputs);
-    // Non-linear transforms rescale each reference's attributions by its own margins.
-    std::vector<double> pair(transform != NULL ? stride : 0);
+    // Non-linear transforms rescale each reference's attributions by its own margins,
+    // so they are accumulated per reference before being combined.
+    std::vector<double> pairs(transform != NULL ? data.num_R * stride : 0);
     std::vector<double> margin_x(outputs), margin_r(outputs);
     auto margins = [&](const double *row, const bool *missing, std::vector<double> &margin) {
         for (unsigned o = 0; o < outputs; ++o) margin[o] = trees.base_offset[o];
@@ -147,18 +148,23 @@ inline void ExplainRows(const TreeEnsemble &trees, const std::vector<TreeEnsembl
         const double y = data.y == NULL ? 0 : data.y[i];
         if (transform != NULL) margins(runner.x, runner.x_missing, margin_x);
 
-        for (unsigned j = 0; j < data.num_R; ++j) {
-            runner.r = data.R + static_cast<size_t>(j) * data.M;
-            runner.r_missing = data.R_missing + static_cast<size_t>(j) * data.M;
-            if (transform != NULL) std::fill(pair.begin(), pair.end(), 0);
-            runner.phi = transform != NULL ? pair.data() : out;
-            for (const auto &view : views) {
-                runner.tree = &view;
+        // Visit every reference within a tree, keeping that tree's nodes in cache
+        // instead of streaming the whole ensemble once per reference.
+        std::fill(pairs.begin(), pairs.end(), 0);
+        for (const auto &view : views) {
+            runner.tree = &view;
+            for (unsigned j = 0; j < data.num_R; ++j) {
+                runner.r = data.R + static_cast<size_t>(j) * data.M;
+                runner.r_missing = data.R_missing + static_cast<size_t>(j) * data.M;
+                runner.phi = transform != NULL ? pairs.data() + j * stride : out;
                 runner.Run();
             }
-            if (transform == NULL) continue;
+        }
 
-            margins(runner.r, runner.r_missing, margin_r);
+        for (unsigned j = 0; transform != NULL && j < data.num_R; ++j) {
+            const double *pair = pairs.data() + j * stride;
+            margins(data.R + static_cast<size_t>(j) * data.M, data.R_missing + static_cast<size_t>(j) * data.M,
+                    margin_r);
             for (unsigned o = 0; o < outputs; ++o) {
                 double rescale = 1;
                 if (margin_x[o] != margin_r[o]) {
