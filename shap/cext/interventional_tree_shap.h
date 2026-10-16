@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -168,6 +169,11 @@ private:
 inline std::size_t Depth(const TreeEnsemble &tree, unsigned node) {
     if (tree.is_leaf(node)) return 0;
     return 1 + std::max(Depth(tree, tree.children_left[node]), Depth(tree, tree.children_right[node]));
+}
+
+inline std::size_t Leaves(const TreeEnsemble &tree, unsigned node) {
+    if (tree.is_leaf(node)) return 1;
+    return Leaves(tree, tree.children_left[node]) + Leaves(tree, tree.children_right[node]);
 }
 
 /**
@@ -414,12 +420,16 @@ inline void ExplainRows(const TreeEnsemble &trees, const std::vector<TreeEnsembl
 #define SHAP_INTERVENTIONAL_FORCE 0
 #endif
 
-// Whether the pattern algorithm should explain a tree. On the GPUTreeShap model grid
-// (depths 3, 8 and 16; 10 to 100 references), patterns broke even at about 10, 20-25
-// and 40-60 references respectively, so this never chose the slower algorithm there.
-inline bool PreferPatterns(std::size_t depth, const ExplanationDataset &data) {
+// Whether the pattern algorithm should explain a tree with this many leaves. The
+// traversal costs about N R t per tree for N explained and R background rows, while
+// patterns cost about N a + R b, so patterns win when a / R + b / N < t. Measured on
+// four datasets, depths 3-16, N 10-5,000 and R 5-1,000, both a and b grow with the
+// square root of the leaf count. Fitted constants were stable under leaving out any
+// one dataset, and stayed within 2.0-2.3x worst case over nearby values.
+inline bool PreferPatterns(std::size_t leaves, const ExplanationDataset &data) {
     if (SHAP_INTERVENTIONAL_FORCE) return SHAP_INTERVENTIONAL_FORCE == 2;
-    return data.num_R >= 3 * depth;
+    double n = data.num_X, r = data.num_R;
+    return std::sqrt(static_cast<double>(leaves)) * (1.5 * n + 0.5 * r) <= n * r;
 }
 
 template <bool SingleOutput>
@@ -441,8 +451,7 @@ inline void Explain(const TreeEnsemble &trees, const ExplanationDataset &data, d
     for (unsigned t = 0; t < trees.tree_limit; ++t) {
         TreeEnsemble view;
         trees.get_tree(view, t);
-        std::size_t depth = Depth(view, 0);
-        bool use_patterns = !transform && depth <= kMaxPatternBits && PreferPatterns(depth, data);
+        bool use_patterns = !transform && Depth(view, 0) <= kMaxPatternBits && PreferPatterns(Leaves(view, 0), data);
         (use_patterns ? patterns : traversal).push_back(view);
     }
     if (trees.num_outputs == 1) {

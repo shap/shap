@@ -3172,7 +3172,7 @@ def _brute_force_interventional(predict, x, background):
     return phi / len(background)
 
 
-# Few references use the traversal; many references relative to depth use decision patterns.
+# The large tree with few references uses the traversal; the small tree uses decision patterns.
 @pytest.mark.parametrize("max_depth,n_background", [(8, 6), (3, 12)])
 def test_experimental_interventional_matches_brute_force(max_depth, n_background):
     rng = np.random.default_rng(0)
