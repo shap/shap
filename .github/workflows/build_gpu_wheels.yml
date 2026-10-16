@@ -163,7 +163,7 @@ jobs:
           # against this exact wheel.
           CIBW_TEST_SKIP: "*"
           # Use pre-built manylinux CUDA container
-          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/manylinux_cuda/manylinux_2_28_x86_64_cuda12_8:latest
+          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/manylinux_cuda/manylinux_2_28_x86_64_cuda12_8-slim:latest
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           path: ./wheelhouse/*.whl
