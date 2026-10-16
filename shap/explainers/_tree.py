@@ -170,6 +170,7 @@ class TreeExplainer(Explainer):
         # FIXME: The `link` and `linearize_link` arguments are ignored. GH #3513
         link: Any = None,
         linearize_link: Any = None,
+        enable_experimental: bool = False,
     ) -> None:
         """Build a new Tree explainer for the passed model.
 
@@ -242,6 +243,13 @@ class TreeExplainer(Explainer):
             Deprecated, will be deprecated in v0.47.0 and removed in version v0.49.0.
             Please use the ``approximate`` argument in the :meth:`.shap_values` or ``__call__`` methods instead.
 
+        enable_experimental : bool, optional
+            Enable experimental algorithms where available. Defaults to False, using
+            the established algorithms. Currently, this enables Quadrature Tree SHAP
+            for exact path-dependent values and interactions computed by SHAP's CPU
+            extension. Model-native and GPU routing, interventional explanations, and
+            approximate values are currently unchanged.
+
         References
         ----------
         .. [1] Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum.
@@ -307,6 +315,7 @@ class TreeExplainer(Explainer):
         _safe_check_tree_instance_experimental(model)
 
         self.data_missing = None if self.data is None else pd.isna(self.data)
+        self.enable_experimental = enable_experimental
         self.feature_perturbation = feature_perturbation
         self.expected_value = None
         if isinstance(model, TreeEnsemble):
@@ -744,6 +753,7 @@ class TreeExplainer(Explainer):
                 feature_perturbation_codes[self.feature_perturbation],
                 output_transform_codes[transform],
                 False,
+                self.enable_experimental,
             )
         else:
             _cext.dense_tree_saabas(
@@ -912,6 +922,7 @@ class TreeExplainer(Explainer):
             feature_perturbation_codes[self.feature_perturbation],
             output_transform_codes[transform],
             True,
+            self.enable_experimental,
         )
 
         return self._get_shap_interactions_output(phi, flat_output)
