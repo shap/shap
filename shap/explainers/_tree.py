@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import ast
-import io
 import json
 import os
 import time
@@ -28,7 +26,6 @@ from ..utils._exceptions import (
 from ..utils._legacy import DenseData
 from ..utils._warnings import ExperimentalWarning
 from ._explainer import Explainer
-from .other._ubjson import decode_ubjson_buffer
 
 try:
     import shap._cext as _cext  # type: ignore
@@ -86,7 +83,8 @@ def _safe_check_tree_instance_experimental(tree_instance: Any) -> None:
             )
     else:
         warnings.warn(
-            f"Unable to check experimental integration status for {tree_instance} object", ExperimentalWarning
+            f"Unable to check experimental integration status for {tree_instance} object",
+            ExperimentalWarning,
         )
 
 
@@ -418,7 +416,13 @@ class TreeExplainer(Explainer):
             feature_names = getattr(self, "data_feature_names", None)
 
         if not interactions:
-            v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity, approximate=approximate)
+            v = self.shap_values(
+                X,
+                y=y,
+                from_call=True,
+                check_additivity=check_additivity,
+                approximate=approximate,
+            )
             if isinstance(v, list):
                 v = np.stack(v, axis=-1)  # put outputs at the end
         else:
@@ -478,7 +482,14 @@ class TreeExplainer(Explainer):
         y: npt.NDArray[Any] | pd.Series | None,
         tree_limit: int | None,
         check_additivity: bool,
-    ) -> tuple[npt.NDArray[Any], npt.NDArray[Any] | pd.Series | None, npt.NDArray[np.bool_], bool, int, bool]:
+    ) -> tuple[
+        npt.NDArray[Any],
+        npt.NDArray[Any] | pd.Series | None,
+        npt.NDArray[np.bool_],
+        bool,
+        int,
+        bool,
+    ]:
         # see if we have a default tree_limit in place.
         if tree_limit is None:
             tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
@@ -563,7 +574,10 @@ class TreeExplainer(Explainer):
             )
             if check_additivity and self.model.model_output == "raw":
                 model_output_vals = self.model.original_model.predict(
-                    X, iteration_range=(0, n_iterations), output_margin=True, validate_features=False
+                    X,
+                    iteration_range=(0, n_iterations),
+                    output_margin=True,
+                    validate_features=False,
                 )
 
         elif self.model.model_type == "lightgbm":
@@ -856,7 +870,10 @@ class TreeExplainer(Explainer):
 
             n_iterations = _xgboost_n_iterations(tree_limit, self.model.num_stacked_models)
             phi = self.model.original_model.predict(
-                X, iteration_range=(0, n_iterations), pred_interactions=True, validate_features=False
+                X,
+                iteration_range=(0, n_iterations),
+                pred_interactions=True,
+                validate_features=False,
             )
 
             # note we pull off the last column and keep it as our expected_value
@@ -881,7 +898,11 @@ class TreeExplainer(Explainer):
             phi = self.model.original_model.get_feature_importance(data=X, fstr_type="ShapInteractionValues")
             # note we pull off the last column and keep it as our expected_value
             if len(phi.shape) == 4:
-                self.expected_value = getattr(self, "expected_value", [phi[0, i, -1, -1] for i in range(phi.shape[1])])
+                self.expected_value = getattr(
+                    self,
+                    "expected_value",
+                    [phi[0, i, -1, -1] for i in range(phi.shape[1])],
+                )
                 return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]  # type: ignore[return-value]
             else:
                 self.expected_value = getattr(self, "expected_value", phi[0, -1, -1])
@@ -928,12 +949,22 @@ class TreeExplainer(Explainer):
         else:
             self.expected_value = [phi[0, -1, -1, i] for i in range(phi.shape[3])]
             if flat_output:
-                out = np.stack([phi[0, :-1, :-1, i] for i in range(self.model.num_outputs)], axis=-1)
+                out = np.stack(
+                    [phi[0, :-1, :-1, i] for i in range(self.model.num_outputs)],
+                    axis=-1,
+                )
             else:
-                out = np.stack([phi[:, :-1, :-1, i] for i in range(self.model.num_outputs)], axis=-1)
+                out = np.stack(
+                    [phi[:, :-1, :-1, i] for i in range(self.model.num_outputs)],
+                    axis=-1,
+                )
         return out
 
-    def assert_additivity(self, phi: npt.NDArray[Any] | list[npt.NDArray[Any]], model_output: npt.NDArray[Any]) -> None:
+    def assert_additivity(
+        self,
+        phi: npt.NDArray[Any] | list[npt.NDArray[Any]],
+        model_output: npt.NDArray[Any],
+    ) -> None:
         def check_sum(sum_val: npt.NDArray[Any], model_output: npt.NDArray[Any]) -> None:
             diff = np.abs(sum_val - model_output)
             # TODO: add arguments for passing custom 'atol' and 'rtol' values to 'np.allclose'
@@ -1182,7 +1213,13 @@ class TreeEnsemble:
             self.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_)  # output is average of trees
             self.trees = [
-                SingleTree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing)
+                SingleTree(
+                    e.tree_,
+                    normalize=True,
+                    scaling=scaling,
+                    data=data,
+                    data_missing=data_missing,
+                )
                 for e in model.estimators_
             ]
             self.objective = objective_name_map.get(model.criterion, None)
@@ -1220,7 +1257,12 @@ class TreeEnsemble:
                 raise InvalidModelError(emsg)
 
             self.trees = [
-                SingleTree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing)
+                SingleTree(
+                    e.tree_,
+                    scaling=model.learning_rate,
+                    data=data,
+                    data_missing=data_missing,
+                )
                 for e in model.estimators_[:, 0]
             ]
             self.objective = objective_name_map.get(model.criterion, None)
@@ -1326,7 +1368,12 @@ class TreeEnsemble:
                 raise InvalidModelError(emsg)
 
             self.trees = [
-                SingleTree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing)
+                SingleTree(
+                    e.tree_,
+                    scaling=model.learning_rate,
+                    data=data,
+                    data_missing=data_missing,
+                )
                 for e in model.estimators_[:, 0]
             ]
             self.objective = objective_name_map.get(model.criterion, None)
@@ -1351,7 +1398,11 @@ class TreeEnsemble:
             ):
                 sum_weight = sum(model.treeWeights)  # output is average of trees
                 self.trees = [
-                    SingleTree(tree, normalize=normalize, scaling=model.treeWeights[i] / sum_weight)
+                    SingleTree(
+                        tree,
+                        normalize=normalize,
+                        scaling=model.treeWeights[i] / sum_weight,
+                    )
                     for i, tree in enumerate(model.trees)
                 ]
             # Spark GBT, create 1 weighted (learning rate) tree per sub-model
@@ -1519,7 +1570,13 @@ class TreeEnsemble:
             self.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_)  # output is average of trees
             self.trees = [
-                SingleTree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing)
+                SingleTree(
+                    e.tree_,
+                    normalize=True,
+                    scaling=scaling,
+                    data=data,
+                    data_missing=data_missing,
+                )
                 for e in model.estimators_
             ]
             self.objective = objective_name_map.get(model.criterion, None)
@@ -1543,7 +1600,10 @@ class TreeEnsemble:
                 self.model_output = "raw"  # note that after loading we have a new model_output type
             assert safe_isinstance(
                 model.base_models[0][param_idx],
-                ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor"],
+                [
+                    "sklearn.tree.DecisionTreeRegressor",
+                    "sklearn.tree.tree.DecisionTreeRegressor",
+                ],
             ), "You must use default_tree_learner!"
             shap_trees = [trees[param_idx] for trees in model.base_models]
             self.internal_dtype = shap_trees[0].tree_.value.dtype.type
@@ -1573,6 +1633,17 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(shap_trees[0].criterion, None)
             self.tree_output = "raw_value"
             self.base_offset = model.init_params[param_idx]
+        elif safe_isinstance(model, ["treelite.Model", "treelite.core.Model"]):
+            assert_import("treelite")
+            self.original_model = model
+            loader = TreeliteModelLoader(model)
+            self.trees = loader.get_trees(data=data, data_missing=data_missing)
+            self.base_offset = loader.base_score
+            self.objective = loader.objective
+            self.tree_output = loader.tree_output
+            self.input_dtype = loader.input_dtype
+            if loader.num_stacked_models > 1:
+                self.num_stacked_models = loader.num_stacked_models
         else:
             raise InvalidModelError("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
@@ -1892,7 +1963,10 @@ class SingleTree:
             self.children_default = tree["children_default"].astype(np.int32)
             self.features = tree["features"].astype(np.int32)
             self.thresholds = tree["thresholds"]
-            self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
+            if "threshold_types" in tree:
+                self.threshold_types = tree["threshold_types"].astype(np.int32)
+            else:
+                self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = tree["values"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
@@ -2056,8 +2130,7 @@ class SingleTree:
             self.values = np.multiply(self.values, scaling)
 
         elif isinstance(tree, dict) and "nodeid" in tree:
-            """ Directly create tree given the JSON dump (with stats) of a XGBoost model.
-            """
+            """Directly create tree given the JSON dump (with stats) of a XGBoost model."""
 
             def max_id(node):
                 if "children" in node:
@@ -2094,8 +2167,7 @@ class SingleTree:
             extract_data(tree, self)
 
         elif isinstance(tree, str):
-            """ Build a tree from a text dump (with stats) of xgboost.
-            """
+            """Build a tree from a text dump (with stats) of xgboost."""
 
             nodes = [t.lstrip() for t in tree[:-1].split("\n")]
             nodes_dict = {}
@@ -2191,7 +2263,10 @@ class SingleTree:
 
         # we compute the expectations to make sure they follow the SHAP logic
         self.max_depth = _cext.compute_expectations(
-            self.children_left, self.children_right, self.node_sample_weight, self.values
+            self.children_left,
+            self.children_right,
+            self.node_sample_weight,
+            self.values,
         )
 
 
@@ -2250,265 +2325,31 @@ def get_xgboost_dmatrix_properties(model: Any) -> dict[str, Any]:
 class XGBTreeModelLoader:
     """This loads an XGBoost model directly from a raw memory dump."""
 
-    n_trees_per_iter: int
-    n_targets: int
-    name_obj: str
-    name_gbm: str
-    base_score: float
-    num_feature: int
-    num_class: int
-    num_trees: int
-    node_parents: list[npt.NDArray[Any]]
-    node_cleft: list[npt.NDArray[np.int32]]
-    node_cright: list[npt.NDArray[np.int32]]
-    node_sindex: list[npt.NDArray[np.uint32]]
-    children_default: list[npt.NDArray[Any]]
-    sum_hess: list[npt.NDArray[np.float64]]
-    values: list[npt.NDArray[Any]]
-    thresholds: list[npt.NDArray[Any]]
-    threshold_types: list[npt.NDArray[np.int32]]
-    features: list[npt.NDArray[Any]]
-    split_types: list[npt.NDArray[Any]]
-    categories: list[list[list[int]]]
-    cat_feature_indices: npt.NDArray[Any] | None
-
     def __init__(self, xgb_model: Any) -> None:
+        import treelite
         import xgboost as xgb
 
         _check_xgboost_version(xgb.__version__)
-        model: xgb.Booster = xgb_model
 
-        raw = xgb_model.save_raw(raw_format="ubj")
-        with io.BytesIO(raw) as fd:
-            jmodel = decode_ubjson_buffer(fd)
+        raw: bytearray = xgb_model.save_raw(raw_format="ubj")
+        treelite_model = treelite.frontend.from_xgboost_ubjson(raw)
 
-        learner = jmodel["learner"]
-        learner_model_param = learner["learner_model_param"]
-        objective = learner["objective"]
-
-        booster = learner["gradient_booster"]
-        n_classes = max(int(learner_model_param["num_class"]), 1)
-        n_targets = max(int(learner_model_param["num_target"]), 1)
-        n_targets = max(n_targets, n_classes)
-
-        # darts booster does not have the standard format.
-        # Therefore we need to unpack the gbtree key.
-        if "gbtree" in booster and "model" not in booster:
-            booster = booster["gbtree"]
-        # Check the input model doesn't have vector-leaf
-        if booster["model"].get("iteration_indptr", None) is not None:
-            # iteration_indptr was introduced in 2.0.
-            iteration_indptr = np.asarray(booster["model"]["iteration_indptr"], dtype=np.int32)
-            diff = np.diff(iteration_indptr)
-        else:
-            n_parallel_trees = int(booster["model"]["gbtree_model_param"]["num_parallel_tree"])
-            diff = np.repeat(n_targets * n_parallel_trees, model.num_boosted_rounds())
-        if np.any(diff != diff[0]):
-            raise ValueError("vector-leaf is not yet supported.:", diff)
-
-        # used to convert the number of iteration to the number of trees.
-        # Accounts for number of classes, targets, forest size.
-        self.n_trees_per_iter = int(diff[0])
-        self.n_targets = n_targets
-        assert self.n_trees_per_iter > 0
-
-        self.name_obj = objective["name"]
-        self.name_gbm = booster["name"]
-        # handle the link function.
-        base_score = learner_model_param["base_score"]
-        if isinstance(base_score, str):
-            try:
-                base_score = ast.literal_eval(base_score)
-                if not isinstance(base_score, (list, float, int, tuple, np.ndarray)):
-                    raise ValueError
-            except ValueError as e:
-                emsg = f"Expected the base_score to contain a list or float, received {base_score}"
-                raise ValueError(emsg) from e
-        if isinstance(base_score, (list, tuple, np.ndarray)):
-            base_score = np.asarray(base_score, dtype=float)
-            if base_score.size == 1:
-                base_score = float(base_score[0])
-        else:
-            base_score = float(base_score)
-        self.base_score = base_score
-        if self.name_obj in ("binary:logistic", "reg:logistic"):
-            self.base_score = scipy.special.logit(base_score)
-        elif self.name_obj in (
-            "reg:gamma",
-            "reg:tweedie",
-            "count:poisson",
-            "survival:cox",
-            "survival:aft",
-        ):
-            # exp family
-            self.base_score = np.log(self.base_score)
-        else:
-            self.base_score = base_score
-
-        self.num_feature = int(learner_model_param["num_feature"])
-        self.num_class = int(learner_model_param["num_class"])
-
-        trees = booster["model"]["trees"]
-        self.num_trees = len(trees)
-
-        self.node_parents = []
-        self.node_cleft = []
-        self.node_cright = []
-        self.node_sindex = []
-        self.children_default: list[np.ndarray] = []
-        self.sum_hess = []
-
-        self.values = []
-        self.thresholds = []
-        self.threshold_types = []
-        self.features = []
-
-        # Categorical features, not supported by the SHAP package yet.
-        self.split_types = []
-        self.categories = []
-
-        feature_types = model.feature_types
-        if feature_types is not None:
-            cat_feature_indices: np.ndarray = np.where(np.asarray(feature_types) == "c")[0]
-            if len(cat_feature_indices) == 0:
-                self.cat_feature_indices: np.ndarray | None = None
-            else:
-                self.cat_feature_indices = cat_feature_indices
-        else:
-            self.cat_feature_indices = None
-
-        def to_integers(data: list[int]) -> np.ndarray:
-            """Handle u8 array from UBJSON."""
-            assert isinstance(data, list)
-            return np.asanyarray(data, dtype=np.uint8)
-
-        for i in range(self.num_trees):
-            tree = trees[i]
-            parents = np.asarray(tree["parents"])
-            self.node_parents.append(parents)
-            self.node_cleft.append(np.asarray(tree["left_children"], dtype=np.int32))
-            self.node_cright.append(np.asarray(tree["right_children"], dtype=np.int32))
-            self.node_sindex.append(np.asarray(tree["split_indices"], dtype=np.uint32))
-
-            base_weight = np.asarray(tree["base_weights"], dtype=np.float32)
-            if base_weight.size != self.node_cleft[-1].size:
-                raise ValueError("vector-leaf is not yet supported.")
-
-            default_left = to_integers(tree["default_left"])
-            default_child = np.where(default_left == 1, self.node_cleft[-1], self.node_cright[-1]).astype(np.int64)
-            self.children_default.append(default_child)
-            self.sum_hess.append(np.asarray(tree["sum_hessian"], dtype=np.float64))
-
-            is_leaf = self.node_cleft[-1] == -1
-
-            # XGBoost stores split condition and leaf weight in the same field.
-            split_cond = np.asarray(tree["split_conditions"], dtype=np.float32)
-            leaf_weight = np.where(is_leaf, split_cond, 0.0)
-            thresholds = np.where(is_leaf, 0.0, split_cond)
-
-            # Xgboost uses < for thresholds where shap uses <= Move the threshold down
-            # by the smallest possible increment
-            thresholds = np.where(is_leaf, 0.0, np.nextafter(thresholds, -np.float32(np.inf)))
-            threshold_types = np.zeros_like(thresholds, dtype=np.int32)
-
-            self.values.append(leaf_weight.reshape(leaf_weight.size, 1))
-            self.thresholds.append(thresholds)
-            self.threshold_types.append(threshold_types)
-
-            split_idx = np.asarray(tree["split_indices"], dtype=np.int64)
-            self.features.append(split_idx)
-
-            # - categorical features
-            # when ubjson is used, this is a byte array with each element as uint8
-            split_types = to_integers(tree["split_type"])
-            self.split_types.append(split_types)
-            # categories for each node is stored in a CSR style storage with segment as
-            # the begin ptr and the `categories' as values.
-            cat_segments: list[int] = tree["categories_segments"]
-            cat_sizes: list[int] = tree["categories_sizes"]
-            # node index for categorical nodes
-            cat_nodes: list[int] = tree["categories_nodes"]
-            assert len(cat_segments) == len(cat_sizes) == len(cat_nodes)
-            cats = tree["categories"]
-
-            tree_categories = self.parse_categories(cat_nodes, cat_segments, cat_sizes, cats, self.node_cleft[-1])
-            self.categories.append(tree_categories)
-
-    @staticmethod
-    def parse_categories(
-        cat_nodes: list[int],
-        cat_segments: list[int],
-        cat_sizes: list[int],
-        cats: list[int],
-        left_children: npt.NDArray[Any],
-    ) -> list[list[int]]:
-        """Parse the JSON model to extract partitions of categories for each
-        node. Returns a list, in which each element is a list of categories for tree
-        split. For a numerical split, the list is empty.
-
-        This is not used yet, only implemented for future reference.
-
-        """
-        # The storage for categories is only defined for categorical nodes to prevent
-        # unnecessary overhead for numerical splits, we track the categorical node that
-        # are processed using a counter.
-        cat_cnt = 0
-        if cat_nodes:
-            last_cat_node = cat_nodes[cat_cnt]
-        else:
-            last_cat_node = -1
-        node_categories: list[list[int]] = []
-        for node_id in range(len(left_children)):
-            if node_id == last_cat_node:
-                beg = cat_segments[cat_cnt]
-                size = cat_sizes[cat_cnt]
-                end = beg + size
-                # categories for this node
-                node_cats = cats[beg:end]
-                # categories are unique for each node
-                assert len(set(node_cats)) == len(node_cats)
-                cat_cnt += 1
-                if cat_cnt == len(cat_nodes):
-                    last_cat_node = -1  # continue to process the rest of the nodes
-                else:
-                    last_cat_node = cat_nodes[cat_cnt]
-                assert node_cats
-                node_categories.append(node_cats)
-            else:
-                # append an empty node, it's either a numerical node or a leaf.
-                node_categories.append([])
-        return node_categories
+        self.treelite_loader = TreeliteModelLoader(treelite_model=treelite_model)
 
     def get_trees(
         self,
         data: npt.NDArray[Any] | None = None,
         data_missing: npt.NDArray[np.bool_] | None = None,
     ) -> list[SingleTree]:
-        trees = []
-        for i in range(self.num_trees):
-            info = {
-                "children_left": self.node_cleft[i],
-                "children_right": self.node_cright[i],
-                "children_default": self.children_default[i],
-                "feature": self.features[i],
-                "threshold": self.thresholds[i],
-                "threshold_type": self.threshold_types[i],
-                "value": self.values[i],
-                "node_sample_weight": self.sum_hess[i],
-            }
-            trees.append(SingleTree(info, data=data, data_missing=data_missing))
-        return trees
+        return self.treelite_loader.get_trees(data=data, data_missing=data_missing)
 
     def print_info(self) -> None:
         print("--- global parameters ---")
-        print("base_score =", self.base_score)
-        print("num_feature =", self.num_feature)
-        print("num_class =", self.num_class)
-        print("name_obj =", self.name_obj)
-        print("name_gbm =", self.name_gbm)
-        print()
-        print("--- gbtree specific parameters ---")
-        print("num_feature =", self.num_feature)
+        print("base_score =", self.treelite_loader.base_score)
+        print("num_feature =", self.treelite_loader.num_feature)
+        print("num_class =", self.treelite_loader.num_class)
+        print("num_target =", self.treelite_loader.num_target)
+        print("objective =", self.treelite_loader.objective)
 
 
 class CatBoostTreeModelLoader:
@@ -2609,3 +2450,210 @@ class CatBoostTreeModelLoader:
             )
 
         return trees
+
+
+class TreeliteModelLoader:
+    """Load a TreeLite model into SHAP's tree format.
+
+    Requires treelite >= 4.0 (regression, binary clf, multi-class clf).
+    Uses the field accessor API for both header and tree structure.
+    """
+
+    def __init__(self, treelite_model: Any) -> None:
+        self.num_feature: int = treelite_model.num_feature
+        self.num_tree: int = treelite_model.num_tree
+
+        # Detect origin so we know how the model rounded inputs before
+        # splitting: XGBoost/sklearn round to float32; LightGBM's native
+        # predictor operates in float64 with no rounding.
+        ta0 = treelite_model.get_tree_accessor(0)
+        num_nodes0 = int(ta0.get_field("num_nodes")[0])
+        sum_hess0 = ta0.get_field("sum_hess")
+        data_count0 = ta0.get_field("data_count")
+        if len(sum_hess0) != num_nodes0 and len(data_count0) == num_nodes0:
+            self.input_dtype: type = np.float64  # LightGBM
+        else:
+            self.input_dtype = np.float32  # XGBoost / sklearn
+
+        ha = treelite_model.get_header_accessor()
+        task_type_list = [
+            "kBinaryClf",
+            "kRegressor",
+            "kMultiClf",
+            "kLearningToRank",
+            "kIsolationForest",
+        ]
+        task_type: str = task_type_list[int(ha.get_field("task_type")[0])]
+        self.average_tree_output: bool = bool(ha.get_field("average_tree_output")[0])
+        self.num_class: int = int(ha.get_field("num_class")[0])
+
+        # base_scores is a vector for multiclass (one score per class)
+        base_scores_raw = ha.get_field("base_scores").astype(np.float64)
+        self.base_score: Any = base_scores_raw if len(base_scores_raw) > 1 else float(base_scores_raw[0])
+
+        # num_target > 1 means multiple regression outputs (XGBoost multi-output)
+        try:
+            self.num_target: int = int(ha.get_field("num_target")[0])
+        except Exception:
+            self.num_target = 1
+
+        try:
+            lvs = ha.get_field("leaf_vector_shape")
+            total = int(np.prod(lvs)) if len(lvs) > 0 else 1
+            self.leaf_vector_size: int = total if total > 1 else 1
+        except Exception:
+            self.leaf_vector_size = 1
+
+        self.num_stacked_models: int = 1
+        if self.leaf_vector_size > 1:
+            self.num_stacked_models = 1  # outputs come from the leaf vector
+        elif task_type == "kMultiClf" and self.num_class > 1:
+            self.num_stacked_models = self.num_class
+        elif self.num_target > 1:
+            self.num_stacked_models = self.num_target
+
+        _task_map: dict[str, tuple[str | None, str]] = {
+            "kRegressor": ("squared_error", "raw_value"),
+            "kBinaryClf": ("binary_crossentropy", "log_odds"),
+            "kMultiClf": (None, "raw_value"),
+            "kLearningToRank": (None, "raw_value"),
+        }
+        self.objective, self.tree_output = _task_map.get(task_type, (None, "raw_value"))
+
+        # sigmoid_alpha: LightGBM binary models can use a custom sigmoid scale
+        try:
+            self.sigmoid_alpha: float = float(ha.get_field("sigmoid_alpha")[0])
+        except Exception:
+            self.sigmoid_alpha = 1.0
+
+        # Scale base_score by sigmoid_alpha so the standard logistic transform is correct
+        if self.sigmoid_alpha != 1.0 and self.tree_output == "log_odds":
+            if isinstance(self.base_score, np.ndarray):
+                self.base_score = self.base_score * self.sigmoid_alpha
+            else:
+                self.base_score = self.base_score * self.sigmoid_alpha
+
+        self._trees_data: list[dict] = [self._parse_tree(treelite_model, i) for i in range(self.num_tree)]
+
+    def _parse_tree(self, treelite_model: Any, tree_id: int) -> dict:
+        """Load one tree via the tree accessor API into SHAP's dict format."""
+        ta = treelite_model.get_tree_accessor(tree_id)
+
+        num_nodes: int = int(ta.get_field("num_nodes")[0])
+        node_type = ta.get_field("node_type")
+        cleft = ta.get_field("cleft").astype(np.int32)
+        cright = ta.get_field("cright").astype(np.int32)
+        split_index = ta.get_field("split_index").astype(np.int32)
+        default_left = ta.get_field("default_left")
+        leaf_value = ta.get_field("leaf_value").astype(np.float64)
+        threshold = ta.get_field("threshold").copy()
+        cmp = ta.get_field("cmp")
+
+        # Node sample weight: prefer sum_hess (XGBoost), fall back to data_count (LightGBM)
+        sum_hess = ta.get_field("sum_hess")
+        data_count = ta.get_field("data_count")
+        if len(sum_hess) == num_nodes:
+            node_sample_weight = sum_hess.astype(np.float64)
+        elif len(data_count) == num_nodes:
+            node_sample_weight = data_count.astype(np.float64)
+        else:
+            node_sample_weight = np.zeros(num_nodes, dtype=np.float64)
+
+        is_leaf = node_type == 0
+        is_internal = ~is_leaf
+
+        # treelite ops: 2="<", 3="<=", 4=">", 5=">=" (TRUE branch -> cleft).
+        # SHAP means "feature <= threshold -> left", so only ">" and ">=" swap.
+        swap_mask = is_internal & ((cmp == 4) | (cmp == 5))
+        children_left = np.where(swap_mask, cright, cleft).astype(np.int32)
+        children_right = np.where(swap_mask, cleft, cright).astype(np.int32)
+
+        # "<" and ">=" (after swap) mean "feature < T": shift threshold down 1 ULP
+        # in the ORIGINAL dtype (float32 for XGBoost) before the float64 cast.
+        shift_down = is_internal & ((cmp == 2) | (cmp == 5))
+        threshold[shift_down] = np.nextafter(threshold[shift_down], np.array(-np.inf, dtype=threshold.dtype))
+        threshold = threshold.astype(np.float64)
+
+        # children_default: swapping cleft/cright also swaps the default direction
+        effective_default_left = np.logical_xor(default_left.astype(bool), swap_mask)
+        children_default = np.where(
+            is_leaf,
+            np.int32(-1),
+            np.where(effective_default_left, children_left, children_right),
+        ).astype(np.int32)
+
+        # Categorical splits (node_type == 2). treelite lists per-node categories in
+        # category_list (sliced by category_list_begin/end) plus a flag
+        # category_list_right_child. SHAP encodes the LEFT-going categories as a
+        # bitmask (sum of 2**(cat-1)) with threshold_type=1.
+        threshold_types = np.zeros(num_nodes, dtype=np.int32)
+        cat_node_mask = node_type == 2
+        if cat_node_mask.any():
+            category_list = ta.get_field("category_list").astype(np.int64)
+            cat_begin = ta.get_field("category_list_begin").astype(np.int64)
+            cat_end = ta.get_field("category_list_end").astype(np.int64)
+            cat_right = ta.get_field("category_list_right_child").astype(bool)
+            for nid in np.where(cat_node_mask)[0]:
+                node_cats = category_list[int(cat_begin[nid]) : int(cat_end[nid])]
+                if cat_right[nid]:
+                    children_left[nid], children_right[nid] = cright[nid], cleft[nid]
+                else:
+                    children_left[nid], children_right[nid] = cleft[nid], cright[nid]
+                threshold[nid] = float(np.sum(2.0 ** (node_cats.astype(np.float64) - 1)))
+                threshold_types[nid] = 1
+                children_default[nid] = cleft[nid] if default_left[nid] else cright[nid]
+                if 0 in node_cats:
+                    # The C extension uses (1 << (cat-1)); for cat=0 this is
+                    # (1 << -1) = UB, acting as (1 << 31) = 0x80000000 on x86.
+                    # cat=0 ALWAYS goes to children_right. Fix: complement encoding
+                    # + swap so cat=0 falls to children_right = the correct leaf.
+                    # 0xFFFFFF = 2^24-1: exactly representable in float32,
+                    # bit31=0 ensures cat=0 UB always ANDs to 0.
+                    bitmask_nz = int(threshold[nid])
+                    threshold[nid] = float(0xFFFFFF - bitmask_nz)
+                    children_left[nid], children_right[nid] = (
+                        children_right[nid],
+                        children_left[nid],
+                    )
+                    children_default[nid] = cleft[nid] if default_left[nid] else cright[nid]
+
+        features = split_index.astype(np.int32)
+
+        # Vector-valued leaves store values in a flattened leaf_vector field,
+        # sliced per node by leaf_vector_begin/end (leaf_value is empty here).
+        if self.leaf_vector_size > 1:
+            leaf_vector = ta.get_field("leaf_vector").astype(np.float64)
+            lv_begin = ta.get_field("leaf_vector_begin").astype(np.int64)
+            lv_end = ta.get_field("leaf_vector_end").astype(np.int64)
+            values = np.zeros((num_nodes, self.leaf_vector_size), dtype=np.float64)
+            for nid in range(num_nodes):
+                beg, end = int(lv_begin[nid]), int(lv_end[nid])
+                if end > beg:
+                    values[nid, : end - beg] = leaf_vector[beg:end]
+        else:
+            values = leaf_value.reshape(num_nodes, 1)
+
+        # Scale by sigmoid_alpha for LightGBM binary with custom sigmoid
+        if self.sigmoid_alpha != 1.0 and self.tree_output == "log_odds":
+            values = values * self.sigmoid_alpha
+
+        if self.average_tree_output and self.num_tree > 0:
+            values = values / self.num_tree
+
+        return {
+            "children_left": children_left,
+            "children_right": children_right,
+            "children_default": children_default,
+            "features": features,
+            "thresholds": threshold,
+            "threshold_types": threshold_types,
+            "values": values,
+            "node_sample_weight": node_sample_weight,
+        }
+
+    def get_trees(
+        self,
+        data: npt.NDArray[Any] | None = None,
+        data_missing: npt.NDArray[np.bool_] | None = None,
+    ) -> list[SingleTree]:
+        return [SingleTree(td, data=data, data_missing=data_missing) for td in self._trees_data]
