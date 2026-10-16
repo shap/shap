@@ -257,7 +257,7 @@ jobs:
           cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
 
       - name: Run GPU tests
-        run: uv run --no-project pytest backends/shap-cuda/tests/test_gpu_tree.py -v --import-mode=append
+        run: uv run --no-project pytest backends/shap-cuda/tests -v --import-mode=append
 
   gpu_test_stop_runner:
     name: Stop GPU runner
