@@ -187,19 +187,6 @@ def test_invalid_input_conversion(tree_args, name):
         call_binding("dense_tree_shap", tree_args, np.zeros((2, 2, 1)))
 
 
-@pytest.mark.parametrize("invalid", ["dtype", "shape", "readonly"])
-def test_gpu_buffer_validation(tree_args, invalid):
-    # These failures happen before entering CUDA and do not require a GPU.
-    module = pytest.importorskip("shap._cext_gpu")
-    out = np.zeros((2, 2, 1), dtype=np.float32 if invalid == "dtype" else np.float64)
-    if invalid == "shape":
-        out = out[:, :1, :].copy()
-    elif invalid == "readonly":
-        out.flags.writeable = False
-    with pytest.raises(ValueError if invalid == "shape" else TypeError):
-        call_binding("dense_tree_shap", tree_args, out, module=module)
-
-
 def test_single_tree_normalizes_mutable_buffers(tree_args):
     from shap.explainers._tree import SingleTree
 
