@@ -49,7 +49,7 @@ inline bool GoesLeft(const TreeEnsemble &tree, unsigned node, const double *x, c
 
 template <bool SingleOutput> struct Runner {
     const Coefficients &coefficients;
-    unsigned features;
+    unsigned features, outputs;
     const TreeEnsemble *tree = nullptr;
     const double *x = nullptr, *r = nullptr;
     const bool *x_missing = nullptr, *r_missing = nullptr;
@@ -57,52 +57,61 @@ template <bool SingleOutput> struct Runner {
     // +1 when a feature is taken from x on the current path, -1 from r, 0 if unassigned.
     // Every assignment is undone while unwinding, so this is shared across trees and pairs.
     std::vector<signed char> source;
-    std::vector<unsigned> path;
+    // Each player level owns its children's positive/negative sums; the root owns a sink.
+    std::vector<double> scratch;
 
-    Runner(const Coefficients &coefficients, unsigned features, unsigned max_depth)
-        : coefficients(coefficients), features(features), source(features, 0) {
-        path.reserve(max_depth);
-    }
+    Runner(const Coefficients &coefficients, unsigned features, unsigned outputs)
+        : coefficients(coefficients), features(features), outputs(outputs), source(features, 0),
+          scratch(static_cast<size_t>(2 + 4 * coefficients.size) * outputs) {}
 
-    unsigned NumOutputs() const { return SingleOutput ? 1 : tree->num_outputs; }
+    unsigned NumOutputs() const { return SingleOutput ? 1 : outputs; }
 
-    void Leaf(unsigned node, unsigned a, unsigned b) {
+    // Every foreground player of a leaf receives the same share, as does every
+    // background player. Sum these shares over a subtree and credit each player once
+    // at its split, keeping the work per pair linear in the reachable nodes.
+    void Leaf(unsigned node, unsigned a, unsigned b, double *positive, double *negative) {
         const double *values = tree->values + static_cast<size_t>(node) * NumOutputs();
         size_t index = static_cast<size_t>(a) * coefficients.size + b;
-        double positive = coefficients.positive[index], negative = coefficients.negative[index];
         for (unsigned o = 0; o < NumOutputs(); ++o) {
-            double value = values[o];
-            if (a == 0) phi[static_cast<size_t>(features) * NumOutputs() + o] += value;
-            for (auto feature : path) {
-                phi[static_cast<size_t>(feature) * NumOutputs() + o] +=
-                    value * (source[feature] > 0 ? positive : negative);
-            }
+            positive[o] = values[o] * coefficients.positive[index];
+            negative[o] = values[o] * coefficients.negative[index];
+            if (a == 0) phi[static_cast<size_t>(features) * NumOutputs() + o] += values[o];
         }
     }
 
     // Finish the foreground subtree before visiting its background sibling.
-    void Visit(unsigned node, unsigned a, unsigned b) {
+    void Visit(unsigned node, unsigned a, unsigned b, double *positive, double *negative) {
         while (!tree->is_leaf(node)) {
             unsigned feature = tree->features[node];
             bool x_left = GoesLeft(*tree, node, x, x_missing);
             bool r_left = GoesLeft(*tree, node, r, r_missing);
             if (x_left != r_left && source[feature] == 0) {
                 unsigned left = tree->children_left[node], right = tree->children_right[node];
-                path.push_back(feature);
+                double *x_sums = scratch.data() + static_cast<size_t>(2 + 4 * (a + b)) * NumOutputs();
+                double *r_sums = x_sums + 2 * NumOutputs();
                 source[feature] = 1;
-                Visit(x_left ? left : right, a + 1, b);
+                Visit(x_left ? left : right, a + 1, b, x_sums, x_sums + NumOutputs());
                 source[feature] = -1;
-                Visit(r_left ? left : right, a, b + 1);
+                Visit(r_left ? left : right, a, b + 1, r_sums, r_sums + NumOutputs());
                 source[feature] = 0;
-                path.pop_back();
+                double *value = phi + static_cast<size_t>(feature) * NumOutputs();
+                for (unsigned o = 0; o < NumOutputs(); ++o) {
+                    double x_positive = x_sums[o], x_negative = x_sums[NumOutputs() + o];
+                    double r_positive = r_sums[o], r_negative = r_sums[NumOutputs() + o];
+                    value[o] += x_positive + r_negative;
+                    positive[o] = x_positive + r_positive;
+                    negative[o] = x_negative + r_negative;
+                }
                 return;
             }
             // Agreement, or a repeated split following its feature's assigned source.
             bool left = x_left == r_left || source[feature] > 0 ? x_left : r_left;
             node = left ? tree->children_left[node] : tree->children_right[node];
         }
-        Leaf(node, a, b);
+        Leaf(node, a, b, positive, negative);
     }
+
+    void Run() { Visit(0, 0, 0, scratch.data(), scratch.data() + NumOutputs()); }
 };
 
 // Size the coefficient table from the trees rather than trusting max_depth metadata.
@@ -119,7 +128,7 @@ inline void ExplainRows(const TreeEnsemble &trees, const std::vector<TreeEnsembl
     unsigned depth = 0;
     for (const auto &view : views) depth = std::max(depth, Depth(view, 0));
     Coefficients coefficients(std::min(depth, data.M));
-    Runner<SingleOutput> runner(coefficients, data.M, depth);
+    Runner<SingleOutput> runner(coefficients, data.M, outputs);
     // Non-linear transforms rescale each reference's attributions by its own margins.
     std::vector<double> pair(transform != NULL ? stride : 0);
     std::vector<double> margin_x(outputs), margin_r(outputs);
@@ -145,7 +154,7 @@ inline void ExplainRows(const TreeEnsemble &trees, const std::vector<TreeEnsembl
             runner.phi = transform != NULL ? pair.data() : out;
             for (const auto &view : views) {
                 runner.tree = &view;
-                runner.Visit(0, 0, 0);
+                runner.Run();
             }
             if (transform == NULL) continue;
 
