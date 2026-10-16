@@ -168,6 +168,10 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@e090b81e30c4d855ea63bf4b6e59204c09a101ae # v4.2.1
         env:
+          # Pinning the cuda extra modifies pyproject.toml. Keep setuptools-scm
+          # from treating that dirty checkout as a new development release.
+          SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SHAP: ${{ needs.compute_version.outputs.version }}
+          CIBW_ENVIRONMENT_PASS_LINUX: SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SHAP
           CIBW_ARCHS_LINUX: ${{ contains(matrix.os, '-arm') && 'aarch64' || 'x86_64' }}
           CIBW_ARCHS_MACOS: ${{ matrix.os == 'macos-14' && 'arm64' || 'x86_64' }}
           CIBW_ARCHS_WINDOWS: ${{ contains(matrix.os, '-arm') && 'ARM64' || 'AMD64' }}
@@ -225,6 +229,9 @@ jobs:
           ))
 
       - name: Build sdist (pep517)
+        env:
+          # Use the version computed before the cuda dependency pin dirtied the checkout.
+          SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SHAP: ${{ needs.compute_version.outputs.version }}
         run: |
           uv build --sdist
 
