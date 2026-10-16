@@ -90,6 +90,30 @@ def test_xgboost_predictions():
     assert np.allclose(y_pred, y_pred_tree_ensemble, atol=1e-7)
 
 
+def test_xgboost_log_loss_predictions():
+    """TreeEnsemble.predict should check the labels when explaining the log loss. Regression test for GH#4828."""
+    from shap.explainers._tree import TreeEnsemble
+
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.adult(n_points=100)
+    model = xgboost.XGBClassifier(n_estimators=10, max_depth=2).fit(X, y)
+    tree_ensemble = TreeEnsemble(
+        model=model,
+        data=X,
+        data_missing=None,
+        model_output="log_loss",
+    )
+
+    with pytest.raises(ValueError, match="labels must be provided"):
+        tree_ensemble.predict(X)
+    with pytest.raises(ValueError, match="does not match the number of samples"):
+        tree_ensemble.predict(X, y[:-1])
+
+    # per-sample log loss written in terms of the margin
+    margin = model.predict(X, output_margin=True)
+    assert np.allclose(tree_ensemble.predict(X, y), np.logaddexp(0, margin) - y * margin, atol=1e-6)
+
+
 def test_front_page_sklearn():
     # load JS visualization code to notebook
     shap.initjs()
