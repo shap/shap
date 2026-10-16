@@ -247,9 +247,10 @@ class TreeExplainer(Explainer):
         enable_experimental : bool, optional
             Enable experimental algorithms where available. Defaults to False, using
             the established algorithms. Currently, this enables Quadrature Tree SHAP
-            for exact path-dependent values and interactions computed by SHAP's CPU
-            extension. Model-native and GPU routing, interventional explanations, and
-            approximate values are currently unchanged.
+            for exact path-dependent values and interactions, and exact
+            interventional values in double precision, computed by SHAP's CPU
+            extension. Model-native and GPU routing and approximate values are
+            currently unchanged.
 
         References
         ----------
