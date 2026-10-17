@@ -245,3 +245,14 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_explanation_percentile_without_data():
+    """Checks that percentile works when optional data is None (issue #5196)."""
+    values = np.array([[1.0, 2.0], [3.0, 4.0]])
+    exp = shap.Explanation(values=values)
+    assert exp.data is None
+
+    p = exp.percentile(50, axis=0)
+    assert p.data is None
+    assert np.allclose(p.values, [2.0, 3.0])
