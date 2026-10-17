@@ -268,3 +268,14 @@ def test_explanation_slices_pandas_data():
     pd.testing.assert_series_equal(exp[:, 0].data, df["a"])
     pd.testing.assert_series_equal(exp[:, "b"].data, df["b"])
     assert exp[2, 1].data == 3
+
+
+def test_explanation_percentile_without_data():
+    """Checks that percentile works when optional data is None (issue #5196)."""
+    values = np.array([[1.0, 2.0], [3.0, 4.0]])
+    exp = shap.Explanation(values=values)
+    assert exp.data is None
+
+    p = exp.percentile(50, axis=0)
+    assert p.data is None
+    assert np.allclose(p.values, [2.0, 3.0])
