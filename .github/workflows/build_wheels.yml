@@ -105,7 +105,7 @@ jobs:
           cp -r "$SHAP_DATA_DIR" /tmp/test_data_cache/
           ls -la /tmp/test_data_cache/
       - name: Upload cached datasets
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
@@ -138,7 +138,7 @@ jobs:
         run: git fetch --tags
 
       - name: Download pre-cached datasets
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: test-data-cache
           path: ${{ runner.temp }}/test_data_cache
@@ -166,7 +166,7 @@ jobs:
           ))
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@e090b81e30c4d855ea63bf4b6e59204c09a101ae # v4.2.1
+        uses: pypa/cibuildwheel@b3395e271a35f73dad77f21802abe9b986dfe299 # v4.3.1
         env:
           # Pinning the cuda extra modifies pyproject.toml. Keep setuptools-scm
           # from treating that dirty checkout as a new development release.
@@ -187,7 +187,7 @@ jobs:
           CIBW_TEST_COMMAND_WINDOWS: |
             python -c "import shap, os, shutil; cache_path = r'${{ runner.temp }}\test_data_cache'; shap_cache = os.path.join(os.path.dirname(shap.__file__), 'cached_data'); os.makedirs(shap_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'cached_data'), shap_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'cached_data')) else None" && pytest -v {project}/tests --import-mode=append
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           path: ./wheelhouse/*.whl
           name: bdist_files_${{ matrix.os }}
@@ -236,7 +236,7 @@ jobs:
           uv build --sdist
 
       - name: Upload sdist
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: sdist_files
           path: dist/*.tar.gz
@@ -252,13 +252,13 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: dist
           pattern: bdist_files_*
           merge-multiple: true
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: sdist_files
           path: dist
@@ -281,13 +281,13 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: dist
           pattern: bdist_files_*
           merge-multiple: true
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: sdist_files
           path: dist
@@ -303,7 +303,7 @@ jobs:
     if: github.event_name == 'schedule' && github.repository == 'shap/shap'
     steps:
       # The upload action only handles *.whl, so the sdist is not downloaded here
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: dist
           pattern: bdist_files_*
