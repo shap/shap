@@ -41,7 +41,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Install dependencies for dataset download
         run: |
           uv pip install --system . --group download-datasets
@@ -112,7 +112,7 @@ jobs:
         run: git fetch --tags
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       # Built via cibuildwheel (manylinux), not a bare `uv build --wheel`: a wheel
       # compiled directly on this runner links against its recent libstdc++ and
@@ -143,7 +143,7 @@ jobs:
         run: git fetch --tags
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: Build CUDA wheel
         uses: pypa/cibuildwheel@b3395e271a35f73dad77f21802abe9b986dfe299 # v4.3.1
@@ -189,7 +189,7 @@ jobs:
         run: git fetch --tags
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: Build sdist
         run: uv build --package shap-cuda --sdist
@@ -221,7 +221,7 @@ jobs:
           path: dist
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: Set up Python 3.13 venv
         run: |
