@@ -28,7 +28,7 @@ from ..utils._warnings import ExperimentalWarning
 from ._explainer import Explainer
 
 try:
-    from .. import _cext  # type: ignore
+    import shap._cext as _cext  # type: ignore
 except ImportError as e:
     record_import_error("cext", "C extension was not built during install!", e)
 
