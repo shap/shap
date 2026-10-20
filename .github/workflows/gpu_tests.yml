@@ -167,7 +167,7 @@ jobs:
           ls -la "$SHAP_CACHE_DIR" 2>/dev/null || echo "No shap data"
 
       - name: Run GPU tests
-        run: uv run pytest backends/shap-cuda/tests/test_gpu_tree.py -v
+        run: uv run pytest backends/shap-cuda/tests -v
 
   stop-runner:
     if: ${{ always() && needs.start-runner.result == 'success' }}
