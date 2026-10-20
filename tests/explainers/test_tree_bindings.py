@@ -1,9 +1,12 @@
 """Exercise array conversion and in-place writes at the native tree boundary."""
 
 import numpy as np
+import pandas as pd
 import pytest
 
+import shap
 from shap import _cext  # type: ignore[attr-defined]
+from shap.explainers._tree import SingleTree
 
 
 @pytest.fixture
@@ -188,8 +191,6 @@ def test_invalid_input_conversion(tree_args, name):
 
 
 def test_single_tree_normalizes_mutable_buffers(tree_args):
-    from shap.explainers._tree import SingleTree
-
     tree = {
         name: tree_args[name][0]
         for name in ("children_left", "children_right", "children_default", "features", "thresholds", "values")
@@ -208,10 +209,6 @@ def test_single_tree_normalizes_mutable_buffers(tree_args):
 
 @pytest.mark.parametrize("kind", ["list", "series"])
 def test_array_like_labels(tree_args, kind):
-    import pandas as pd
-
-    import shap
-
     X = np.array([[0.0], [1.0]])
     y = np.array([1.0, 5.0])
     tree = {
