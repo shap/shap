@@ -612,7 +612,7 @@ class Explanation(metaclass=MetaExplanation):
                 values_ndim = np.ndim(self.values)
                 norm_axis = axis if (axis is None or axis >= 0) else (values_ndim + axis)
                 if norm_axis is None or norm_axis < data_ndim:
-                    new_self.data = np.percentile(new_self.data, q, axis)
+                    new_self.data = np.percentile(new_self.data, q, norm_axis)
         # new_self.data = None
         new_self.op_history.append(
             OpHistoryItem(
