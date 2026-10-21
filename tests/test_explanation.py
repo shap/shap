@@ -273,6 +273,7 @@ def test_explanation_percentile_multi_output():
     assert p.data is not None
     assert np.array_equal(p.data, data)
 
+
 def test_explanation_percentile_multi_output_negative_axis():
     """Checks that percentile with negative axis reduces values and data along the same feature dimension."""
     n_samples, n_features, n_outputs = 10, 4, 3
@@ -288,4 +289,3 @@ def test_explanation_percentile_multi_output_negative_axis():
     assert p.data is not None
     assert p.data.shape == (n_samples,)
     assert np.allclose(p.data, np.percentile(data, 50, axis=1))
-
