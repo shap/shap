@@ -17,6 +17,21 @@ def test_random_dependence_no_interaction():
     shap.dependence_plot(0, np.random.randn(20, 5), np.random.randn(20, 5), show=False, interaction_index=None)
 
 
+@pytest.mark.parametrize("interaction_index", ["auto", None])
+def test_dependence_multioutput_raises(interaction_index):
+    """Make sure multi-output SHAP values give a clear error instead of crashing in approximate_interactions."""
+    # GH 5110
+    with pytest.raises(ValueError, match=r"shap_values\[:, :, 0\]"):
+        shap.dependence_plot(
+            0, np.random.randn(20, 5, 3), np.random.randn(20, 5), show=False, interaction_index=interaction_index
+        )
+
+
+def test_dependence_interaction_values():
+    """Make sure 3D interaction values still work when plotted with a pair of indices."""
+    shap.dependence_plot((0, 1), np.random.randn(20, 5, 5), np.random.randn(20, 5), show=False)
+
+
 def test_dependence_use_line_collection_bug():
     """Make sure a dependence plot does not crash."""
     # GH 3368

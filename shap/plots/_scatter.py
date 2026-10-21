@@ -628,6 +628,15 @@ def dependence_legacy(
 
     ind = convert_name(ind, shap_values, feature_names)
 
+    # a 3D array is only valid for interaction values plotted with a pair of indices, otherwise
+    # it is most likely a multi-output (e.g. multi-class) result of shape (samples, features, outputs)
+    if len(shap_values.shape) == 3 and not (hasattr(ind, "__len__") and len(ind) == 2):
+        raise ValueError(
+            f"The passed shap_values have shape {shap_values.shape}, but a 2D array of shape "
+            "(# samples x # features) was expected. If you have multi-output (e.g. multi-class) SHAP values, "
+            "pass the values for a single output instead, e.g. shap_values[:, :, 0] for the first class."
+        )
+
     # guess what other feature as the strongest interaction with the plotted feature
     if not hasattr(ind, "__len__"):
         if interaction_index == "auto":
