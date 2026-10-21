@@ -2,7 +2,7 @@
 requires = [
   "scikit-build-core>=0.10.0",
   "setuptools-scm>=8.0",
-  "numpy>=2.0",
+  "nanobind>=2.0.0",
   "packaging>20.9",
 ]
 build-backend = "_build_backend"
@@ -15,6 +15,8 @@ readme = "README.md"
 license = {text = "MIT License"}
 authors = [
   {name = "Scott Lundberg", email = "slund1@cs.washington.edu"},
+  {name = "Rory Mitchell", email = "ramitchellnz@gmail.com"},
+  {name = "Tobias Pitters", email = "tobias.pitters@gmail.com"},
 ]
 requires-python = ">=3.12"
 dependencies = [
@@ -28,6 +30,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Intended Audience :: Information Technology",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering",
