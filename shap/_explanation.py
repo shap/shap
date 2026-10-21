@@ -581,7 +581,7 @@ class Explanation(metaclass=MetaExplanation):
             return group_features(self, grouping)
         raise DimensionError("Only axis = 1 is supported for grouping right now...")
 
-    def percentile(self, q: float, axis: int | None = None) -> Explanation:
+    def percentile(self, q: float, axis: int | tuple[int, ...] | None = None) -> Explanation:
         """Compute the q-th percentile of the explanation values (and data) along the specified axis.
 
         Parameters
@@ -589,7 +589,7 @@ class Explanation(metaclass=MetaExplanation):
         q : float
             Percentile or sequence of percentiles to compute, which must be between 0 and 100 inclusive.
 
-        axis : int or None, optional
+        axis : int, tuple of ints, or None, optional
             Axis along which the percentiles are computed. Default is None, which computes
             the percentile over all dimensions. If the axis corresponds to a model-output dimension
             that is absent from the background data, the data is preserved unchanged.
@@ -610,8 +610,16 @@ class Explanation(metaclass=MetaExplanation):
             if new_self.data is not None:
                 data_ndim = np.ndim(new_self.data)
                 values_ndim = np.ndim(self.values)
-                norm_axis = axis if (axis is None or axis >= 0) else (values_ndim + axis)
-                if norm_axis is None or norm_axis < data_ndim:
+                if axis is None:
+                    norm_axis = None
+                    valid_for_data = True
+                elif isinstance(axis, tuple):
+                    norm_axis = tuple(a if a >= 0 else values_ndim + a for a in axis)
+                    valid_for_data = all(a < data_ndim for a in norm_axis)
+                else:
+                    norm_axis = axis if axis >= 0 else (values_ndim + axis)
+                    valid_for_data = norm_axis < data_ndim
+                if valid_for_data:
                     new_self.data = np.percentile(new_self.data, q, norm_axis)
         # new_self.data = None
         new_self.op_history.append(
