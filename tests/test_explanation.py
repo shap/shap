@@ -302,6 +302,7 @@ def test_explanation_percentile_tuple_axis():
     assert p.data is not None
     assert np.isclose(p.data, 25.0)
 
+
 def test_explanation_percentile_mixed_tuple_axis():
     """Checks that percentile with mixed tuple axes reduces data on shared feature axes and omits output axes."""
     values = np.arange(24, dtype=float).reshape(2, 3, 4)
@@ -313,4 +314,3 @@ def test_explanation_percentile_mixed_tuple_axis():
     assert p.data is not None
     assert p.data.shape == (2,)
     assert np.allclose(p.data, np.percentile(data, 50, axis=1))
-
