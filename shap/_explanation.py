@@ -615,7 +615,8 @@ class Explanation(metaclass=MetaExplanation):
                     valid_for_data = True
                 elif isinstance(axis, tuple):
                     norm_axis = tuple(a if a >= 0 else values_ndim + a for a in axis)
-                    valid_for_data = all(a < data_ndim for a in norm_axis)
+                    norm_axis = tuple(a for a in norm_axis if a < data_ndim)
+                    valid_for_data = len(norm_axis) > 0
                 else:
                     norm_axis = axis if axis >= 0 else (values_ndim + axis)
                     valid_for_data = norm_axis < data_ndim
