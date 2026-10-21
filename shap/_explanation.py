@@ -582,6 +582,23 @@ class Explanation(metaclass=MetaExplanation):
         raise DimensionError("Only axis = 1 is supported for grouping right now...")
 
     def percentile(self, q: float, axis: int | None = None) -> Explanation:
+        """Compute the q-th percentile of the explanation values (and data) along the specified axis.
+
+        Parameters
+        ----------
+        q : float
+            Percentile or sequence of percentiles to compute, which must be between 0 and 100 inclusive.
+
+        axis : int or None, optional
+            Axis along which the percentiles are computed. Default is None, which computes
+            the percentile over all dimensions. If the axis corresponds to a model-output dimension
+            that is absent from the background data, the data is preserved unchanged.
+
+        Returns
+        -------
+        Explanation
+            A new Explanation object with percentiles computed along the given axis.
+        """
         new_self = copy.deepcopy(self)
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
             new_values = self._flatten_feature_names()
@@ -591,10 +608,11 @@ class Explanation(metaclass=MetaExplanation):
         else:
             new_self.values = np.percentile(new_self.values, q, axis)
             if new_self.data is not None:
-                try:
+                data_ndim = np.ndim(new_self.data)
+                values_ndim = np.ndim(self.values)
+                norm_axis = axis if (axis is None or axis >= 0) else (values_ndim + axis)
+                if norm_axis is None or norm_axis < data_ndim:
                     new_self.data = np.percentile(new_self.data, q, axis)
-                except Exception:
-                    new_self.data = None
         # new_self.data = None
         new_self.op_history.append(
             OpHistoryItem(
