@@ -81,29 +81,11 @@ install(TARGETS _cutils LIBRARY DESTINATION shap)
 # Build the Tree Logic extension module (cext)
 # ==============================================================================
 
-# Check if the SABI version is being requested
-if(NOT "${SKBUILD_SABI_VERSION}" STREQUAL "")
-  set(USE_SABI USE_SABI ${SKBUILD_SABI_VERSION})
-endif()
-
-python_add_library(
-  _cext MODULE
-
-  # Target the stable ABI of Python 3.12+, reducing the number of binary wheels
-  ${USE_SABI} WITH_SOABI
-
-  # Sources for the cext module
+nanobind_add_module(
+  _cext
+  STABLE_ABI
+  NB_STATIC
   shap/cext/_cext.cc
 )
-
-# Get the include directory for NumPy and add it to the include path
-execute_process(
-    COMMAND "${PYTHON_EXECUTABLE}"
-    -c "import numpy; print(numpy.get_include())"
-    OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-target_include_directories(_cext PUBLIC ${NUMPY_INCLUDE_DIR})
 
 install(TARGETS _cext LIBRARY DESTINATION shap)

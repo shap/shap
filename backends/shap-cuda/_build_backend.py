@@ -1,7 +1,7 @@
 """PEP 517 build backend wrapping scikit-build-core.
 
-shap_cuda/cext/tree_shap.h is a symlink into the sibling shap/cext/ dir (the
-CPU and GPU extensions compile against the same header). scikit-build-core's
+The shared tree headers are symlinks into the sibling shap/cext/ dir (the
+CPU and GPU extensions compile against the same headers). scikit-build-core's
 sdist packaging preserves symlinks as-is, which produces a tarball that's
 broken once extracted outside this monorepo. build_sdist here swaps the
 symlink for its resolved file content before delegating, then restores it.
@@ -13,7 +13,9 @@ from typing import Any
 
 from scikit_build_core import build as _skbuild
 
-_SYMLINKED_HEADERS: list[Path] = [Path(__file__).parent / "shap_cuda" / "cext" / "tree_shap.h"]
+_SYMLINKED_HEADERS: list[Path] = [
+    Path(__file__).parent / "shap_cuda" / "cext" / name for name in ("tree_shap.h", "tree_shap_bindings.h")
+]
 
 
 def __getattr__(name: str) -> Any:

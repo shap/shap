@@ -35,28 +35,18 @@ endif()
 if(CMAKE_CUDA_COMPILER AND CUDAToolkit_FOUND)
   message(STATUS "CUDA toolkit found, building the _cext_gpu extension.")
 
-  if(NOT "${SKBUILD_SABI_VERSION}" STREQUAL "")
-    set(USE_SABI USE_SABI ${SKBUILD_SABI_VERSION})
-  endif()
+  find_package(nanobind CONFIG REQUIRED)
 
-  python_add_library(
-    _cext_gpu MODULE
-
-    ${USE_SABI} WITH_SOABI
+  nanobind_add_module(
+    _cext_gpu
+    STABLE_ABI
+    NB_STATIC
 
     # The .cu file is compiled by nvcc, the .cc file by the host compiler
     shap_cuda/cext/_cext_gpu.cu
     shap_cuda/cext/_cext_gpu.cc
   )
 
-  execute_process(
-      COMMAND "${PYTHON_EXECUTABLE}"
-      -c "import numpy; print(numpy.get_include())"
-      OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-
-  target_include_directories(_cext_gpu PUBLIC ${NUMPY_INCLUDE_DIR})
   target_link_libraries(_cext_gpu PRIVATE CUDA::cudart)
 
   set_target_properties(_cext_gpu PROPERTIES
