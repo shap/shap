@@ -290,6 +290,7 @@ def test_explanation_percentile_multi_output_negative_axis():
     assert p.data.shape == (n_samples,)
     assert np.allclose(p.data, np.percentile(data, 50, axis=1))
 
+
 def test_explanation_percentile_tuple_axis():
     """Checks that percentile supports tuple axes for both values and data."""
     values = np.array([[1.0, 2.0], [3.0, 4.0]])
@@ -300,4 +301,3 @@ def test_explanation_percentile_tuple_axis():
     assert np.isclose(p.values, 2.5)
     assert p.data is not None
     assert np.isclose(p.data, 25.0)
-
