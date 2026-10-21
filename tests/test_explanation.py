@@ -257,6 +257,7 @@ def test_explanation_percentile_without_data():
     assert p.data is None
     assert np.allclose(p.values, [2.0, 3.0])
 
+
 def test_explanation_percentile_multi_output():
     """Checks that percentile preserves data when reducing a model-output axis absent from data."""
     n_samples, n_features, n_outputs = 10, 4, 3
@@ -271,4 +272,3 @@ def test_explanation_percentile_multi_output():
     assert np.allclose(p.values, np.percentile(values, 50, axis=2))
     assert p.data is not None
     assert np.array_equal(p.data, data)
-
