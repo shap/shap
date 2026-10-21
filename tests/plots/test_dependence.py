@@ -40,7 +40,7 @@ def test_dependence_interaction_values():
     interaction_values = rng.standard_normal((20, 5, 5))
     _, ax = plt.subplots()
     shap.dependence_plot((0, 1), interaction_values, rng.standard_normal((20, 5)), ax=ax, show=False)
-    plotted = ax.collections[0].get_offsets()[:, 1]
+    plotted = np.asarray(ax.collections[0].get_offsets())[:, 1]
     np.testing.assert_allclose(np.sort(plotted), np.sort(2 * interaction_values[:, 1, 0]))
 
 
