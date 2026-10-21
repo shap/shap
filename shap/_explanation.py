@@ -760,17 +760,19 @@ def group_features(shap_values: Explanation, feature_map: dict[str, str]) -> Exp
 
         if rank1:
             sv_new.values[i] = shap_values.values[old_inds].sum()
-            sv_new.data[i] = shap_values.data[old_inds].sum()
+            if shap_values.data is not None:
+                sv_new.data[i] = shap_values.data[old_inds].sum()
         else:
             sv_new.values[:, i] = shap_values.values[:, old_inds].sum(1)
-            sv_new.data[:, i] = shap_values.data[:, old_inds].sum(1)
+            if shap_values.data is not None:
+                sv_new.data[:, i] = shap_values.data[:, old_inds].sum(1)
         sv_new.feature_names[i] = new_name
         i += 1
 
     return Explanation(
         sv_new.values[:i] if rank1 else sv_new.values[:, :i],
         base_values=sv_new.base_values,
-        data=sv_new.data[:i] if rank1 else sv_new.data[:, :i],
+        data=None if sv_new.data is None else (sv_new.data[:i] if rank1 else sv_new.data[:, :i]),
         display_data=None
         if sv_new.display_data is None
         else (sv_new.display_data[:, :i] if rank1 else sv_new.display_data[:, :i]),
