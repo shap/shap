@@ -13,6 +13,33 @@ on:
   workflow_dispatch:
 
 jobs:
+  # shap-cuda (backends/shap-cuda) reaches directly into shap-core internals,
+  # so the two must always be installed as an exact matching pair. Computed
+  # once here and pinned into the "cuda" extra below, rather than left
+  # unconstrained, so `pip install shap[cuda]==X.Y.Z` can't silently resolve
+  # to a shap-cuda from a different release.
+  compute_version:
+    name: Compute release version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - run: git fetch --tags
+      - name: Install uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: Compute version
+        id: version
+        run: |
+          VERSION=$(uv run --no-project --with setuptools-scm python -m setuptools_scm)
+          if [ -z "$VERSION" ]; then
+            echo "::error::setuptools_scm produced an empty version"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
   # For the nightly schedule, skip the whole build if main has not changed since
   # the last successful nightly run. Release and manual runs always build.
   check_changes:
@@ -50,6 +77,7 @@ jobs:
             echo "should_build=true" >> "$GITHUB_OUTPUT"
           fi
 
+
   # we need this test since we run into 403 errors on MacOS, see GH #4179
   prepare_data:
     needs: [check_changes]
@@ -63,7 +91,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Install dependencies for dataset download
         run: |
           uv pip install --system . --group download-datasets
@@ -77,7 +105,7 @@ jobs:
           cp -r "$SHAP_DATA_DIR" /tmp/test_data_cache/
           ls -la /tmp/test_data_cache/
       - name: Upload cached datasets
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
@@ -89,7 +117,7 @@ jobs:
 
   build_wheels:
     name: Build ${{ matrix.os }} wheels
-    needs: [prepare_data]
+    needs: [prepare_data, compute_version]
     strategy:
       fail-fast: false
       matrix:
@@ -110,7 +138,7 @@ jobs:
         run: git fetch --tags
 
       - name: Download pre-cached datasets
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: test-data-cache
           path: ${{ runner.temp }}/test_data_cache
@@ -125,11 +153,25 @@ jobs:
           unset _libomp_path
 
       - name: "Install uv"
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Pin the cuda extra to this exact release
+        shell: python
+        run: |
+          import pathlib
+          path = pathlib.Path("pyproject.toml")
+          path.write_text(path.read_text().replace(
+              'cuda = ["shap-cuda"]',
+              'cuda = ["shap-cuda==${{ needs.compute_version.outputs.version }}"]',
+          ))
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@e090b81e30c4d855ea63bf4b6e59204c09a101ae # v4.2.1
+        uses: pypa/cibuildwheel@b3395e271a35f73dad77f21802abe9b986dfe299 # v4.3.1
         env:
+          # Pinning the cuda extra modifies pyproject.toml. Keep setuptools-scm
+          # from treating that dirty checkout as a new development release.
+          SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SHAP: ${{ needs.compute_version.outputs.version }}
+          CIBW_ENVIRONMENT_PASS_LINUX: SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SHAP
           CIBW_ARCHS_LINUX: ${{ contains(matrix.os, '-arm') && 'aarch64' || 'x86_64' }}
           CIBW_ARCHS_MACOS: ${{ matrix.os == 'macos-14' && 'arm64' || 'x86_64' }}
           CIBW_ARCHS_WINDOWS: ${{ contains(matrix.os, '-arm') && 'ARM64' || 'AMD64' }}
@@ -145,14 +187,14 @@ jobs:
           CIBW_TEST_COMMAND_WINDOWS: |
             python -c "import shap, os, shutil; cache_path = r'${{ runner.temp }}\test_data_cache'; shap_cache = os.path.join(os.path.dirname(shap.__file__), 'cached_data'); os.makedirs(shap_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'cached_data'), shap_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'cached_data')) else None" && pytest -v {project}/tests --import-mode=append
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           path: ./wheelhouse/*.whl
           name: bdist_files_${{ matrix.os }}
 
   build_sdist:
     name: Build source distribution
-    needs: [check_changes]
+    needs: [check_changes, compute_version]
     if: needs.check_changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -174,14 +216,27 @@ jobs:
           python-version: '3.12'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Pin the cuda extra to this exact release
+        shell: python
+        run: |
+          import pathlib
+          path = pathlib.Path("pyproject.toml")
+          path.write_text(path.read_text().replace(
+              'cuda = ["shap-cuda"]',
+              'cuda = ["shap-cuda==${{ needs.compute_version.outputs.version }}"]',
+          ))
 
       - name: Build sdist (pep517)
+        env:
+          # Use the version computed before the cuda dependency pin dirtied the checkout.
+          SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SHAP: ${{ needs.compute_version.outputs.version }}
         run: |
           uv build --sdist
 
       - name: Upload sdist
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: sdist_files
           path: dist/*.tar.gz
@@ -197,13 +252,13 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: dist
           pattern: bdist_files_*
           merge-multiple: true
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: sdist_files
           path: dist
@@ -226,13 +281,13 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: dist
           pattern: bdist_files_*
           merge-multiple: true
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: sdist_files
           path: dist
@@ -248,7 +303,7 @@ jobs:
     if: github.event_name == 'schedule' && github.repository == 'shap/shap'
     steps:
       # The upload action only handles *.whl, so the sdist is not downloaded here
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: dist
           pattern: bdist_files_*
