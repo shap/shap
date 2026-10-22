@@ -26,7 +26,6 @@ typedef tfloat (* transform_f)(const tfloat margin, const tfloat y);
 namespace FEATURE_DEPENDENCE {
     const unsigned independent = 0;
     const unsigned tree_path_dependent = 1;
-    const unsigned global_path_dependent = 2;
 }
 
 struct TreeEnsemble {
@@ -75,31 +74,6 @@ struct TreeEnsemble {
 
     bool is_leaf(unsigned pos)const {
         return children_left[pos] < 0;
-    }
-
-    void allocate(unsigned tree_limit_in, unsigned max_nodes_in, unsigned num_outputs_in) {
-        tree_limit = tree_limit_in;
-        max_nodes = max_nodes_in;
-        num_outputs = num_outputs_in;
-        children_left = new int[tree_limit * max_nodes];
-        children_right = new int[tree_limit * max_nodes];
-        children_default = new int[tree_limit * max_nodes];
-        features = new int[tree_limit * max_nodes];
-        thresholds = new tfloat[tree_limit * max_nodes];
-        threshold_types = new int[tree_limit * max_nodes];
-        values = new tfloat[tree_limit * max_nodes * num_outputs];
-        node_sample_weights = new tfloat[tree_limit * max_nodes];
-    }
-
-    void free() {
-        delete[] children_left;
-        delete[] children_right;
-        delete[] children_default;
-        delete[] features;
-        delete[] thresholds;
-        delete[] threshold_types;
-        delete[] values;
-        delete[] node_sample_weights;
     }
 };
 
@@ -561,165 +535,6 @@ inline void tree_shap(const TreeEnsemble& tree, const ExplanationDataset &data,
     );
 
     delete[] unique_path_data;
-}
-
-
-inline unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEnsemble &trees,
-                                     const tfloat *data, const bool *data_missing, int *data_inds,
-                                     const unsigned num_background_data_inds, unsigned num_data_inds,
-                                     unsigned M, unsigned row = 0, unsigned i = 0, unsigned pos = 0,
-                                     tfloat *leaf_value = NULL) {
-    //tfloat new_leaf_value[trees.num_outputs];
-    tfloat *new_leaf_value = (tfloat *) alloca(sizeof(tfloat) * trees.num_outputs); // allocate on the stack
-    unsigned row_offset = row * trees.max_nodes;
-
-    // we have hit a terminal leaf!!!
-    if (trees.children_left[row_offset + i] < 0 && row + 1 == trees.tree_limit) {
-
-        // create the leaf node
-        const tfloat *vals = trees.values + (row * trees.max_nodes + i) * trees.num_outputs;
-        if (leaf_value == NULL) {
-            for (unsigned j = 0; j < trees.num_outputs; ++j) {
-                out_tree.values[pos * trees.num_outputs + j] = vals[j];
-            }
-        } else {
-            for (unsigned j = 0; j < trees.num_outputs; ++j) {
-                out_tree.values[pos * trees.num_outputs + j] = leaf_value[j] + vals[j];
-            }
-        }
-        out_tree.children_left[pos] = -1;
-        out_tree.children_right[pos] = -1;
-        out_tree.children_default[pos] = -1;
-        out_tree.features[pos] = -1;
-        out_tree.thresholds[pos] = 0;
-        out_tree.node_sample_weights[pos] = num_background_data_inds;
-
-        return pos;
-    }
-
-    // we hit an intermediate leaf (so just add the value to our accumulator and move to the next tree)
-    if (trees.children_left[row_offset + i] < 0) {
-
-        // accumulate the value of this original leaf so it will land on all eventual terminal leaves
-        const tfloat *vals = trees.values + (row * trees.max_nodes + i) * trees.num_outputs;
-        if (leaf_value == NULL) {
-            for (unsigned j = 0; j < trees.num_outputs; ++j) {
-                new_leaf_value[j] = vals[j];
-            }
-        } else {
-            for (unsigned j = 0; j < trees.num_outputs; ++j) {
-                new_leaf_value[j] = leaf_value[j] + vals[j];
-            }
-        }
-        leaf_value = new_leaf_value;
-
-        // move forward to the next tree
-        row += 1;
-        row_offset += trees.max_nodes;
-        i = 0;
-    }
-
-    // split the data inds by this node's threshold
-    const tfloat t = trees.thresholds[row_offset + i];
-    const int f = trees.features[row_offset + i];
-    const bool right_default = trees.children_default[row_offset + i] == trees.children_right[row_offset + i];
-    int low_ptr = 0;
-    int high_ptr = num_data_inds - 1;
-    unsigned num_left_background_data_inds = 0;
-    int low_data_ind;
-    while (low_ptr <= high_ptr) {
-        low_data_ind = data_inds[low_ptr];
-        const int data_ind = std::abs(low_data_ind) * M + f;
-        const bool is_missing = data_missing[data_ind];
-        if ((!is_missing && data[data_ind] > t) || (right_default && is_missing)) {
-            data_inds[low_ptr] = data_inds[high_ptr];
-            data_inds[high_ptr] = low_data_ind;
-            high_ptr -= 1;
-        } else {
-            if (low_data_ind >= 0) ++num_left_background_data_inds; // negative data_inds are not background samples
-            low_ptr += 1;
-        }
-    }
-    int *left_data_inds = data_inds;
-    const unsigned num_left_data_inds = low_ptr;
-    int *right_data_inds = data_inds + low_ptr;
-    const unsigned num_right_data_inds = num_data_inds - num_left_data_inds;
-    const unsigned num_right_background_data_inds = num_background_data_inds - num_left_background_data_inds;
-
-    // all the data went right, so we skip creating this node and just recurse right
-    if (num_left_data_inds == 0) {
-        return build_merged_tree_recursive(
-            out_tree, trees, data, data_missing, data_inds,
-            num_background_data_inds, num_data_inds, M, row,
-            trees.children_right[row_offset + i], pos, leaf_value
-        );
-
-    // all the data went left, so we skip creating this node and just recurse left
-    } else if (num_right_data_inds == 0) {
-        return build_merged_tree_recursive(
-            out_tree, trees, data, data_missing, data_inds,
-            num_background_data_inds, num_data_inds, M, row,
-            trees.children_left[row_offset + i], pos, leaf_value
-        );
-
-    // data went both ways so we create this node and recurse down both paths
-    } else {
-
-        // build the left subtree
-        const unsigned new_pos = build_merged_tree_recursive(
-            out_tree, trees, data, data_missing, left_data_inds,
-            num_left_background_data_inds, num_left_data_inds, M, row,
-            trees.children_left[row_offset + i], pos + 1, leaf_value
-        );
-
-        // fill in the data for this node
-        out_tree.children_left[pos] = pos + 1;
-        out_tree.children_right[pos] = new_pos + 1;
-        if (trees.children_left[row_offset + i] == trees.children_default[row_offset + i]) {
-            out_tree.children_default[pos] = pos + 1;
-        } else {
-            out_tree.children_default[pos] = new_pos + 1;
-        }
-
-        out_tree.features[pos] = trees.features[row_offset + i];
-        out_tree.thresholds[pos] = trees.thresholds[row_offset + i];
-        out_tree.node_sample_weights[pos] = num_background_data_inds;
-
-        // build the right subtree
-        return build_merged_tree_recursive(
-            out_tree, trees, data, data_missing, right_data_inds,
-            num_right_background_data_inds, num_right_data_inds, M, row,
-            trees.children_right[row_offset + i], new_pos + 1, leaf_value
-        );
-    }
-}
-
-
-inline void build_merged_tree(TreeEnsemble &out_tree, const ExplanationDataset &data, const TreeEnsemble &trees) {
-
-    // create a joint data matrix from both X and R matrices
-    tfloat *joined_data = new tfloat[(data.num_X + data.num_R) * data.M];
-    std::copy(data.X, data.X + data.num_X * data.M, joined_data);
-    std::copy(data.R, data.R + data.num_R * data.M, joined_data + data.num_X * data.M);
-    bool *joined_data_missing = new bool[(data.num_X + data.num_R) * data.M];
-    std::copy(data.X_missing, data.X_missing + data.num_X * data.M, joined_data_missing);
-    std::copy(data.R_missing, data.R_missing + data.num_R * data.M, joined_data_missing + data.num_X * data.M);
-
-    // create an starting array of data indexes we will recursively sort
-    int *data_inds = new int[data.num_X + data.num_R];
-    for (unsigned i = 0; i < data.num_X; ++i) data_inds[i] = i;
-    for (unsigned i = data.num_X; i < data.num_X + data.num_R; ++i) {
-        data_inds[i] = -i; // a negative index means it won't be recorded as a background sample
-    }
-
-    build_merged_tree_recursive(
-        out_tree, trees, joined_data, joined_data_missing, data_inds, data.num_R,
-        data.num_X + data.num_R, data.M
-    );
-
-    delete[] joined_data;
-    delete[] joined_data_missing;
-    delete[] data_inds;
 }
 
 
@@ -1408,47 +1223,6 @@ inline void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, co
 }
 
 /**
- * This runs Tree SHAP with a global path conditional dependence assumption.
- *
- * By first merging all the trees in a tree ensemble into an equivalent single tree
- * this method allows arbitrary marginal transformations and also ensures that all the
- * evaluations of the model are consistent with some training data point.
- */
-inline void dense_global_path_dependent(const TreeEnsemble& trees, const ExplanationDataset &data,
-                                 tfloat *out_contribs, tfloat transform(const tfloat, const tfloat)) {
-
-    // allocate space for our new merged tree (we save enough room to totally split all samples if need be)
-    TreeEnsemble merged_tree;
-    merged_tree.allocate(1, (data.num_X + data.num_R) * 2, trees.num_outputs);
-
-    // collapse the ensemble of trees into a single tree that has the same behavior
-    // for all the X and R samples in the dataset
-    build_merged_tree(merged_tree, data, trees);
-
-    // compute the expected value and depth of the new merged tree
-    compute_expectations(merged_tree);
-
-    // explain each sample using our new merged tree
-    ExplanationDataset instance;
-    tfloat *instance_out_contribs;
-    for (unsigned i = 0; i < data.num_X; ++i) {
-        instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
-        data.get_x_instance(instance, i);
-
-        // since we now just have a single merged tree we can just use the tree_path_dependent algorithm
-        tree_shap(merged_tree, instance, instance_out_contribs, 0, 0);
-
-        // apply the base offset to the bias term
-        for (unsigned j = 0; j < trees.num_outputs; ++j) {
-            instance_out_contribs[data.M * trees.num_outputs + j] += trees.base_offset[j];
-        }
-    }
-
-    merged_tree.free();
-}
-
-
-/**
  * The main method for computing Tree SHAP on models using dense data.
  */
 inline void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset &data, tfloat *out_contribs,
@@ -1468,12 +1242,6 @@ inline void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset 
         case FEATURE_DEPENDENCE::tree_path_dependent:
             if (interactions) dense_tree_interactions_path_dependent(trees, data, out_contribs, transform);
             else dense_tree_path_dependent(trees, data, out_contribs, transform);
-            return;
-
-        case FEATURE_DEPENDENCE::global_path_dependent:
-            if (interactions) {
-                std::cerr << "FEATURE_DEPENDENCE::global_path_dependent does not support interactions!\n";
-            } else dense_global_path_dependent(trees, data, out_contribs, transform);
             return;
     }
 }

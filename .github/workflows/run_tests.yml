@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Install dependencies for dataset download
         run: |
           uv pip install --system . --group download-datasets
@@ -50,7 +50,7 @@ jobs:
           cp -r "$SHAP_DATA_DIR" /tmp/test_data_cache/
           ls -la /tmp/test_data_cache/
       - name: Upload cached datasets
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
@@ -93,12 +93,44 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
-        id: filter
         with:
-          filters: |
-            js:
-              - 'javascript/**'
+          fetch-depth: 0
+      - name: Check for JavaScript changes
+        id: filter
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          # Manual runs and initial pushes rebuild the bundle unconditionally.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "js=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # A force-push can leave the previous tip outside the fetched history.
+          for commit in "$BASE_SHA" "$HEAD_SHA"; do
+            if ! git cat-file -e "$commit^{commit}"; then
+              git fetch --no-tags origin "$commit"
+            fi
+          done
+
+          # PRs compare against the merge base; pushes compare the two tips.
+          comparison="$BASE_SHA..$HEAD_SHA"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            comparison="$BASE_SHA...$HEAD_SHA"
+          fi
+          changed_files="$RUNNER_TEMP/shap-changed-files"
+          git diff --no-renames --name-only -z "$comparison" -- > "$changed_files"
+          js=false
+          while IFS= read -r -d '' path; do
+            if [[ "$path" == javascript/* ]]; then
+              js=true
+              break
+            fi
+          done < "$changed_files"
+          echo "js=$js" >> "$GITHUB_OUTPUT"
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
@@ -107,7 +139,7 @@ jobs:
       # Build JavaScript bundle if JS files have changed
       - name: Set up Node.js
         if: steps.filter.outputs.js == 'true'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: lts/Hydrogen
       - name: Build JavaScript bundle conditionally
@@ -127,7 +159,7 @@ jobs:
           echo "DYLD_LIBRARY_PATH=$_libomp_path:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
           unset _libomp_path
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       # Released pandas/scikit-learn do not yet ship cp315 wheels. In particular,
       # scikit-learn's isolated build pulls in scipy<1.18, which has no cp315 wheels.
       - name: Install Python 3.15 dependency nightlies
@@ -141,7 +173,7 @@ jobs:
         run: |
           uv pip install --system . --group ${{matrix.extras}} --group plots
       - name: Download pre-cached datasets
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
@@ -180,7 +212,7 @@ jobs:
           --import-mode=append
       - name: Upload mpl test report
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: mpl-results-${{ matrix.python-version }}-${{ runner.os }}-${{ matrix.extras }}
           path: mpl-results/
@@ -204,7 +236,7 @@ jobs:
         with:
           python-version: 3.12
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Install dependencies
         run: |
           uv pip install --system numpy==2.0 . --group test-core --group plots
@@ -222,7 +254,7 @@ jobs:
         with:
           python-version: 3.13
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Install dependencies
         run: |
           uv pip install --system . --group test-core
