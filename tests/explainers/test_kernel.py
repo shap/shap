@@ -36,6 +36,25 @@ def test_empty_background_rejected_before_model_call(background_type):
         shap.KernelExplainer(model, background, **kwargs)
 
 
+@pytest.mark.parametrize("background_type", ["numpy", "dataframe", "indexed", "sparse", "dense"])
+def test_single_background_sample_remains_supported(background_type):
+    background: Any = np.ones((1, 3))
+    kwargs = {}
+    if background_type in ("dataframe", "indexed"):
+        background = pd.DataFrame(background, columns=list("abc"))
+        kwargs["keep_index"] = background_type == "indexed"
+    elif background_type == "sparse":
+        background = scipy.sparse.csr_matrix(background)
+    elif background_type == "dense":
+        background = shap.utils._legacy.DenseData(background, list("abc"))
+
+    def model(data):
+        return np.asarray(data.sum(axis=1)).reshape(-1)
+
+    explainer = shap.KernelExplainer(model, background, **kwargs)
+    assert explainer.expected_value == pytest.approx(3)
+
+
 def test_null_model_small():
     """Test a small null model."""
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 4)), nsamples=100)

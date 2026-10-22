@@ -64,6 +64,8 @@ class KernelExplainer(Explainer):
         using a single reference value or using the ``kmeans`` function to summarize the dataset.
         Note: for the sparse case, we accept any sparse matrix but convert to lil format for
         performance.
+        The background dataset must contain at least one sample; an empty dataset
+        raises ``ValueError``.
 
     feature_names : list
         The names of the features in the background dataset. If the background dataset is
@@ -77,6 +79,12 @@ class KernelExplainer(Explainer):
         Default is "identity" (a no-op).
         If the model output is a probability, then "logit" can be used to transform the SHAP values
         into log-odds units.
+
+    Raises
+    ------
+    ValueError
+        If the background dataset contains no samples. At least one background
+        sample is required to compute the expected value.
 
     Examples
     --------
