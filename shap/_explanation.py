@@ -590,7 +590,8 @@ class Explanation(metaclass=MetaExplanation):
             new_self.clustering = None
         else:
             new_self.values = np.percentile(new_self.values, q, axis)
-            new_self.data = np.percentile(new_self.data, q, axis)
+            if new_self.data is not None:
+                new_self.data = np.percentile(new_self.data, q, axis)
         # new_self.data = None
         new_self.op_history.append(
             OpHistoryItem(
