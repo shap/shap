@@ -138,6 +138,8 @@ class KernelExplainer(Explainer):
         self.keep_index_ordered = kwargs.get("keep_index_ordered", False)
         self.model = convert_to_model(model, keep_index=self.keep_index)
         self.data = convert_to_data(data, keep_index=self.keep_index)
+        if self.data.data.shape[0] == 0:
+            raise ValueError("Background dataset cannot be empty")
         model_null = match_model_to_data(self.model, self.data)
 
         # enforce our current input type limitations

@@ -1,4 +1,5 @@
 import sys
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -14,6 +15,25 @@ from . import common
 
 def sigm(x):
     return np.exp(x) / (1 + np.exp(x))
+
+
+@pytest.mark.parametrize("background_type", ["numpy", "dataframe", "indexed", "sparse", "dense"])
+def test_empty_background_rejected_before_model_call(background_type):
+    background: Any = np.empty((0, 3))
+    kwargs = {}
+    if background_type in ("dataframe", "indexed"):
+        background = pd.DataFrame(background, columns=list("abc"))
+        kwargs["keep_index"] = background_type == "indexed"
+    elif background_type == "sparse":
+        background = scipy.sparse.csr_matrix(background)
+    elif background_type == "dense":
+        background = shap.utils._legacy.DenseData(background, list("abc"))
+
+    def model(_):
+        pytest.fail("An empty background must be rejected before evaluating the model")
+
+    with pytest.raises(ValueError, match="Background dataset cannot be empty"):
+        shap.KernelExplainer(model, background, **kwargs)
 
 
 def test_null_model_small():
