@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import ast
-import io
 import json
 import os
 import time
@@ -28,7 +26,6 @@ from ..utils._exceptions import (
 from ..utils._legacy import DenseData
 from ..utils._warnings import ExperimentalWarning
 from ._explainer import Explainer
-from .other._ubjson import decode_ubjson_buffer
 
 try:
     import shap._cext as _cext  # type: ignore
@@ -2340,265 +2337,31 @@ def get_xgboost_dmatrix_properties(model: Any) -> dict[str, Any]:
 class XGBTreeModelLoader:
     """This loads an XGBoost model directly from a raw memory dump."""
 
-    n_trees_per_iter: int
-    n_targets: int
-    name_obj: str
-    name_gbm: str
-    base_score: float
-    num_feature: int
-    num_class: int
-    num_trees: int
-    node_parents: list[npt.NDArray[Any]]
-    node_cleft: list[npt.NDArray[np.int32]]
-    node_cright: list[npt.NDArray[np.int32]]
-    node_sindex: list[npt.NDArray[np.uint32]]
-    children_default: list[npt.NDArray[Any]]
-    sum_hess: list[npt.NDArray[np.float64]]
-    values: list[npt.NDArray[Any]]
-    thresholds: list[npt.NDArray[Any]]
-    threshold_types: list[npt.NDArray[np.int32]]
-    features: list[npt.NDArray[Any]]
-    split_types: list[npt.NDArray[Any]]
-    categories: list[list[list[int]]]
-    cat_feature_indices: npt.NDArray[Any] | None
-
     def __init__(self, xgb_model: Any) -> None:
+        import treelite
         import xgboost as xgb
 
         _check_xgboost_version(xgb.__version__)
-        model: xgb.Booster = xgb_model
 
-        raw = xgb_model.save_raw(raw_format="ubj")
-        with io.BytesIO(raw) as fd:
-            jmodel = decode_ubjson_buffer(fd)
+        raw: bytearray = xgb_model.save_raw(raw_format="ubj")
+        treelite_model = treelite.frontend.from_xgboost_ubjson(raw)
 
-        learner = jmodel["learner"]
-        learner_model_param = learner["learner_model_param"]
-        objective = learner["objective"]
-
-        booster = learner["gradient_booster"]
-        n_classes = max(int(learner_model_param["num_class"]), 1)
-        n_targets = max(int(learner_model_param["num_target"]), 1)
-        n_targets = max(n_targets, n_classes)
-
-        # darts booster does not have the standard format.
-        # Therefore we need to unpack the gbtree key.
-        if "gbtree" in booster and "model" not in booster:
-            booster = booster["gbtree"]
-        # Check the input model doesn't have vector-leaf
-        if booster["model"].get("iteration_indptr", None) is not None:
-            # iteration_indptr was introduced in 2.0.
-            iteration_indptr = np.asarray(booster["model"]["iteration_indptr"], dtype=np.int32)
-            diff = np.diff(iteration_indptr)
-        else:
-            n_parallel_trees = int(booster["model"]["gbtree_model_param"]["num_parallel_tree"])
-            diff = np.repeat(n_targets * n_parallel_trees, model.num_boosted_rounds())
-        if np.any(diff != diff[0]):
-            raise ValueError("vector-leaf is not yet supported.:", diff)
-
-        # used to convert the number of iteration to the number of trees.
-        # Accounts for number of classes, targets, forest size.
-        self.n_trees_per_iter = int(diff[0])
-        self.n_targets = n_targets
-        assert self.n_trees_per_iter > 0
-
-        self.name_obj = objective["name"]
-        self.name_gbm = booster["name"]
-        # handle the link function.
-        base_score = learner_model_param["base_score"]
-        if isinstance(base_score, str):
-            try:
-                base_score = ast.literal_eval(base_score)
-                if not isinstance(base_score, (list, float, int, tuple, np.ndarray)):
-                    raise ValueError
-            except ValueError as e:
-                emsg = f"Expected the base_score to contain a list or float, received {base_score}"
-                raise ValueError(emsg) from e
-        if isinstance(base_score, (list, tuple, np.ndarray)):
-            base_score = np.asarray(base_score, dtype=float)
-            if base_score.size == 1:
-                base_score = float(base_score[0])
-        else:
-            base_score = float(base_score)
-        self.base_score = base_score
-        if self.name_obj in ("binary:logistic", "reg:logistic"):
-            self.base_score = scipy.special.logit(base_score)
-        elif self.name_obj in (
-            "reg:gamma",
-            "reg:tweedie",
-            "count:poisson",
-            "survival:cox",
-            "survival:aft",
-        ):
-            # exp family
-            self.base_score = np.log(self.base_score)
-        else:
-            self.base_score = base_score
-
-        self.num_feature = int(learner_model_param["num_feature"])
-        self.num_class = int(learner_model_param["num_class"])
-
-        trees = booster["model"]["trees"]
-        self.num_trees = len(trees)
-
-        self.node_parents = []
-        self.node_cleft = []
-        self.node_cright = []
-        self.node_sindex = []
-        self.children_default: list[np.ndarray] = []
-        self.sum_hess = []
-
-        self.values = []
-        self.thresholds = []
-        self.threshold_types = []
-        self.features = []
-
-        # Categorical features, not supported by the SHAP package yet.
-        self.split_types = []
-        self.categories = []
-
-        feature_types = model.feature_types
-        if feature_types is not None:
-            cat_feature_indices: np.ndarray = np.where(np.asarray(feature_types) == "c")[0]
-            if len(cat_feature_indices) == 0:
-                self.cat_feature_indices: np.ndarray | None = None
-            else:
-                self.cat_feature_indices = cat_feature_indices
-        else:
-            self.cat_feature_indices = None
-
-        def to_integers(data: list[int]) -> np.ndarray:
-            """Handle u8 array from UBJSON."""
-            assert isinstance(data, list)
-            return np.asanyarray(data, dtype=np.uint8)
-
-        for i in range(self.num_trees):
-            tree = trees[i]
-            parents = np.asarray(tree["parents"])
-            self.node_parents.append(parents)
-            self.node_cleft.append(np.asarray(tree["left_children"], dtype=np.int32))
-            self.node_cright.append(np.asarray(tree["right_children"], dtype=np.int32))
-            self.node_sindex.append(np.asarray(tree["split_indices"], dtype=np.uint32))
-
-            base_weight = np.asarray(tree["base_weights"], dtype=np.float32)
-            if base_weight.size != self.node_cleft[-1].size:
-                raise ValueError("vector-leaf is not yet supported.")
-
-            default_left = to_integers(tree["default_left"])
-            default_child = np.where(default_left == 1, self.node_cleft[-1], self.node_cright[-1]).astype(np.int64)
-            self.children_default.append(default_child)
-            self.sum_hess.append(np.asarray(tree["sum_hessian"], dtype=np.float64))
-
-            is_leaf = self.node_cleft[-1] == -1
-
-            # XGBoost stores split condition and leaf weight in the same field.
-            split_cond = np.asarray(tree["split_conditions"], dtype=np.float32)
-            leaf_weight = np.where(is_leaf, split_cond, 0.0)
-            thresholds = np.where(is_leaf, 0.0, split_cond)
-
-            # Xgboost uses < for thresholds where shap uses <= Move the threshold down
-            # by the smallest possible increment
-            thresholds = np.where(is_leaf, 0.0, np.nextafter(thresholds, -np.float32(np.inf)))
-            threshold_types = np.zeros_like(thresholds, dtype=np.int32)
-
-            self.values.append(leaf_weight.reshape(leaf_weight.size, 1))
-            self.thresholds.append(thresholds)
-            self.threshold_types.append(threshold_types)
-
-            split_idx = np.asarray(tree["split_indices"], dtype=np.int64)
-            self.features.append(split_idx)
-
-            # - categorical features
-            # when ubjson is used, this is a byte array with each element as uint8
-            split_types = to_integers(tree["split_type"])
-            self.split_types.append(split_types)
-            # categories for each node is stored in a CSR style storage with segment as
-            # the begin ptr and the `categories' as values.
-            cat_segments: list[int] = tree["categories_segments"]
-            cat_sizes: list[int] = tree["categories_sizes"]
-            # node index for categorical nodes
-            cat_nodes: list[int] = tree["categories_nodes"]
-            assert len(cat_segments) == len(cat_sizes) == len(cat_nodes)
-            cats = tree["categories"]
-
-            tree_categories = self.parse_categories(cat_nodes, cat_segments, cat_sizes, cats, self.node_cleft[-1])
-            self.categories.append(tree_categories)
-
-    @staticmethod
-    def parse_categories(
-        cat_nodes: list[int],
-        cat_segments: list[int],
-        cat_sizes: list[int],
-        cats: list[int],
-        left_children: npt.NDArray[Any],
-    ) -> list[list[int]]:
-        """Parse the JSON model to extract partitions of categories for each
-        node. Returns a list, in which each element is a list of categories for tree
-        split. For a numerical split, the list is empty.
-
-        This is not used yet, only implemented for future reference.
-
-        """
-        # The storage for categories is only defined for categorical nodes to prevent
-        # unnecessary overhead for numerical splits, we track the categorical node that
-        # are processed using a counter.
-        cat_cnt = 0
-        if cat_nodes:
-            last_cat_node = cat_nodes[cat_cnt]
-        else:
-            last_cat_node = -1
-        node_categories: list[list[int]] = []
-        for node_id in range(len(left_children)):
-            if node_id == last_cat_node:
-                beg = cat_segments[cat_cnt]
-                size = cat_sizes[cat_cnt]
-                end = beg + size
-                # categories for this node
-                node_cats = cats[beg:end]
-                # categories are unique for each node
-                assert len(set(node_cats)) == len(node_cats)
-                cat_cnt += 1
-                if cat_cnt == len(cat_nodes):
-                    last_cat_node = -1  # continue to process the rest of the nodes
-                else:
-                    last_cat_node = cat_nodes[cat_cnt]
-                assert node_cats
-                node_categories.append(node_cats)
-            else:
-                # append an empty node, it's either a numerical node or a leaf.
-                node_categories.append([])
-        return node_categories
+        self.treelite_loader = TreeliteModelLoader(treelite_model=treelite_model)
 
     def get_trees(
         self,
         data: npt.NDArray[Any] | None = None,
         data_missing: npt.NDArray[np.bool_] | None = None,
     ) -> list[SingleTree]:
-        trees = []
-        for i in range(self.num_trees):
-            info = {
-                "children_left": self.node_cleft[i],
-                "children_right": self.node_cright[i],
-                "children_default": self.children_default[i],
-                "feature": self.features[i],
-                "threshold": self.thresholds[i],
-                "threshold_type": self.threshold_types[i],
-                "value": self.values[i],
-                "node_sample_weight": self.sum_hess[i],
-            }
-            trees.append(SingleTree(info, data=data, data_missing=data_missing))
-        return trees
+        return self.treelite_loader.get_trees(data=data, data_missing=data_missing)
 
     def print_info(self) -> None:
         print("--- global parameters ---")
-        print("base_score =", self.base_score)
-        print("num_feature =", self.num_feature)
-        print("num_class =", self.num_class)
-        print("name_obj =", self.name_obj)
-        print("name_gbm =", self.name_gbm)
-        print()
-        print("--- gbtree specific parameters ---")
-        print("num_feature =", self.num_feature)
+        print("base_score =", self.treelite_loader.base_score)
+        print("num_feature =", self.treelite_loader.num_feature)
+        print("num_class =", self.treelite_loader.num_class)
+        print("num_target =", self.treelite_loader.num_target)
+        print("objective =", self.treelite_loader.objective)
 
 
 class CatBoostTreeModelLoader:
