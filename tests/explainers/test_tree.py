@@ -3036,6 +3036,21 @@ def test_quadrature_dispatch(interactions, monkeypatch):
     assert calls == [False, True]
 
 
+@pytest.mark.parametrize("interactions", [False, True])
+def test_quadrature_legacy_pickle_defaults_to_original(interactions):
+    X = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]])
+    model = DecisionTreeRegressor(max_depth=2, random_state=0).fit(X, X[:, 0] + 2 * X[:, 1])
+    explainer = shap.TreeExplainer(model)
+    expected = explainer(X, interactions=interactions)
+
+    # Older pickles have no experimental flag, and restoring skips __init__.
+    del explainer.enable_experimental
+    restored = pickle.loads(pickle.dumps(explainer))
+    actual = restored(X, interactions=interactions)
+    np.testing.assert_array_equal(actual.values, expected.values)
+    np.testing.assert_array_equal(actual.base_values, expected.base_values)
+
+
 @pytest.mark.parametrize("depth", [50, 80])
 @pytest.mark.parametrize("interactions", [False, True])
 def test_quadrature_deep_tree_stability(depth, interactions):

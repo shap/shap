@@ -776,7 +776,7 @@ class TreeExplainer(Explainer):
                 feature_perturbation_codes[self.feature_perturbation],
                 output_transform_codes[transform],
                 False,
-                self.enable_experimental,
+                getattr(self, "enable_experimental", False),
             )
         else:
             _cext.dense_tree_saabas(
@@ -952,7 +952,7 @@ class TreeExplainer(Explainer):
             feature_perturbation_codes[self.feature_perturbation],
             output_transform_codes[transform],
             True,
-            self.enable_experimental,
+            getattr(self, "enable_experimental", False),
         )
 
         return self._get_shap_interactions_output(phi, flat_output)
