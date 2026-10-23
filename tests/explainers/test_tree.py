@@ -3084,8 +3084,8 @@ def test_quadrature_deep_tree_stability(depth, interactions):
 @pytest.mark.parametrize("n_outputs", [1, 3])
 @pytest.mark.parametrize("interactions", [False, True])
 def test_quadrature_repeated_features(n_outputs, interactions):
-    # Six distinct features require three quadrature points, exercising cached
-    # traversal for scalar and vector leaves. Features 0 and 1 repeat on the chain.
+    # Six distinct features require three quadrature points.
+    # Features 0 and 1 repeat on the chain for both scalar and vector leaves.
     depth = 8
     nodes = 2 * depth + 1
     left = np.full(nodes, -1, dtype=np.int32)
@@ -3121,7 +3121,7 @@ def test_quadrature_repeated_features(n_outputs, interactions):
     actual = shap.TreeExplainer(model, enable_experimental=True)(rows, interactions=interactions)
     np.testing.assert_allclose(actual.values, original.values, atol=1e-12, rtol=1e-12)
     np.testing.assert_allclose(actual.base_values, original.base_values, atol=1e-12, rtol=1e-12)
-    # Reusing the same explainer must restore cached feature factors between calls.
+    # Repeated calls and row order must not change the attributions.
     explainer = shap.TreeExplainer(model, enable_experimental=True)
     explainer(rows, interactions=interactions)
     repeated = explainer(rows[::-1], interactions=interactions)
