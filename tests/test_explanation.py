@@ -245,3 +245,48 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_getitem_2d_output_names_preserves_feature_names():
+    """Regression test: slicing by a 2D output name must preserve feature_names.
+
+    Previously, feature_names was incorrectly set to np.array(new_data) — numeric
+    data values — instead of the actual string feature names when slicing an
+    Explanation with per-instance (2D) output_names.
+
+    2D output_names must be passed as a numpy array so the slicer correctly
+    identifies the dimensional structure as (samples, outputs) rather than treating
+    the nested Python list as three-dimensional.
+    """
+    n_instances = 3
+    n_features = 4
+    n_outputs = 2
+    feature_names = ["feat_a", "feat_b", "feat_c", "feat_d"]
+
+    # np.array required: list-of-lists causes the slicer to misreport dimensions
+    output_names = np.array([["out_x", "out_y"] for _ in range(n_instances)])
+
+    rs = np.random.RandomState(42)
+    values = rs.randn(n_instances, n_features, n_outputs)
+    data = rs.randn(n_instances, n_features)
+    base_values = rs.randn(n_instances, n_outputs)
+
+    exp = shap.Explanation(
+        values=values,
+        base_values=base_values,
+        data=data,
+        feature_names=feature_names,
+        output_names=output_names,
+    )
+
+    # For a 3D Explanation (instances × features × outputs), select an output
+    # with exp[:, :, name] — this triggers the 2D output_names workaround.
+    sliced = exp[:, :, "out_x"]
+
+    # feature_names must be the original strings, not the numeric data values
+    assert list(sliced.feature_names) == feature_names, f"Expected {feature_names}, got {sliced.feature_names}"
+
+    # values must be the correct output column
+    assert sliced.values.shape == (n_instances, n_features)
+    for i in range(n_instances):
+        np.testing.assert_array_equal(sliced.values[i], values[i, :, 0])
