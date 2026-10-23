@@ -3003,7 +3003,7 @@ def test_nullable_pandas_dtype():
 
 @pytest.mark.parametrize("n_outputs", [1, 3])
 @pytest.mark.parametrize("interactions", [False, True])
-def test_quadrature_matches_original(n_outputs, interactions, monkeypatch):
+def test_quadrature_matches_original(n_outputs, interactions):
     rng = np.random.default_rng(0)
     X = rng.normal(size=(100, 4))
     y = rng.normal(size=(100, n_outputs))
@@ -3013,7 +3013,16 @@ def test_quadrature_matches_original(n_outputs, interactions, monkeypatch):
     original = shap.TreeExplainer(model)
     quadrature = shap.TreeExplainer(model, enable_experimental=True)
 
-    # Check both the public result and that the flag reaches the CPU dispatcher.
+    expected = original(rows, interactions=interactions)
+    actual = quadrature(rows, interactions=interactions)
+    np.testing.assert_allclose(actual.values, expected.values, atol=1e-12, rtol=1e-12)
+    np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-12, rtol=1e-12)
+
+
+@pytest.mark.parametrize("interactions", [False, True])
+def test_quadrature_dispatch(interactions, monkeypatch):
+    X = np.array([[0.0], [1.0]])
+    model = DecisionTreeRegressor(max_depth=1, random_state=0).fit(X, X[:, 0])
     calls = []
     dense_tree_shap = shap.explainers._tree._cext.dense_tree_shap
 
@@ -3022,11 +3031,54 @@ def test_quadrature_matches_original(n_outputs, interactions, monkeypatch):
         return dense_tree_shap(*args)
 
     monkeypatch.setattr(shap.explainers._tree._cext, "dense_tree_shap", record_dispatch)
-    expected = original(rows, interactions=interactions)
-    actual = quadrature(rows, interactions=interactions)
+    shap.TreeExplainer(model)(X, interactions=interactions)
+    shap.TreeExplainer(model, enable_experimental=True)(X, interactions=interactions)
     assert calls == [False, True]
-    np.testing.assert_allclose(actual.values, expected.values, atol=1e-12, rtol=1e-12)
-    np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-12, rtol=1e-12)
+
+
+@pytest.mark.parametrize("depth", [50, 80])
+@pytest.mark.parametrize("interactions", [False, True])
+def test_quadrature_deep_tree_stability(depth, interactions):
+    # An AND chain has depth d but only 2d + 1 nodes. Each feature independently
+    # takes its hot branch with probability 1/2; only the final leaf has value 1.
+    nodes = 2 * depth + 1
+    left = np.full(nodes, -1, dtype=np.int32)
+    right = left.copy()
+    left[:depth] = np.arange(depth, 2 * depth)
+    right[:depth] = np.arange(1, depth + 1)
+    right[depth - 1] = 2 * depth
+    features = np.full(nodes, -1, dtype=np.int32)
+    features[:depth] = np.arange(depth)
+    cover = np.empty(nodes)
+    cover[:depth] = np.exp2(-np.arange(depth, dtype=float))
+    cover[depth : 2 * depth] = cover[:depth] / 2
+    cover[-1] = cover[depth - 1] / 2
+    values = np.zeros((nodes, 1))
+    values[-1] = 1
+    tree = {
+        "children_left": left,
+        "children_right": right,
+        "children_default": right,
+        "features": features,
+        "thresholds": np.zeros(nodes),
+        "values": values,
+        "node_sample_weight": cover,
+    }
+    explainer = shap.TreeExplainer({"trees": [tree]}, enable_experimental=True)
+    X = np.ones((3, depth))
+    X[1] = -1
+    X[2] = np.nan  # Missing values follow the hot branch.
+    result = explainer(X, interactions=interactions)
+    baseline = 2.0**-depth
+    # Symmetry determines each attribution, independently of legacy Tree SHAP.
+    expected = np.broadcast_to(np.array([1 - baseline, -baseline, 1 - baseline])[:, None] / depth, X.shape)
+    actual = result.values.sum(axis=2) if interactions else result.values
+    assert np.isfinite(result.values).all()
+    np.testing.assert_allclose(actual, expected, rtol=1e-12, atol=1e-15)
+    np.testing.assert_allclose(result.base_values, baseline, rtol=1e-14, atol=0)
+    np.testing.assert_allclose(actual.sum(axis=1) + result.base_values, [1, 0, 1], rtol=0, atol=1e-13)
+    if interactions:
+        np.testing.assert_allclose(result.values, result.values.swapaxes(1, 2), rtol=0, atol=1e-15)
 
 
 @pytest.mark.parametrize("approximate,with_background", [(True, False), (False, True), (True, True)])

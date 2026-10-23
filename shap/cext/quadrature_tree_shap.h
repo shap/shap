@@ -19,6 +19,17 @@
  */
 namespace shap_quadrature {
 
+inline double LegendrePolynomial(unsigned n, double x, double &derivative) {
+    double p0 = 1, p1 = x;
+    for (unsigned k = 2; k <= n; ++k) {
+        double p = ((2.0 * k - 1) * x * p1 - (k - 1.0) * p0) / k;
+        p0 = p1;
+        p1 = p;
+    }
+    derivative = n * (x * p1 - p0) / (x * x - 1);
+    return p1;
+}
+
 struct Rule {
     std::vector<double> nodes, weights;
     explicit Rule(unsigned n) : nodes(n), weights(n) {
@@ -27,25 +38,13 @@ struct Rule {
             double x = std::cos(pi * (i + 0.75) / (n + 0.5));
             double derivative = 0;
             for (unsigned iter = 0; iter < 64; ++iter) {
-                double p0 = 1, p1 = x;
-                for (unsigned k = 2; k <= n; ++k) {
-                    double p = ((2.0 * k - 1) * x * p1 - (k - 1.0) * p0) / k;
-                    p0 = p1;
-                    p1 = p;
-                }
-                derivative = n * (x * p1 - p0) / (x * x - 1);
-                double dx = p1 / derivative;
+                double p = LegendrePolynomial(n, x, derivative);
+                double dx = p / derivative;
                 x -= dx;
                 if (std::abs(dx) < 1e-15) break;
             }
             // Re-evaluate at the converged root, as in the upstream rule.
-            double p0 = 1, p1 = x;
-            for (unsigned k = 2; k <= n; ++k) {
-                double p = ((2.0 * k - 1) * x * p1 - (k - 1.0) * p0) / k;
-                p0 = p1;
-                p1 = p;
-            }
-            derivative = n * (x * p1 - p0) / (x * x - 1);
+            LegendrePolynomial(n, x, derivative);
             nodes[n - 1 - i] = 0.5 * (x + 1);
             weights[n - 1 - i] = 1 / ((1 - x * x) * derivative * derivative);
         }
@@ -148,9 +147,9 @@ template <bool Interactions, bool SingleOutput = false> struct Runner {
         return scratch.data() + n + return_size + static_cast<size_t>(depth) * workspace_size;
     }
 
-    void Visit(unsigned split, unsigned child, bool satisfies, unsigned depth,
+    void Visit(unsigned node, unsigned child, bool satisfies, unsigned depth,
                const double *basis, double *result) {
-        unsigned feature = tree.features[split];
+        unsigned feature = tree.features[node];
         double old = probability[feature];
         bool first = old < 0;
         double previous = first ? 1 : old;
