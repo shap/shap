@@ -3081,6 +3081,53 @@ def test_quadrature_deep_tree_stability(depth, interactions):
         np.testing.assert_allclose(result.values, result.values.swapaxes(1, 2), rtol=0, atol=1e-15)
 
 
+@pytest.mark.parametrize("n_outputs", [1, 3])
+@pytest.mark.parametrize("interactions", [False, True])
+def test_quadrature_repeated_features(n_outputs, interactions):
+    # Six distinct features require three quadrature points, exercising cached
+    # traversal for scalar and vector leaves. Features 0 and 1 repeat on the chain.
+    depth = 8
+    nodes = 2 * depth + 1
+    left = np.full(nodes, -1, dtype=np.int32)
+    right = left.copy()
+    left[:depth] = np.arange(depth, 2 * depth)
+    right[:depth] = np.arange(1, depth + 1)
+    right[depth - 1] = 2 * depth
+    features = np.full(nodes, -1, dtype=np.int32)
+    features[:depth] = [0, 1, 2, 0, 3, 4, 1, 5]
+    thresholds = np.zeros(nodes)
+    thresholds[[3, 6]] = 0.5
+    cover = np.empty(nodes)
+    cover[:depth] = np.exp2(-np.arange(depth, dtype=float))
+    cover[depth : 2 * depth] = cover[:depth] / 2
+    cover[-1] = cover[depth - 1] / 2
+    rng = np.random.default_rng(123)
+    tree = {
+        "children_left": left,
+        "children_right": right,
+        "children_default": left,
+        "features": features,
+        "thresholds": thresholds,
+        "values": rng.normal(size=(nodes, n_outputs)),
+        "node_sample_weight": cover,
+    }
+    model = {"trees": [tree]}
+    rows = rng.uniform(-1, 1, size=(24, 6))
+    rows[0] = 1
+    rows[1] = -1  # Repeated features remain cold; other descendants still matter.
+    rows[2] = 0.25  # A previously hot feature becomes cold at its repeated split.
+    rows[3] = np.nan
+    original = shap.TreeExplainer(model)(rows, interactions=interactions)
+    actual = shap.TreeExplainer(model, enable_experimental=True)(rows, interactions=interactions)
+    np.testing.assert_allclose(actual.values, original.values, atol=1e-12, rtol=1e-12)
+    np.testing.assert_allclose(actual.base_values, original.base_values, atol=1e-12, rtol=1e-12)
+    # Reusing the same explainer must restore cached feature factors between calls.
+    explainer = shap.TreeExplainer(model, enable_experimental=True)
+    explainer(rows, interactions=interactions)
+    repeated = explainer(rows[::-1], interactions=interactions)
+    np.testing.assert_allclose(repeated.values, actual.values[::-1], atol=1e-12, rtol=1e-12)
+
+
 @pytest.mark.parametrize("approximate,with_background", [(True, False), (False, True), (True, True)])
 def test_quadrature_preserves_other_algorithms(approximate, with_background):
     rng = np.random.default_rng(0)

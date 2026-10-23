@@ -31,8 +31,9 @@ inline double LegendrePolynomial(unsigned n, double x, double &derivative) {
 }
 
 struct Rule {
-    std::vector<double> nodes, weights;
-    explicit Rule(unsigned n) : nodes(n), weights(n) {
+    std::vector<double> nodes, weights, cold_factor, cold_term;
+    explicit Rule(unsigned n, bool cache_factors)
+        : nodes(n), weights(n), cold_factor(cache_factors ? n : 0), cold_term(cache_factors ? n : 0) {
         constexpr double pi = 3.141592653589793238462643383279502884;
         for (unsigned i = 0; i < n; ++i) {
             double x = std::cos(pi * (i + 0.75) / (n + 0.5));
@@ -47,6 +48,10 @@ struct Rule {
             LegendrePolynomial(n, x, derivative);
             nodes[n - 1 - i] = 0.5 * (x + 1);
             weights[n - 1 - i] = 1 / ((1 - x * x) * derivative * derivative);
+            if (cache_factors) {
+                cold_factor[n - 1 - i] = 1 - nodes[n - 1 - i];
+                cold_term[n - 1 - i] = -1 / cold_factor[n - 1 - i];
+            }
         }
     }
 };
@@ -107,7 +112,7 @@ inline void RootMean(const TreeEnsemble &tree, const std::vector<double> &ratios
 // Upstream's return-edge recurrence, with SHAP's split semantics and output layout.
 // Fold w_prod into the basis (as the upstream GPU does), avoiding large basis
 // products multiplied by vanishing leaf probabilities.
-template <bool Interactions, bool SingleOutput = false> struct Runner {
+template <bool Interactions, bool SingleOutput = false, bool CacheFactors = true> struct Runner {
     const TreeEnsemble &tree;
     const Rule &rule;
     const std::vector<double> &ratios;
@@ -118,14 +123,16 @@ template <bool Interactions, bool SingleOutput = false> struct Runner {
     double *phi;
     std::vector<double> probability;
     std::vector<unsigned> path;
+    std::vector<const double *> factors;
     std::vector<double> scratch;
 
     Runner(const TreeEnsemble &tree, const Rule &rule, const std::vector<double> &ratios,
            const double *x, const bool *missing, unsigned features, double *phi)
         : tree(tree), rule(rule), ratios(ratios), x(x), missing(missing), features(features),
           n(static_cast<unsigned>(rule.nodes.size())),
-          return_size(static_cast<size_t>(n) * NumOutputs()), workspace_size(n + 2 * return_size),
-          phi(phi), probability(features, -1),
+          return_size(static_cast<size_t>(n) * NumOutputs()),
+          workspace_size(CacheFactors ? 4 * n + (Interactions ? 2 : 1) * return_size : n + 2 * return_size),
+          phi(phi), probability(features, -1), factors(CacheFactors && Interactions ? features : 0, nullptr),
           scratch(n + return_size + static_cast<size_t>(tree.max_depth) * workspace_size) {
         path.reserve(tree.max_depth);
         std::fill(scratch.begin(), scratch.begin() + n, 1);
@@ -140,7 +147,9 @@ template <bool Interactions, bool SingleOutput = false> struct Runner {
                      * NumOutputs();
     }
 
-    // Each level owns a shared next basis and output-by-point right/edge buffers.
+    // Each level owns a right result, next basis, and (for interactions) edge buffer.
+    // Cached traversal also keeps hot factors, old reciprocals, and old factors here;
+    // their addresses remain valid until this level's subtree has returned.
     // Siblings reuse the same level after returning; descendants use later levels.
     // Root basis and results are also reused across rows.
     double *Workspace(unsigned depth) {
@@ -148,7 +157,7 @@ template <bool Interactions, bool SingleOutput = false> struct Runner {
     }
 
     void Visit(unsigned node, unsigned child, bool satisfies, unsigned depth,
-               const double *basis, double *result) {
+               const double *basis, double *result, const double *old_inverse, const double *old_term) {
         unsigned feature = tree.features[node];
         double old = probability[feature];
         bool first = old < 0;
@@ -156,18 +165,41 @@ template <bool Interactions, bool SingleOutput = false> struct Runner {
         double weight = ratios[child];
         double enter = satisfies ? previous / weight : 0;
         double *next = Workspace(depth) + return_size;
-        for (unsigned i = 0; i < n; ++i) {
-            next[i] = basis[i] * weight * (1 + (enter - 1) * rule.nodes[i])
-                      / (1 + (previous - 1) * rule.nodes[i]);
+        const double *term = nullptr;
+        bool repeated = previous != 1;
+        if constexpr (CacheFactors) {
+            double *hot_term = next + n;
+            term = satisfies ? hot_term : rule.cold_term.data();
+            for (unsigned i = 0; i < n; ++i) {
+                double factor = satisfies ? 1 + (enter - 1) * rule.nodes[i] : rule.cold_factor[i];
+                if (satisfies) hot_term[i] = (enter - 1) / factor;
+                next[i] = basis[i] * weight * factor * (repeated ? old_inverse[i] : 1);
+            }
+        } else {
+            for (unsigned i = 0; i < n; ++i) {
+                next[i] = basis[i] * weight * (1 + (enter - 1) * rule.nodes[i])
+                          / (1 + (previous - 1) * rule.nodes[i]);
+            }
+        }
+        const double *saved = nullptr;
+        // Ancestor hot buffers and the rule's cold table outlive this subtree.
+        // Restore the pointer on return so repeated splits and siblings can reuse it.
+        if constexpr (CacheFactors && Interactions) {
+            saved = factors[feature];
+            factors[feature] = term;
         }
         probability[feature] = enter;
         if (Interactions && first) path.push_back(feature);
         RunNode(child, depth + 1, next, result);
-        double *edge = Workspace(depth) + return_size + n;
+        double *edge = Workspace(depth) + return_size + (CacheFactors ? 4 * n : n);
         auto coefficient = [&](unsigned i) {
-            double t = rule.nodes[i];
-            return (enter - 1) / (1 + (enter - 1) * t) -
-                   (previous - 1) / (1 + (previous - 1) * t);
+            if constexpr (CacheFactors) {
+                return term[i] - (repeated ? old_term[i] : 0);
+            } else {
+                double t = rule.nodes[i];
+                return (enter - 1) / (1 + (enter - 1) * t) -
+                       (previous - 1) / (1 + (previous - 1) * t);
+            }
         };
         // Vector leaves reuse coefficients across outputs. Scalar leaves compute
         // them directly in the reduction, avoiding a separate pass and buffer read.
@@ -181,8 +213,9 @@ template <bool Interactions, bool SingleOutput = false> struct Runner {
             double delta = 0;
             for (unsigned i = 0; i < n; ++i) {
                 double factor = SingleOutput ? coefficient(i) : next[i];
-                edge[offset + i] = rule.weights[i] * result[offset + i] * factor;
-                delta += edge[offset + i];
+                double contribution = rule.weights[i] * result[offset + i] * factor;
+                if constexpr (Interactions) edge[offset + i] = contribution;
+                delta += contribution;
             }
             value[o] += delta;
         }
@@ -191,7 +224,7 @@ template <bool Interactions, bool SingleOutput = false> struct Runner {
                 if (partner == feature) continue;
                 double alpha = probability[partner] - 1;
                 auto denominator = [&](unsigned i) { return 1 + alpha * rule.nodes[i]; };
-                if (!SingleOutput) {
+                if constexpr (!CacheFactors && !SingleOutput) {
                     for (unsigned i = 0; i < n; ++i) next[i] = denominator(i);
                 }
                 double *pair = phi + (static_cast<size_t>(feature) * (features + 1) + partner)
@@ -200,12 +233,17 @@ template <bool Interactions, bool SingleOutput = false> struct Runner {
                     size_t offset = static_cast<size_t>(o) * n;
                     double delta = 0;
                     for (unsigned i = 0; i < n; ++i) {
-                        double divisor = SingleOutput ? denominator(i) : next[i];
-                        delta += edge[offset + i] * alpha / divisor;
+                        if constexpr (CacheFactors) {
+                            delta += edge[offset + i] * factors[partner][i];
+                        } else {
+                            double divisor = SingleOutput ? denominator(i) : next[i];
+                            delta += edge[offset + i] * alpha / divisor;
+                        }
                     }
                     pair[o] += delta;
                 }
             }
+            if constexpr (CacheFactors) factors[feature] = saved;
             if (first) path.pop_back();
         }
         probability[feature] = old;
@@ -226,8 +264,32 @@ template <bool Interactions, bool SingleOutput = false> struct Runner {
             (tree.threshold_types[node] == 1 ? category_in_threshold(tree.thresholds[node], x[feature]) :
                                              x[feature] <= tree.thresholds[node]);
         double *right = Workspace(depth);
-        Visit(node, tree.children_left[node], left, depth, basis, result);
-        Visit(node, tree.children_right[node], !left, depth, basis, right);
+        double *old_inverse = nullptr, *old_term = nullptr;
+        if constexpr (CacheFactors) {
+            double previous = probability[feature] < 0 ? 1 : probability[feature];
+            double *next = right + return_size;
+            // A feature that is already cold contributes zero on both edges.
+            // Descendants on other features can still contribute, so visit them.
+            if (previous == 0) {
+                for (unsigned i = 0; i < n; ++i) next[i] = basis[i] * ratios[tree.children_left[node]];
+                RunNode(tree.children_left[node], depth + 1, next, result);
+                for (unsigned i = 0; i < n; ++i) next[i] = basis[i] * ratios[tree.children_right[node]];
+                RunNode(tree.children_right[node], depth + 1, next, right);
+                for (size_t i = 0; i < return_size; ++i) result[i] += right[i];
+                return;
+            }
+            old_inverse = next + 2 * n;
+            old_term = next + 3 * n;
+            // Both children share this denominator. First occurrences need none.
+            if (previous != 1) {
+                for (unsigned i = 0; i < n; ++i) {
+                    old_inverse[i] = 1 / (1 + (previous - 1) * rule.nodes[i]);
+                    old_term[i] = (previous - 1) * old_inverse[i];
+                }
+            }
+        }
+        Visit(node, tree.children_left[node], left, depth, basis, result, old_inverse, old_term);
+        Visit(node, tree.children_right[node], !left, depth, basis, right, old_inverse, old_term);
         for (size_t i = 0; i < return_size; ++i) result[i] += right[i];
     }
 
@@ -260,11 +322,11 @@ inline void FinalizeInteractions(double *phi, unsigned features, unsigned output
     }
 }
 
-template <bool Interactions, bool SingleOutput = false>
+template <bool Interactions, bool SingleOutput = false, bool CacheFactors = true>
 inline void ExplainTree(const TreeEnsemble &tree, const Rule &rule,
                         const std::vector<double> &ratios, const std::vector<double> &mean,
                         const ExplanationDataset &data, double *phi, size_t stride) {
-    Runner<Interactions, SingleOutput> runner(tree, rule, ratios, nullptr, nullptr, data.M, nullptr);
+    Runner<Interactions, SingleOutput, CacheFactors> runner(tree, rule, ratios, nullptr, nullptr, data.M, nullptr);
     // Rewind restores the probability/path state. Reuse all workspace across rows,
     // and traverse once per row with shared path arithmetic for every output.
     for (unsigned row = 0; row < data.num_X; ++row) {
@@ -290,15 +352,21 @@ inline void Explain(const TreeEnsemble &trees, const ExplanationDataset &data, d
                 if (!tree.is_leaf(node)) used_features[tree.features[node]] = true;
             }
         }
-        Rule rule(RuleSize(tree, data.M));
+        unsigned points = RuleSize(tree, data.M);
+        // Caching overhead outweighs saved divisions for tiny scalar rules and
+        // one-point vector rules. Keep their compact uncached traversal.
+        bool cache_factors = points > 1 && (tree.num_outputs > 1 || points > 2);
+        Rule rule(points, cache_factors);
         auto ratios = CoverRatios(tree);
         std::vector<double> mean(tree.num_outputs, 0);
         RootMean(tree, ratios, 0, 1, mean);
         // Dispatch once per tree; quadrature point counts remain runtime-sized.
         if (tree.num_outputs == 1) {
-            ExplainTree<Interactions, true>(tree, rule, ratios, mean, data, phi, stride);
+            if (cache_factors) ExplainTree<Interactions, true, true>(tree, rule, ratios, mean, data, phi, stride);
+            else ExplainTree<Interactions, true, false>(tree, rule, ratios, mean, data, phi, stride);
         } else {
-            ExplainTree<Interactions, false>(tree, rule, ratios, mean, data, phi, stride);
+            if (cache_factors) ExplainTree<Interactions, false, true>(tree, rule, ratios, mean, data, phi, stride);
+            else ExplainTree<Interactions, false, false>(tree, rule, ratios, mean, data, phi, stride);
         }
     }
     std::vector<unsigned> active_features;
