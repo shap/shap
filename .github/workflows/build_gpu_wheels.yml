@@ -13,10 +13,6 @@ name: Build GPU wheels
 # github-hosted CPU runner. A real GPU is only needed to *execute*
 # backends/shap-cuda/tests/test_gpu_tree.py afterwards.
 #
-# NOTE: installing the CUDA toolkit inside the cibuildwheel manylinux
-# container (CIBW_BEFORE_ALL below) has not been validated end-to-end yet -
-# expect to iterate on that step once this workflow is actually run.
-#
 # Requires a trusted-publisher entry on PyPI/TestPyPI for the "shap-cuda"
 # project pointing at THIS workflow filename (build_gpu_wheels.yml).
 
@@ -166,12 +162,8 @@ jobs:
           # GPU test suite here - that happens in the gpu_test job below,
           # against this exact wheel.
           CIBW_TEST_SKIP: "*"
-          # NEEDS VALIDATION: installs the CUDA toolkit (nvcc only, no driver/
-          # GPU needed) inside the manylinux_2_28 (AlmaLinux 8-based) container.
-          CIBW_BEFORE_ALL: |
-            dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
-            dnf install -y cuda-toolkit-12-8
-
+          # Use pre-built manylinux CUDA container
+          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/manylinux_cuda/manylinux_2_28_x86_64_cuda12_8-slim:latest
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           path: ./wheelhouse/*.whl
@@ -257,7 +249,7 @@ jobs:
           cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
 
       - name: Run GPU tests
-        run: uv run --no-project pytest backends/shap-cuda/tests/test_gpu_tree.py -v --import-mode=append
+        run: uv run --no-project pytest backends/shap-cuda/tests -v --import-mode=append
 
   gpu_test_stop_runner:
     name: Stop GPU runner
