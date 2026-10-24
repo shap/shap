@@ -10,7 +10,6 @@ TIMEOUT = 30  # seconds
 
 allow_to_fail = [
     Path("api_examples/explainers/GPUTree.ipynb"),
-    Path("api_examples/plots/decision_plot.ipynb"),
     Path("benchmarks/others/Benchmark Debug Mode.ipynb"),
     Path("benchmarks/text/Abstractive Summarization Benchmark Demo.ipynb"),
     Path("benchmarks/text/Text Emotion Multiclass Classification Benchmark Demo.ipynb"),
