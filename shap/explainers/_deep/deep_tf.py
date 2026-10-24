@@ -87,14 +87,6 @@ class TFDeep(Explainer):
             have a value of False during predictions (and hence explanations).
 
         """
-        if version.parse(tf.__version__) < version.parse("1.4.0"):
-            warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
-
-        if version.parse(tf.__version__) >= version.parse("2.4.0"):
-            warnings.warn(
-                "Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion."
-            )
-
         # determine the model inputs and outputs
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
@@ -779,7 +771,7 @@ op_handlers["SquaredDifference"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda 
 op_handlers["Minimum"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.minimum(x, y))
 op_handlers["Maximum"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.maximum(x, y))
 
-# ops that allow up to two inputs to vary are are linear when only one input varies
+# ops that allow up to two inputs to vary are linear when only one input varies
 op_handlers["Mul"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: x * y)
 op_handlers["RealDiv"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: x / y)
 op_handlers["MatMul"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.matmul(x, y))
