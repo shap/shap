@@ -1,8 +1,9 @@
+from importlib.metadata import entry_points
+
 from ._additive import AdditiveExplainer
 from ._coalition import CoalitionExplainer
 from ._deep import DeepExplainer
 from ._exact import ExactExplainer
-from ._gpu_tree import GPUTreeExplainer
 from ._gradient import GradientExplainer
 from ._kernel import KernelExplainer
 from ._linear import LinearExplainer
@@ -11,11 +12,27 @@ from ._permutation import PermutationExplainer
 from ._sampling import SamplingExplainer
 from ._tree import TreeExplainer
 
+_TREE_BACKEND_PRIORITY = ["cuda", "rocm"]
+
+
+def _load_tree_backend(name: str):
+    backends = {ep.name: ep for ep in entry_points(group="shap.tree_backends")}
+    if not backends:
+        raise ImportError(f"{name} requires an accelerator backend to be installed, e.g. `pip install shap[cuda]`.")
+    chosen = next((b for b in _TREE_BACKEND_PRIORITY if b in backends), next(iter(backends)))
+    return backends[chosen].load()
+
+
+def __getattr__(name: str):
+    if name in ("GPUTreeExplainer", "GPUTree"):
+        return _load_tree_backend(name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 # Alternative legacy "short-form" aliases, which are kept here for backwards-compatibility
 Additive = AdditiveExplainer
 Deep = DeepExplainer
 Exact = ExactExplainer
-GPUTree = GPUTreeExplainer
 Gradient = GradientExplainer
 Kernel = KernelExplainer
 Linear = LinearExplainer
