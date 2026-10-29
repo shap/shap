@@ -189,10 +189,10 @@ Expected gradients combines ideas from [Integrated Gradients](https://arxiv.org/
 ```python
 from keras.applications.vgg16 import VGG16
 from keras.applications.vgg16 import preprocess_input
-import keras.backend as K
 import numpy as np
 import json
 import shap
+import tensorflow as tf
 
 # load pre-trained model and choose two images to explain
 model = VGG16(weights='imagenet', include_top=True)
@@ -207,8 +207,15 @@ with open(fname) as f:
 
 # explain how the input to the 7th layer of the model explains the top two classes
 def map2layer(x, layer):
-    feed_dict = dict(zip([model.layers[0].input], [preprocess_input(x.copy())]))
-    return K.get_session().run(model.layers[layer].input, feed_dict)
+    intermediate_model = tf.keras.Model(
+        inputs=model.input,
+        outputs=model.layers[layer].input,
+    )
+
+    return intermediate_model(
+        preprocess_input(x.copy()),
+        training=False,
+    ).numpy()
 e = shap.GradientExplainer(
     (model.layers[7].input, model.layers[-1].output),
     map2layer(X, 7),
