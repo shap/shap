@@ -36,6 +36,7 @@ class PermutationExplainer(Explainer):
         masker: Any,
         link: Any = links.identity,
         feature_names: list[str] | None = None,
+        output_names: list[str] | None = None,
         linearize_link: bool = True,
         seed: int | None = None,
         **call_args: Any,
@@ -68,7 +69,14 @@ class PermutationExplainer(Explainer):
         if masker is None:
             raise ValueError("masker cannot be None.")
 
-        super().__init__(model, masker, link=link, linearize_link=linearize_link, feature_names=feature_names)
+        super().__init__(
+            model,
+            masker,
+            link=link,
+            linearize_link=linearize_link,
+            feature_names=feature_names,
+            output_names=output_names,
+        )
 
         if not isinstance(self.model, Model):
             self.model = Model(self.model)
