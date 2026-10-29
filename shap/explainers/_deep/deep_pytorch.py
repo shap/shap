@@ -408,6 +408,16 @@ op_handler["Softplus"] = nonlinear_1d
 op_handler["Softmax"] = nonlinear_1d
 op_handler["SELU"] = nonlinear_1d
 op_handler["GELU"] = nonlinear_1d
+op_handler["SiLU"] = nonlinear_1d
+op_handler["Mish"] = nonlinear_1d
+op_handler["CELU"] = nonlinear_1d
+op_handler["PReLU"] = nonlinear_1d
+op_handler["ReLU6"] = nonlinear_1d
+op_handler["Hardtanh"] = nonlinear_1d
+op_handler["Hardsigmoid"] = nonlinear_1d
+op_handler["Hardswish"] = nonlinear_1d
+op_handler["LogSigmoid"] = nonlinear_1d
+op_handler["Softsign"] = nonlinear_1d
 
 op_handler["MaxPool1d"] = maxpool
 op_handler["MaxPool2d"] = maxpool
