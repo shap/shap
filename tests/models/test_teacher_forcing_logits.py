@@ -1,23 +1,31 @@
 """This file contains tests for the TeacherForcingLogits class."""
 
+import platform
+
 import numpy as np
 import pytest
 
 import shap
 
 
+def _from_pretrained_or_skip(loader, name, **kwargs):
+    try:
+        return loader.from_pretrained(name, **kwargs)
+    except Exception as exc:
+        pytest.skip(f"Could not load {name}: {exc}")
+
+
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 def test_falcon():
     pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
-    requests = pytest.importorskip("requests")
-    name = "fxmarty/really-tiny-falcon-testing"
-    try:
-        tokenizer = transformers.AutoTokenizer.from_pretrained(name)
-        model = transformers.AutoModelForCausalLM.from_pretrained(
-            name, trust_remote_code=True, load_in_8bit=False, low_cpu_mem_usage=False
-        )
-    except requests.exceptions.RequestException:
-        pytest.xfail(reason="Connection error to transformers model")
+    name = "hf-internal-testing/tiny-random-gpt2"
+
+    tokenizer = _from_pretrained_or_skip(transformers.AutoTokenizer, name)
+    model = _from_pretrained_or_skip(transformers.AutoModelForCausalLM, name)
 
     model = model.eval()
 
@@ -42,14 +50,9 @@ def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     """Tests if get_teacher_forced_logits() works for encoder-decoder models."""
     pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
-    requests = pytest.importorskip("requests")
-
     name = "hf-internal-testing/tiny-random-BartModel"
-    try:
-        tokenizer = transformers.AutoTokenizer.from_pretrained(name)
-        model = transformers.AutoModelForSeq2SeqLM.from_pretrained(name)
-    except requests.exceptions.RequestException:
-        pytest.xfail(reason="Connection error to transformers model")
+    tokenizer = _from_pretrained_or_skip(transformers.AutoTokenizer, name)
+    model = _from_pretrained_or_skip(transformers.AutoModelForSeq2SeqLM, name)
 
     wrapped_model = shap.models.TeacherForcing(model, tokenizer, device="cpu")
 
@@ -68,14 +71,9 @@ def test_method_get_teacher_forced_logits_for_decoder_model():
     """Tests if get_teacher_forced_logits() works for decoder only models."""
     pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
-    requests = pytest.importorskip("requests")
-
     name = "hf-internal-testing/tiny-random-gpt2"
-    try:
-        tokenizer = transformers.AutoTokenizer.from_pretrained(name)
-        model = transformers.AutoModelForCausalLM.from_pretrained(name)
-    except requests.exceptions.RequestException:
-        pytest.xfail(reason="Connection error to transformers model")
+    tokenizer = _from_pretrained_or_skip(transformers.AutoTokenizer, name)
+    model = _from_pretrained_or_skip(transformers.AutoModelForCausalLM, name)
 
     model.config.is_decoder = True
 
