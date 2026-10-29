@@ -235,6 +235,11 @@ def test_tf_multi_inputs_multi_outputs():
     predicted = model.predict([input1_data, input2_data])
     explainer = shap.GradientExplainer(model, [input1_data, input2_data])
     shap_values = explainer.shap_values([input1_data, input2_data])
+
+    assert len(shap_values) == 2
+    assert shap_values[0].shape == (32, 3, 3)
+    assert shap_values[1].shape == (32, 4, 3)
+
     np.testing.assert_allclose(shap_values[0].sum(1) + shap_values[1].sum(1) + predicted.mean(0), predicted, atol=1e-1)
 
 
@@ -470,3 +475,35 @@ def test_tf_input(random_seed, input_type):
     assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (
         d / np.abs(diff).sum()
     )
+
+    vals1 = explainer.shap_values(example, rseed=42)
+    vals2 = explainer.shap_values(example, rseed=42)
+    np.testing.assert_allclose(vals1, vals2, atol=1e-6)
+
+
+def test_invalid_input_shape_raises():
+    tf = pytest.importorskip("tensorflow")
+
+    model = tf.keras.Sequential([tf.keras.layers.Input(shape=(3,)), tf.keras.layers.Dense(1)])
+    model.compile(optimizer="adam", loss="mse")
+
+    background = np.zeros((10, 3))
+    explainer = shap.GradientExplainer(model, background)
+
+    with pytest.raises(AssertionError):
+        explainer.shap_values([np.ones((1, 3))])  # wrong type (list instead of array)
+
+
+def test_ranked_outputs():
+    tf = pytest.importorskip("tensorflow")
+
+    model = tf.keras.Sequential([tf.keras.layers.Input(shape=(4,)), tf.keras.layers.Dense(3)])
+    model.compile(optimizer="adam", loss="mse")
+
+    X = np.random.randn(20, 4)
+    explainer = shap.GradientExplainer(model, X[:10])
+
+    shap_vals, ranks = explainer.shap_values(X[:1], ranked_outputs=2)
+
+    assert ranks.shape[1] == 2
+    assert shap_vals.shape[0] == 1
