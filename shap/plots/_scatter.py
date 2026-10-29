@@ -609,16 +609,16 @@ def dependence_legacy(
         if feature_names is None:
             feature_names = features.columns
         features = features.to_numpy()
-    if _is_polars_dataframe(display_features):
-        if feature_names is None:
-            feature_names = display_features.columns
-        display_features = display_features.to_numpy()
 
     # convert from DataFrames if we got any
     if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         features = features.values
+    if _is_polars_dataframe(display_features):
+        if feature_names is None:
+            feature_names = display_features.columns
+        display_features = display_features.to_numpy()
     if isinstance(display_features, pd.DataFrame):
         if feature_names is None:
             feature_names = display_features.columns
