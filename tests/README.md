@@ -13,3 +13,31 @@ can be run manually on Google Colab.
 1. Click the badge above to open the notebook in Google Colab
 2. Switch to a GPU runtime: **Runtime > Change runtime type > T4 GPU**
 3. Run all cells
+
+---
+
+### Running GPU tests locally
+
+In addition to Google Colab, GPU TreeExplainer tests can also be run locally on a system with a CUDA-capable GPU.
+
+#### Requirements
+- CUDA toolkit installed
+- Compatible GPU drivers
+- SHAP built with GPU support (`_cext_gpu`)
+
+#### Steps
+
+1. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+
+2. Build SHAP with GPU support:
+
+```bash
+pip install .
+
+3. Run GPU tests:
+
+```bash
+pytest tests --gpu
