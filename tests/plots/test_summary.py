@@ -11,6 +11,36 @@ from numpy.testing import assert_array_equal
 import shap
 
 
+def test_summary_repeated_on_same_figure_no_duplicate_colorbars():
+    """GH #3920: second summary_plot on the same figure must not stack colorbars."""
+    np.random.seed(0)
+    fig = plt.figure()
+    X = np.random.randn(40, 5)
+    sv = np.random.randn(40, 5)
+    shap.summary_plot(sv, X, show=False)
+    n_after_first = len(fig.axes)
+    shap.summary_plot(sv, X, show=False)
+    n_after_second = len(fig.axes)
+    assert n_after_second == n_after_first, (
+        f"Expected {n_after_first} axes after redraw, got {n_after_second} (duplicate colorbars?)"
+    )
+    plt.close(fig)
+
+
+def test_summary_repeated_with_log_scale_no_duplicate_colorbars():
+    """GH #3920: log scale is preserved when redrawing after removing the colorbar."""
+    np.random.seed(0)
+    fig = plt.figure()
+    X = np.random.randn(40, 5)
+    sv = np.random.randn(40, 5)
+    shap.summary_plot(sv, X, show=False, use_log_scale=True)
+    n_after_first = len(fig.axes)
+    shap.summary_plot(sv, X, show=False, use_log_scale=True)
+    assert len(fig.axes) == n_after_first
+    assert plt.gca().get_xscale() == "symlog"
+    plt.close(fig)
+
+
 @pytest.mark.mpl_image_compare
 def test_summary():
     """Just make sure the summary_plot function doesn't crash."""
