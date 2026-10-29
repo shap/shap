@@ -46,6 +46,33 @@ def test_waterfall_legacy(explainer):
     return fig
 
 
+def test_waterfall_legacy_duplicate_yticks():
+    """Regression test for duplicate y-tick collapse in matplotlib 3.3+."""
+
+    expected_value = 0.5
+    shap_values = np.array([0.1, -0.2, 0.3, 0.05, -0.15])
+    features = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    feature_names = ["a", "b", "c", "d", "e"]
+
+    fig = plt.figure()
+
+    shap.plots._waterfall.waterfall_legacy(
+        expected_value,
+        shap_values,
+        features=features,
+        feature_names=feature_names,
+        show=False,
+    )
+
+    ax = plt.gca()
+    tick_labels = ax.get_yticklabels()
+
+    # Ensure both y-tick label layers are preserved
+    assert len(tick_labels) == 10
+
+    plt.close(fig)
+
+
 @pytest.mark.mpl_image_compare(tolerance=3)
 def test_waterfall_bounds(explainer):
     """Test the waterfall plot with upper and lower error bounds plotted."""
