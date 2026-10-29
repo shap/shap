@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-9.0.3, pluggy-1.6.0
+Matplotlib: 3.10.9
+Freetype: 2.6.1
+rootdir: /Users/dushyantacharya/.gemini/antigravity/scratch/shap
+configfile: pyproject.toml
+plugins: mpl-0.19.0, anyio-4.13.0
+collected 592 items / 1 deselected / 1 skipped / 591 selected
+
+tests/actions/test_action.py ...                                         [  0%]
+tests/actions/test_optimizer.py ....                                     [  1%]
+tests/benchmark/test_imports.py .                                        [  1%]
+tests/explainers/other/test_maple.py .                                   [  1%]
+tests/explainers/other/test_treegain.py ...                              [  2%]
+tests/explainers/other/test_ubjson.py ...                                [  2%]
+tests/explainers/test_coalition.py ..

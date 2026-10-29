@@ -1,0 +1,35 @@
+ruff (legacy alias)......................................................Failed
+- hook id: ruff
+- exit code: 1
+
+D418 Function decorated with `@overload` shouldn't contain a docstring
+ --> shap/_cutils.pyi:7:5
+  |
+6 | @overload
+7 | def compute_grey_code_row_values(
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+8 |     row_values: Annotated[NDArray[numpy.float64], dict(shape=(None,), device="cpu")],
+9 |     mask: Annotated[NDArray[numpy.bool_], dict(shape=(None,), device="cpu")],
+  |
+
+D418 Function decorated with `@overload` shouldn't contain a docstring
+  --> shap/_cutils.pyi:19:5
+   |
+18 | @overload
+19 | def compute_grey_code_row_values(
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+20 |     row_values: Annotated[NDArray[numpy.float64], dict(shape=(None, None), device="cpu")],
+21 |     mask: Annotated[NDArray[numpy.bool_], dict(shape=(None,), device="cpu")],
+   |
+
+Found 2 errors.
+
+ruff format..............................................................Passed
+check for added large files..............................................Passed
+check for merge conflicts................................................Passed
+check toml...............................................................Passed
+check yaml...............................................................Passed
+mixed line ending........................................................Passed
+trim trailing whitespace.................................................Passed
+fix end of files.........................................................Passed
+Check notebook cell order................................................Passed
