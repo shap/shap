@@ -88,7 +88,7 @@ class AdditiveForceArrayVisualizer extends React.Component {
 
     // Create our colors and color gradients
       //Verify custom color map
-    let plot_colors=undefined;
+    let plot_colors = colors.colors.RdBu;
     if (typeof this.props.plot_cmap === "string")
     {
       if (!(this.props.plot_cmap in colors.colors))
@@ -101,8 +101,8 @@ class AdditiveForceArrayVisualizer extends React.Component {
         plot_colors = colors.colors[this.props.plot_cmap]
       }
     }
-    else if (Array.isArray(this.props.plot_cmap)){
-      plot_colors = this.props.plot_cmap
+    else if (Array.isArray(this.props.plot_cmap) && this.props.plot_cmap.length > 0) {
+      plot_colors = this.props.plot_cmap;
     }
     this.colors = plot_colors.map(x => hsl(x));
     this.brighterColors = [1.45, 1.6].map((v, i) => this.colors[i].brighter(v));
