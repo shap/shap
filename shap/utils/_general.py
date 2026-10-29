@@ -43,10 +43,7 @@ def shapley_coefficients(n: int) -> npt.NDArray[Any]:
 
 
 def _is_polars_dataframe(x: object) -> bool:
-    """Return True if ``x`` is a polars DataFrame, without importing polars.
-
-    If polars has not been imported by the user, ``x`` cannot be a polars object.
-    """
+    """Return True if ``x`` is a polars DataFrame, without importing polars."""
     pl = sys.modules.get("polars")
     return pl is not None and isinstance(x, pl.DataFrame)
 

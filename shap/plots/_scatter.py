@@ -554,13 +554,13 @@ def dependence_legacy(
     shap_values : numpy.array
         Matrix of SHAP values (# samples x # features).
 
-    features : numpy.array or pandas.DataFrame
+    features : numpy.array, pandas.DataFrame or polars.DataFrame
         Matrix of feature values (# samples x # features).
 
     feature_names : list
         Names of the features (length # features).
 
-    display_features : numpy.array or pandas.DataFrame
+    display_features : numpy.array, pandas.DataFrame or polars.DataFrame
         Matrix of feature values for visual display (such as strings instead of coded values).
 
     interaction_index : "auto", None, int, or string
@@ -605,7 +605,6 @@ def dependence_legacy(
             "passing shap_values[0] instead to explain the first output class of a multi-output model."
         )
 
-    # convert polars DataFrames to numpy arrays
     if _is_polars_dataframe(features):
         if feature_names is None:
             feature_names = features.columns

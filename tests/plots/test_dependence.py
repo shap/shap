@@ -58,7 +58,7 @@ def test_dependence_polars_dataframe():
 
 
 def test_dependence_polars_string_feature():
-    """A polars DataFrame with a string column works like the pandas equivalent."""
+    """A polars DataFrame with a string column is labelled and categorised like a pandas one."""
     pl = pytest.importorskip("polars")
     X = pl.DataFrame(
         {
@@ -66,8 +66,12 @@ def test_dependence_polars_string_feature():
             "Age": [10, 15, 28, 3, 84, 56],
         }
     )
-    shap_values = np.random.randn(*X.shape)
+    rng = np.random.default_rng(0)
+    shap_values = rng.normal(size=X.shape)
 
     shap.dependence_plot("Sex", shap_values, X, interaction_index=None, show=False)
 
+    ax = plt.gca()
+    assert ax.get_xlabel() == "Sex"
+    assert {t.get_text() for t in ax.get_xticklabels() if t.get_text()} == {"Male", "Female"}
     plt.close("all")
