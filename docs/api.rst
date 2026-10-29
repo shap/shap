@@ -20,7 +20,7 @@ Explanation
 
 .. _explainers_api:
 
-explainers
+Explainers
 ----------
 *See also:* :ref:`Explainer API Examples <explainers_examples>`.
 
@@ -49,7 +49,7 @@ explainers
 
 .. _plots_api:
 
-plots
+Plots
 -----
 *See also:* :ref:`Plot API Examples <plots_examples>`.
 
@@ -76,7 +76,7 @@ plots
 
 .. _maskers_api:
 
-maskers
+Maskers
 -------
 *See also:* :ref:`Masker API Examples <maskers_examples>`.
 
@@ -97,7 +97,7 @@ maskers
 
 .. _models_api:
 
-models
+Models
 ------
 .. autosummary::
     :toctree: generated/
@@ -111,7 +111,7 @@ models
 
 .. _utils_api:
 
-utils
+Utils
 -----
 .. autosummary::
     :toctree: generated/
@@ -134,7 +134,7 @@ utils
 
 .. _datasets_api:
 
-datasets
+Datasets
 --------
 .. autosummary::
     :toctree: generated/
