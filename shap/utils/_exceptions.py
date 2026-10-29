@@ -58,3 +58,9 @@ class InvalidStyleOptionError(ValueError):
     """Raised when an invalid style option is specified."""
 
     pass
+
+
+class TypeError(ValueError):
+    """Used when a parameter has an unexpected type."""
+
+    pass
