@@ -17,6 +17,7 @@ from sklearn.utils import check_array
 
 import shap
 from shap.explainers._explainer import Explanation
+from shap.explainers._pyspark_utils import create_resource_safe_spark_session
 from shap.explainers._tree import SingleTree
 from shap.utils._exceptions import InvalidModelError
 
@@ -228,9 +229,7 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
     try:
-        spark = pyspark.sql.SparkSession.builder.config(
-            conf=pyspark.SparkConf().set("spark.master", "local[*]")
-        ).getOrCreate()
+        spark = create_resource_safe_spark_session(pyspark)
     except Exception:
         pytest.skip("Could not create pyspark context")
 
@@ -284,9 +283,7 @@ def test_pyspark_regression_decision_tree(configure_pyspark_python):
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
     try:
-        spark = pyspark.sql.SparkSession.builder.config(
-            conf=pyspark.SparkConf().set("spark.master", "local[*]")
-        ).getOrCreate()
+        spark = create_resource_safe_spark_session(pyspark)
     except Exception:
         pytest.skip("Could not create pyspark context")
 
