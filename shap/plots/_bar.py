@@ -28,6 +28,7 @@ def bar(
     show_data="auto",
     ax=None,
     show=True,
+    vertical=False,
 ):
     """Create a bar plot of a set of SHAP values.
 
@@ -63,6 +64,9 @@ def bar(
         Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
+    vertical : bool
+        If ``True``, draw vertical bars with features on the x-axis instead of
+        the default horizontal bars. Default is ``False``.
 
     Returns
     -------
@@ -245,8 +249,27 @@ def bar(
         # Only modify the figure size if ax was not passed in
         # compute our figure size based on how many features we are showing
         fig = plt.gcf()
-        row_height = 0.5
-        fig.set_size_inches(8, num_features * row_height * np.sqrt(len(values)) + 1.5)
+        if vertical:
+            fig.set_size_inches(max(6, num_features * 0.8 * np.sqrt(len(values)) + 1.5), 5)
+        else:
+            row_height = 0.5
+            fig.set_size_inches(8, num_features * row_height * np.sqrt(len(values)) + 1.5)
+
+    if vertical:
+        _bar_vertical(
+            ax=ax,
+            values=values,
+            feature_inds=feature_inds,
+            feature_names=feature_names,
+            feature_order=feature_order,
+            num_features=num_features,
+            cohort_labels=cohort_labels,
+            cohort_sizes=cohort_sizes,
+            xlabel=xlabel,
+            style=style,
+            show=show,
+        )
+        return ax if not show else None
 
     # if negative values are present then we draw a vertical line to mark 0, otherwise the axis does this for us...
     negative_values_present = np.sum(values[:, feature_order[:num_features]] < 0) > 0
@@ -392,6 +415,104 @@ def bar(
         plt.show()
     else:
         return ax
+
+
+def _bar_vertical(
+    ax,
+    values,
+    feature_inds,
+    feature_names,
+    feature_order,
+    num_features,
+    cohort_labels,
+    cohort_sizes,
+    xlabel,
+    style,
+    show,
+):
+    """Draw vertical bars with features on the x-axis."""
+    negative_values_present = np.sum(values[:, feature_order[:num_features]] < 0) > 0
+    if negative_values_present:
+        ax.axhline(0, color="#000000", linestyle="-", linewidth=1, zorder=1)
+
+    patterns = (None, "\\\\", "++", "xx", "////", "*", "o", "O", ".", "-")
+    total_width = 0.7
+    bar_width = total_width / len(values)
+    x_pos = np.arange(len(feature_inds))
+
+    for i in range(len(values)):
+        xpos_offset = (i - len(values) / 2) * bar_width + bar_width / 2
+        ax.bar(
+            x_pos + xpos_offset,
+            values[i, feature_inds],
+            bar_width,
+            align="center",
+            color=[
+                style.primary_color_negative if values[i, feature_inds[j]] <= 0 else style.primary_color_positive
+                for j in range(len(x_pos))
+            ],
+            hatch=patterns[i],
+            edgecolor=(1, 1, 1, 0.8),
+            label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]",
+        )
+
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels([feature_names[i] for i in feature_inds], rotation=45, ha="right", fontsize=11)
+
+    ylen = ax.get_ylim()[1] - ax.get_ylim()[0]
+    bbox = ax.get_window_extent().transformed(ax.figure.dpi_scale_trans.inverted())
+    bbox_to_yscale = ylen / bbox.height
+
+    for i in range(len(values)):
+        xpos_offset = (i - len(values) / 2) * bar_width + bar_width / 2
+        for j in range(len(x_pos)):
+            ind = feature_order[j]
+            if values[i, ind] < 0:
+                ax.text(
+                    x_pos[j] + xpos_offset,
+                    values[i, ind] - (5 / 72) * bbox_to_yscale,
+                    format_value(values[i, ind], "%+0.02f"),
+                    horizontalalignment="center",
+                    verticalalignment="top",
+                    color=style.primary_color_negative,
+                    fontsize=12,
+                )
+            else:
+                ax.text(
+                    x_pos[j] + xpos_offset,
+                    values[i, ind] + (5 / 72) * bbox_to_yscale,
+                    format_value(values[i, ind], "%+0.02f"),
+                    horizontalalignment="center",
+                    verticalalignment="bottom",
+                    color=style.primary_color_positive,
+                    fontsize=12,
+                )
+
+    for i in range(num_features):
+        ax.axvline(i + 0.5, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
+
+    ax.xaxis.set_ticks_position("bottom")
+    ax.yaxis.set_ticks_position("none")
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    if negative_values_present:
+        ax.spines["bottom"].set_visible(False)
+    ax.tick_params("y", labelsize=11)
+
+    ymin, ymax = ax.get_ylim()
+    y_buffer = (ymax - ymin) * 0.05
+    if negative_values_present:
+        ax.set_ylim(ymin - y_buffer, ymax + y_buffer)
+    else:
+        ax.set_ylim(ymin, ymax + y_buffer)
+
+    ax.set_ylabel(xlabel, fontsize=13)
+
+    if len(values) > 1:
+        ax.legend(fontsize=12)
+
+    if show:
+        plt.show()
 
 
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
