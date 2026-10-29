@@ -1,5 +1,6 @@
 """This file contains tests for the `shap.datasets` module."""
 
+import numpy as np
 import pytest
 
 import shap
@@ -146,3 +147,32 @@ def test_rank():
     assert y2.shape == (768,)
     assert q1.shape == (201,)
     assert q2.shape == (50,)
+
+
+def test_rng_preservation():
+    """Test that corrgroups60 and independentlinear60 do not corrupt the global numpy random state."""
+    # Set a specific seed and capture state
+    np.random.seed(42)
+    state_before = np.random.get_state()
+
+    # Call corrgroups60
+    shap.datasets.corrgroups60(n_points=100)
+    state_after_corrgroups = np.random.get_state()
+
+    # Assert state is identical
+    for a, b in zip(state_before, state_after_corrgroups):
+        if isinstance(a, np.ndarray):
+            assert np.array_equal(a, b)
+        else:
+            assert a == b
+
+    # Call independentlinear60
+    shap.datasets.independentlinear60(n_points=100)
+    state_after_independent = np.random.get_state()
+
+    # Assert state is identical
+    for a, b in zip(state_before, state_after_independent):
+        if isinstance(a, np.ndarray):
+            assert np.array_equal(a, b)
+        else:
+            assert a == b
