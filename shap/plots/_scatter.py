@@ -13,7 +13,7 @@ from matplotlib.markers import MarkerStyle
 from .._explanation import Explanation
 from ..utils import approximate_interactions, convert_name
 from ..utils._exceptions import DimensionError
-from ..utils._general import encode_array_if_needed
+from ..utils._general import _is_polars_dataframe, encode_array_if_needed
 from . import colors
 from ._labels import labels
 from ._utils import AxisLimitSpec, parse_axis_limit
@@ -604,6 +604,16 @@ def dependence_legacy(
             "The passed shap_values are a list not an array! If you have a list of explanations try "
             "passing shap_values[0] instead to explain the first output class of a multi-output model."
         )
+
+    # convert polars DataFrames to numpy arrays
+    if _is_polars_dataframe(features):
+        if feature_names is None:
+            feature_names = features.columns
+        features = features.to_numpy()
+    if _is_polars_dataframe(display_features):
+        if feature_names is None:
+            feature_names = display_features.columns
+        display_features = display_features.to_numpy()
 
     # convert from DataFrames if we got any
     if isinstance(features, pd.DataFrame):
