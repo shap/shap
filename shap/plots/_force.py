@@ -42,6 +42,7 @@ def force(
     ordering_keys_time_format=None,
     text_rotation=0,
     contribution_threshold=0.05,
+    ax=None,
 ):
     """Visualize the given SHAP values with an additive force layout.
 
@@ -93,6 +94,11 @@ def force(
         Controls the feature names/values that are displayed on force plot.
         Only features that the magnitude of their shap value is larger than min_perc * (sum of all abs shap values)
         will be displayed.
+
+    ax : matplotlib.axes.Axes or None
+        Axes object to plot on. Only used when ``matplotlib=True``. When *None*
+        (default), a new figure and axes are created. When supplied, ``figsize``
+        is ignored and the caller is responsible for figure sizing.
 
     """
     # support passing an explanation object
@@ -201,6 +207,7 @@ def force(
             show=show,
             text_rotation=text_rotation,
             min_perc=contribution_threshold,
+            ax=ax,
         )
 
     else:
@@ -391,6 +398,7 @@ def visualize(
     ordering_keys_time_format=None,
     text_rotation=0,
     min_perc=0.05,
+    ax=None,
 ):
     """Main interface for switching between matplotlib / javascript force plots.
 
@@ -409,6 +417,7 @@ def visualize(
                 show=show,
                 text_rotation=text_rotation,
                 min_perc=min_perc,
+                ax=ax,
             )
         else:
             return AdditiveForceVisualizer(e, plot_cmap=plot_cmap)
@@ -515,10 +524,11 @@ class AdditiveForceVisualizer(BaseVisualizer):
   );
 </script>"""
 
-    def matplotlib(self, figsize, show, text_rotation, min_perc=0.05):
-        fig = draw_additive_plot(self.data, figsize=figsize, show=show, text_rotation=text_rotation, min_perc=min_perc)
-
-        return fig
+    def matplotlib(self, figsize, show, text_rotation, min_perc=0.05, ax=None):
+        ax = draw_additive_plot(
+            self.data, figsize=figsize, show=show, text_rotation=text_rotation, min_perc=min_perc, ax=ax
+        )
+        return ax
 
     def _repr_html_(self):
         return self.html()
