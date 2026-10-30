@@ -24,8 +24,10 @@ class Tabular(Masker):
 
         Parameters
         ----------
-        data : np.array, pandas.DataFrame
-            The background dataset that is used for masking.
+        data : np.array, pandas.DataFrame, or tuple of (mean, covariance)
+            The background dataset that is used for masking. Can also be a
+            tuple of ``(mean, covariance)`` where mean is a 1-D array of
+            feature means and covariance is a 2-D array of feature covariances.
 
         max_samples : int
             The maximum number of samples to use from the passed background data. If data has more
@@ -46,12 +48,18 @@ class Tabular(Masker):
 
         """
         self.output_dataframe = False
+        self.mean: np.ndarray | None = None
+        self.cov: np.ndarray | None = None
         if isinstance(data, pd.DataFrame):
             self.feature_names = data.columns
             data = data.values
             self.output_dataframe = True
 
-        if isinstance(data, dict) and "mean" in data:
+        if isinstance(data, tuple) and len(data) == 2:
+            self.mean = data[0].values if isinstance(data[0], pd.DataFrame) else np.asarray(data[0])
+            self.cov = data[1].values if isinstance(data[1], pd.DataFrame) else np.asarray(data[1])
+            data = np.expand_dims(self.mean, 0)
+        elif isinstance(data, dict) and "mean" in data:
             self.mean = data.get("mean", None)
             self.cov = data.get("cov", None)
             data = np.expand_dims(data["mean"], 0)
@@ -189,7 +197,7 @@ class Tabular(Masker):
             if self.output_dataframe:
                 s.save("data", pd.DataFrame(self.data, columns=self.feature_names))
             elif getattr(self, "mean", None) is not None:
-                s.save("data", (self.mean, self.cov))
+                s.save("data", {"mean": self.mean, "cov": self.cov})
             else:
                 s.save("data", self.data)
 
@@ -285,7 +293,11 @@ class Impute(Masker):  # we should inherit from Tabular once we add support for 
             The background dataset that is used for masking.
 
         """
-        if isinstance(data, dict) and "mean" in data:
+        if isinstance(data, tuple) and len(data) == 2:
+            self.mean = data[0].values if isinstance(data[0], pd.DataFrame) else np.asarray(data[0])
+            self.cov = data[1].values if isinstance(data[1], pd.DataFrame) else np.asarray(data[1])
+            data = np.expand_dims(self.mean, 0)
+        elif isinstance(data, dict) and "mean" in data:
             self.mean = data.get("mean", None)
             self.cov = data.get("cov", None)
             data = np.expand_dims(data["mean"], 0)
