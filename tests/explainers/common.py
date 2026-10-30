@@ -66,7 +66,7 @@ def test_interactions_additivity(explainer_type, model, masker, data, **kwargs):
     explainer = explainer_type(model, masker, **kwargs)
     shap_values = explainer(data, interactions=True)
 
-    assert np.max(np.abs(shap_values.base_values + shap_values.values.sum((1, 2)) - model(data)) < 1e6)
+    assert np.max(np.abs(shap_values.base_values + shap_values.values.sum((1, 2)) - model(data))) < 1e-6
     return shap_values
 
 
