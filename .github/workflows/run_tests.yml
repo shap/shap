@@ -18,6 +18,8 @@ on:
       - "scripts/run_pyodide_tests.py"
       - "pyproject.toml"
       - "CMakeLists.txt"
+      - "scripts/spec0_constraints.py"
+      - ".github/actions/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -285,24 +287,28 @@ jobs:
           path: mpl-results/
           if-no-files-found: ignore
 
-  test_oldest_supported_numpy:
-    # Package is built with numpy 2.X
-    # This job is recommended by https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-0-specific-advice
-    # The "oldest supported numpy" is determined by SPEC 0:
-    # https://scientific-python.org/specs/spec-0000/
-    name: run tests (oldest supported numpy)
+  test_spec0_minimum:
+    name: run tests (SPEC 0 minimum versions)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up Python 3.12
+      - name: Set up Python 3.13
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          python-version: 3.12
+          python-version: "3.13"
       - name: Install uv
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
-      - name: Install dependencies
-        run: |
-          uv pip install --system numpy==2.0 . --group test-core --group plots
+      - name: Generate SPEC 0 constraints
+        id: spec0
+        uses: ./.github/actions/spec0-constraints
+        with:
+          packages: numpy scipy pandas scikit-learn matplotlib
+          output-file: constraints-spec0.txt
+      - name: Install dependencies at SPEC 0 floors
+        run: >
+          uv pip install --system
+          -c constraints-spec0.txt
+          . --group test-core --group plots
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
 

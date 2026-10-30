@@ -1,0 +1,75 @@
+name: "Generate SPEC 0 constraints"
+description: >
+  Reads the Scientific Python SPEC 0 schedule and writes a pip constraints
+  file with exact minimum-version pins for a list of packages.  Exposes the
+  generated file path and a JSON package-to-version mapping as step outputs.
+author: "SHAP contributors"
+
+inputs:
+  packages:
+    description: >
+      Space-separated list of packages to pin.
+      Defaults to the five SHAP core scientific dependencies.
+    required: false
+    default: "numpy scipy pandas scikit-learn matplotlib"
+
+  output-file:
+    description: >
+      Workspace-relative path to write the generated constraints file.
+    required: false
+    default: "constraints-spec0.txt"
+
+  date:
+    description: >
+      Reference date in YYYY-MM-DD format.  Defaults to today.
+      Pass a fixed date for reproducible test runs.
+    required: false
+    default: ""
+
+  schedule-path:
+    description: >
+      Workspace-relative path to a local schedule.json.  When supplied the
+      action skips the network download.  Useful for offline or hermetic CI.
+    required: false
+    default: ""
+
+outputs:
+  constraints-file:
+    description: >
+      Workspace-relative path to the generated pip constraints file.
+    value: ${{ steps.generate.outputs.constraints-file }}
+
+  versions-json:
+    description: >
+      JSON object mapping each requested package name to its pinned version,
+      e.g. {"matplotlib":"3.11.0","numpy":"2.3.0","pandas":"2.3.0",
+      "scikit-learn":"1.7.0","scipy":"1.15.0"}.
+    value: ${{ steps.generate.outputs.versions-json }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Generate SPEC 0 constraints
+      id: generate
+      shell: bash
+      env:
+        _PACKAGES: ${{ inputs.packages }}
+        _OUTPUT_FILE: ${{ inputs.output-file }}
+        _DATE: ${{ inputs.date }}
+        _SCHEDULE: ${{ inputs.schedule-path }}
+        _ACTION_PATH: ${{ github.action_path }}
+        _WORKSPACE: ${{ github.workspace }}
+      run: |
+        set -euo pipefail
+        ARGS=(
+          --packages $_PACKAGES
+          --output "$_WORKSPACE/$_OUTPUT_FILE"
+        )
+        if [ -n "$_DATE" ]; then
+          ARGS+=(--date "$_DATE")
+        fi
+        if [ -n "$_SCHEDULE" ]; then
+          ARGS+=(--schedule "$_WORKSPACE/$_SCHEDULE")
+        fi
+        python "$_ACTION_PATH/../../../scripts/spec0_constraints.py" "${ARGS[@]}"
+        echo "constraints-file=$_OUTPUT_FILE" >> "$GITHUB_OUTPUT"
