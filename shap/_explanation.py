@@ -122,9 +122,12 @@ class Explanation(metaclass=MetaExplanation):
         - single-output model: ``(n_samples, n_features)``
         - multi-output model: ``(n_samples, n_features, n_outputs)``
         - interaction values from ``explainer(X, interactions=True)``,
-          single-output: ``(n_samples, n_features, n_features)``
+          single-output: ``(n_samples, n_features, n_features)``; sum
+          both feature axes to recover the ordinary SHAP values
         - interaction values from ``explainer(X, interactions=True)``,
           multi-output: ``(n_samples, n_features, n_features, n_outputs)``
+          for explainers that preserve both axes; ``Explainer.__call__``
+          may flatten the trailing axes
 
         If another ``Explanation`` is passed, its ``values``, ``base_values``
         and ``data`` are copied onto this instance.
@@ -135,12 +138,13 @@ class Explanation(metaclass=MetaExplanation):
         ``(n_samples,)`` for single-output models, ``(n_samples, n_outputs)``
         for multi-output models.
     data : numpy.ndarray, pandas.DataFrame, list, or None
-        The input data that was explained — the same object as (or a
-        view of) the ``X`` passed to the explainer's ``__call__``.
-        Copying is **not** guaranteed; ``TreeExplainer`` stores a direct
-        reference, so mutating ``exp.data`` may also mutate the original
-        ``X``. Same number of rows as ``values`` and used by plot
-        functions to show feature values next to their attributions.
+        The input data that was explained. May share storage with the
+        original ``X`` (``TreeExplainer`` stores a direct reference), or
+        may be a transformed copy (the shared explainer applies
+        ``masker.data_transform``; ``TreeExplainer`` converts DataFrames
+        to arrays). Mutating ``exp.data`` may therefore also mutate the
+        original ``X``. Same number of rows as ``values`` and used by
+        plot functions to show feature values next to their attributions.
     display_data : numpy.ndarray, pandas.DataFrame, or None
         A human-readable alternative to ``data`` used by plots. For
         example, use the raw (un-encoded) strings of a categorical feature
@@ -158,9 +162,9 @@ class Explanation(metaclass=MetaExplanation):
         classifier. Aligned with the output axis of ``values``.
     output_indexes : numpy.ndarray or None
         Index of each explained output in the original model's output
-        vector, or ``None``. May be set by ``PartitionExplainer`` when
-        only a subset of outputs is explained. Not populated by
-        ``DeepExplainer`` or the shared ``Explainer.__call__``.
+        vector, or ``None``. Not populated by ``DeepExplainer``,
+        ``PartitionExplainer``, or the shared ``Explainer.__call__``.
+        Always check for ``None`` before use.
     lower_bounds, upper_bounds : numpy.ndarray or None
         Confidence bounds on ``values``, shape matching ``values``. Used
         by plots that support uncertainty display.
@@ -354,8 +358,10 @@ class Explanation(metaclass=MetaExplanation):
     def data(self):
         """The input data the explanation was computed on.
 
-        The same object as (or a view of) the ``X`` passed to the explainer.
-        Copying is **not** guaranteed; mutating ``exp.data`` may also
+        The input data the explanation was computed on. May share storage
+        with the original ``X`` (``TreeExplainer`` stores a direct
+        reference), or may be a transformed copy (masker transforms or
+        DataFrame-to-array conversion). Mutating ``exp.data`` may also
         mutate the original input. Plot functions read this to display
         feature values alongside their attributions.
         """
@@ -406,11 +412,9 @@ class Explanation(metaclass=MetaExplanation):
     def output_indexes(self):
         """Index of each explained output in the original model's output vector, or ``None``.
 
-        May be set by ``PartitionExplainer`` when only a subset of outputs
-        is explained. ``DeepExplainer`` does not support ``ranked_outputs``
-        in ``__call__`` and the shared ``Explainer.__call__`` does not
-        propagate output indexes to this attribute. Always check for
-        ``None`` before use.
+        Not populated by ``DeepExplainer``, ``PartitionExplainer``, or
+        the shared ``Explainer.__call__``. Always check for ``None``
+        before use.
         """
         return self._s.output_indexes
 
@@ -442,9 +446,8 @@ class Explanation(metaclass=MetaExplanation):
         """Per-value standard deviation of explainer contributions,
         same shape as ``values``, or ``None``.
 
-        Set by ``PermutationExplainer`` to the std dev across permutation
-        runs — *not* the standard error of the mean. Divide by
-        ``sqrt(n_permutations)`` to obtain the standard error.
+        Set by ``PermutationExplainer`` to the pooled standard deviation
+        across permutation runs.
         """
         return self._s.error_std
 
