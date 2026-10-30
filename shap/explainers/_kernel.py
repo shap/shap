@@ -22,6 +22,7 @@ from .._cutils import compute_exp_val
 from .._explanation import Explanation
 from ..utils import safe_isinstance
 from ..utils._exceptions import DimensionError
+from ..utils._general import index_to_numpy
 from ..utils._legacy import (
     DenseData,
     SparseData,
@@ -311,7 +312,7 @@ class KernelExplainer(Explainer):
             X = X.values
         elif isinstance(X, pd.DataFrame):
             if self.keep_index:
-                index_value = X.index.values
+                index_value = index_to_numpy(X.index)
                 index_name = X.index.name
                 column_name = list(X.columns)
             X = X.values

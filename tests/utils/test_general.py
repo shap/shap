@@ -1,3 +1,6 @@
+import warnings
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -122,3 +125,23 @@ def test_format_value_string_input():
     # Test with string that starts with minus
     result = shap.utils._general.format_value("-123", "%0.03f")
     assert result == "\u2212" + "123"
+
+
+def test_index_to_numpy():
+    """index_to_numpy returns the same values as the deprecated Index.values without warning."""
+    # GH #3066
+    naive_dates = pd.date_range("2018-01-01", periods=3, freq="D")
+    tz_aware_dates = pd.date_range("2018-01-01", periods=3, freq="D", tz="UTC")
+    expected_dates = [datetime(2018, 1, 1), datetime(2018, 1, 2), datetime(2018, 1, 3)]
+    cases = [
+        (pd.RangeIndex(3), [0, 1, 2]),
+        (pd.Index(["a", "b", "c"]), ["a", "b", "c"]),
+        (naive_dates, expected_dates),
+        (tz_aware_dates, expected_dates),
+    ]
+    for index, expected in cases:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result = shap.utils.index_to_numpy(index)
+        assert len(caught) == 0, [str(w.message) for w in caught]
+        assert result.tolist() == expected
