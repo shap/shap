@@ -270,7 +270,7 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
             diffs = expected_values + shap_values.sum(1) - predictions.class1
             assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class0!"
         else:
-            normalizedPredictions = (predictions.T / predictions.sum(1)).T
+            normalizedPredictions = (predictions.T / predictions.sum(axis=1)).T
             diffs = expected_values[0] + shap_values[:, :, 0].sum(1) - normalizedPredictions.class0
             assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class0!" + model
             diffs = expected_values[1] + shap_values[:, :, 1].sum(1) - normalizedPredictions.class1
