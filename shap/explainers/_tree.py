@@ -481,7 +481,7 @@ class TreeExplainer(Explainer):
 
     def _validate_inputs(
         self,
-        X: npt.NDArray[Any] | pd.Series | pd.DataFrame,
+        X: npt.NDArray[Any] | pd.Series | pd.DataFrame | scipy.sparse.sparray | scipy.sparse.spmatrix,
         y: npt.NDArray[Any] | pd.Series | None,
         tree_limit: int | None,
         check_additivity: bool,
@@ -502,6 +502,10 @@ class TreeExplainer(Explainer):
         # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
         if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.to_numpy(dtype=self.model.input_dtype, na_value=np.nan)
+
+        if scipy.sparse.issparse(X) and hasattr(X, "toarray"):
+            X = X.toarray()
+
         flat_output = False
         if len(X.shape) == 1:
             flat_output = True
@@ -509,6 +513,8 @@ class TreeExplainer(Explainer):
         if X.dtype != self.model.input_dtype:
             X = X.astype(self.model.input_dtype)
         X_missing = np.isnan(X, dtype=bool)
+        if y is not None:
+            y = np.asarray(y)
         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
@@ -1821,6 +1827,8 @@ class TreeEnsemble:
         if X.dtype.type != self.input_dtype:
             X = X.astype(self.input_dtype)
         X_missing = np.isnan(X, dtype=bool)
+        if y is not None:
+            y = np.asarray(y)
         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
@@ -2225,6 +2233,10 @@ class SingleTree:
             self.node_sample_weight = node_sample_weight
         else:
             raise TypeError("Unknown input to SingleTree constructor: " + str(tree))
+
+        # These buffers are updated in place by the native tree bindings.
+        self.values = np.require(self.values, dtype=np.float64, requirements=["C", "W"])
+        self.node_sample_weight = np.require(self.node_sample_weight, dtype=np.float64, requirements=["C", "W"])
 
         # Re-compute the number of samples that pass through each node if we are given data
         if data is not None and data_missing is not None:
