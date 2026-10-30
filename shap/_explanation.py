@@ -108,7 +108,11 @@ class Explanation(metaclass=MetaExplanation):
         f(x) \approx \text{base\_values} + \sum_i \text{values}_i
 
     so together ``base_values`` and ``values`` explain the model output
-    ``f(x)`` exactly (up to explainer approximation error).
+    ``f(x)`` exactly (up to explainer approximation error). Here ``f(x)``
+    is in the *explainer's output space*, which may differ from the raw
+    model output when a link function is used (e.g. ``shap.links.logit``
+    transforms to log-odds) or when ``TreeExplainer`` is configured with
+    a non-default ``model_output``.
 
     Parameters
     ----------
@@ -117,6 +121,13 @@ class Explanation(metaclass=MetaExplanation):
 
         - single-output model: ``(n_samples, n_features)``
         - multi-output model: ``(n_samples, n_features, n_outputs)``
+        - interaction values from ``explainer(X, interactions=True)``,
+          single-output: ``(n_samples, n_features, n_features)``; sum
+          both feature axes to recover the ordinary SHAP values
+        - interaction values from ``explainer(X, interactions=True)``,
+          multi-output: ``(n_samples, n_features, n_features, n_outputs)``
+          for explainers that preserve both axes; ``Explainer.__call__``
+          may flatten the trailing axes
 
         If another ``Explanation`` is passed, its ``values``, ``base_values``
         and ``data`` are copied onto this instance.
@@ -127,10 +138,13 @@ class Explanation(metaclass=MetaExplanation):
         ``(n_samples,)`` for single-output models, ``(n_samples, n_outputs)``
         for multi-output models.
     data : numpy.ndarray, pandas.DataFrame, list, or None
-        The input data that was explained — typically a copy of the
-        ``X`` passed to the explainer's ``__call__``. Same number of rows as
-        ``values`` and used by plot functions to show feature values next
-        to their attributions.
+        The input data that was explained. May share storage with the
+        original ``X`` (``TreeExplainer`` stores a direct reference), or
+        may be a transformed copy (the shared explainer applies
+        ``masker.data_transform``; ``TreeExplainer`` converts DataFrames
+        to arrays). Mutating ``exp.data`` may therefore also mutate the
+        original ``X``. Same number of rows as ``values`` and used by
+        plot functions to show feature values next to their attributions.
     display_data : numpy.ndarray, pandas.DataFrame, or None
         A human-readable alternative to ``data`` used by plots. For
         example, use the raw (un-encoded) strings of a categorical feature
@@ -147,18 +161,23 @@ class Explanation(metaclass=MetaExplanation):
         Names of the model outputs — e.g. the class names of a multi-class
         classifier. Aligned with the output axis of ``values``.
     output_indexes : numpy.ndarray or None
-        For explainers that only compute a subset of outputs (e.g. the
-        top-k ranked outputs), the index of each explained output in the
-        original model's output vector.
+        Index of each explained output in the original model's output
+        vector, or ``None``. Not populated by ``DeepExplainer``,
+        ``PartitionExplainer``, or the shared ``Explainer.__call__``.
+        Always check for ``None`` before use.
     lower_bounds, upper_bounds : numpy.ndarray or None
         Confidence bounds on ``values``, shape matching ``values``. Used
         by plots that support uncertainty display.
     error_std : numpy.ndarray or None
-        Per-value standard error estimate, shape matching ``values``.
+        Per-value standard deviation of explainer contributions, shape
+        matching ``values``. Set by ``PermutationExplainer`` to the std
+        dev across permutation runs — not the standard error of the mean.
     main_effects : numpy.ndarray or None
-        The SHAP "main effects" — the single-feature component of the
-        attribution, separate from interaction terms. Shape matches
-        ``values``.
+        The single-feature component of the attribution, separate from
+        interaction terms, shape ``(n_samples, n_features)``, or ``None``.
+        When interactions are computed, ``values`` has a larger shape
+        than ``main_effects``. ``TreeExplainer`` may return interaction
+        values without setting this.
     hierarchical_values : numpy.ndarray, list, or None
         Attributions against a hierarchical (partition) model of the
         features, rather than flat per-feature. See
@@ -291,7 +310,7 @@ class Explanation(metaclass=MetaExplanation):
             instance_names=None if instance_names is None else Alias(instance_names, 0),
             feature_names=feature_names,
             output_names=output_names,
-            output_indexes=None if output_indexes is None else (self.output_dims, output_indexes),
+            output_indexes=(None if output_indexes is None else (self.output_dims, output_indexes)),
             lower_bounds=list_wrap(lower_bounds),
             upper_bounds=list_wrap(upper_bounds),
             error_std=list_wrap(error_std),
@@ -325,6 +344,9 @@ class Explanation(metaclass=MetaExplanation):
         single-output model it has shape ``(n_samples,)`` and every row
         typically holds the same scalar; for a multi-output model the
         shape is ``(n_samples, n_outputs)``.
+        May be ``None``: ``DeepExplainer`` and ``GradientExplainer`` do
+        not populate this attribute. Guard against ``None`` before using
+        the additivity formula.
         """
         return self._s.base_values
 
@@ -336,9 +358,12 @@ class Explanation(metaclass=MetaExplanation):
     def data(self):
         """The input data the explanation was computed on.
 
-        Typically a copy of the ``X`` passed to the explainer — same
-        number of rows as ``values``. Plot functions read this so they
-        can display feature values alongside their attributions.
+        The input data the explanation was computed on. May share storage
+        with the original ``X`` (``TreeExplainer`` stores a direct
+        reference), or may be a transformed copy (masker transforms or
+        DataFrame-to-array conversion). Mutating ``exp.data`` may also
+        mutate the original input. Plot functions read this to display
+        feature values alongside their attributions.
         """
         return self._s.data
 
@@ -385,11 +410,11 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def output_indexes(self):
-        """For ranked-output explainers, the original-model index of each explained output.
+        """Index of each explained output in the original model's output vector, or ``None``.
 
-        Populated when the explainer was called with ``ranked_outputs=k``
-        rather than explaining every output. Lets callers map back from
-        explained-output position to original class index.
+        Not populated by ``DeepExplainer``, ``PartitionExplainer``, or
+        the shared ``Explainer.__call__``. Always check for ``None``
+        before use.
         """
         return self._s.output_indexes
 
@@ -418,15 +443,24 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def error_std(self):
-        """Per-value standard error estimate, same shape as ``values``, or ``None``."""
+        """Per-value standard deviation of explainer contributions,
+        same shape as ``values``, or ``None``.
+
+        Set by ``PermutationExplainer`` to the pooled standard deviation
+        across permutation runs.
+        """
         return self._s.error_std
 
     @property
     def main_effects(self):
-        """The main-effect component of the SHAP values, same shape as ``values``.
+        """The single-feature (main-effect) component of the SHAP values,
+        shape ``(n_samples, n_features)``, or ``None``.
 
-        When the explainer also computes interactions, ``values`` =
-        ``main_effects`` + interaction terms. ``None`` otherwise.
+        When interactions are computed, ``values`` has shape
+        ``(n_samples, n_features, n_features)`` while ``main_effects``
+        stays ``(n_samples, n_features)`` — their shapes do not match.
+        ``TreeExplainer`` may return interaction values without setting
+        this attribute.
         """
         return self._s.main_effects
 
@@ -919,11 +953,13 @@ def group_features(shap_values: Explanation, feature_map: dict[str, str]) -> Exp
         sv_new.values[:i] if rank1 else sv_new.values[:, :i],
         base_values=sv_new.base_values,
         data=sv_new.data[:i] if rank1 else sv_new.data[:, :i],
-        display_data=None
-        if sv_new.display_data is None
-        else (sv_new.display_data[:, :i] if rank1 else sv_new.display_data[:, :i]),
+        display_data=(
+            None
+            if sv_new.display_data is None
+            else (sv_new.display_data[:, :i] if rank1 else sv_new.display_data[:, :i])
+        ),
         instance_names=None,
-        feature_names=None if sv_new.feature_names is None else sv_new.feature_names[:i],
+        feature_names=(None if sv_new.feature_names is None else sv_new.feature_names[:i]),
         output_names=None,
         output_indexes=None,
         lower_bounds=None,
