@@ -1,0 +1,80 @@
+name: "Generate SPEC 0 constraints"
+description: >
+  Reads the Scientific Python SPEC 0 schedule and writes a pip constraints
+  file with exact minimum-version pins for a list of packages.  Exposes the
+  generated file path and a JSON package-to-version mapping as step outputs.
+author: "SHAP contributors"
+
+inputs:
+  packages:
+    description: >
+      Space-separated list of packages to pin.
+      Defaults to the five SHAP core scientific dependencies.
+    required: false
+    default: "numpy scipy pandas scikit-learn matplotlib"
+
+  output-file:
+    description: >
+      Workspace-relative path to write the generated constraints file.
+    required: false
+    default: "constraints-spec0.txt"
+
+  date:
+    description: >
+      Reference date in YYYY-MM-DD format.  Defaults to today.
+      Pass a fixed date for reproducible test runs.
+    required: false
+    default: ""
+
+  schedule-path:
+    description: >
+      Workspace-relative path to a local schedule.json.  When supplied the
+      action skips the network download.  Useful for offline or hermetic CI.
+    required: false
+    default: ""
+
+outputs:
+  constraints-file:
+    description: >
+      Workspace-relative path to the generated pip constraints file.
+    value: ${{ steps.generate.outputs.constraints-file }}
+
+  versions-json:
+    description: >
+      JSON object mapping each requested package name to its pinned version,
+      e.g. {"matplotlib":"3.11.0","numpy":"2.3.0","pandas":"2.3.0",
+      "scikit-learn":"1.7.0","scipy":"1.15.0"}.
+    value: ${{ steps.generate.outputs.versions-json }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Generate SPEC 0 constraints
+      id: generate
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # Build argument list dynamically so empty optional inputs are omitted.
+        ARGS=(
+          --packages ${{ inputs.packages }}
+          --output "${{ github.workspace }}/${{ inputs.output-file }}"
+        )
+
+        if [ -n "${{ inputs.date }}" ]; then
+          ARGS+=(--date "${{ inputs.date }}")
+        fi
+
+        if [ -n "${{ inputs.schedule-path }}" ]; then
+          ARGS+=(--schedule "${{ github.workspace }}/${{ inputs.schedule-path }}")
+        fi
+
+        # The script reads $GITHUB_OUTPUT (set by the runner) and appends
+        # "constraints-file=<path>" and "versions-json=<json>" to it.
+        python "${{ github.action_path }}/../../../scripts/spec0_constraints.py" \
+          "${ARGS[@]}"
+
+        # Also expose the output-file name as a step output so callers can
+        # reference it with ${{ steps.<id>.outputs.constraints-file }} even
+        # when the script's GITHUB_OUTPUT write is not available.
+        echo "constraints-file=${{ inputs.output-file }}" >> "$GITHUB_OUTPUT"
