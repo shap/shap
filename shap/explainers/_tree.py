@@ -54,11 +54,7 @@ feature_perturbation_codes = {
     "tree_path_dependent": 1,
 }
 
-
-def _to_numpy(X: nw.DataFrame | nw.Series, cast_type: Any, na_value: Any) -> np.ndarray:
-    breakpoint()
-    numpy_dtype = np.dtype(cast_type)
-    narwhals_dtype = {
+NUMPY_NARWHALS_DTYPE_MAP = {
         np.dtype("bool"): nw.Boolean,
         np.dtype("int8"): nw.Int8,
         np.dtype("int16"): nw.Int16,
@@ -71,16 +67,23 @@ def _to_numpy(X: nw.DataFrame | nw.Series, cast_type: Any, na_value: Any) -> np.
         np.dtype("float16"): nw.Float16,
         np.dtype("float32"): nw.Float32,
         np.dtype("float64"): nw.Float64,
-    }[numpy_dtype]
-    if isinstance(X, nw.Series):
-        X = X.cast(narwhals_dtype)
-        if na_value is not None:
-            X = X.fill_null(na_value)
-    else:
-        X = X.with_columns(nw.all().cast(narwhals_dtype))
-        if na_value is not None:
+    }
+
+def _to_numpy(X: nw.DataFrame | nw.Series, na_value: Any, cast_type: Any = None) -> np.ndarray:
+    breakpoint()
+    numpy_dtype = np.dtype(cast_type)
+    if cast_type is not None:
+        narwhals_dtype = NUMPY_NARWHALS_DTYPE_MAP[numpy_dtype]
+        if isinstance(X, nw.Series):
+            X = X.cast(narwhals_dtype)
+        elif isinstance(X, nw.DataFrame):
+            X = X.with_columns(nw.all().cast(narwhals_dtype))
+
+    if isinstance(X, nw.Series) and na_value is not None:
+        X = X.fill_null(na_value)
+    elif isinstance(X, nw.DataFrame) and na_value is not None:
             X = X.with_columns(nw.all().fill_null(na_value))
-    return np.asarray(X.to_numpy(), dtype=numpy_dtype)
+    return np.asarray(X.to_numpy())
 
 
 def _safe_check_tree_instance_experimental(tree_instance: Any) -> None:
@@ -538,7 +541,7 @@ class TreeExplainer(Explainer):
             tree_limit = self.model.values.shape[0]
         # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
         if isinstance(X, (nw.DataFrame, nw.Series)):
-            X = _to_numpy(X, self.model.input_dtype, np.nan)
+            X = _to_numpy(X, cast_type=self.model.input_dtype, na_value=np.nan)
 
         if scipy.sparse.issparse(X) and hasattr(X, "toarray"):
             X = X.toarray()
@@ -629,7 +632,7 @@ class TreeExplainer(Explainer):
         elif self.model.model_type == "lightgbm":
             assert not approximate, "approximate=True is not supported for LightGBM models!"
             if isinstance(X, (nw.DataFrame, nw.Series)):
-                X = _to_numpy(X, self.model.input_dtype, np.nan)
+                X = _to_numpy(X, na_value=np.nan)
             phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
             # Note: the data must be joined on the last axis
             if (
