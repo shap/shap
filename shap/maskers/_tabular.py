@@ -189,7 +189,7 @@ class Tabular(Masker):
             if self.output_dataframe:
                 s.save("data", pd.DataFrame(self.data, columns=self.feature_names))
             elif getattr(self, "mean", None) is not None:
-                s.save("data", (self.mean, self.cov))
+                s.save("data", {"mean": self.mean, "cov": self.cov})
             else:
                 s.save("data", self.data)
 
@@ -285,7 +285,11 @@ class Impute(Masker):  # we should inherit from Tabular once we add support for 
             The background dataset that is used for masking.
 
         """
-        if isinstance(data, dict) and "mean" in data:
+        if isinstance(data, tuple) and len(data) == 2:
+            self.mean = data[0]
+            self.cov = data[1]
+            data = np.expand_dims(data[0], 0)
+        elif isinstance(data, dict) and "mean" in data:
             self.mean = data.get("mean", None)
             self.cov = data.get("cov", None)
             data = np.expand_dims(data["mean"], 0)

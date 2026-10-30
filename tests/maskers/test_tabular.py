@@ -56,7 +56,8 @@ def test_serialization_independent_masker_dataframe():
 
     # comparing masked values
     assert np.array_equal(
-        original_independent_masker(mask, X[:1].values[0])[1], new_independent_masker(mask, X[:1].values[0])[1]
+        original_independent_masker(mask, X[:1].values[0])[1],
+        new_independent_masker(mask, X[:1].values[0])[1],
     )
 
 
@@ -82,7 +83,10 @@ def test_serialization_independent_masker_numpy():
     mask[4] = 0
 
     # comparing masked values
-    assert np.array_equal(original_independent_masker(mask, X[0])[0], new_independent_masker(mask, X[0])[0])
+    assert np.array_equal(
+        original_independent_masker(mask, X[0])[0],
+        new_independent_masker(mask, X[0])[0],
+    )
 
 
 def test_serialization_partion_masker_dataframe():
@@ -107,7 +111,8 @@ def test_serialization_partion_masker_dataframe():
 
     # comparing masked values
     assert np.array_equal(
-        original_partition_masker(mask, X[:1].values[0])[1], new_partition_masker(mask, X[:1].values[0])[1]
+        original_partition_masker(mask, X[:1].values[0])[1],
+        new_partition_masker(mask, X[:1].values[0])[1],
     )
 
 
@@ -141,7 +146,11 @@ def test_independent_masker_with_dataframe_init():
     import pandas as pd
 
     df = pd.DataFrame(
-        {"a": [0.0, 1.0, 2.0, 3.0, 4.0], "b": [5.0, 6.0, 7.0, 8.0, 9.0], "c": [10.0, 11.0, 12.0, 13.0, 14.0]}
+        {
+            "a": [0.0, 1.0, 2.0, 3.0, 4.0],
+            "b": [5.0, 6.0, 7.0, 8.0, 9.0],
+            "c": [10.0, 11.0, 12.0, 13.0, 14.0],
+        }
     )
 
     masker = shap.maskers.Independent(df)
@@ -154,7 +163,10 @@ def test_independent_masker_with_dataframe_init():
 
 def test_independent_masker_with_dict_mean_cov():
     """Test Independent masker with dictionary containing mean and cov."""
-    data_dict = {"mean": np.array([1.5, 2.5, 3.5]), "cov": np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])}
+    data_dict = {
+        "mean": np.array([1.5, 2.5, 3.5]),
+        "cov": np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+    }
 
     masker = shap.maskers.Independent(data_dict)
 
@@ -280,3 +292,25 @@ def test_subsampling_warning_when_data_exceeds_max_samples(caplog):
     assert len(caplog.records) == 1
     assert "200" in caplog.records[0].message
     assert "max_samples=50" in caplog.records[0].message
+
+
+def test_serialization_independent_masker_mean_cov():
+    """Test that Independent masker with mean/cov background survives save/load."""
+    import tempfile
+
+    mean = np.array([1.0, 2.0])
+    cov = np.array([[2.0, 0.25], [0.25, 3.0]])
+    x = np.array([[4.0, 6.0]])
+
+    original = shap.LinearExplainer((np.array([2.0, 3.0]), 5.0), (mean, cov))
+    before = original(x)
+
+    with tempfile.TemporaryFile() as f:
+        original.save(f)
+        f.seek(0)
+        restored = shap.Explainer.load(f)
+
+    after = restored(x)
+
+    np.testing.assert_allclose(after.values, before.values)
+    np.testing.assert_allclose(after.base_values, before.base_values)
