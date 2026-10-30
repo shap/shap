@@ -8,6 +8,7 @@ import time
 import warnings
 from typing import Any, Literal
 
+import narwhals as nw
 import numpy as np
 import numpy.typing as npt
 import scipy.sparse
@@ -28,8 +29,6 @@ from ..utils._legacy import DenseData
 from ..utils._warnings import ExperimentalWarning
 from ._explainer import Explainer
 from .other._ubjson import decode_ubjson_buffer
-
-import narwhals as nw
 
 try:
     import shap._cext as _cext  # type: ignore
@@ -675,7 +674,6 @@ class TreeExplainer(Explainer):
                 out = np.stack(out, axis=-1)  # type: ignore[assignment]
             return out  # type: ignore[return-value]
         return None
-
 
     @nw.narwhalify
     def shap_values(
