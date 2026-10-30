@@ -287,7 +287,7 @@ class PermutationExplainer(Explainer):
             of such matrices, one for each output.
 
         """
-        explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
+        explanation = self(X, max_evals=npermutations * (2 * X.shape[1] + 1), main_effects=main_effects)
         return explanation.values  # type: ignore[union-attr]
 
     def __str__(self) -> str:

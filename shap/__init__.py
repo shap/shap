@@ -9,7 +9,6 @@ from .explainers._coalition import CoalitionExplainer
 from .explainers._deep import DeepExplainer
 from .explainers._exact import ExactExplainer
 from .explainers._explainer import Explainer
-from .explainers._gpu_tree import GPUTreeExplainer
 from .explainers._gradient import GradientExplainer
 from .explainers._kernel import KernelExplainer
 from .explainers._linear import LinearExplainer
@@ -92,7 +91,7 @@ else:
 
 
 # other stuff :)
-from . import datasets, links, utils  # noqa: E402
+from . import actions, datasets, links, utils  # noqa: E402
 from .actions._optimizer import ActionOptimizer  # noqa: E402
 from .utils import approximate_interactions, sample  # noqa: E402
 
@@ -101,6 +100,7 @@ from .utils._legacy import kmeans  # noqa: E402
 
 # Use __all__ to let type checkers know what is part of the public API.
 __all__ = [
+    "actions",
     "Cohorts",
     "Explanation",
     # Explainers
@@ -147,3 +147,11 @@ __all__ = [
     "sample",
     "kmeans",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    if name in ("GPUTreeExplainer", "GPUTree"):
+        from . import explainers
+
+        return getattr(explainers, "GPUTreeExplainer")
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

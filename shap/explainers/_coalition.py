@@ -247,7 +247,7 @@ class CoalitionExplainer(Explainer):
         )  # generate permutations of neighbours consistent with partition tree, and related weights
         self.masks, self.keys = _create_masks(
             self.root, self.masker.feature_names
-        )  # turn the premutations into valid masks for inference
+        )  # turn the permutations into valid masks for inference
         self.masks_dict = dict(zip(self.keys, self.masks))
         self.mask_permutations = _create_combined_masks(
             self.combinations_list, self.masks_dict
