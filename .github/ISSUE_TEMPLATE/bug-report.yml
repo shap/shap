@@ -64,7 +64,7 @@ body:
           required: true
         - label: I have confirmed this bug exists on the [latest release](https://github.com/shap/shap/releases) of shap.
           required: true
-        - label: I have confirmed this bug exists on the [master branch](https://github.com/shap/shap/blob/master/CONTRIBUTING.md#installing-from-the-master-branch) of shap.
+        - label: I have confirmed this bug exists on the [main branch](https://github.com/shap/shap/blob/main/CONTRIBUTING.md#installing-the-latest-version) of shap.
         - label: I'd be interested in making a PR to fix this bug
   - type: textarea
     id: version

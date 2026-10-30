@@ -15,7 +15,7 @@ class AdditiveExplainer(Explainer):
     you will get incorrect answers that fail additivity).
     """
 
-    _expected_value: float | npt.NDArray[np.floating[Any]]
+    _expected_value: float | np.floating[Any] | npt.NDArray[np.floating[Any]]
     _zero_offset: float | npt.NDArray[np.floating[Any]]
     _input_offsets: npt.NDArray[np.floating[Any]]
 
