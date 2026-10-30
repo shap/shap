@@ -10,7 +10,6 @@ from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
 import scipy.sparse
 import scipy.special
 from packaging import version
@@ -29,6 +28,8 @@ from ..utils._legacy import DenseData
 from ..utils._warnings import ExperimentalWarning
 from ._explainer import Explainer
 from .other._ubjson import decode_ubjson_buffer
+
+import narwhals as nw
 
 try:
     import shap._cext as _cext  # type: ignore
@@ -53,6 +54,34 @@ feature_perturbation_codes = {
     "interventional": 0,
     "tree_path_dependent": 1,
 }
+
+
+def _to_numpy(X: nw.DataFrame | nw.Series, cast_type: Any, na_value: Any) -> np.ndarray:
+    breakpoint()
+    numpy_dtype = np.dtype(cast_type)
+    narwhals_dtype = {
+        np.dtype("bool"): nw.Boolean,
+        np.dtype("int8"): nw.Int8,
+        np.dtype("int16"): nw.Int16,
+        np.dtype("int32"): nw.Int32,
+        np.dtype("int64"): nw.Int64,
+        np.dtype("uint8"): nw.UInt8,
+        np.dtype("uint16"): nw.UInt16,
+        np.dtype("uint32"): nw.UInt32,
+        np.dtype("uint64"): nw.UInt64,
+        np.dtype("float16"): nw.Float16,
+        np.dtype("float32"): nw.Float32,
+        np.dtype("float64"): nw.Float64,
+    }[numpy_dtype]
+    if isinstance(X, nw.Series):
+        X = X.cast(narwhals_dtype)
+        if na_value is not None:
+            X = X.fill_null(na_value)
+    else:
+        X = X.with_columns(nw.all().cast(narwhals_dtype))
+        if na_value is not None:
+            X = X.with_columns(nw.all().fill_null(na_value))
+    return np.asarray(X.to_numpy(), dtype=numpy_dtype)
 
 
 def _safe_check_tree_instance_experimental(tree_instance: Any) -> None:
@@ -266,7 +295,7 @@ class TreeExplainer(Explainer):
             )
         if feature_names is not None:
             self.data_feature_names = feature_names
-        elif isinstance(data, pd.DataFrame):
+        elif isinstance(data, nw.DataFrame):
             self.data_feature_names = list(data.columns)
 
         masker = data
@@ -282,8 +311,8 @@ class TreeExplainer(Explainer):
                 "TreeExplainer does not support clustered data inputs! Please use shap.Explainer or pass an unclustered masker!"
             )
 
-        if isinstance(data, pd.DataFrame):
-            self.data = data.values
+        if isinstance(data, nw.DataFrame):
+            self.data = data.to_numpy()
         elif isinstance(data, DenseData):
             self.data = data.data
         else:
@@ -422,7 +451,7 @@ class TreeExplainer(Explainer):
         start_time = time.time()
 
         feature_names: Any
-        if isinstance(X, pd.DataFrame):
+        if isinstance(X, nw.DataFrame):
             feature_names = list(X.columns)
         else:
             feature_names = getattr(self, "data_feature_names", None)
@@ -509,8 +538,8 @@ class TreeExplainer(Explainer):
         if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
             tree_limit = self.model.values.shape[0]
         # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
-        if isinstance(X, (pd.Series, pd.DataFrame)):
-            X = X.to_numpy(dtype=self.model.input_dtype, na_value=np.nan)
+        if isinstance(X, (nw.DataFrame, nw.Series)):
+            X = _to_numpy(X, self.model.input_dtype, np.nan)
 
         if scipy.sparse.issparse(X) and hasattr(X, "toarray"):
             X = X.toarray()
@@ -600,6 +629,8 @@ class TreeExplainer(Explainer):
 
         elif self.model.model_type == "lightgbm":
             assert not approximate, "approximate=True is not supported for LightGBM models!"
+            if isinstance(X, (nw.DataFrame, nw.Series)):
+                X = _to_numpy(X, self.model.input_dtype, np.nan)
             phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
             # Note: the data must be joined on the last axis
             if (
@@ -645,6 +676,8 @@ class TreeExplainer(Explainer):
             return out  # type: ignore[return-value]
         return None
 
+
+    @nw.narwhalify
     def shap_values(
         self,
         X: Any,
