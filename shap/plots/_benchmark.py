@@ -23,7 +23,7 @@ def benchmark(benchmark, show=True):
 
         # see if we have multiple metrics or just a single metric
         single_metric = True
-        metric_name = None
+        metric_name: str | None = None
         has_curves = True
         for b in benchmark:
             if metric_name is None:
@@ -33,6 +33,8 @@ def benchmark(benchmark, show=True):
 
             if b.curve_x is None or b.curve_y is None:
                 has_curves = False
+        if metric_name is None:
+            raise ValueError("The benchmark list must not be empty.")
 
         methods = list({b.method for b in benchmark})
         methods.sort()
@@ -155,15 +157,15 @@ def benchmark(benchmark, show=True):
             xs = [-0.03 * (len(methods) - 1)] + list(range(len(metrics) + 1))
             for i, method in enumerate(methods):
                 scores = [1 - i / (len(methods) - 1), 1 - i / (len(methods) - 1)]
-                values = [None, None]
+                metric_values = [None, None]
                 for metric in metrics:
                     for b in benchmark:
                         if b.method == method and b.metric == metric:
                             scores.append(norm_values[b.full_name])
-                            values.append(b.value)
+                            metric_values.append(b.value)
                 plt.plot(xs, scores, color=method_color[method], label=method)
 
-                for x, y, value in zip(xs, scores, values):
+                for x, y, value in zip(xs, scores, metric_values):
                     if value is None:
                         continue
                     label = f"{value:.2f}"

@@ -3,9 +3,8 @@
 import numpy as np
 import pandas as pd
 import pytest
-import sklearn
-
 import shap
+import sklearn
 from shap.explainers._tree import SingleTree, TreeEnsemble
 from shap.utils import assert_import
 
@@ -301,9 +300,7 @@ def test_lightgbm_categorical_split(use_interactions):
 
 
 def test_categorical_split_cpu_gpu_equivalence():
-    """
-    Check consistency with a dummy tree that a single categorical split yields the same results on GPU and CPU.
-    """
+    """Check consistency between GPU and CPU for a single categorical split."""
     tree = {
         "children_left": np.array([1, -1, -1], dtype=np.int32),
         "children_right": np.array([2, -1, -1], dtype=np.int32),
@@ -328,9 +325,7 @@ def test_categorical_split_cpu_gpu_equivalence():
 
 
 def test_categorical_split_matches_binary_feature():
-    """
-    Tests that using the categorical feature for SHAP value computation gives the same result as using a binary feature that routes the same way. We compare values computed on gpu and cpu here to check consistency.
-    """
+    """Test that equivalent categorical and binary features produce the same SHAP values."""
     children_left = np.array([1, -1, -1], dtype=np.int32)
     children_right = np.array([2, -1, -1], dtype=np.int32)
     children_default = np.array([1, -1, -1], dtype=np.int32)
