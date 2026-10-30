@@ -546,13 +546,18 @@ def dependence_legacy(
 
     Parameters
     ----------
-    ind : int or string
+    ind : int, string or tuple
         If this is an int it is the index of the feature to plot. If this is a string it is
         either the name of the feature to plot, or it can have the form "rank(int)" to specify
         the feature with that rank (ordered by mean absolute SHAP value over all the samples).
+        If this is a pair of feature indices or names, the corresponding SHAP interaction
+        values are plotted (requires ``shap_values`` to be SHAP interaction values).
 
     shap_values : numpy.array
-        Matrix of SHAP values (# samples x # features).
+        Matrix of SHAP values (# samples x # features). For multi-output (e.g. multi-class)
+        models, pass the values for a single output, e.g. ``shap_values[:, :, 0]``. When ``ind``
+        is a pair, this is instead an array of SHAP interaction values
+        (# samples x # features x # features).
 
     features : numpy.array or pandas.DataFrame
         Matrix of feature values (# samples x # features).
@@ -626,7 +631,18 @@ def dependence_legacy(
     if len(features.shape) == 1:
         features = np.reshape(features, (len(features), 1))
 
+    # check this before convert_name, since "rank(int)" on 3D values converts to an array
+    ind_is_pair = not isinstance(ind, str) and hasattr(ind, "__len__") and len(ind) == 2
     ind = convert_name(ind, shap_values, feature_names)
+
+    # a 3D array is only valid for interaction values plotted with a pair of indices, otherwise
+    # it is most likely a multi-output (e.g. multi-class) result of shape (samples, features, outputs)
+    if len(shap_values.shape) == 3 and not ind_is_pair:
+        raise ValueError(
+            f"The passed shap_values have shape {shap_values.shape}, but a 2D array of shape "
+            "(# samples x # features) was expected. If you have multi-output (e.g. multi-class) SHAP values, "
+            "pass the values for a single output instead, e.g. shap_values[:, :, 0] for the first class."
+        )
 
     # guess what other feature as the strongest interaction with the plotted feature
     if not hasattr(ind, "__len__"):
