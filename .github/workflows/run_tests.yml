@@ -18,6 +18,8 @@ on:
       - "scripts/run_pyodide_tests.py"
       - "pyproject.toml"
       - "CMakeLists.txt"
+      - "scripts/spec0_constraints.py"
+      - ".github/actions/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

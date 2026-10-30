@@ -210,6 +210,10 @@ class TestWriteConstraints:
 
 
 class TestMain:
+    @pytest.fixture(autouse=True)
+    def _clear_github_output(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+
     def test_success(self, schedule_file: Path, tmp_path: Path) -> None:
         out = tmp_path / "constraints.txt"
         rc = main(

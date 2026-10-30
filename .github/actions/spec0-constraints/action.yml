@@ -52,26 +52,24 @@ runs:
     - name: Generate SPEC 0 constraints
       id: generate
       shell: bash
+      env:
+        _PACKAGES: ${{ inputs.packages }}
+        _OUTPUT_FILE: ${{ inputs.output-file }}
+        _DATE: ${{ inputs.date }}
+        _SCHEDULE: ${{ inputs.schedule-path }}
+        _ACTION_PATH: ${{ github.action_path }}
+        _WORKSPACE: ${{ github.workspace }}
       run: |
         set -euo pipefail
-
-        # Build argument list dynamically so empty optional inputs are omitted.
         ARGS=(
-          --packages ${{ inputs.packages }}
-          --output "${{ github.workspace }}/${{ inputs.output-file }}"
+          --packages $_PACKAGES
+          --output "$_WORKSPACE/$_OUTPUT_FILE"
         )
-
-        if [ -n "${{ inputs.date }}" ]; then
-          ARGS+=(--date "${{ inputs.date }}")
+        if [ -n "$_DATE" ]; then
+          ARGS+=(--date "$_DATE")
         fi
-
-        if [ -n "${{ inputs.schedule-path }}" ]; then
-          ARGS+=(--schedule "${{ github.workspace }}/${{ inputs.schedule-path }}")
+        if [ -n "$_SCHEDULE" ]; then
+          ARGS+=(--schedule "$_WORKSPACE/$_SCHEDULE")
         fi
-
-        # The script reads $GITHUB_OUTPUT (set by the runner) and appends
-        # "constraints-file=<path>" and "versions-json=<json>" to it.
-        python "${{ github.action_path }}/../../../scripts/spec0_constraints.py" \
-          "${ARGS[@]}"
-
-        echo "constraints-file=${{ inputs.output-file }}" >> "$GITHUB_OUTPUT"
+        python "$_ACTION_PATH/../../../scripts/spec0_constraints.py" "${ARGS[@]}"
+        echo "constraints-file=$_OUTPUT_FILE" >> "$GITHUB_OUTPUT"

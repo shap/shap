@@ -64,9 +64,12 @@ def resolve_versions(
         if not isinstance(raw, str):
             raise ValueError(f"Schedule entry is missing a 'start_date' string: {entry!r}")
         try:
-            return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
         except ValueError as exc:
             raise ValueError(f"Cannot parse start_date {raw!r}: {exc}") from exc
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        return dt
 
     applicable = [e for e in schedule if _entry_dt(e) <= ref_dt]
     applicable.sort(key=_entry_dt)
