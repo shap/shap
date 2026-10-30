@@ -240,7 +240,7 @@ jobs:
       - name: Install dependencies
         # Do regular install NOT editable install: see GH #3020
         run: |
-          uv pip install --system '.[test,plots]'
+          uv pip install --system . --group test --group plots
       - name: Install nightly pre-release packages
         run: |
           # LightGBM nightly wheels (see GH #5013).
