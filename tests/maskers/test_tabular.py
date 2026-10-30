@@ -161,6 +161,8 @@ def test_independent_masker_with_dict_mean_cov():
     # Should have mean and cov attributes
     assert hasattr(masker, "mean")
     assert hasattr(masker, "cov")
+    assert masker.mean is not None
+    assert masker.cov is not None
     assert np.allclose(masker.mean, data_dict["mean"])
     assert np.allclose(masker.cov, data_dict["cov"])
 
@@ -296,7 +298,7 @@ def test_serialization_independent_masker_mean_cov():
         f.seek(0)
         restored = shap.Explainer.load(f)
 
-    after = restored(x)
+    after = restored(x)  # type: ignore[operator]
 
-    np.testing.assert_allclose(after.values, before.values)
-    np.testing.assert_allclose(after.base_values, before.base_values)
+    np.testing.assert_allclose(after.values, before.values)  # type: ignore[union-attr]
+    np.testing.assert_allclose(after.base_values, before.base_values)  # type: ignore[union-attr]
