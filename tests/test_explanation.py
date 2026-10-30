@@ -43,6 +43,47 @@ def test_explanation_repr():
     )
 
 
+@pytest.mark.parametrize("q", [0, 50, 100])
+@pytest.mark.parametrize("axis", [None, 0, 1])
+@pytest.mark.parametrize("with_data", [False, True])
+def test_percentile_optional_data(q, axis, with_data):
+    values = np.arange(12, dtype=float).reshape(4, 3)
+    data = values + 20 if with_data else None
+    exp = shap.Explanation(values=values.copy(), data=data)
+
+    result = exp.percentile(q, axis=axis)
+
+    np.testing.assert_allclose(result.values, np.percentile(values, q, axis=axis))
+    if with_data:
+        np.testing.assert_allclose(result.data, np.percentile(data, q, axis=axis))
+        np.testing.assert_array_equal(exp.data, data)
+    else:
+        assert result.data is None
+        assert exp.data is None
+    np.testing.assert_array_equal(exp.values, values)
+    assert exp.op_history == []
+    assert result.op_history[-1] == OpHistoryItem(
+        name="percentile",
+        args=(axis,),
+        prev_shape=exp.shape,
+        collapsed_instances=axis == 0,
+    )
+
+
+@pytest.mark.parametrize(
+    ("shape", "axis"),
+    [((6,), None), ((6,), 0), ((2, 3, 4), 0), ((2, 3, 4), 1), ((2, 3, 4), 2)],
+)
+def test_percentile_without_data_for_vector_and_multioutput_shapes(shape, axis):
+    values = np.arange(np.prod(shape), dtype=float).reshape(shape)
+    exp = shap.Explanation(values=values)
+
+    result = exp.percentile(50, axis=axis)
+
+    np.testing.assert_allclose(result.values, np.percentile(values, 50, axis=axis))
+    assert result.data is None
+
+
 def test_explanation_hstack(random_seed):
     """Checks that `hstack` works as expected with two valid Explanation objects.
     And that it returns an Explanation object.
