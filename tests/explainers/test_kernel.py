@@ -412,7 +412,7 @@ def test_kernel_multiclass_single_row():
     """Check a multi-input scenario."""
     X, y = shap.datasets.iris()
 
-    lr = sklearn.linear_model.LogisticRegression(solver="lbfgs")
+    lr = sklearn.linear_model.LogisticRegression(solver="lbfgs", max_iter=1000)
     lr.fit(X, y)
     pred = lr.predict_proba(X.iloc[[0], :])
 
@@ -425,7 +425,7 @@ def test_kernel_multiclass_multiple_rows():
     """Check a multi-input scenario."""
     X, y = shap.datasets.iris()
 
-    lr = sklearn.linear_model.LogisticRegression(solver="lbfgs")
+    lr = sklearn.linear_model.LogisticRegression(solver="lbfgs", max_iter=1000)
     lr.fit(X, y)
     pred = lr.predict_proba(X.iloc[[0, 1], :])
 
