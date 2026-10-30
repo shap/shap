@@ -74,7 +74,4 @@ runs:
         python "${{ github.action_path }}/../../../scripts/spec0_constraints.py" \
           "${ARGS[@]}"
 
-        # Also expose the output-file name as a step output so callers can
-        # reference it with ${{ steps.<id>.outputs.constraints-file }} even
-        # when the script's GITHUB_OUTPUT write is not available.
         echo "constraints-file=${{ inputs.output-file }}" >> "$GITHUB_OUTPUT"
