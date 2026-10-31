@@ -111,6 +111,35 @@ def make_pandas_polars_frames(random_state: int, n_rows: int = 96) -> tuple[Any,
     return pandas_frame, polars_frame, labels
 
 
+def make_numeric_pandas_polars_frames(random_state: int = 0, n_rows: int = 32) -> tuple[Any, Any, np.ndarray]:
+    """Create paired numeric frames for explainer and plotting parity checks."""
+    import pandas as pd
+    import polars as pl
+
+    rng = np.random.default_rng(random_state)
+    values = rng.normal(size=(n_rows, 3))
+    names = ["a", "b", "c"]
+    pandas_frame = pd.DataFrame(values, columns=names)
+    polars_frame = pl.DataFrame({name: values[:, i] for i, name in enumerate(names)})
+    target = values[:, 0] - 0.5 * values[:, 1] + 0.25 * values[:, 2]
+    return pandas_frame, polars_frame, target
+
+
+def assert_plot_frames_equal(plot_function: Any, pandas_frame: Any, polars_frame: Any) -> None:
+    """Compare rendered plot pixels after passing each backend frame to a plot function."""
+    import matplotlib.pyplot as plt
+
+    images = []
+    for frame in (pandas_frame, polars_frame):
+        plt.close("all")
+        plot_function(frame)
+        figure = plt.gcf()
+        figure.canvas.draw()
+        images.append(np.asarray(figure.canvas.buffer_rgba()).copy())
+    plt.close("all")
+    np.testing.assert_array_equal(images[0], images[1])
+
+
 def assert_npz_equal(reference_path: str | Path, candidate_path: str | Path) -> None:
     """Require the same keys, shapes, and exact values in two saved output bundles."""
     with (
