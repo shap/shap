@@ -115,3 +115,23 @@ def test_partial_dependence_ordinary_selectors():
     fig, ax = shap.plots.partial_dependence(0, model, X, ice=False, show=False)
     assert ax.get_xlabel() == "Feature 0"
     plt.close(fig)
+
+
+def test_partial_dependence_rank_based_indexing_single_sample():
+    """rank(N) resolves correctly for a single-sample Explanation with flat (n_features,) values."""
+    # GH #2920
+    X = np.random.default_rng(0).normal(size=(1, 3))
+    values = X * np.array([1.0, 0.01, 5.0])
+    exp = shap.Explanation(values=values[0], data=X, base_values=0.0, feature_names=["a", "b", "c"])
+
+    def model(features):
+        return features[:, 2] * 2.0
+
+    # the two-feature path exercises selector resolution without the
+    # Explanation-shaped overlays the one-feature path applies afterwards
+    fig, ax = shap.plots.partial_dependence(
+        ("rank(0)", "rank(1)"), model, exp, feature_names=["a", "b", "c"], show=False
+    )
+    assert ax.get_xlabel() == "c"
+    assert ax.get_ylabel() == "a"
+    plt.close(fig)
