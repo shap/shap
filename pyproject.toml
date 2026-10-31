@@ -264,6 +264,13 @@ filterwarnings = [
   "ignore:.*typing.io is deprecated.*:DeprecationWarning:.*pyspark.*",
   "ignore:.*is_datetime64tz_dtype is deprecated.*:DeprecationWarning:.*pyspark.*",
   "ignore:.*'force_all_finite' was renamed to 'ensure_all_finite' in 1.6.*:FutureWarning:.*sklearn.*",
+  # PySpark passes pandas' deprecated copy= to astype() internally; reported at
+  # pyspark/sql/pandas/types.py and unfixed in the latest PySpark (4.3.0).
+  # Left without a category: Pandas4Warning only exists in pandas >= 3.1 and
+  # pytest cannot resolve it as a filter category on older pandas.
+  "ignore:.*The copy keyword is deprecated and will be removed.*::.*pyspark.*",
+  # PySpark announces its own incomplete pandas 3 support
+  "ignore:.*PySpark does not yet fully support pandas.*:FutureWarning:.*pyspark.*",
 ]
 markers = ["xslow: mark test as extremely slow (not run unless explicitly requested)"]
 
