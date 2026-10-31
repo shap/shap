@@ -19,6 +19,7 @@ log = logging.getLogger("shap")
 class Tabular(Masker):
     """A common base class for Independent and Partition."""
 
+    @nw.narwhalify
     def __init__(self, data, max_samples=100, clustering=None, partition=None):
         """This masks out tabular features by integrating over the given background dataset.
 
