@@ -1,4 +1,4 @@
-"""Direct pandas/Polars parity checks for tabular masker inputs."""
+"""Direct pandas/Polars parity checks for dataframe-based SHAP inputs."""
 
 import narwhals as nw
 import numpy as np
