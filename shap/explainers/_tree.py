@@ -70,7 +70,6 @@ NUMPY_NARWHALS_DTYPE_MAP = {
     }
 
 def _to_numpy(X: nw.DataFrame | nw.Series, na_value: Any, cast_type: Any = None) -> np.ndarray:
-    breakpoint()
     numpy_dtype = np.dtype(cast_type)
     if cast_type is not None:
         narwhals_dtype = NUMPY_NARWHALS_DTYPE_MAP[numpy_dtype]
@@ -191,6 +190,7 @@ class TreeExplainer(Explainer):
     model_output: str
     data_feature_names: list[str]
 
+    @nw.narwhalify
     def __init__(
         self,
         model: Any,
@@ -300,6 +300,7 @@ class TreeExplainer(Explainer):
         elif isinstance(data, nw.DataFrame):
             self.data_feature_names = list(data.columns)
 
+        breakpoint()
         masker = data
         super().__init__(model, masker, feature_names=feature_names)
 
@@ -346,7 +347,7 @@ class TreeExplainer(Explainer):
 
         _safe_check_tree_instance_experimental(model)
 
-        self.data_missing = None if self.data is None else pd.isna(self.data)
+        self.data_missing = None if self.data is None else np.isnan(self.data)
         self.enable_experimental = enable_experimental
         self.feature_perturbation = feature_perturbation
         self.expected_value = None
@@ -415,6 +416,7 @@ class TreeExplainer(Explainer):
         """This computes the expected value conditioned on the given label value."""
         return self.model.predict(self.data, np.ones(self.data.shape[0]) * y).mean(0)  # type: ignore[union-attr]
 
+    @nw.narwhalify
     def __call__(  # type: ignore
         self,
         X: Any,
@@ -490,8 +492,8 @@ class TreeExplainer(Explainer):
         X_data: np.ndarray | None | scipy.sparse.csr_matrix
         # cf. GH dsgibbons#66, this conversion to numpy array should be done AFTER
         # calculation of shap values
-        if isinstance(X, pd.DataFrame):
-            X_data = X.values
+        if isinstance(X, nw.DataFrame):
+            X_data = X.to_numpy()
         elif safe_isinstance(X, "xgboost.core.DMatrix"):
             import xgboost
 
@@ -597,7 +599,7 @@ class TreeExplainer(Explainer):
 
     def _short_circuit_tree_path_dependent_to_external_shap_calculation(
         self,
-        X: Any,
+        X: nw.DataFrame | np.ndarray[Any, Any],
         tree_limit: int,
         approximate: bool,
         check_additivity: bool,
@@ -659,6 +661,8 @@ class TreeExplainer(Explainer):
             import catboost
 
             if not isinstance(X, catboost.Pool):
+                if hasattr(X, "to_native"):
+                    X = X.to_native()
                 X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
             phi = self.model.original_model.get_feature_importance(data=X, fstr_type="ShapValues")
 
@@ -864,6 +868,7 @@ class TreeExplainer(Explainer):
             out = [-out, out]  # type: ignore[assignment]
         return out
 
+    @nw.narwhalify
     def shap_interaction_values(
         self,
         X: npt.NDArray[Any] | pd.DataFrame | Any,
@@ -1096,6 +1101,7 @@ class TreeEnsemble:
     _xgboost_n_outputs: int
     _xgb_dmatrix_props: dict[str, Any]
 
+    # @nw.narwhalify
     def __init__(
         self,
         model: Any,
@@ -1829,9 +1835,10 @@ class TreeEnsemble:
 
         return transform
 
+    @nw.narwhalify
     def predict(
         self,
-        X: npt.NDArray[Any] | pd.Series | pd.DataFrame,
+        X: npt.NDArray[Any] | "pd.Series" | "pd.DataFrame" | "pl.Series" | "pl.DataFrame" | nw.Series | nw.DataFrame,
         y: npt.NDArray[Any] | None = None,
         output: str | None = None,
         tree_limit: int | None = None,
@@ -1863,8 +1870,8 @@ class TreeEnsemble:
             tree_limit = -1 if self.tree_limit is None else self.tree_limit
 
         # convert dataframes (use to_numpy to handle pandas nullable dtypes like Int64/Float64)
-        if isinstance(X, (pd.Series, pd.DataFrame)):
-            X = X.to_numpy(dtype=self.input_dtype, na_value=np.nan)
+        if isinstance(X, (nw.Series, nw.DataFrame)):
+            X = _to_numpy(X, cast_type=self.input_dtype, na_value=np.nan)
         flat_output = False
         if len(X.shape) == 1:
             flat_output = True
