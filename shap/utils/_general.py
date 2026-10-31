@@ -70,16 +70,18 @@ def convert_name(
         return ind
 
 
-def index_to_numpy(index: pd.Index) -> npt.NDArray[Any]:
-    """Convert a pandas Index to a NumPy array of its values.
+def index_to_numpy(index: pd.Index) -> npt.NDArray[Any] | pd.api.extensions.ExtensionArray:
+    """Convert a pandas Index to an array of its values.
 
     For a timezone-aware ``DatetimeIndex`` this returns the UTC values as a
-    tz-naive array, matching the historical behavior of ``Index.values``,
-    which pandas 3.1 deprecates for silently dropping the timezone.
+    tz-naive NumPy array, matching the historical behavior of ``Index.values``,
+    which pandas 3.1 deprecates for silently dropping the timezone. Other
+    indexes return ``Index.values`` unchanged, including extension arrays for
+    nullable dtypes.
     """
     if isinstance(index, pd.DatetimeIndex) and index.tz is not None:
         return index.tz_convert(None).to_numpy()
-    return index.to_numpy()
+    return index.values
 
 
 def potential_interactions(shap_values_column: Any, shap_values_matrix: Any) -> npt.NDArray[Any]:
