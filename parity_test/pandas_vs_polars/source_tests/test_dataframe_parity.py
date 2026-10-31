@@ -43,3 +43,36 @@ def test_tabular_masker_dataframe_inputs_match(masker_type):
         nw.from_native(polars_delta).to_numpy(),
     )
     np.testing.assert_array_equal(pandas_varying, polars_varying)
+
+
+def test_sample_dataframe_inputs_match():
+    pandas = pytest.importorskip("pandas")
+    polars = pytest.importorskip("polars")
+
+    values = np.arange(60, dtype=np.float64).reshape(20, 3)
+    columns = ["first", "second", "third"]
+    pandas_frame = pandas.DataFrame(values, columns=columns)
+    polars_frame = polars.DataFrame({name: values[:, i] for i, name in enumerate(columns)})
+
+    pandas_sample = shap.utils.sample(pandas_frame, nsamples=7, random_state=0)
+    polars_sample = shap.utils.sample(polars_frame, nsamples=7, random_state=0)
+    np.testing.assert_array_equal(
+        nw.from_native(pandas_sample).to_numpy(),
+        nw.from_native(polars_sample).to_numpy(),
+    )
+    assert list(nw.from_native(pandas_sample).columns) == columns
+    assert list(nw.from_native(polars_sample).columns) == columns
+
+
+def test_hclust_dataframe_inputs_match():
+    pandas = pytest.importorskip("pandas")
+    polars = pytest.importorskip("polars")
+
+    values = np.arange(60, dtype=np.float64).reshape(20, 3)
+    columns = ["first", "second", "third"]
+    pandas_frame = pandas.DataFrame(values, columns=columns)
+    polars_frame = polars.DataFrame({name: values[:, i] for i, name in enumerate(columns)})
+
+    pandas_tree = shap.utils.hclust(pandas_frame)
+    polars_tree = shap.utils.hclust(polars_frame)
+    np.testing.assert_array_equal(pandas_tree, polars_tree)
