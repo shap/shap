@@ -1,7 +1,7 @@
 import logging
 
+import narwhals as nw
 import numpy as np
-import pandas as pd
 
 from .. import utils
 
@@ -46,9 +46,11 @@ class Tabular(Masker):
 
         """
         self.output_dataframe = False
-        if isinstance(data, pd.DataFrame):
+        self.data_implementation = None
+        if isinstance(data, nw.DataFrame):
             self.feature_names = data.columns
-            data = data.values
+            self.data_implementation = data.implementation
+            data = data.to_numpy()
             self.output_dataframe = True
 
         if isinstance(data, dict) and "mean" in data:
@@ -109,6 +111,13 @@ class Tabular(Masker):
         # this is property that allows callers to check what rows actually changed since last time.
         # self.changed_rows = np.ones(self.data.shape[0], dtype=bool)
 
+    def _to_native_dataframe(self, data):
+        return nw.DataFrame.from_numpy(
+            data,
+            schema=self.feature_names,
+            backend=self.data_implementation,
+        ).to_native()
+
     def __call__(self, mask, x):
         mask = self._standardize_mask(mask, x)
 
@@ -140,7 +149,7 @@ class Tabular(Masker):
                 MaskedModel.delta_mask_noop_value,
             )
             if self.output_dataframe:
-                return (pd.DataFrame(masked_inputs_out, columns=self.feature_names),), varying_rows_out
+                return (self._to_native_dataframe(masked_inputs_out),), varying_rows_out
 
             return (masked_inputs_out,), varying_rows_out
 
@@ -149,7 +158,7 @@ class Tabular(Masker):
         self._last_mask[:] = mask
 
         if self.output_dataframe:
-            return pd.DataFrame(self._masked_data, columns=self.feature_names)
+            return self._to_native_dataframe(self._masked_data)
 
         return (self._masked_data,)
 
@@ -187,7 +196,7 @@ class Tabular(Masker):
         with Serializer(out_file, "shap.maskers.Tabular", version=0) as s:
             # save the data in the format it was given to us
             if self.output_dataframe:
-                s.save("data", pd.DataFrame(self.data, columns=self.feature_names))
+                s.save("data", self._to_native_dataframe(self.data))
             elif getattr(self, "mean", None) is not None:
                 s.save("data", (self.mean, self.cov))
             else:

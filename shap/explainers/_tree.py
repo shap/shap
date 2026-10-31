@@ -6,7 +6,7 @@ import json
 import os
 import time
 import warnings
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import narwhals as nw
 import numpy as np
@@ -14,6 +14,10 @@ import numpy.typing as npt
 import scipy.sparse
 import scipy.special
 from packaging import version
+
+if TYPE_CHECKING:
+    import pandas as pd
+    import polars as pl
 
 from .. import maskers
 from .._explanation import Explanation
@@ -301,7 +305,6 @@ class TreeExplainer(Explainer):
         elif isinstance(data, nw.DataFrame):
             self.data_feature_names = list(data.columns)
 
-        breakpoint()
         masker = data
         super().__init__(model, masker, feature_names=feature_names)
 
@@ -634,8 +637,8 @@ class TreeExplainer(Explainer):
 
         elif self.model.model_type == "lightgbm":
             assert not approximate, "approximate=True is not supported for LightGBM models!"
-            if isinstance(X, (nw.DataFrame, nw.Series)):
-                X = _to_numpy(X, na_value=np.nan)
+            if hasattr(X, "to_native"):
+                X = X.to_native()
             phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
             # Note: the data must be joined on the last axis
             if (
@@ -953,6 +956,8 @@ class TreeExplainer(Explainer):
             import catboost
 
             if not isinstance(X, catboost.Pool):
+                if hasattr(X, "to_numpy"):
+                    X = X.to_numpy()
                 X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
             phi = self.model.original_model.get_feature_importance(data=X, fstr_type="ShapInteractionValues")
             # note we pull off the last column and keep it as our expected_value
