@@ -64,6 +64,10 @@ def partial_dependence(
         ranking_values = shap_values.values
     else:
         ranking_values = shap_values
+    if ranking_values is not None and ranking_values.ndim == 1:
+        # a single sample yields flat (n_features,) values; restore the sample
+        # axis that convert_name's mean-|SHAP| ranking averages across
+        ranking_values = ranking_values.reshape(1, -1)
 
     # convert from DataFrames if we got any
     use_dataframe = False
