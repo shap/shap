@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -41,3 +42,36 @@ def test_dependence_use_line_collection_bug():
         shap_values=shap_values[:1, :],  # type: ignore[call-overload]
         show=False,
     )
+
+
+def test_dependence_polars_dataframe():
+    """dependence_plot accepts a polars DataFrame and uses its column names."""
+    pl = pytest.importorskip("polars")
+    rng = np.random.default_rng(0)
+    X = pl.DataFrame({"a": rng.normal(size=20), "b": rng.normal(size=20), "c": rng.normal(size=20)})
+    shap_values = rng.normal(size=(20, 3))
+
+    shap.dependence_plot("b", shap_values, X, interaction_index=None, show=False)
+
+    assert plt.gca().get_xlabel() == "b"
+    plt.close("all")
+
+
+def test_dependence_polars_string_feature():
+    """A polars DataFrame with a string column is labelled and categorised like a pandas one."""
+    pl = pytest.importorskip("polars")
+    X = pl.DataFrame(
+        {
+            "Sex": ["Male", "Female", "Male", "Male", "Female", "Female"],
+            "Age": [10, 15, 28, 3, 84, 56],
+        }
+    )
+    rng = np.random.default_rng(0)
+    shap_values = rng.normal(size=X.shape)
+
+    shap.dependence_plot("Sex", shap_values, X, interaction_index=None, show=False)
+
+    ax = plt.gca()
+    assert ax.get_xlabel() == "Sex"
+    assert {t.get_text() for t in ax.get_xticklabels() if t.get_text()} == {"Male", "Female"}
+    plt.close("all")
