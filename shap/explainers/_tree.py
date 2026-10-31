@@ -55,19 +55,20 @@ feature_perturbation_codes = {
 }
 
 NUMPY_NARWHALS_DTYPE_MAP = {
-        np.dtype("bool"): nw.Boolean,
-        np.dtype("int8"): nw.Int8,
-        np.dtype("int16"): nw.Int16,
-        np.dtype("int32"): nw.Int32,
-        np.dtype("int64"): nw.Int64,
-        np.dtype("uint8"): nw.UInt8,
-        np.dtype("uint16"): nw.UInt16,
-        np.dtype("uint32"): nw.UInt32,
-        np.dtype("uint64"): nw.UInt64,
-        np.dtype("float16"): nw.Float16,
-        np.dtype("float32"): nw.Float32,
-        np.dtype("float64"): nw.Float64,
-    }
+    np.dtype("bool"): nw.Boolean,
+    np.dtype("int8"): nw.Int8,
+    np.dtype("int16"): nw.Int16,
+    np.dtype("int32"): nw.Int32,
+    np.dtype("int64"): nw.Int64,
+    np.dtype("uint8"): nw.UInt8,
+    np.dtype("uint16"): nw.UInt16,
+    np.dtype("uint32"): nw.UInt32,
+    np.dtype("uint64"): nw.UInt64,
+    np.dtype("float16"): nw.Float16,
+    np.dtype("float32"): nw.Float32,
+    np.dtype("float64"): nw.Float64,
+}
+
 
 def _to_numpy(X: nw.DataFrame | nw.Series, na_value: Any, cast_type: Any = None) -> np.ndarray:
     numpy_dtype = np.dtype(cast_type)
@@ -81,7 +82,7 @@ def _to_numpy(X: nw.DataFrame | nw.Series, na_value: Any, cast_type: Any = None)
     if isinstance(X, nw.Series) and na_value is not None:
         X = X.fill_null(na_value)
     elif isinstance(X, nw.DataFrame) and na_value is not None:
-            X = X.with_columns(nw.all().fill_null(na_value))
+        X = X.with_columns(nw.all().fill_null(na_value))
     return np.asarray(X.to_numpy())
 
 
@@ -1838,7 +1839,7 @@ class TreeEnsemble:
     @nw.narwhalify
     def predict(
         self,
-        X: npt.NDArray[Any] | "pd.Series" | "pd.DataFrame" | "pl.Series" | "pl.DataFrame" | nw.Series | nw.DataFrame,
+        X: npt.NDArray[Any] | pd.Series | pd.DataFrame | pl.Series | pl.DataFrame | nw.Series | nw.DataFrame,
         y: npt.NDArray[Any] | None = None,
         output: str | None = None,
         tree_limit: int | None = None,
