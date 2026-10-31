@@ -245,3 +245,72 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_explanation_percentile_without_data():
+    """Checks that percentile works when optional data is None (issue #5196)."""
+    values = np.array([[1.0, 2.0], [3.0, 4.0]])
+    exp = shap.Explanation(values=values)
+    assert exp.data is None
+
+    p = exp.percentile(50, axis=0)
+    assert p.data is None
+    assert np.allclose(p.values, [2.0, 3.0])
+
+
+def test_explanation_percentile_multi_output():
+    """Checks that percentile preserves data when reducing a model-output axis absent from data."""
+    n_samples, n_features, n_outputs = 10, 4, 3
+    rs = np.random.RandomState(42)
+    values = rs.randn(n_samples, n_features, n_outputs)
+    data = np.arange(n_samples * n_features).reshape(n_samples, n_features)
+
+    exp = shap.Explanation(values=values, data=data)
+    p = exp.percentile(50, axis=2)
+
+    assert p.values.shape == (n_samples, n_features)
+    assert np.allclose(p.values, np.percentile(values, 50, axis=2))
+    assert p.data is not None
+    assert np.array_equal(p.data, data)
+
+
+def test_explanation_percentile_multi_output_negative_axis():
+    """Checks that percentile with negative axis reduces values and data along the same feature dimension."""
+    n_samples, n_features, n_outputs = 10, 4, 3
+    rs = np.random.RandomState(42)
+    values = rs.randn(n_samples, n_features, n_outputs)
+    data = np.arange(n_samples * n_features).reshape(n_samples, n_features)
+
+    exp = shap.Explanation(values=values, data=data)
+    # axis=-2 corresponds to the feature axis (dim 1) for a 3D values array
+    p = exp.percentile(50, axis=-2)
+
+    assert p.values.shape == (n_samples, n_outputs)
+    assert p.data is not None
+    assert p.data.shape == (n_samples,)
+    assert np.allclose(p.data, np.percentile(data, 50, axis=1))
+
+
+def test_explanation_percentile_tuple_axis():
+    """Checks that percentile supports tuple axes for both values and data."""
+    values = np.array([[1.0, 2.0], [3.0, 4.0]])
+    data = np.array([[10.0, 20.0], [30.0, 40.0]])
+    exp = shap.Explanation(values=values, data=data)
+
+    p = exp.percentile(50, axis=(0, 1))
+    assert np.isclose(p.values, 2.5)
+    assert p.data is not None
+    assert np.isclose(p.data, 25.0)
+
+
+def test_explanation_percentile_mixed_tuple_axis():
+    """Checks that percentile with mixed tuple axes reduces data on shared feature axes and omits output axes."""
+    values = np.arange(24, dtype=float).reshape(2, 3, 4)
+    data = np.arange(6, dtype=float).reshape(2, 3)
+    exp = shap.Explanation(values=values, data=data)
+
+    p = exp.percentile(50, axis=(1, 2))
+    assert p.values.shape == (2,)
+    assert p.data is not None
+    assert p.data.shape == (2,)
+    assert np.allclose(p.data, np.percentile(data, 50, axis=1))
