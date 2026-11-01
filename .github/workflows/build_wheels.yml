@@ -166,7 +166,7 @@ jobs:
           ))
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@b3395e271a35f73dad77f21802abe9b986dfe299 # v4.3.1
+        uses: pypa/cibuildwheel@b9e566a2b284570af229f6c2a33673410d0389a3 # v4.3.4
         env:
           # Pinning the cuda extra modifies pyproject.toml. Keep setuptools-scm
           # from treating that dirty checkout as a new development release.
@@ -264,7 +264,7 @@ jobs:
           path: dist
 
       - name: Publish package to TestPyPI
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
         with:
           verbose: true
           repository-url: https://test.pypi.org/legacy/
@@ -293,7 +293,7 @@ jobs:
           path: dist
 
       - name: Publish package to PyPI
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
 
   upload_nightly:
     name: Upload nightly wheels to Anaconda.org

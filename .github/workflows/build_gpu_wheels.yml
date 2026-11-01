@@ -116,7 +116,7 @@ jobs:
       # mismatch). manylinux compiles against old glibc/libstdc++ so the wheel
       # runs on both. One cp312 stable-ABI build covers 3.12+.
       - name: Build shap wheel
-        uses: pypa/cibuildwheel@b3395e271a35f73dad77f21802abe9b986dfe299 # v4.3.1
+        uses: pypa/cibuildwheel@b9e566a2b284570af229f6c2a33673410d0389a3 # v4.3.4
         env:
           CIBW_BUILD: "cp312-manylinux_x86_64"
           CIBW_ARCHS_LINUX: x86_64
@@ -142,7 +142,7 @@ jobs:
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: Build CUDA wheel
-        uses: pypa/cibuildwheel@b3395e271a35f73dad77f21802abe9b986dfe299 # v4.3.1
+        uses: pypa/cibuildwheel@b9e566a2b284570af229f6c2a33673410d0389a3 # v4.3.4
         with:
           package-dir: backends/shap-cuda
         env:
@@ -292,7 +292,7 @@ jobs:
           name: gpu_sdist_files
           path: dist
       - name: Publish package to TestPyPI
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
         with:
           verbose: true
           repository-url: https://test.pypi.org/legacy/
@@ -318,4 +318,4 @@ jobs:
           name: gpu_sdist_files
           path: dist
       - name: Publish package to PyPI
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
