@@ -34,6 +34,8 @@ __pycache__
 shap/explainers/_kernel_lib.c
 /shap/_version.py
 /shap/cached_data
+/backends/shap-cuda/build
+/backends/shap-cuda/shap_cuda/_version.py
 /tests/local_scratch.py
 /tests/mnist_data
 catboost_info

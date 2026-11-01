@@ -1,19 +1,36 @@
 """GPU accelerated tree explanations"""
 
 import numpy as np
-
-from ..utils import assert_import, record_import_error
-from ._tree import (
+import shap
+from packaging.version import parse as _parse_version
+from shap.explainers._tree import (
     TreeExplainer,
     _xgboost_cat_unsupported,
     feature_perturbation_codes,
     output_transform_codes,
 )
+from shap.utils import assert_import, record_import_error
 
 try:
-    from .. import _cext_gpu  # type: ignore
+    from ._version import version as _shap_cuda_version
+except ImportError:
+    _shap_cuda_version = "0.0.0-not-built"
+
+try:
+    from . import _cext_gpu  # type: ignore
 except ImportError as e:
     record_import_error("cext_gpu", "cuda extension was not built during install!", e)
+
+
+def _check_versions_match() -> None:
+    shap_release = _parse_version(shap.__version__).release
+    shap_cuda_release = _parse_version(_shap_cuda_version).release
+    if shap_release != shap_cuda_release:
+        raise RuntimeError(
+            f"shap=={shap.__version__} and shap-cuda=={_shap_cuda_version} are from different "
+            "releases and are not guaranteed to be compatible. Reinstall matching versions, "
+            f"e.g. `pip install shap=={shap.__version__} shap-cuda=={shap.__version__}`."
+        )
 
 
 class GPUTreeExplainer(TreeExplainer):
@@ -25,6 +42,10 @@ class GPUTreeExplainer(TreeExplainer):
     See `GPUTree explainer examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/explainers/GPUTree.html>`_
 
     """
+
+    def __init__(self, *args, **kwargs):
+        _check_versions_match()
+        super().__init__(*args, **kwargs)
 
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True, from_call=False):
         """Estimate the SHAP values for a set of samples.

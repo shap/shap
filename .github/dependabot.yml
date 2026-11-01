@@ -4,6 +4,8 @@ updates:
     directory: "/javascript/"
     schedule:
       interval: "monthly"
+    labels:
+      - "skip-changelog"
     groups:
       # Group all minor and patch updates in a single PR
       js-minor:
@@ -18,7 +20,8 @@ updates:
       default-days: 7
     commit-message:
       prefix: "MAINT"
-    labels: []
+    labels:
+      - "skip-changelog"
     groups:
       github-actions-minor-patch:
         patterns:

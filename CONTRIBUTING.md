@@ -70,10 +70,10 @@ Reports](https://matthewrocklin.com/minimal-bug-reports).
 ## Installing the latest version
 
 To get the very latest version of shap, you can pip-install the library directly
-from the `master` branch:
+from the `main` branch:
 
 ```bash
-pip install git+https://github.com/shap/shap.git@master
+pip install git+https://github.com/shap/shap.git@main
 ```
 
 This can be useful to test if a particular issue or bug has been fixed since the
@@ -131,12 +131,13 @@ The various dependency groups are defined in [pyproject.toml](pyproject.toml):
 - `plots`: includes matplotlib.
 - `docs`: dependencies for building the docs with Sphinx.
 
-To use the CUDA extension for ``GPUTreeExplainer``, set the ``SHAP_ENABLE_CUDA`` environment variable to `1` when installing:
+To develop ``GPUTreeExplainer`` (the CUDA extension, in `backends/shap-cuda`), install it alongside `shap` itself:
 
 ```bash
-SHAP_ENABLE_CUDA=1 pip install -e . --group test-core --group plots
-# or using uv
-SHAP_ENABLE_CUDA=1 uv sync --group test-core --group plots
+pip install -e . --group test-core --group plots
+pip install -e backends/shap-cuda --no-build-isolation
+# or using uv, which installs both automatically as workspace members
+uv sync --group test-core --group plots
 ```
 
 ### Code checks with precommit
@@ -235,7 +236,7 @@ Use a descriptive title, such as:
 Before marking your PR as "ready for review" (by removing the `Draft` status),
 please ensure:
 
-- Your feature branch is up-to-date with the master branch,
+- Your feature branch is up-to-date with the main branch,
 - All [pre-commit hooks](#code-checks-with-precommit) pass, and
 - Unit tests have been added (if your PR adds any new features or fixes a bug).
 

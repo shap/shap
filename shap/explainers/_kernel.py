@@ -127,6 +127,11 @@ class KernelExplainer(Explainer):
         elif isinstance(data, pd.DataFrame):
             self.data_feature_names = list(data.columns)
 
+        self._background_columns = None
+        if isinstance(data, pd.DataFrame):
+            if not data.columns.is_unique:
+                raise ValueError("Background data must have unique column names.")
+            self._background_columns = data.columns.copy()
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
         self.keep_index = kwargs.get("keep_index", False)
@@ -283,6 +288,24 @@ class KernelExplainer(Explainer):
                 Return type for models with multiple outputs and one input changed from list to np.ndarray.
 
         """
+        # Align by background labels, then restore the input order in the result.
+        input_order = None
+        columns = self._background_columns
+        if isinstance(X, pd.DataFrame) and not X.columns.is_unique:
+            raise ValueError(
+                "X must have unique column names. Please ensure that the input DataFrame has unique column names or use a numpy array."
+            )
+        if isinstance(X, pd.DataFrame) and columns is not None:
+            if set(X.columns) != set(columns):
+                missing = list(columns.difference(X.columns))
+                unexpected = list(X.columns.difference(columns))
+                raise ValueError(
+                    "X must have the same column names as the background data: "
+                    f"missing={missing}, unexpected={unexpected}"
+                )
+            input_order = columns.get_indexer(X.columns)
+            X = X.loc[:, columns]
+
         # convert dataframes
         if isinstance(X, pd.Series):
             X = X.values
@@ -332,14 +355,14 @@ class KernelExplainer(Explainer):
                     for j in range(s[1]):
                         outs[j][i] = explanations[i][:, j]
                 outs = np.stack(outs, axis=-1)  # type: ignore[assignment]
-                return outs  # type: ignore[return-value]
+                return np.take(outs, input_order, axis=1) if input_order is not None else outs  # type: ignore[return-value]
 
             # single-output
             else:
                 out = np.zeros((X.shape[0], s[0]))
                 for i in range(X.shape[0]):
                     out[i] = explanations[i]
-                return out
+                return np.take(out, input_order, axis=1) if input_order is not None else out
 
         else:
             emsg = "Instance must have 1 or 2 dimensions!"

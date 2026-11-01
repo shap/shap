@@ -2,7 +2,7 @@ Image examples
 ----------------
 
 These examples explain machine learning models applied to image data. They are all generated from Jupyter
-notebooks `available on GitHub <https://github.com/shap/shap/tree/master/notebooks/image_examples>`_.
+notebooks `available on GitHub <https://github.com/shap/shap/tree/main/notebooks/image_examples>`_.
 
 
 Image classification

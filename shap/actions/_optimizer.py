@@ -61,7 +61,7 @@ class ActionOptimizer:
                 for i in range(len(self.action_groups)):
                     group = self.action_groups[i]
 
-                    # look to to see if we already have a action from this group, if so we need to
+                    # look to see if we already have an action from this group, if so we need to
                     # move to a more expensive action in the same group
                     next_ind = 0
                     prev_in_group = -1

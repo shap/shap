@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Configuration for CodeRabbit AI code reviews.
+# See https://docs.coderabbit.ai/reference/configuration
+language: "en-US"
+early_access: false
+
+reviews:
+  # "chill" keeps review comments focused on real issues rather than nitpicks.
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: false
+  collapse_walkthrough: true
+  sequence_diagrams: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "pre-commit-ci[bot]"
+  path_filters:
+    - "!**/__snapshots__/**"
+    - "!tests/plots/baseline/**"
+    - "!data/**"
+  path_instructions:
+    - path: "shap/**/*.py"
+      instructions: |
+        Focus on numerical correctness of SHAP value computations (e.g. additivity:
+        SHAP values plus the base value should sum to the model output), handling of
+        edge cases such as empty inputs, single samples, multi-output models and
+        pandas vs. numpy inputs. Flag changes to public APIs that lack deprecation
+        handling or documentation updates.
+    - path: "shap/cext/**"
+      instructions: |
+        This is the C++ tree SHAP implementation. Check for out-of-bounds access,
+        integer overflow, memory leaks and incorrect reference counting in the
+        Python C API.
+    - path: "tests/**"
+      instructions: |
+        Check that tests are deterministic (seeded randomness) and assert on
+        meaningful behaviour rather than only checking that code runs.
+    - path: "notebooks/**"
+      instructions: |
+        Verify that examples use the current shap API and do not rely on
+        deprecated functions.
+    - path: "docs/**"
+      instructions: |
+        Check code example accuracy, clarity, and consistency with the current API.
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  code_guidelines:
+    filePatterns:
+      - "CONTRIBUTING.md"
