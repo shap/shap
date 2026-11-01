@@ -1,5 +1,6 @@
 """This file contains tests for the `shap.datasets` module."""
 
+import numpy as np
 import pytest
 
 import shap
@@ -121,6 +122,16 @@ def test_independentlinear60(n_points):
     # check that the n_points parameter samples the dataset
     assert X.shape == (n_points, 60)
     assert y.shape == (n_points,)
+
+
+@pytest.mark.parametrize("generator", [shap.datasets.corrgroups60, shap.datasets.independentlinear60])
+def test_synthetic_linear_datasets_restore_global_rng(generator):
+    """Dataset helpers must not leave the legacy numpy RNG mutated (numpy.random.seed() returns None)."""
+    np.random.seed(424242)
+    expected = np.random.rand(5)
+    np.random.seed(424242)
+    generator(n_points=80)
+    assert np.allclose(np.random.rand(5), expected)
 
 
 @pytest.mark.parametrize("n_points", [None, 12])
