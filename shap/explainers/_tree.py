@@ -107,14 +107,14 @@ def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
 _XGBOOST_ENABLE_CATEGORICAL_DEFAULT_TRUE_VERSION = "3.3"
 
 
-def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
+def _xgboost_has_categorical_splits(model: TreeEnsemble) -> bool:
     # XGBoost's own internal SHAP calculation (used for feature_perturbation=
     # "tree_path_dependent") has natively supported categorical splits since
-    # XGBoost 1.5.0, so no guard is needed there. This guard only applies to
+    # XGBoost 1.5.0, so no guard is needed there. This only matters for
     # shap's own C extension (used for "interventional" and by GPUTreeExplainer),
     # which still cannot interpret XGBoost's categorical split encoding.
     if model.model_type != "xgboost":
-        return
+        return False
 
     has_cat_columns = model.cat_feature_indices is not None
     enable_categorical_flag = getattr(model, "_xgb_enable_categorical", False)
@@ -131,7 +131,11 @@ def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
         if version.parse(xgboost.__version__) < version.parse(_XGBOOST_ENABLE_CATEGORICAL_DEFAULT_TRUE_VERSION):
             has_cat_columns = True
 
-    if has_cat_columns:
+    return has_cat_columns
+
+
+def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
+    if _xgboost_has_categorical_splits(model):
         raise NotImplementedError(
             "Categorical split is not yet supported. You can still use"
             " TreeExplainer with `feature_perturbation=tree_path_dependent`."
@@ -354,7 +358,7 @@ class TreeExplainer(Explainer):
 
         # compute the expected value if we have a parsed tree for the cext
         if self.model.model_output == "log_loss":
-            if self.model.trees is None:
+            if self.model.trees is None or _xgboost_has_categorical_splits(self.model):
                 raise ExplainerError(
                     "TreeExplainer cannot compute log_loss for models with native categorical splits: "
                     'log_loss requires background data and feature_perturbation="interventional", '

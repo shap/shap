@@ -1857,12 +1857,48 @@ class TestExplainerLightGBM:
         # feature_perturbation="interventional", which native categorical
         # splits cannot support, so this combination should raise a clear error.
         lightgbm = pytest.importorskip("lightgbm")
+        rng = np.random.RandomState(0)
+        n = 200
+        categ = pd.Categorical(rng.choice(["a", "b", "c"], size=n))
+        noise = rng.normal(scale=0.1, size=n)
+        # Make `categ` the only informative feature, so the model is forced to
+        # split on it natively, instead of relying on it being picked among
+        # other competing features.
+        X = pd.DataFrame({"categ": categ, "noise": noise})
+        y = (categ.codes + noise > 1).astype(int)
+
+        model = lightgbm.LGBMClassifier(n_estimators=7, n_jobs=1, random_state=0)
+        model.fit(X, y)
+
+        # Sanity check that the fitted model actually contains a native
+        # categorical split, so this test exercises the intended code path.
+        def _has_categorical_split(node):
+            if "threshold" not in node:
+                return False
+            if isinstance(node["threshold"], str):
+                return True
+            return _has_categorical_split(node.get("left_child", {})) or _has_categorical_split(
+                node.get("right_child", {})
+            )
+
+        tree_info = model.booster_.dump_model()["tree_info"]
+        assert any(_has_categorical_split(t["tree_structure"]) for t in tree_info)
+
+        with pytest.raises(ExplainerError, match="log_loss"):
+            shap.TreeExplainer(model, data=X, model_output="log_loss")
+
+    def test_xgboost_categorical_log_loss_raises(self):
+        # GH 5132: XGBoost's native categorical splits are also unsupported by
+        # shap's C extension, so model_output="log_loss" must raise the same
+        # clear error at construction time, rather than only failing later
+        # inside shap_values() with an unrelated NotImplementedError.
+        xgboost = pytest.importorskip("xgboost")
         X, y = shap.datasets.adult(n_points=300)
         X["categ"] = pd.Categorical(
             [p for p in ("M", "F") for _ in range(150)],
             ordered=False,
         )
-        model = lightgbm.LGBMClassifier(n_estimators=7, n_jobs=1)
+        model = xgboost.XGBClassifier(n_estimators=7, enable_categorical=True)
         model.fit(X, y)
 
         with pytest.raises(ExplainerError, match="log_loss"):
