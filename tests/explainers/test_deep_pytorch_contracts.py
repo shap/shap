@@ -90,3 +90,17 @@ def test_interim_layer_attributions_use_layer_input_shape():
     np.testing.assert_allclose(values[..., 0], expected.detach().numpy())
     np.testing.assert_allclose(values.sum(axis=1) + explainer.expected_value, model(samples).detach().numpy())
 
+
+def test_nonlinear_backward_hook_handles_unchanged_and_changed_features():
+    model = torch.nn.Sequential(torch.nn.ReLU(), torch.nn.Linear(2, 1, bias=False))
+    with torch.no_grad():
+        model[1].weight.copy_(torch.tensor([[2.0, 3.0]]))
+    background = torch.tensor([[0.0, -1.0], [0.0, 1.0]])
+    samples = torch.tensor([[0.0, 2.0], [1.0, -2.0]])
+    explainer = shap.DeepExplainer(model, background)
+
+    values = explainer.shap_values(samples)
+
+    expected = (samples.relu() - background.relu().mean(0)) * model[1].weight
+    np.testing.assert_allclose(values[..., 0], expected.detach().numpy())
+    np.testing.assert_allclose(values.sum(axis=1) + explainer.expected_value, model(samples).detach().numpy())

@@ -114,10 +114,9 @@ class PyTorchDeep(Explainer):
                     selected, input, retain_graph=True if idx + 1 < len(interim_inputs) else None, allow_unused=True
                 )[0]
                 if grad is not None:
-                    grad = grad.cpu().numpy()
+                    grads.append(grad.cpu().numpy())
                 else:
-                    grad = torch.zeros_like(X[idx]).cpu().numpy()
-                grads.append(grad)
+                    grads.append(torch.zeros_like(X[idx]).cpu().numpy())
             del self.layer.target_input
             return grads, [i.detach().cpu().numpy() for i in interim_inputs]
         else:
@@ -126,10 +125,9 @@ class PyTorchDeep(Explainer):
                     selected, x, retain_graph=True if idx + 1 < len(X) else None, allow_unused=True
                 )[0]
                 if grad is not None:
-                    grad = grad.cpu().numpy()
+                    grads.append(grad.cpu().numpy())
                 else:
-                    grad = torch.zeros_like(x).cpu().numpy()
-                grads.append(grad)
+                    grads.append(torch.zeros_like(x).cpu().numpy())
             return grads
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
