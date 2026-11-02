@@ -274,7 +274,10 @@ def bar(
         )
 
     # draw the yticks (the 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks)
-    ax.set_yticks(list(y_pos) + list(y_pos + 1e-8), yticklabels + [t.split("=")[-1] for t in yticklabels], fontsize=13)
+    # NB: fontsize is applied separately via tick_params because set_yticks only
+    # accepts text-property kwargs on matplotlib >= 3.5 (see shap/shap#3673).
+    ax.set_yticks(list(y_pos) + list(y_pos + 1e-8), yticklabels + [t.split("=")[-1] for t in yticklabels])
+    ax.tick_params(axis="y", labelsize=13)
 
     xlen = ax.get_xlim()[1] - ax.get_xlim()[0]
     # xticks = ax.get_xticks()
