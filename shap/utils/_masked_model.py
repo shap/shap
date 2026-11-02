@@ -1,6 +1,7 @@
 import copy
 from typing import Any
 
+import narwhals as nw
 import numpy as np
 import scipy.sparse
 
@@ -131,7 +132,7 @@ class MaskedModel:
                         # _ = masked_inputs[varying_rows[-1]]
                         # _ = masked_inputs[varying_rows[-1]]
                         # _ = masked_inputs[varying_rows[-1]]
-                        masked_inputs_subset = masked_inputs[0][varying_rows[-1]]
+                        masked_inputs_subset = _select_rows(masked_inputs[0], varying_rows[-1])
                     else:
                         masked_inputs_subset = [v[varying_rows[-1]] for v in zip(*masked_inputs[0])]
                     masked_inputs = (masked_inputs_subset,) + masked_inputs[1:]
@@ -204,7 +205,7 @@ class MaskedModel:
         masked_inputs, varying_rows = self.masker(masks, *self.args)
         num_varying_rows = varying_rows.sum(1)
 
-        subset_masked_inputs = [arg[varying_rows.reshape(-1)] for arg in masked_inputs]
+        subset_masked_inputs = [_select_rows(arg, varying_rows.reshape(-1)) for arg in masked_inputs]
 
         batch_positions = np.zeros(len(varying_rows) + 1, dtype=int)
         for i in range(len(varying_rows)):
@@ -456,3 +457,16 @@ def link_reweighting(p, link):
     weights = (linearized_link - link(expected_value)) / (link(p) - link(expected_value))
     weights *= weights.shape[0] / np.sum(weights, axis=0)
     return weights
+
+
+def _select_rows(data: Any, row_mask: np.ndarray) -> Any:
+    """Keep the rows of ``data`` where ``row_mask`` is True.
+
+    numpy arrays and pandas DataFrames accept a boolean array for this, but polars
+    reads ``df[bool_array]`` as a column selection. Dataframes are therefore
+    filtered through narwhals by row position, which works for every backend.
+    """
+    frame = nw.from_native(data, eager_only=True, pass_through=True)
+    if isinstance(frame, nw.DataFrame):
+        return frame[np.flatnonzero(row_mask)].to_native()
+    return data[row_mask]
