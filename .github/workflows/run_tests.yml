@@ -292,6 +292,7 @@ jobs:
     # to versions released in the last two years. The change is not committed. uv then
     # installs the lowest versions that satisfy those bounds, so the floors move
     # forward every quarter without manual edits here.
+    # Python is excluded, so the job tests the minimum Python declared in pyproject.toml.
     name: run tests (SPEC 0 oldest supported versions)
     runs-on: ubuntu-latest
     steps:
@@ -301,6 +302,7 @@ jobs:
         with:
           create_pr: false
           update_all: 2
+          excluded_packages: python
       - name: Read minimum Python version
         id: python
         run: |
