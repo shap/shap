@@ -142,6 +142,35 @@ def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
         )
 
 
+def _has_categorical_threshold_types(trees: list[SingleTree] | None) -> bool:
+    # A model can sometimes be parsed into `SingleTree`s without error even
+    # though it contains native categorical splits (e.g. a LightGBM model
+    # trained on integer-coded categorical columns). `threshold_types == 1`
+    # marks those nodes; shap's own C extension cannot evaluate them
+    # correctly outside of feature_perturbation="tree_path_dependent".
+    if trees is None:
+        return False
+    return any(np.any(tree.threshold_types == 1) for tree in trees)
+
+
+def _categorical_splits_background_error(model_output: str | None) -> ExplainerError:
+    """The error raised when native categorical splits are combined with a background
+    dataset, a combination only feature_perturbation="tree_path_dependent" (which needs
+    no background data) supports.
+    """
+    if model_output == "log_loss":
+        return ExplainerError(
+            "TreeExplainer cannot compute log_loss for models with native categorical splits: "
+            'log_loss requires background data and feature_perturbation="interventional", '
+            "which are unsupported for such models."
+        )
+    return ExplainerError(
+        "Currently TreeExplainer can only handle models with categorical splits when "
+        'feature_perturbation="tree_path_dependent" and no background data is passed. Please try again using '
+        'shap.TreeExplainer(model, feature_perturbation="tree_path_dependent").'
+    )
+
+
 class TreeExplainer(Explainer):
     """Uses Tree SHAP algorithms to explain the output of ensemble tree models.
 
@@ -358,22 +387,18 @@ class TreeExplainer(Explainer):
 
         # compute the expected value if we have a parsed tree for the cext
         if self.model.model_output == "log_loss":
-            if self.model.trees is None or _xgboost_has_categorical_splits(self.model):
-                raise ExplainerError(
-                    "TreeExplainer cannot compute log_loss for models with native categorical splits: "
-                    'log_loss requires background data and feature_perturbation="interventional", '
-                    "which are unsupported for such models."
-                )
+            if (
+                self.model.trees is None
+                or _xgboost_has_categorical_splits(self.model)
+                or _has_categorical_threshold_types(self.model.trees)
+            ):
+                raise _categorical_splits_background_error("log_loss")
             self.expected_value = self.__dynamic_expected_value
         elif data is not None:
             try:
                 self.expected_value = self.model.predict(self.data).mean(0)  # type: ignore[union-attr]
             except ValueError:
-                raise ExplainerError(
-                    "Currently TreeExplainer can only handle models with categorical splits when "
-                    'feature_perturbation="tree_path_dependent" and no background data is passed. Please try again using '
-                    'shap.TreeExplainer(model, feature_perturbation="tree_path_dependent").'
-                )
+                raise _categorical_splits_background_error(self.model.model_output)
             if hasattr(self.expected_value, "__len__") and len(self.expected_value) == 1:
                 self.expected_value = self.expected_value[0]
         elif hasattr(self.model, "node_sample_weight"):
@@ -1736,6 +1761,14 @@ class TreeEnsemble:
     ) -> None:
         self.model_type = "xgboost"
         loader = XGBTreeModelLoader(self.original_model)
+
+        if data is not None and loader.cat_feature_indices is not None:
+            # A background dataset containing native categorical columns (e.g. strings)
+            # cannot be parsed by the cext's numeric weight-recomputation, and would
+            # otherwise fail later with a confusing low-level error. Models with native
+            # categorical splits only support feature_perturbation="tree_path_dependent"
+            # with no background data.
+            raise _categorical_splits_background_error(self.model_output)
 
         self.trees = loader.get_trees(data=data, data_missing=data_missing)
         self.base_offset = loader.base_score

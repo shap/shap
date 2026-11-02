@@ -31,6 +31,24 @@ def test_unsupported_model_raises_error():
         _ = shap.TreeExplainer(CustomEstimator())
 
 
+def test_has_categorical_threshold_types():
+    """`_has_categorical_threshold_types` must flag trees whose nodes are marked
+    as native categorical splits (threshold_types == 1), even though they were
+    parsed into `SingleTree`s without error. Regression test for GH 5152."""
+    from types import SimpleNamespace
+
+    from shap.explainers._tree import _has_categorical_threshold_types
+
+    assert _has_categorical_threshold_types(None) is False
+    assert _has_categorical_threshold_types([]) is False
+
+    numeric_tree = SimpleNamespace(threshold_types=np.array([0, 0, -1], dtype=np.int32))
+    assert _has_categorical_threshold_types([numeric_tree]) is False
+
+    categorical_tree = SimpleNamespace(threshold_types=np.array([0, 1, -1], dtype=np.int32))
+    assert _has_categorical_threshold_types([numeric_tree, categorical_tree]) is True
+
+
 def test_large_background_dataset_warning():
     """A warning should be emitted when >1000 background samples are passed
     with feature_perturbation='interventional'. Regression test for GH#4385."""
@@ -1593,6 +1611,23 @@ class TestExplainerXGBoost:
 
         explainer = shap.TreeExplainer(ltr)
         assert explainer.model.tree_limit == ltr.n_estimators * 3
+
+    def test_xgboost_categorical_background_raises(self):
+        # GH 5152 (CodeRabbit): a background dataset containing native categorical
+        # columns used to crash during TreeEnsemble construction with a low-level
+        # TypeError (the cext's weight-recomputation requires a purely numeric
+        # array), instead of the intended, documented ExplainerError.
+        xgboost = pytest.importorskip("xgboost")
+        X, y = shap.datasets.adult(n_points=300)
+        X["categ"] = pd.Categorical(
+            [p for p in ("M", "F") for _ in range(150)],
+            ordered=False,
+        )
+        model = xgboost.XGBClassifier(n_estimators=7, enable_categorical=True)
+        model.fit(X, y)
+
+        with pytest.raises(ExplainerError, match="categorical splits"):
+            shap.TreeExplainer(model, data=X)
 
 
 class TestExplainerLightGBM:
