@@ -285,6 +285,27 @@ jobs:
           path: mpl-results/
           if-no-files-found: ignore
 
+  test_oldest_supported_numpy:
+    # Package is built with numpy 2.X
+    # This job is recommended by https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-0-specific-advice
+    # The "oldest supported numpy" is determined by SPEC 0:
+    # https://scientific-python.org/specs/spec-0000/
+    name: run tests (oldest supported numpy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python 3.12
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: 3.12
+      - name: Install uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - name: Install dependencies
+        run: |
+          uv pip install --system numpy==2.0 . --group test-core --group plots
+      - name: Test with pytest
+        run: pytest --durations=20 --import-mode=append
+
   test_spec0_oldest_supported:
     # Test the oldest supported versions of all dependencies.
     # spec0-action raises the lower bounds in pyproject.toml to the SPEC 0 floors
