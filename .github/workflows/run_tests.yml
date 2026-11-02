@@ -285,24 +285,37 @@ jobs:
           path: mpl-results/
           if-no-files-found: ignore
 
-  test_oldest_supported_numpy:
-    # Package is built with numpy 2.X
-    # This job is recommended by https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-0-specific-advice
-    # The "oldest supported numpy" is determined by SPEC 0:
-    # https://scientific-python.org/specs/spec-0000/
-    name: run tests (oldest supported numpy)
+  test_spec0_oldest_supported:
+    # Test the oldest supported versions of the core scientific packages.
+    # The floors follow SPEC 0 (https://scientific-python.org/specs/spec-0000/) and are
+    # read from the published SPEC 0 schedule, so they move forward every quarter
+    # without manual edits. Exact pins are used: with ">=" the installer would pick
+    # the newest release and the minimum would never be tested.
+    name: run tests (SPEC 0 oldest supported versions)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up Python 3.12
+      - name: Generate SPEC 0 minimum version constraints
+        id: spec0
+        # TODO: switch to scientific-python/spec0-action once its constraints mode is released
+        uses: omar-radwan7/spec0-action@c902ee89449d45c68864d02768c0474a54172a39 # constraints-mode
+        with:
+          mode: constraints
+          packages: numpy scipy pandas scikit-learn matplotlib ipython python
+      - name: Show constraints
+        run: cat constraints-spec0.txt
+      - name: Set up Python ${{ steps.spec0.outputs.python_version }}
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
-          python-version: 3.12
+          python-version: ${{ steps.spec0.outputs.python_version }}
       - name: Install uv
         uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-      - name: Install dependencies
+      - name: Install dependencies at the SPEC 0 floors
         run: |
-          uv pip install --system numpy==2.0 . --group test-core --group plots
+          uv pip install --system -c constraints-spec0.txt . --group test-core --group plots
+      - name: Show installed versions
+        run: |
+          python -c "import sys, numpy, scipy, pandas, sklearn, matplotlib, IPython; print('python', sys.version.split()[0]); [print(m.__name__, m.__version__) for m in (numpy, scipy, pandas, sklearn, matplotlib, IPython)]"
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
 
