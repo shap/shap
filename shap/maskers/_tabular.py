@@ -274,7 +274,7 @@ class Partition(Tabular):
 
 # we should inherit from Tabular once we add support for arbitrary masking
 class Impute(Masker):
-    """Build a Partition masker with the given background data and clustering.
+    """Build an Imputation masker with the given background data and imputation method.
 
     This imputes the values of missing features using the values of the observed features.
 
