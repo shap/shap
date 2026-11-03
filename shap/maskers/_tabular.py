@@ -84,6 +84,9 @@ class Tabular(Masker):
                 "string, or a clustering as a numpy.ndarray."
             )
 
+        # this attribute does nothing, but present for backwards compatibility
+        self.partition = None
+
         self._masked_data = data.copy()
         self._last_mask = np.zeros(data.shape[1], dtype=bool)
         self.shape = self.data.shape
