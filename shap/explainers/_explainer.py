@@ -458,7 +458,11 @@ class Explainer(Serializable):
             # reshape the attribution values using the mask_shapes
             tmp = []
             for i, v in enumerate(arg_values[j]):
-                if np.prod(mask_shapes[i][j]) != np.prod(v.shape):  # see if we have multiple outputs
+                mask_length = np.prod(mask_shapes[i][j])
+                if v.ndim > 2 and v.shape[0] == mask_length:
+                    # keep the trailing axes apart, e.g. (features, features, outputs) for interactions
+                    tmp.append(v.reshape(*mask_shapes[i][j], *v.shape[1:]))
+                elif mask_length != np.prod(v.shape):  # see if we have multiple outputs
                     tmp.append(v.reshape(*mask_shapes[i][j], -1))
                 else:
                     tmp.append(v.reshape(*mask_shapes[i][j]))
