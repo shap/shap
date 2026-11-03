@@ -1,10 +1,14 @@
 import warnings
+from typing import TYPE_CHECKING
 
 import numpy as np
 from packaging import version
 
 from .._explainer import Explainer
 from .deep_utils import _check_additivity
+
+if TYPE_CHECKING:
+    from torch import Tensor
 
 
 class PyTorchDeep(Explainer):
@@ -103,16 +107,16 @@ class PyTorchDeep(Explainer):
         selected = [val for val in outputs[:, idx]]
         grads = []
         if self.interim:
+            assert self.layer is not None
             interim_inputs = self.layer.target_input
             for idx, input in enumerate(interim_inputs):
                 grad = torch.autograd.grad(
                     selected, input, retain_graph=True if idx + 1 < len(interim_inputs) else None, allow_unused=True
                 )[0]
                 if grad is not None:
-                    grad = grad.cpu().numpy()
+                    grads.append(grad.cpu().numpy())
                 else:
-                    grad = torch.zeros_like(X[idx]).cpu().numpy()
-                grads.append(grad)
+                    grads.append(torch.zeros_like(X[idx]).cpu().numpy())
             del self.layer.target_input
             return grads, [i.detach().cpu().numpy() for i in interim_inputs]
         else:
@@ -121,10 +125,9 @@ class PyTorchDeep(Explainer):
                     selected, x, retain_graph=True if idx + 1 < len(X) else None, allow_unused=True
                 )[0]
                 if grad is not None:
-                    grad = grad.cpu().numpy()
+                    grads.append(grad.cpu().numpy())
                 else:
-                    grad = torch.zeros_like(x).cpu().numpy()
-                grads.append(grad)
+                    grads.append(torch.zeros_like(x).cpu().numpy())
             return grads
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
@@ -172,6 +175,7 @@ class PyTorchDeep(Explainer):
         for i in range(model_output_ranks.shape[1]):
             phis = []
             if self.interim:
+                assert self.interim_inputs_shape is not None
                 for k in range(len(self.interim_inputs_shape)):
                     phis.append(np.zeros((X[0].shape[0],) + self.interim_inputs_shape[k][1:]))
             else:
@@ -189,6 +193,7 @@ class PyTorchDeep(Explainer):
                 sample_phis = self.gradient(feature_ind, joint_x)
                 # assign the attributions to the right part of the output arrays
                 if self.interim:
+                    assert self.interim_inputs_shape is not None
                     sample_phis, output = sample_phis
                     x, data = [], []
                     for k in range(len(output)):
@@ -225,17 +230,17 @@ class PyTorchDeep(Explainer):
 
             _check_additivity(self, model_output_values.cpu(), output_phis)
 
-        if isinstance(output_phis, list):
-            # in this case we have multiple inputs and potentially multiple outputs
-            if isinstance(output_phis[0], list):
-                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1) for i in range(len(output_phis[0]))]
-            # multiple outputs case
-            else:
-                output_phis = np.stack(output_phis, axis=-1)
-        if ranked_outputs is not None:
-            return output_phis, model_output_ranks
+        # in this case we have multiple inputs and potentially multiple outputs
+        result: list[np.ndarray] | np.ndarray
+        if isinstance(output_phis[0], list):
+            result = [np.stack([phi[i] for phi in output_phis], axis=-1) for i in range(len(output_phis[0]))]
+        # multiple outputs case
         else:
-            return output_phis
+            result = np.stack(output_phis, axis=-1)
+        if ranked_outputs is not None:
+            return result, model_output_ranks
+        else:
+            return result
 
 
 # Module hooks
@@ -365,7 +370,7 @@ def nonlinear_1d(module, grad_input, grad_output):
     dup0 = [2] + [1 for i in delta_in.shape[1:]]
     # handles numerical instabilities where delta_in is very small by
     # just taking the gradient in those cases
-    grads = [None for _ in grad_input]
+    grads: list[Tensor | None] = [None for _ in grad_input]
     grads[0] = torch.where(
         torch.abs(delta_in.repeat(dup0)) < 1e-6, grad_input[0], grad_output[0] * (delta_out / delta_in).repeat(dup0)
     )
