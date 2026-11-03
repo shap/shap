@@ -106,11 +106,11 @@ class Tabular(Masker):
             A common such background value is the mean of the feature across
             the training data.
 
-        x : 2D np.ndarray
+        x : 1D np.ndarray
             Data to be masked, present as explicit kwarg in most child classes.
-            Usually contains a 2D dataframe-like value representing the input data,
-            called `x`, usually `np.ndarray`.
-            The columns of `x` correspond to the indices in `mask`.
+            Usually contains a 1D dataframe-row-like vector representing a
+            single row of input data, called ``x``, usually ``np.ndarray``.
+            The indices of ``x`` correspond to the indices in ``mask``.
         """
         mask = self._standardize_mask(mask, x)
 
