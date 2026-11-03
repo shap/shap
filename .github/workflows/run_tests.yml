@@ -306,6 +306,44 @@ jobs:
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
 
+  test_spec0_oldest_supported:
+    # Test the oldest supported versions of all dependencies.
+    # spec0-action raises the lower bounds in pyproject.toml to the SPEC 0 floors
+    # (https://scientific-python.org/specs/spec-0000/), for dependencies outside SPEC 0
+    # to versions released in the last two years. The change is not committed. uv then
+    # installs the lowest versions that satisfy those bounds, so the floors move
+    # forward every quarter without manual edits here.
+    # Python is excluded, so the job tests the minimum Python declared in pyproject.toml.
+    name: run tests (SPEC 0 oldest supported versions)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Raise lower bounds to the SPEC 0 floors
+        uses: scientific-python/spec0-action@7c875bc60508e9aab2bdb851e99bfcc53b283e94 # v1.6
+        with:
+          create_pr: false
+          update_all: 2
+          excluded_packages: python
+      - name: Read minimum Python version
+        id: python
+        run: |
+          version=$(python3 -c 'import re, tomllib; spec = tomllib.load(open("pyproject.toml", "rb"))["project"]["requires-python"]; print(re.search(r"[0-9.]+", spec).group())')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Set up Python ${{ steps.python.outputs.version }}
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: ${{ steps.python.outputs.version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - name: Install the lowest supported versions
+        run: |
+          uv pip install --system --resolution lowest-direct . --group test-core --group plots
+      - name: Show installed versions
+        run: |
+          python -c "import sys, numpy, scipy, pandas, sklearn, matplotlib, IPython; print('python', sys.version.split()[0]); [print(m.__name__, m.__version__) for m in (numpy, scipy, pandas, sklearn, matplotlib, IPython)]"
+      - name: Test with pytest
+        run: pytest --durations=20 --import-mode=append
+
   run_mypy:
     # Run mypy on the latest Python version
     name: run mypy
