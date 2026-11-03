@@ -18,7 +18,7 @@ from sklearn.utils import check_array
 import shap
 from shap.explainers._explainer import Explanation
 from shap.explainers._tree import SingleTree
-from shap.utils._exceptions import InvalidModelError
+from shap.utils._exceptions import ExplainerError, InvalidModelError
 
 
 def test_unsupported_model_raises_error():
@@ -29,6 +29,24 @@ def test_unsupported_model_raises_error():
     emsg = "Model type not yet supported by TreeExplainer:"
     with pytest.raises(InvalidModelError, match=emsg):
         _ = shap.TreeExplainer(CustomEstimator())
+
+
+def test_has_categorical_threshold_types():
+    """`_has_categorical_threshold_types` must flag trees whose nodes are marked
+    as native categorical splits (threshold_types == 1), even though they were
+    parsed into `SingleTree`s without error. Regression test for GH 5152."""
+    from types import SimpleNamespace
+
+    from shap.explainers._tree import _has_categorical_threshold_types
+
+    assert _has_categorical_threshold_types(None) is False
+    assert _has_categorical_threshold_types([]) is False
+
+    numeric_tree = SimpleNamespace(threshold_types=np.array([0, 0, -1], dtype=np.int32))
+    assert _has_categorical_threshold_types([numeric_tree]) is False
+
+    categorical_tree = SimpleNamespace(threshold_types=np.array([0, 1, -1], dtype=np.int32))
+    assert _has_categorical_threshold_types([numeric_tree, categorical_tree]) is True
 
 
 def test_large_background_dataset_warning():
@@ -1594,6 +1612,23 @@ class TestExplainerXGBoost:
         explainer = shap.TreeExplainer(ltr)
         assert explainer.model.tree_limit == ltr.n_estimators * 3
 
+    def test_xgboost_categorical_background_raises(self):
+        # GH 5152 (CodeRabbit): a background dataset containing native categorical
+        # columns used to crash during TreeEnsemble construction with a low-level
+        # TypeError (the cext's weight-recomputation requires a purely numeric
+        # array), instead of the intended, documented ExplainerError.
+        xgboost = pytest.importorskip("xgboost")
+        X, y = shap.datasets.adult(n_points=300)
+        X["categ"] = pd.Categorical(
+            [p for p in ("M", "F") for _ in range(150)],
+            ordered=False,
+        )
+        model = xgboost.XGBClassifier(n_estimators=7, enable_categorical=True)
+        model.fit(X, y)
+
+        with pytest.raises(ExplainerError, match="categorical splits"):
+            shap.TreeExplainer(model, data=X)
+
 
 class TestExplainerLightGBM:
     """Tests for the TreeExplainer when the model passed in is a LightGBM instance.
@@ -1834,6 +1869,58 @@ class TestExplainerLightGBM:
 
         shap_values = explainer.shap_values(X.iloc[:10, :])
         assert np.allclose(shap_values.sum(axis=1) + explainer.expected_value, preds[:10], atol=1e-4)
+
+    def test_lightgbm_categorical_log_loss_raises(self):
+        # GH 5132 (case 3): model_output="log_loss" is only supported with
+        # feature_perturbation="interventional", which native categorical
+        # splits cannot support, so this combination should raise a clear error.
+        lightgbm = pytest.importorskip("lightgbm")
+        rng = np.random.RandomState(0)
+        n = 200
+        categ = pd.Categorical(rng.choice(["a", "b", "c"], size=n))
+        noise = rng.normal(scale=0.1, size=n)
+        # Make `categ` the only informative feature, so the model is forced to
+        # split on it natively, instead of relying on it being picked among
+        # other competing features.
+        X = pd.DataFrame({"categ": categ, "noise": noise})
+        y = (categ.codes + noise > 1).astype(int)
+
+        model = lightgbm.LGBMClassifier(n_estimators=7, n_jobs=1, random_state=0)
+        model.fit(X, y)
+
+        # Sanity check that the fitted model actually contains a native
+        # categorical split, so this test exercises the intended code path.
+        def _has_categorical_split(node):
+            if "threshold" not in node:
+                return False
+            if isinstance(node["threshold"], str):
+                return True
+            return _has_categorical_split(node.get("left_child", {})) or _has_categorical_split(
+                node.get("right_child", {})
+            )
+
+        tree_info = model.booster_.dump_model()["tree_info"]
+        assert any(_has_categorical_split(t["tree_structure"]) for t in tree_info)
+
+        with pytest.raises(ExplainerError, match="log_loss"):
+            shap.TreeExplainer(model, data=X, model_output="log_loss")
+
+    def test_xgboost_categorical_log_loss_raises(self):
+        # GH 5132: XGBoost's native categorical splits are also unsupported by
+        # shap's C extension, so model_output="log_loss" must raise the same
+        # clear error at construction time, rather than only failing later
+        # inside shap_values() with an unrelated NotImplementedError.
+        xgboost = pytest.importorskip("xgboost")
+        X, y = shap.datasets.adult(n_points=300)
+        X["categ"] = pd.Categorical(
+            [p for p in ("M", "F") for _ in range(150)],
+            ordered=False,
+        )
+        model = xgboost.XGBClassifier(n_estimators=7, enable_categorical=True)
+        model.fit(X, y)
+
+        with pytest.raises(ExplainerError, match="log_loss"):
+            shap.TreeExplainer(model, data=X, model_output="log_loss")
 
 
 def test_check_consistent_outputs_binary_classification():
