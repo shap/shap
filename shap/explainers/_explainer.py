@@ -99,6 +99,7 @@ class Explainer(Serializable):
         self.feature_names = feature_names
 
         # wrap the incoming masker object as a shap.Masker object
+        masker = nw.from_native(masker, eager_only=True, pass_through=True)
         if isinstance(masker, nw.DataFrame) or (
             (isinstance(masker, np.ndarray) or scipy.sparse.issparse(masker)) and len(masker.shape) == 2
         ):
