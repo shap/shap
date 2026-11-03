@@ -233,7 +233,8 @@ def hclust(
         bg_no_nan: npt.NDArray[Any] = X_arr.copy()
         for i in range(bg_no_nan.shape[1]):
             np.nan_to_num(bg_no_nan[:, i], nan=np.nanmean(bg_no_nan[:, i]), copy=False)
-        dist = scipy.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape) * 1e-8, metric=metric)
+        rng = sklearn.utils.check_random_state(random_state)
+        dist = scipy.spatial.distance.pdist(bg_no_nan.T + rng.randn(*bg_no_nan.T.shape) * 1e-8, metric=metric)
 
     # build linkage
     if linkage == "single":
