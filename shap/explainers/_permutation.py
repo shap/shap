@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
 
+import narwhals as nw
 import numpy as np
 
 from .. import links
@@ -30,6 +31,7 @@ class PermutationExplainer(Explainer):
     See `Permutation explainer examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/explainers/Permutation.html>`_
     """
 
+    @nw.narwhalify
     def __init__(
         self,
         model: Any,
@@ -106,6 +108,7 @@ class PermutationExplainer(Explainer):
                 self.__call__.__kwdefaults__[k] = v  # type: ignore[index]
 
     # note that changes to this function signature should be copied to the default call argument wrapper above
+    @nw.narwhalify
     def __call__(
         self,
         *args: Any,
@@ -254,6 +257,7 @@ class PermutationExplainer(Explainer):
             "output_names": self.model.output_names if hasattr(self.model, "output_names") else None,
         }
 
+    @nw.narwhalify
     def shap_values(
         self,
         X: Any,

@@ -41,7 +41,8 @@ class Serializable:
 
         # here we call the constructor with all the arguments we have loaded
         constructor_args = obj_type.load(in_file, instantiate=False, **kwargs)
-        used_args = inspect.getfullargspec(obj_type.__init__)[0]
+        # unwrap decorators such as @nw.narwhalify so the real constructor arguments are found
+        used_args = inspect.getfullargspec(inspect.unwrap(obj_type.__init__))[0]
         return obj_type(**{k: constructor_args[k] for k in constructor_args if k in used_args})
 
 

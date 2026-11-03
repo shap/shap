@@ -99,6 +99,7 @@ class Explainer(Serializable):
         self.feature_names = feature_names
 
         # wrap the incoming masker object as a shap.Masker object
+        masker = nw.from_native(masker, eager_only=True, pass_through=True)
         if isinstance(masker, nw.DataFrame) or (
             (isinstance(masker, np.ndarray) or scipy.sparse.issparse(masker)) and len(masker.shape) == 2
         ):
@@ -345,6 +346,7 @@ class Explainer(Serializable):
                     pass
 
             # convert DataFrames to numpy arrays
+            args[i] = nw.from_native(args[i], eager_only=True, pass_through=True)  # type: ignore[index]
             if isinstance(args[i], nw.DataFrame):
                 feature_names[i] = list(args[i].columns)  # type: ignore[call-overload, index]
                 args[i] = args[i].to_numpy()  # type: ignore[index]
