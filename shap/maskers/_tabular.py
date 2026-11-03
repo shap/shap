@@ -263,7 +263,7 @@ class Partition(Tabular):
     """
 
     def __init__(self, data, max_samples=100, clustering="correlation"):
- 
+
         self.clustering = clustering
         super().__init__(data, max_samples=max_samples, clustering=clustering)
 
