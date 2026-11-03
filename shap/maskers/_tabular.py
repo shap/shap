@@ -47,7 +47,6 @@ class Tabular(Masker):
     """
 
     def __init__(self, data, max_samples=100, clustering=None):
-        self.data = data
         self.max_samples = max_samples
 
         self.output_dataframe = False
@@ -72,6 +71,8 @@ class Tabular(Masker):
                 data.shape[0],
             )
             data = utils.sample(data, max_samples)
+
+        self.data = data
 
         # compute the clustering of the data
         if isinstance(clustering, str):
