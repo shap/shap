@@ -132,7 +132,7 @@ class MaskedModel:
                         # _ = masked_inputs[varying_rows[-1]]
                         # _ = masked_inputs[varying_rows[-1]]
                         # _ = masked_inputs[varying_rows[-1]]
-                        masked_inputs_subset = _select_rows(masked_inputs[0], varying_rows[-1])
+                        masked_inputs_subset = _subset_rows(masked_inputs[0], varying_rows[-1])
                     else:
                         masked_inputs_subset = [v[varying_rows[-1]] for v in zip(*masked_inputs[0])]
                     masked_inputs = (masked_inputs_subset,) + masked_inputs[1:]
@@ -144,7 +144,7 @@ class MaskedModel:
                 for i, v in enumerate(masked_inputs):
                     all_masked_inputs[i].append(v)
 
-            joined_masked_inputs = tuple([np.concatenate(v) for v in all_masked_inputs])
+            joined_masked_inputs = tuple(_to_native(_concat(v)) for v in all_masked_inputs)
             outputs = self.model(*joined_masked_inputs)
             _assert_output_input_match(joined_masked_inputs, outputs)
             all_outputs.append(outputs)
@@ -205,7 +205,7 @@ class MaskedModel:
         masked_inputs, varying_rows = self.masker(masks, *self.args)
         num_varying_rows = varying_rows.sum(1)
 
-        subset_masked_inputs = [_select_rows(arg, varying_rows.reshape(-1)) for arg in masked_inputs]
+        subset_masked_inputs = [_to_native(_subset_rows(arg, varying_rows.reshape(-1))) for arg in masked_inputs]
 
         batch_positions = np.zeros(len(varying_rows) + 1, dtype=int)
         for i in range(len(varying_rows)):
@@ -459,14 +459,26 @@ def link_reweighting(p, link):
     return weights
 
 
-def _select_rows(data: Any, row_mask: np.ndarray) -> Any:
+def _subset_rows(data: Any, row_mask: np.ndarray) -> Any:
     """Keep the rows of ``data`` where ``row_mask`` is True.
 
-    numpy arrays and pandas DataFrames accept a boolean array for this, but polars
-    reads ``df[bool_array]`` as a column selection. Dataframes are therefore
-    filtered through narwhals by row position, which works for every backend.
+    narwhals frames are indexed by row position, because polars reads ``df[bool_array]``
+    as a column selection.
     """
-    frame = nw.from_native(data, eager_only=True, pass_through=True)
-    if isinstance(frame, nw.DataFrame):
-        return frame[np.flatnonzero(row_mask)].to_native()
+    if isinstance(data, nw.DataFrame):
+        return data[np.flatnonzero(row_mask)]
     return data[row_mask]
+
+
+def _concat(parts: list) -> Any:
+    """Stack the masked input batches, keeping narwhals frames as frames."""
+    if parts and isinstance(parts[0], nw.DataFrame):
+        return nw.concat(parts, how="vertical")
+    return np.concatenate(parts)
+
+
+def _to_native(data: Any) -> Any:
+    """Convert a narwhals frame back to the user's dataframe type right before calling the model."""
+    if isinstance(data, nw.DataFrame):
+        return data.to_native()
+    return data
