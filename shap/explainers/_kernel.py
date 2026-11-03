@@ -435,6 +435,12 @@ class KernelExplainer(Explainer):
 
             # reserve space for some of our computations
             self.allocate()
+            self._vectorize_synth = (
+                isinstance(self.varyingFeatureGroups, np.ndarray)
+                and self.varyingFeatureGroups.ndim == 1
+                and not scipy.sparse.issparse(self.synth_data)
+                and not scipy.sparse.issparse(instance.x)
+            )
 
             # weight the different subset sizes
             num_subset_sizes = int(np.ceil((self.M - 1) / 2.0))
@@ -545,6 +551,16 @@ class KernelExplainer(Explainer):
                 weight_left = np.sum(weight_vector[num_full_subsets:])
                 log.info(f"{weight_left = }")
                 self.kernelWeights[nfixed_samples:] *= weight_left / self.kernelWeights[nfixed_samples:].sum()
+
+            if getattr(self, "_vectorize_synth", False):
+                # Fill every sampled coalition's synth_data in one pass instead of one
+                # assignment per coalition in addsample(): overwrite the 'on' features
+                # (mask == 1) of the tiled background with the explained instance.
+                ns = self.nsamplesAdded
+                col_mask = np.zeros((ns, self.synth_data.shape[1]), dtype=bool)
+                col_mask[:, self.varyingFeatureGroups] = self.maskMatrix[:ns] == 1.0
+                full_mask = np.repeat(col_mask, self.N, axis=0)
+                np.copyto(self.synth_data[: ns * self.N], instance.x[0], where=full_mask)
 
             # execute the model on the synthetic samples we have created
             self.run()
@@ -675,7 +691,7 @@ class KernelExplainer(Explainer):
             if len(groups.shape) == 2:
                 for group in groups:
                     self.synth_data[offset : offset + self.N, group] = x[0, group]
-            else:
+            elif not getattr(self, "_vectorize_synth", False):
                 # further performance optimization in case each group has a single feature
                 evaluation_data = x[0, groups]
                 # In edge case where background is all dense but evaluation data
