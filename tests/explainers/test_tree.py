@@ -3199,9 +3199,11 @@ def test_experimental_interventional_matches_original(n_outputs):
     rows[0, 0] = np.nan
     background = background.copy()
     background[1, 1] = np.nan
-    kwargs = {"feature_perturbation": "interventional"}
-    expected = shap.TreeExplainer(model, background, **kwargs)(rows)
-    actual = shap.TreeExplainer(model, background, enable_experimental=True, **kwargs)(rows)
+    original = shap.TreeExplainer(model, background, feature_perturbation="interventional")
+    experimental = shap.TreeExplainer(
+        model, background, feature_perturbation="interventional", enable_experimental=True
+    )
+    expected, actual = original(rows), experimental(rows)
     # The original implementation stores node values in float32.
     np.testing.assert_allclose(actual.values, expected.values, atol=1e-6)
     np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-6)
@@ -3218,9 +3220,11 @@ def test_experimental_interventional_deep_tree_few_features():
     assert model.get_depth() > 16
     # The dispatch rule picks patterns for this tree and these batch sizes.
     assert np.sqrt(model.get_n_leaves()) * (1.5 / len(background) + 0.5 / len(rows)) <= 1
-    kwargs = {"feature_perturbation": "interventional"}
-    expected = shap.TreeExplainer(model, background, **kwargs)(rows)
-    actual = shap.TreeExplainer(model, background, enable_experimental=True, **kwargs)(rows)
+    original = shap.TreeExplainer(model, background, feature_perturbation="interventional")
+    experimental = shap.TreeExplainer(
+        model, background, feature_perturbation="interventional", enable_experimental=True
+    )
+    expected, actual = original(rows), experimental(rows)
     np.testing.assert_allclose(actual.values, expected.values, atol=1e-6)
     np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-6)
 
@@ -3229,9 +3233,11 @@ def test_experimental_interventional_probability_output():
     rng = np.random.default_rng(0)
     X = rng.normal(size=(200, 4))
     model = GradientBoostingClassifier(n_estimators=10, max_depth=3, random_state=0).fit(X, X[:, 0] + X[:, 1] > 0)
-    kwargs = {"feature_perturbation": "interventional", "model_output": "probability"}
-    expected = shap.TreeExplainer(model, X[:20], **kwargs)(X[100:105])
-    actual = shap.TreeExplainer(model, X[:20], enable_experimental=True, **kwargs)(X[100:105])
+    original = shap.TreeExplainer(model, X[:20], feature_perturbation="interventional", model_output="probability")
+    experimental = shap.TreeExplainer(
+        model, X[:20], feature_perturbation="interventional", model_output="probability", enable_experimental=True
+    )
+    expected, actual = original(X[100:105]), experimental(X[100:105])
     np.testing.assert_allclose(actual.values, expected.values, atol=1e-6)
     np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-6)
     np.testing.assert_allclose(
