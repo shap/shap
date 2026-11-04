@@ -197,8 +197,10 @@ inline std::size_t Leaves(const TreeEnsemble &tree, unsigned node) {
  * foreground x background rows. Attributions are summed over references, so this
  * applies to raw outputs only.
  */
-using Pattern = std::uint32_t;
-constexpr std::size_t kMaxPatternBits = 16;  // bounds the dense pattern lookup table
+// Sixteen bits bound the dense pattern lookup table to 2^16 slots.
+using Pattern = std::uint16_t;
+constexpr std::size_t kMaxPatternBits = 16;
+static_assert(kMaxPatternBits <= 8 * sizeof(Pattern));
 
 template <bool SingleOutput> class Patterns {
 public:
