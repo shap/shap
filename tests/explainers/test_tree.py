@@ -3207,6 +3207,24 @@ def test_experimental_interventional_matches_original(n_outputs):
     np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-6)
 
 
+def test_experimental_interventional_deep_tree_few_features():
+    # Deeper than 16 splits, but only three distinct features per path, so decision
+    # patterns still apply.
+    rng = np.random.default_rng(0)
+    X = rng.uniform(-1, 1, size=(4000, 3))
+    y = np.sin(8 * X[:, 0]) + X[:, 1] * X[:, 2] + 0.1 * rng.normal(size=len(X))
+    model = DecisionTreeRegressor(max_depth=24, min_samples_leaf=5, random_state=0).fit(X, y)
+    background, rows = X[:100], X[100:200]
+    assert model.get_depth() > 16
+    # The dispatch rule picks patterns for this tree and these batch sizes.
+    assert np.sqrt(model.get_n_leaves()) * (1.5 / len(background) + 0.5 / len(rows)) <= 1
+    kwargs = {"feature_perturbation": "interventional"}
+    expected = shap.TreeExplainer(model, background, **kwargs)(rows)
+    actual = shap.TreeExplainer(model, background, enable_experimental=True, **kwargs)(rows)
+    np.testing.assert_allclose(actual.values, expected.values, atol=1e-6)
+    np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-6)
+
+
 def test_experimental_interventional_probability_output():
     rng = np.random.default_rng(0)
     X = rng.normal(size=(200, 4))

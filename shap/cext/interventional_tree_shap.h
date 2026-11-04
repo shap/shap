@@ -184,6 +184,18 @@ inline std::size_t Leaves(const TreeEnsemble &tree, unsigned node) {
     return Leaves(tree, tree.children_left[node]) + Leaves(tree, tree.children_right[node]);
 }
 
+// The most distinct features on any root-to-leaf path, with uses counting each
+// feature's splits on the current path. Repeated features share a pattern bit.
+inline std::size_t PathFeatures(const TreeEnsemble &tree, unsigned node, std::vector<unsigned> &uses) {
+    if (tree.is_leaf(node)) return 0;
+    unsigned feature = tree.features[node];
+    std::size_t added = uses[feature]++ == 0;
+    std::size_t below = std::max(PathFeatures(tree, tree.children_left[node], uses),
+                                 PathFeatures(tree, tree.children_right[node], uses));
+    --uses[feature];
+    return added + below;
+}
+
 /**
  * Decision-pattern algorithm, after WOODELF's background SHAP:
  * https://ron-wettenstein.github.io/TreeBranchMarks/benchmarks/resources/mn_background_explanation.html
@@ -462,10 +474,12 @@ inline void Explain(const TreeEnsemble &trees, const ExplanationDataset &data, d
                     transform_f transform) {
     // Patterns sum each tree over references; the traversal then averages all trees.
     std::vector<TreeEnsemble> traversal, patterns;
+    std::vector<unsigned> uses(data.M, 0);
     for (unsigned t = 0; t < trees.tree_limit; ++t) {
         TreeEnsemble view;
         trees.get_tree(view, t);
-        bool use_patterns = !transform && Depth(view, 0) <= kMaxPatternBits && PreferPatterns(Leaves(view, 0), data);
+        bool use_patterns = !transform && PathFeatures(view, 0, uses) <= kMaxPatternBits &&
+                            PreferPatterns(Leaves(view, 0), data);
         (use_patterns ? patterns : traversal).push_back(view);
     }
     if (trees.num_outputs == 1) {
