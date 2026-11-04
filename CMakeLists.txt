@@ -87,5 +87,6 @@ nanobind_add_module(
   NB_STATIC
   shap/cext/_cext.cc
 )
+target_compile_features(_cext PRIVATE cxx_std_17)
 
 install(TARGETS _cext LIBRARY DESTINATION shap)
