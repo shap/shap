@@ -11,16 +11,20 @@
 /**
  * Interventional Tree SHAP values with an empirical background distribution.
  *
- * For a foreground row x and a background row r, every coalition takes each
- * feature from either x or r. Splits where x and r agree are followed directly,
- * and a feature that already has a source on the current path follows that
- * source, so only distinct disagreeing features become players. At a reachable
- * leaf with a foreground and b background assignments, the coalition polynomial
- * is t^a (1-t)^b. Integrating its derivative gives each foreground feature
- * 1 / (a * C(a+b, a)) and each background feature -1 / (b * C(a+b, b)) of the
- * leaf value. Other features are dummies for that leaf. The leaf reached with
- * every assignment from the background (a = 0) contributes to the baseline.
- * Unlike quadrature, these coefficients are exact and need no cover statistics.
+ * Baseline SHAP explains a foreground row x against a single background row r:
+ * every coalition takes each feature from either x or r. Splits where x and r
+ * agree are followed directly, and a feature that already has a source on the
+ * current path follows that source, so only distinct disagreeing features
+ * become players. At a reachable leaf with a foreground and b background
+ * assignments, the coalition polynomial is t^a (1-t)^b. Integrating its
+ * derivative gives each foreground feature 1 / (a * C(a+b, a)) and each
+ * background feature -1 / (b * C(a+b, b)) of the leaf value. Other features are
+ * dummies for that leaf. The leaf reached with every assignment from the
+ * background (a = 0) contributes to the baseline. Unlike quadrature, these
+ * coefficients are exact and need no cover statistics.
+ *
+ * Interventional (background) SHAP is the average of baseline SHAP over every
+ * background row.
  */
 namespace shap_interventional {
 
