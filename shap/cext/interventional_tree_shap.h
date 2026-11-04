@@ -375,20 +375,24 @@ inline void ExplainRows(const TreeEnsemble &trees, const std::vector<TreeEnsembl
     // Non-linear transforms rescale each reference's attributions by its own margins,
     // so they are accumulated per reference before being combined.
     std::vector<double> pairs(transform ? data.num_R * stride : 0);
-    std::vector<double> margin_x(outputs), margin_r(outputs);
-    auto margins = [&](Row row, std::vector<double> &margin) {
-        std::copy_n(trees.base_offset, outputs, margin.begin());
+    std::vector<double> margin_x(outputs), margins_r(transform ? data.num_R * outputs : 0);
+    auto margins = [&](Row row, double *margin) {
+        std::copy_n(trees.base_offset, outputs, margin);
         for (unsigned t = 0; t < trees.tree_limit; ++t) {
             const double *values = tree_predict(t, trees, row.values, row.missing);
-            std::transform(margin.begin(), margin.end(), values, margin.begin(), std::plus<>());
+            std::transform(margin, margin + outputs, values, margin, std::plus<>());
         }
     };
+    // Background margins do not depend on the foreground row, so predict them once.
+    if (transform) {
+        for (std::size_t j = 0; j < data.num_R; ++j) margins(BackgroundRow(data, j), margins_r.data() + j * outputs);
+    }
 
     for (std::size_t i = 0; i < data.num_X; ++i) {
         double *out = phi + i * stride;
         const Row x = ForegroundRow(data, i);
         const double y = data.y ? data.y[i] : 0;
-        if (transform) margins(x, margin_x);
+        if (transform) margins(x, margin_x.data());
 
         // Visit every reference within a tree, keeping that tree's nodes in cache
         // instead of streaming the whole ensemble once per reference.
@@ -402,7 +406,7 @@ inline void ExplainRows(const TreeEnsemble &trees, const std::vector<TreeEnsembl
         if (transform) {
             for (std::size_t j = 0; j < data.num_R; ++j) {
                 const double *pair = pairs.data() + j * stride;
-                margins(BackgroundRow(data, j), margin_r);
+                const double *margin_r = margins_r.data() + j * outputs;
                 for (std::size_t o = 0; o < outputs; ++o) {
                     double rescale = 1;
                     if (margin_x[o] != margin_r[o]) {
