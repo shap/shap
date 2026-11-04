@@ -561,6 +561,11 @@ class Explainer(Serializable):
                 kwargs["data"] = s.load("data")
             else:
                 kwargs["masker"] = s.load("masker", masker_loader)
+                # TreeExplainer has both a masker and a data attribute, so save() wrote both. Its constructor
+                # takes the masker through `data`; prefer the saved masker so that e.g. max_samples is kept.
+                if issubclass(cls, explainers.TreeExplainer):
+                    data = s.load("data")
+                    kwargs["data"] = data if kwargs["masker"] is None else kwargs["masker"]
             kwargs["link"] = s.load("link")
         return kwargs
 
