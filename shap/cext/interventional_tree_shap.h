@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
+#include <utility>
 #include <vector>
 
 // TreeEnsemble, ExplanationDataset and tree_predict are defined by tree_shap.h.
@@ -37,15 +39,17 @@ public:
 
     explicit Coefficients(std::size_t max_players)
         : size_(max_players + 1), shares_(size_ * size_) {
-        for (std::size_t a = 0; a < size_; ++a) {
-            for (std::size_t b = 0; a + b < size_; ++b) {
-                // 1 / C(a+b, a) by a short multiplicative recurrence, avoiding overflow.
-                auto [small, large] = std::minmax(a, b);
-                double inverse = 1;
-                for (std::size_t i = 1; i <= small; ++i) inverse *= static_cast<double>(i) / (large + i);
-                auto &share = shares_[a * size_ + b];
-                if (a > 0) share.positive = inverse / a;
-                if (b > 0) share.negative = -inverse / b;
+        for (std::size_t large = 0; large < size_; ++large) {
+            // 1 / C(small+large, small), one factor below 1 per step in small, avoiding overflow.
+            double inverse = 1;
+            for (std::size_t small = 0; small <= large && small + large < size_; ++small) {
+                if (small > 0) inverse *= static_cast<double>(small) / (large + small);
+                // Symmetric in a and b, so it fills both orientations.
+                for (auto [a, b] : {std::pair{small, large}, std::pair{large, small}}) {
+                    auto &share = shares_[a * size_ + b];
+                    if (a > 0) share.positive = inverse / a;
+                    if (b > 0) share.negative = -inverse / b;
+                }
             }
         }
     }
