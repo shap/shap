@@ -307,10 +307,14 @@ private:
             if (r_unique_[b] == full) baseline = r_counts_[b];
         }
 
-        // Per foreground pattern and bit, the summed share of that feature's player.
-        // A foreground player (c_d = 1) gains the positive shares of references with
-        // b_d = 0; a background player (c_d = 0) gains every negative share, since
-        // valid references all have b_d = 1.
+        // For a foreground pattern c and a reference pattern b, each feature on the
+        // path takes one of four roles from its bits c_d and b_d:
+        //   1. c_d = 1, b_d = 0: foreground player, gaining the pair's positive share.
+        //   2. c_d = 0, b_d = 1: background player, gaining the pair's negative share.
+        //   3. c_d = 1, b_d = 1: dummy, since either source reaches the leaf.
+        //   4. c_d = 0, b_d = 0: the leaf is unreachable, so the pair is skipped.
+        // For each foreground pattern, sum every feature's shares over the references
+        // that reach the leaf.
         shares_.assign(x_unique_.size() * bits, 0);
         positive_by_bit_.resize(bits);
         for (std::size_t c = 0; c < x_unique_.size(); ++c) {
@@ -320,16 +324,18 @@ private:
             std::fill(positive_by_bit_.begin(), positive_by_bit_.end(), 0);
             for (std::size_t b = 0; b < r_unique_.size(); ++b) {
                 Pattern r_pattern = r_unique_[b];
+                // Rule 4: some feature has c_d = 0 and b_d = 0.
                 if ((x_pattern | r_pattern) != full) continue;
                 const auto &share = coefficients_(bits - Popcount(r_pattern), negatives);
                 double positive_share = r_counts_[b] * share.positive;
                 positive += positive_share;
                 negative += r_counts_[b] * share.negative;
-                // Foreground bits that this reference also satisfies are dummies for it.
+                // Rule 3: foreground bits that this reference also satisfies are dummies for it.
                 for (Pattern both = x_pattern & r_pattern; both; both &= both - 1) {
                     positive_by_bit_[Ctz(both)] += positive_share;
                 }
             }
+            // Rules 1 and 2. Every reaching reference has b_d = 1 where c_d = 0.
             double *share = shares_.data() + c * bits;
             for (std::size_t d = 0; d < bits; ++d) {
                 share[d] = x_pattern >> d & 1 ? positive - positive_by_bit_[d] : negative;
