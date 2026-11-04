@@ -469,7 +469,8 @@ inline void ExplainPatterns(const TreeEnsemble &trees, const std::vector<TreeEns
                             const ExplanationDataset &data, double *phi) {
     std::size_t depth = 0;
     for (const auto &view : views) depth = std::max(depth, Depth(view, 0));
-    Coefficients coefficients(std::min<std::size_t>(depth, data.M));
+    // Patterns have at most kMaxPatternBits players per leaf, however deep the tree.
+    Coefficients coefficients(std::min<std::size_t>(kMaxPatternBits, data.M));
     Patterns<SingleOutput> patterns(coefficients, data, trees.num_outputs, depth);
     for (const auto &view : views) patterns.Run(view, phi);
 }
