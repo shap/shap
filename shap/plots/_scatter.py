@@ -13,7 +13,7 @@ from matplotlib.markers import MarkerStyle
 from .._explanation import Explanation
 from ..utils import approximate_interactions, convert_name
 from ..utils._exceptions import DimensionError
-from ..utils._general import encode_array_if_needed
+from ..utils._general import _is_polars_dataframe, encode_array_if_needed
 from . import colors
 from ._labels import labels
 from ._utils import AxisLimitSpec, parse_axis_limit
@@ -554,13 +554,13 @@ def dependence_legacy(
     shap_values : numpy.array
         Matrix of SHAP values (# samples x # features).
 
-    features : numpy.array or pandas.DataFrame
+    features : numpy.array, pandas.DataFrame or polars.DataFrame
         Matrix of feature values (# samples x # features).
 
     feature_names : list
         Names of the features (length # features).
 
-    display_features : numpy.array or pandas.DataFrame
+    display_features : numpy.array, pandas.DataFrame or polars.DataFrame
         Matrix of feature values for visual display (such as strings instead of coded values).
 
     interaction_index : "auto", None, int, or string
@@ -605,11 +605,20 @@ def dependence_legacy(
             "passing shap_values[0] instead to explain the first output class of a multi-output model."
         )
 
+    if _is_polars_dataframe(features):
+        if feature_names is None:
+            feature_names = features.columns
+        features = features.to_numpy()
+
     # convert from DataFrames if we got any
     if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         features = features.values
+    if _is_polars_dataframe(display_features):
+        if feature_names is None:
+            feature_names = display_features.columns
+        display_features = display_features.to_numpy()
     if isinstance(display_features, pd.DataFrame):
         if feature_names is None:
             feature_names = display_features.columns
