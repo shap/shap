@@ -1,10 +1,11 @@
-import warnings
-from collections.abc import Callable
-from typing import Any, Literal
+from __future__ import annotations
 
+import warnings
+from typing import TYPE_CHECKING, Any, Literal
+
+import narwhals as nw
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
 from scipy.sparse import issparse
 from tqdm.auto import tqdm
 
@@ -15,6 +16,22 @@ from ..utils._exceptions import (
     InvalidModelError,
 )
 from ._explainer import Explainer
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    import pandas as pd
+    import polars as pl
+
+    from .._explanation import Explanation
+
+
+def _to_numpy(x: Any) -> Any:
+    """Convert a dataframe or series from any narwhals-supported backend to numpy; pass anything else through."""
+    x = nw.from_native(x, eager_only=True, allow_series=True, pass_through=True)
+    if isinstance(x, (nw.DataFrame, nw.Series)):
+        return x.to_numpy()
+    return x
 
 
 class LinearExplainer(Explainer):
@@ -132,7 +149,8 @@ class LinearExplainer(Explainer):
         # wrap the incoming masker object as a shap.Masker object before calling
         # parent class constructor, which does the same but without respecting
         # the user-provided feature_perturbation choice
-        if isinstance(masker, pd.DataFrame) or (
+        masker = nw.from_native(masker, eager_only=True, pass_through=True)
+        if isinstance(masker, nw.DataFrame) or (
             (isinstance(masker, np.ndarray) or issparse(masker)) and len(masker.shape) == 2
         ):
             if self.feature_perturbation == "correlation_dependent":
@@ -161,32 +179,19 @@ class LinearExplainer(Explainer):
             raise NotImplementedError(
                 "The Linear explainer only supports the Independent, Partition, and Impute maskers right now!"
             )
-        data = getattr(self.masker, "data", None)
-
-        # convert DataFrame's to numpy arrays
-        if isinstance(data, pd.DataFrame):
-            data = data.values
+        # convert dataframes (pandas, polars, ...) to numpy arrays
+        data = _to_numpy(getattr(self.masker, "data", None))
 
         # get the mean and covariance of the model
         if getattr(self.masker, "mean", None) is not None:
-            self.mean = self.masker.mean
-            self.cov = self.masker.cov
+            self.mean = _to_numpy(self.masker.mean)
+            self.cov = _to_numpy(self.masker.cov)
         elif isinstance(data, dict) and len(data) == 2:
-            self.mean = data["mean"]
-            if isinstance(self.mean, pd.Series):
-                self.mean = self.mean.values
-
-            self.cov = data["cov"]
-            if isinstance(self.cov, pd.DataFrame):
-                self.cov = self.cov.values
+            self.mean = _to_numpy(data["mean"])
+            self.cov = _to_numpy(data["cov"])
         elif isinstance(data, tuple) and len(data) == 2:
-            self.mean = data[0]
-            if isinstance(self.mean, pd.Series):
-                self.mean = self.mean.values
-
-            self.cov = data[1]
-            if isinstance(self.cov, pd.DataFrame):
-                self.cov = self.cov.values
+            self.mean = _to_numpy(data[0])
+            self.cov = _to_numpy(data[1])
         elif data is None:
             raise ValueError("A background data distribution must be provided!")
         else:
@@ -363,6 +368,34 @@ class LinearExplainer(Explainer):
             return False
         return True
 
+    @nw.narwhalify
+    def __call__(
+        self,
+        *args: Any,
+        max_evals: int | Literal["auto"] = "auto",
+        main_effects: bool = False,
+        error_bounds: bool = False,
+        batch_size: int | Literal["auto"] = "auto",
+        outputs: Any = None,
+        silent: bool = False,
+        **kwargs: Any,
+    ) -> Explanation | list[Explanation]:
+        """Explain the model's output for the given samples.
+
+        Accepts numpy arrays, scipy sparse matrices, and dataframes from any backend supported by
+        narwhals (e.g. pandas or polars). See :meth:`shap.Explainer.__call__` for the arguments.
+        """
+        return super().__call__(
+            *args,
+            max_evals=max_evals,
+            main_effects=main_effects,
+            error_bounds=error_bounds,
+            batch_size=batch_size,
+            outputs=outputs,
+            silent=silent,
+            **kwargs,
+        )
+
     def explain_row(
         self,
         *row_args: Any,
@@ -376,13 +409,10 @@ class LinearExplainer(Explainer):
         """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         assert len(row_args) == 1, "Only single-argument functions are supported by the Linear explainer!"
 
-        X = row_args[0]
+        # convert dataframes (pandas, polars, ...) to numpy arrays
+        X = _to_numpy(row_args[0])
         if len(X.shape) == 1:
             X = X.reshape(1, -1)
-
-        # convert dataframes
-        if isinstance(X, (pd.Series, pd.DataFrame)):
-            X = X.values
 
         if len(X.shape) not in (1, 2):
             raise DimensionError(f"Instance must have 1 or 2 dimensions! Not: {len(X.shape)}")
@@ -425,12 +455,15 @@ class LinearExplainer(Explainer):
             "clustering": None,
         }
 
-    def shap_values(self, X: npt.NDArray[np.floating[Any]] | pd.DataFrame | pd.Series) -> npt.NDArray[np.floating[Any]]:
+    @nw.narwhalify
+    def shap_values(
+        self, X: npt.NDArray[np.floating[Any]] | pd.DataFrame | pd.Series | pl.DataFrame | pl.Series
+    ) -> npt.NDArray[np.floating[Any]]:
         """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
-        X : numpy.array, pandas.DataFrame or scipy.csr_matrix
+        X : numpy.array, pandas.DataFrame, polars.DataFrame or scipy.csr_matrix
             A matrix of samples (# samples x # features) on which to explain the model's output.
 
         Returns
@@ -452,9 +485,8 @@ class LinearExplainer(Explainer):
                 Return type for models with multiple outputs changed from list to np.ndarray.
 
         """
-        # convert dataframes
-        if isinstance(X, (pd.Series, pd.DataFrame)):
-            X = X.values
+        # convert dataframes (pandas, polars, ...) to numpy arrays
+        X = _to_numpy(X)
 
         # assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         if len(X.shape) not in (1, 2):
