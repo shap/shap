@@ -168,7 +168,8 @@ def test_opchain_indexing():
 
 def test_opchain_indexing_with_non_integer_result_raises():
     """A chain that does not give positions must raise instead of truncating its values to positions."""
-    exp = shap.Explanation(np.array([[1.0, -5.0, 3.0], [-2.0, 4.0, 0.0]]))
+    # the means truncate to the valid positions [0, 1, 2]
+    exp = shap.Explanation(np.array([[0.2, 1.2, 2.2], [0.2, 1.2, 2.2]]))
     with pytest.raises(IndexError):
         exp[:, shap.Explanation.abs.mean(0)]
 
