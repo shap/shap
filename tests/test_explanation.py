@@ -43,6 +43,30 @@ def test_explanation_repr():
     )
 
 
+@pytest.mark.parametrize("single_row", [False, True])
+@pytest.mark.parametrize("with_data", [False, True])
+def test_group_features_optional_data(single_row, with_data):
+    values = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+    expected = np.array([[3.0, 3.0], [9.0, 6.0]])
+    base_values = np.array([0.1, 0.2])
+    if single_row:
+        values, expected, base_values = values[0], expected[0], base_values[0]
+    data = 10 * values if with_data else None
+    explanation = shap.Explanation(values.copy(), base_values=base_values, data=data, feature_names=["a", "b", "c"])
+
+    grouped = explanation.sum(axis=1, grouping={"a": "ab", "b": "ab"})
+
+    np.testing.assert_array_equal(grouped.values, expected)
+    np.testing.assert_array_equal(grouped.base_values, base_values)
+    assert grouped.feature_names == ["ab", "c"]
+    if with_data:
+        np.testing.assert_array_equal(grouped.data, 10 * expected)
+    else:
+        assert grouped.data is None
+    np.testing.assert_array_equal(explanation.values, values)
+    assert explanation.feature_names == ["a", "b", "c"]
+
+
 def test_explanation_hstack(random_seed):
     """Checks that `hstack` works as expected with two valid Explanation objects.
     And that it returns an Explanation object.
