@@ -899,7 +899,7 @@ def test_skopt_rf_et():
     explainer_et = shap.TreeExplainer(result_et.models[-1], et_df)
     shap_values_et = explainer_et.shap_values(et_df)
 
-    shap_values_et2 = explainer_et.shap_values(et_df)
+    explainer_et.shap_values(et_df)
     rf_df = pd.DataFrame(result_rf.x_iters, columns=["X0", "X1"])
 
     # Explain the model's predictions (Random forest).
