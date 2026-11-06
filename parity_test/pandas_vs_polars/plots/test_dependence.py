@@ -11,6 +11,7 @@ def test_dependence_plot_dataframe_inputs_match():
     values = pandas_frame.to_numpy()
 
     def plot(frame):
+        np.random.seed(0)
         shap.dependence_plot("a", values, frame, interaction_index=None, show=False)
 
     _utils.assert_plot_frames_equal(plot, pandas_frame, polars_frame)
