@@ -1,6 +1,7 @@
 import typing
 
 import matplotlib.pyplot as plt
+import narwhals as nw
 import numpy as np
 import pandas as pd
 
@@ -28,6 +29,7 @@ def compute_bounds(xmin, xmax, xv):
     return (xmin, xmax)
 
 
+@nw.narwhalify
 def partial_dependence(
     ind,
     model,
@@ -58,10 +60,10 @@ def partial_dependence(
 
     # convert from DataFrames if we got any
     use_dataframe = False
-    if isinstance(features, pd.DataFrame):
+    if isinstance(features, nw.DataFrame):
         if feature_names is None:
             feature_names = features.columns
-        features = features.values
+        features = features.to_numpy()
         use_dataframe = True
 
     if feature_names is None:

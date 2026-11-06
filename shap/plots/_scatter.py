@@ -6,6 +6,7 @@ from typing import Any, Literal
 
 import matplotlib
 import matplotlib.pyplot as plt
+import narwhals as nw
 import numpy as np
 import pandas as pd
 from matplotlib.markers import MarkerStyle
@@ -514,6 +515,7 @@ def _plot_histogram(ax: plt.Axes, xv, xv_no_jitter):
     ax2.spines["bottom"].set_visible(False)
 
 
+@nw.narwhalify
 def dependence_legacy(
     ind,
     shap_values=None,
@@ -606,14 +608,14 @@ def dependence_legacy(
         )
 
     # convert from DataFrames if we got any
-    if isinstance(features, pd.DataFrame):
+    if isinstance(features, nw.DataFrame):
         if feature_names is None:
             feature_names = features.columns
-        features = features.values
-    if isinstance(display_features, pd.DataFrame):
+        features = features.to_numpy()
+    if isinstance(display_features, nw.DataFrame):
         if feature_names is None:
             feature_names = display_features.columns
-        display_features = display_features.values
+        display_features = display_features.to_numpy()
     elif display_features is None:
         display_features = features
 
