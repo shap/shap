@@ -153,6 +153,26 @@ def test_populating_op_history():
     assert np.allclose(exp.values, [10.8, 11.0, 11.6])
 
 
+def test_opchain_indexing():
+    """Indexing with an OpChain gives the same result as indexing with the chain's result."""
+    values = np.array([[1.0, -5.0, 3.0], [-2.0, 4.0, -1.0]])
+    exp = shap.Explanation(values, feature_names=["a", "b", "c"])
+
+    order = shap.Explanation.abs.mean(0).argsort
+    assert exp[:, order].feature_names == ["a", "c", "b"]
+    assert np.array_equal(exp[:, order].values, values[:, [0, 2, 1]])
+    assert exp[:, order.flip].feature_names == ["b", "c", "a"]
+    assert exp[:, order[0]].feature_names == "a"
+    assert np.array_equal(exp[0][shap.Explanation.abs.argsort].values, [1.0, 3.0, -5.0])
+
+
+def test_opchain_indexing_with_non_integer_result_raises():
+    """A chain that does not give positions must raise instead of truncating its values to positions."""
+    exp = shap.Explanation(np.array([[1.0, -5.0, 3.0], [-2.0, 4.0, 0.0]]))
+    with pytest.raises(IndexError):
+        exp[:, shap.Explanation.abs.mean(0)]
+
+
 @pytest.mark.parametrize(
     "inp",
     [
