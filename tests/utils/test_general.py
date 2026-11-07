@@ -122,3 +122,12 @@ def test_format_value_string_input():
     # Test with string that starts with minus
     result = shap.utils._general.format_value("-123", "%0.03f")
     assert result == "\u2212" + "123"
+
+
+def test_kmeans_duplicate_rows():
+    """`kmeans` keeps one weight per center when k exceeds the number of distinct rows."""
+    background = np.array([[0.0, 0.0], [0.0, 0.0], [1.0, 1.0], [1.0, 1.0]])
+    with pytest.warns(UserWarning, match="Number of distinct clusters"):
+        summary = shap.kmeans(background, 3)
+    assert summary.data.shape == (3, 2)
+    np.testing.assert_array_equal(np.sort(summary.weights), [0.0, 0.5, 0.5])

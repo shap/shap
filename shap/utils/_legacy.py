@@ -48,7 +48,7 @@ def kmeans(X, k, round_values=True):
                 )  # sparse support courtesy of @PrimozGodec
                 ind = np.argmin(np.abs(xj - kmeans.cluster_centers_[i, j]))
                 kmeans.cluster_centers_[i, j] = X[ind, j]
-    return DenseData(kmeans.cluster_centers_, group_names, None, 1.0 * np.bincount(kmeans.labels_))
+    return DenseData(kmeans.cluster_centers_, group_names, None, 1.0 * np.bincount(kmeans.labels_, minlength=k))
 
 
 class Instance:
