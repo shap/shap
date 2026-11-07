@@ -13,6 +13,31 @@ import shap
 from shap._explanation import OpHistoryItem
 
 
+@pytest.mark.parametrize("batched", [False, True])
+@pytest.mark.parametrize("names", [["a", "b", "c"], ["b", "a", "c"]])
+@pytest.mark.parametrize("grouping", [{"a": "b"}, {"a": "group", "b": "group"}, {}])
+def test_grouping_preserves_attributions(batched, names, grouping):
+    values = np.array([1.0, 2.0, 3.0])
+    data = values * 10
+    if batched:
+        values = np.stack([values, values * 2])
+        data = np.stack([data, data * 2])
+    exp = shap.Explanation(values, data=data, feature_names=names)
+
+    grouped = exp.sum(axis=1 if batched else 0, grouping=grouping)
+
+    expected_names = list(dict.fromkeys(grouping.get(name, name) for name in names))
+    indices = [[i for i, name in enumerate(names) if grouping.get(name, name) == group] for group in expected_names]
+    expected_values = np.stack([values[..., inds].sum(axis=-1) for inds in indices], axis=-1)
+    expected_data = np.stack([data[..., inds].sum(axis=-1) for inds in indices], axis=-1)
+    assert grouped.feature_names == expected_names
+    np.testing.assert_array_equal(grouped.values, expected_values)
+    np.testing.assert_array_equal(grouped.data, expected_data)
+    np.testing.assert_array_equal(grouped.values.sum(axis=-1), values.sum(axis=-1))
+    np.testing.assert_array_equal(exp.values, values)
+    assert exp.feature_names == names
+
+
 def test_explanation_repr():
     exp = shap.Explanation(values=np.arange(5))
     assert (
