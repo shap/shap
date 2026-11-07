@@ -181,3 +181,17 @@ def test_inpaint_fully_masked_image():
     # mean = 100/ (5*5) = 4.00
     result = image_masker(None, image)
     assert np.all(result[0] == 4.0)
+
+
+def test_image_masker_blur_cache():
+    """Make sure sequential distinct images compute separate blurred backgrounds."""
+    masker = shap.maskers.Image("blur(3, 3)", shape=(10, 10, 3))
+    img1 = np.ones((10, 10, 3), dtype=np.float32) * 10.0
+    img2 = np.ones((10, 10, 3), dtype=np.float32) * 200.0
+
+    mask = np.zeros(300, dtype=bool)
+    out1 = masker(mask, img1)[0]
+    out2 = masker(mask, img2)[0]
+
+    assert np.isclose(out1.mean(), 10.0)
+    assert np.isclose(out2.mean(), 200.0)
