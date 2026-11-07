@@ -97,7 +97,14 @@ class Image(Masker):
 
         if isinstance(self.mask_value, str):
             if self.blur_kernel is not None:
-                if self._blur_value_cache is None or self._last_x is None or not np.array_equal(self._last_x, x):
+                cached_x = getattr(self, "_last_x", None)
+                if (
+                    self._blur_value_cache is None
+                    or cached_x is None
+                    or cached_x.dtype != x.dtype
+                    or not np.array_equal(cached_x, x, equal_nan=True)
+                ):
+                    self._last_x = None
                     self._blur_value_cache = cv2.blur(x.reshape(self.input_shape), self.blur_kernel).ravel()
                     self._last_x = x.copy()
                 out = x.copy()

@@ -195,3 +195,24 @@ def test_image_masker_blur_cache():
 
     assert np.isclose(out1.mean(), 10.0)
     assert np.isclose(out2.mean(), 200.0)
+
+    # In-place modification of the same array object should also invalidate the cache
+    img_mut = np.ones((10, 10, 3), dtype=np.float32) * 10.0
+    out_mut1 = masker(mask, img_mut)[0]
+    assert np.isclose(out_mut1.mean(), 10.0)
+    img_mut[:] = 50.0
+    out_mut2 = masker(mask, img_mut)[0]
+    assert np.isclose(out_mut2.mean(), 50.0)
+
+    # Dtype changes should invalidate the cache
+    img_u8 = np.ones((10, 10, 3), dtype=np.uint8) * 10
+    out_u8 = masker(mask, img_u8)[0]
+    assert out_u8.dtype == np.uint8
+
+    # Unchanged images with NaNs should successfully reuse the cache
+    img_nan = np.full((10, 10, 3), np.nan, dtype=np.float32)
+    _ = masker(mask, img_nan)
+    cache_id1 = id(masker._blur_value_cache)
+    _ = masker(mask, img_nan)
+    cache_id2 = id(masker._blur_value_cache)
+    assert cache_id1 == cache_id2
