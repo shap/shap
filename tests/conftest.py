@@ -25,12 +25,14 @@ import pytest  # noqa: E402
 def pytest_addoption(parser):
     parser.addoption("--random-seed", action="store", help="Fix the random seed")
 
+
 @pytest.fixture(scope="session", autouse=True)
 def populate_cached_data_from_repo():
     """Populate shap's cached_data from the local repository data/ directory for offline testing."""
     import shutil
 
     import shap
+
     repo_data = Path(__file__).resolve().parent.parent / "data"
     if repo_data.is_dir():
         cache_dir = Path(shap.__file__).resolve().parent / "cached_data"
@@ -40,7 +42,6 @@ def populate_cached_data_from_repo():
                 dest = cache_dir / item.name
                 if not dest.exists():
                     shutil.copyfile(item, dest)
-
 
 
 @pytest.fixture()

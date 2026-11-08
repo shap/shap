@@ -716,6 +716,7 @@ def cache(url: str, file_name: str | None = None) -> str:
         repo_file = os.path.join(repo_data_dir, file_name)
         if os.path.isfile(repo_file):
             import shutil
+
             shutil.copyfile(repo_file, file_path)
             return file_path
 
@@ -725,12 +726,14 @@ def cache(url: str, file_name: str | None = None) -> str:
             env_file = os.path.join(env_data_dir, file_name)
             if os.path.isfile(env_file):
                 import shutil
+
                 shutil.copyfile(env_file, file_path)
                 return file_path
 
         # 3. Download using a custom User-Agent to avoid HTTP 403 Forbidden on CI
         from urllib.error import HTTPError, URLError
         from urllib.request import Request, urlopen
+
         try:
             req = Request(url, headers={"User-Agent": "shap-dataset-fetcher/1.0"})
             with urlopen(req, timeout=30) as response, open(file_path, "wb") as out_file:
