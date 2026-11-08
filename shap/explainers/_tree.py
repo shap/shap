@@ -54,6 +54,85 @@ feature_perturbation_codes = {
     "tree_path_dependent": 1,
 }
 
+def _call_dense_tree_shap(
+    children_left: Any,
+    children_right: Any,
+    children_default: Any,
+    features: Any,
+    thresholds: Any,
+    threshold_types: Any,
+    values: Any,
+    node_sample_weight: Any,
+    max_depth: int,
+    X: Any,
+    X_missing: Any,
+    y: Any,
+    data: Any,
+    data_missing: Any,
+    tree_limit: int,
+    base_offset: Any,
+    phi: Any,
+    feature_perturbation: int,
+    output_transform: int,
+    interactions: bool,
+    enable_experimental: bool = False,
+) -> Any:
+    """Invoke _cext.dense_tree_shap with backward compatibility for 20-arg C extensions."""
+    try:
+        return _cext.dense_tree_shap(
+            children_left,
+            children_right,
+            children_default,
+            features,
+            thresholds,
+            threshold_types,
+            values,
+            node_sample_weight,
+            max_depth,
+            X,
+            X_missing,
+            y,
+            data,
+            data_missing,
+            tree_limit,
+            base_offset,
+            phi,
+            feature_perturbation,
+            output_transform,
+            interactions,
+            enable_experimental,
+        )
+    except TypeError as e:
+        if "20 arguments (21 given)" in str(e) or "20 positional arguments but 21 were given" in str(e):
+            if enable_experimental:
+                raise NotImplementedError(
+                    "The installed C-extension does not support enable_experimental=True. "
+                    "Please rebuild SHAP from source."
+                ) from e
+            return _cext.dense_tree_shap(
+                children_left,
+                children_right,
+                children_default,
+                features,
+                thresholds,
+                threshold_types,
+                values,
+                node_sample_weight,
+                max_depth,
+                X,
+                X_missing,
+                y,
+                data,
+                data_missing,
+                tree_limit,
+                base_offset,
+                phi,
+                feature_perturbation,
+                output_transform,
+                interactions,
+            )
+        raise
+
 
 def _safe_check_tree_instance_experimental(tree_instance: Any) -> None:
     """
@@ -755,7 +834,7 @@ class TreeExplainer(Explainer):
         phi = np.zeros((X.shape[0], X.shape[1] + 1, self.model.num_outputs))
 
         if not approximate:
-            _cext.dense_tree_shap(
+            _call_dense_tree_shap(
                 self.model.children_left,
                 self.model.children_right,
                 self.model.children_default,
@@ -931,7 +1010,7 @@ class TreeExplainer(Explainer):
         # run the core algorithm using the C extension
         assert_import("cext")
         phi = np.zeros((X.shape[0], X.shape[1] + 1, X.shape[1] + 1, self.model.num_outputs))
-        _cext.dense_tree_shap(
+        _call_dense_tree_shap(
             self.model.children_left,
             self.model.children_right,
             self.model.children_default,
