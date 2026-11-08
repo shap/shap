@@ -52,6 +52,35 @@ def test_multi_output_interactions():
     np.testing.assert_allclose(row_values, expected)
 
 
+def test_exact_zero_varying_inputs_shapes():
+    """Verify that rows with no varying inputs against background produce attribution
+    arrays with matching dimensions for single-output, multi-output, and interaction modes,
+    and do not crash when mixed with varying rows in a batch."""
+    X_bg = np.array([[1.0, 2.0], [1.0, 2.0]])
+    X_test = np.array([[1.0, 2.0], [3.0, 2.0]])  # row 0 has no varying inputs, row 1 varies
+    masker = shap.maskers.Independent(X_bg)
+
+    # Multi-output model
+    def model_multi(X):
+        return np.column_stack([X[:, 0] + X[:, 1], X[:, 0] * 2])
+
+    ex_multi = shap.explainers.Exact(model_multi, masker)
+    exp_multi = ex_multi(X_test)
+    assert exp_multi.values.shape == (2, 2, 2)
+    np.testing.assert_allclose(exp_multi.values[0], np.zeros((2, 2)))
+    np.testing.assert_allclose(exp_multi.base_values + exp_multi.values.sum(axis=1), model_multi(X_test))
+
+    # Single-output with interactions
+    def model_single(X):
+        return X[:, 0] * X[:, 1]
+
+    ex_single = shap.explainers.Exact(model_single, masker)
+    exp_inter = ex_single(X_test, interactions=True)
+    assert exp_inter.values.shape == (2, 2, 2)
+    np.testing.assert_allclose(exp_inter.values[0], np.zeros((2, 2)))
+    np.testing.assert_allclose(exp_inter.base_values + exp_inter.values.sum(axis=(1, 2)), model_single(X_test))
+
+
 @compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_single_output_auto_masker():
     model, data = common.basic_xgboost_scenario(100)

@@ -143,12 +143,21 @@ class ExactExplainer(Explainer):
             if len(inds) == 0:
                 # if nothing varies then we can just return the expected value as the output and be done with it
                 outputs = fm(np.array([MaskedModel.delta_mask_noop_value]), zero_index=0, batch_size=batch_size)
-                # todo: not quite sure about values, that should be constantly 0!
+                if interactions is True or interactions == 2:
+                    row_values = np.zeros((len(fm), len(fm)) + outputs.shape[1:], dtype=np.float64)
+                elif interactions is False or (interactions == 1 and interactions is not True):
+                    row_values = np.zeros((len(fm),) + outputs.shape[1:], dtype=np.float64)
+                elif interactions > 2:
+                    raise NotImplementedError(
+                        "Currently the Exact explainer does not support interactions higher than order 2!"
+                    )
                 return {
-                    "values": np.zeros(row_args[0].shape),
+                    "values": row_values,
                     "expected_values": outputs[0],
                     "mask_shapes": fm.mask_shapes,
-                    "main_effects": None,
+                    "main_effects": np.zeros((len(fm),) + outputs.shape[1:], dtype=np.float64)
+                    if main_effects
+                    else None,
                     "clustering": getattr(self.masker, "clustering", None),
                 }
 
