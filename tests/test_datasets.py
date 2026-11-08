@@ -1,8 +1,19 @@
 """This file contains tests for the `shap.datasets` module."""
 
+import urllib.error
+
 import pytest
 
 import shap
+
+
+@pytest.fixture(autouse=True)
+def handle_network_errors():
+    """Catch network-related errors during dataset fetching and mark as skipped."""
+    try:
+        yield
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as e:
+        pytest.skip(f"Dataset fetch failed due to network error: {e}")
 
 
 @pytest.mark.parametrize("n_points", [None, 12])
