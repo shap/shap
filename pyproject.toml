@@ -257,6 +257,8 @@ wheel.py-api = "cp312"
 [tool.pytest.ini_options]
 addopts = "--mpl -m 'not xslow'"
 mpl-default-style = "default"
+mpl-default-tolerance = "10"
+mpl-deterministic = true
 testpaths = ["tests"]
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
