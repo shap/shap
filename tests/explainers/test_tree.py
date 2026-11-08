@@ -1306,14 +1306,14 @@ class TestExplainerXGBoost:
         * XGBRanker
     """
 
-    xgboost = pytest.importorskip("xgboost")
+    @pytest.fixture(autouse=True)
+    def setup_class_fixture(self):
+        self.xgboost = pytest.importorskip("xgboost")
 
-    regressors = [xgboost.XGBRegressor, xgboost.XGBRFRegressor]
-    classifiers = [xgboost.XGBClassifier, xgboost.XGBRFClassifier]
-
-    @pytest.mark.parametrize("Reg", regressors)
-    def test_xgboost_regression(self, Reg):
+    @pytest.mark.parametrize("regressor_name", ["XGBRegressor", "XGBRFRegressor"])
+    def test_xgboost_regression(self, regressor_name):
         # train xgboost model
+        Reg = getattr(self.xgboost, regressor_name)
         X, y = shap.datasets.california(n_points=500)
         model = Reg().fit(X, y)
         predicted = model.predict(X)
@@ -1329,11 +1329,12 @@ class TestExplainerXGBoost:
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
-    @pytest.mark.parametrize("Clf", classifiers)
-    def test_xgboost_dmatrix_propagation(self, Clf):
+    @pytest.mark.parametrize("classifier_name", ["XGBClassifier", "XGBRFClassifier"])
+    def test_xgboost_dmatrix_propagation(self, classifier_name):
         """Test that xgboost sklearn attributes are properly passed to the DMatrix
         initiated during shap value calculation. See GH #3313
         """
+        Clf = getattr(self.xgboost, classifier_name)
         X, y = shap.datasets.adult(n_points=100)
 
         # Randomly add missing data to the input where missing data is encoded as 1e-8
@@ -1352,8 +1353,9 @@ class TestExplainerXGBoost:
         # check that SHAP values sum to model output
         np.testing.assert_allclose(margin, explainer.expected_value + shap_values.sum(axis=1), atol=1e-4, rtol=1e-4)
 
-    @pytest.mark.parametrize("Reg", regressors)
-    def test_xgboost_direct(self, Reg):
+    @pytest.mark.parametrize("regressor_name", ["XGBRegressor", "XGBRFRegressor"])
+    def test_xgboost_direct(self, regressor_name):
+        Reg = getattr(self.xgboost, regressor_name)
         random_seed = 0
         rs = np.random.RandomState(random_seed)
         N = 100
