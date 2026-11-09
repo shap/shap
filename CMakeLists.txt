@@ -83,6 +83,11 @@ install(TARGETS _cutils LIBRARY DESTINATION shap)
 
 nanobind_add_module(
   _cext
+
+  # Optimize for speed rather than nanobind's default of binary size: with GCC,
+  # path-dependent TreeExplainer is about 40% slower when built with -Os.
+  NOMINSIZE
+
   STABLE_ABI
   NB_STATIC
   shap/cext/_cext.cc
