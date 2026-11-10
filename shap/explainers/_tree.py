@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import io
 import json
 import os
@@ -325,7 +326,10 @@ class TreeExplainer(Explainer):
             # to construct trees by hand (e.g. with categorical splits, which the
             # third-party model parsers are needed for otherwise) and explain them
             # without round-tripping through an external model object.
-            self.model = model
+            # Apply the requested model_output the same way TreeEnsemble.__init__ does,
+            # on a shallow copy so the caller's ensemble is left unchanged.
+            self.model = copy.copy(model)
+            self.model.model_output = model_output
         else:
             self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
         self.model_output = model_output

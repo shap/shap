@@ -3502,3 +3502,72 @@ def test_treelite_lightgbm_scaled_sigmoid():
 
     sv = shap.TreeExplainer(tl_model, data=X, model_output="probability")(X)
     np.testing.assert_allclose(sv.base_values + sv.values.sum(axis=1), model.predict(X), rtol=1e-6, atol=1e-6)
+
+
+def _stump_dict():
+    return {
+        "objective": "binary_crossentropy",
+        "tree_output": "log_odds",
+        "trees": [
+            {
+                "children_left": np.array([1, -1, -1], dtype=np.int32),
+                "children_right": np.array([2, -1, -1], dtype=np.int32),
+                "children_default": np.array([1, -1, -1], dtype=np.int32),
+                "features": np.array([0, -2, -2], dtype=np.int32),
+                "thresholds": np.array([0.5, -2, -2], dtype=np.float64),
+                "values": np.array([[0.0], [0.2], [0.8]], dtype=np.float64),
+                "node_sample_weight": np.array([100.0, 40.0, 60.0], dtype=np.float64),
+            }
+        ],
+    }
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        pytest.param({"feature_perturbation": "tree_path_dependent"}, id="default-raw"),
+        pytest.param(
+            {
+                "data": np.array([[0.2], [0.7], [0.4]]),
+                "model_output": "probability",
+                "feature_perturbation": "interventional",
+            },
+            id="probability-interventional",
+        ),
+    ],
+)
+def test_prebuilt_tree_ensemble_applies_model_output(kwargs):
+    """A pre-built TreeEnsemble must honour model_output like the equivalent dict model (GH #5098)."""
+    from shap.explainers._tree import TreeEnsemble
+
+    X = np.array([[0.1], [0.9]])
+    prebuilt = shap.TreeExplainer(TreeEnsemble(_stump_dict()), **kwargs)
+    reference = shap.TreeExplainer(_stump_dict(), **kwargs)
+
+    assert prebuilt.model.model_output == reference.model.model_output
+    np.testing.assert_allclose(prebuilt.shap_values(X), reference.shap_values(X))
+
+
+def test_prebuilt_tree_ensemble_rejects_probability_without_data():
+    """tree_path_dependent only supports raw output, for pre-built ensembles as for any other model (GH #5098)."""
+    from shap.explainers._tree import TreeEnsemble
+
+    with pytest.raises(ValueError, match='Only model_output="raw" is supported'):
+        shap.TreeExplainer(TreeEnsemble(_stump_dict()), model_output="probability")
+
+
+def test_prebuilt_tree_ensemble_is_not_mutated():
+    """Constructing the explainer must not change the TreeEnsemble the caller passed in (GH #5098)."""
+    from shap.explainers._tree import TreeEnsemble
+
+    ensemble = TreeEnsemble(_stump_dict())
+    explainer = shap.TreeExplainer(
+        ensemble,
+        data=np.array([[0.2], [0.7], [0.4]]),
+        model_output="probability",
+        feature_perturbation="interventional",
+    )
+
+    assert explainer.model.model_output == "probability"
+    assert ensemble.model_output is None
+    assert explainer.model.trees is ensemble.trees
