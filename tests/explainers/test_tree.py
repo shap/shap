@@ -3143,15 +3143,106 @@ def test_quadrature_repeated_features(n_outputs, interactions):
     np.testing.assert_allclose(repeated.values, actual.values[::-1], atol=1e-12, rtol=1e-12)
 
 
-@pytest.mark.parametrize("approximate,with_background", [(True, False), (False, True), (True, True)])
-def test_quadrature_preserves_other_algorithms(approximate, with_background):
+@pytest.mark.parametrize("with_background", [False, True])
+def test_quadrature_preserves_approximate(with_background):
     rng = np.random.default_rng(0)
     X = rng.normal(size=(50, 3))
     model = DecisionTreeRegressor(max_depth=4, random_state=0).fit(X, X[:, 0] * X[:, 1])
     background = X if with_background else None
-    expected = shap.TreeExplainer(model, background).shap_values(X[:5], approximate=approximate)
-    actual = shap.TreeExplainer(model, background, enable_experimental=True).shap_values(X[:5], approximate=approximate)
+    expected = shap.TreeExplainer(model, background).shap_values(X[:5], approximate=True)
+    actual = shap.TreeExplainer(model, background, enable_experimental=True).shap_values(X[:5], approximate=True)
     np.testing.assert_array_equal(actual, expected)
+
+
+def _brute_force_interventional(predict, x, background):
+    """Average exact Shapley values of each fixed-reference game."""
+    M = len(x)
+    phi = np.zeros(M)
+    for r in background:
+        for i in range(M):
+            others = [j for j in range(M) if j != i]
+            for k in range(M):
+                weight = math.factorial(k) * math.factorial(M - k - 1) / math.factorial(M)
+                for subset in itertools.combinations(others, k):
+                    z = r.copy()
+                    z[list(subset)] = x[list(subset)]
+                    without = predict(z[None])[0]
+                    z[i] = x[i]
+                    phi[i] += weight * (predict(z[None])[0] - without)
+    return phi / len(background)
+
+
+# The large tree with few references uses the traversal; the small tree uses decision patterns.
+@pytest.mark.parametrize("max_depth,n_background", [(8, 6), (3, 12)])
+def test_experimental_interventional_matches_brute_force(max_depth, n_background):
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(200, 4))
+    # Repeated features along paths exercise source reuse at later splits.
+    model = DecisionTreeRegressor(max_depth=max_depth, random_state=0).fit(X, X[:, 0] * X[:, 1] + np.sin(3 * X[:, 0]))
+    background = X[:n_background]
+    rows = np.vstack([X[50:53], background[:1]])
+    explainer = shap.TreeExplainer(model, background, feature_perturbation="interventional", enable_experimental=True)
+    explanation = explainer(rows)
+    expected = np.array([_brute_force_interventional(model.predict, x, background) for x in rows])
+    np.testing.assert_allclose(explanation.values, expected, atol=1e-12)
+    np.testing.assert_allclose(explanation.base_values, model.predict(background).mean(), atol=1e-12)
+
+
+@pytest.mark.parametrize("n_outputs", [1, 3])
+def test_experimental_interventional_matches_original(n_outputs):
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(200, 5))
+    y = np.c_[X[:, 0] * X[:, 1], X[:, 2], X[:, 3] - X[:, 0]][:, :n_outputs]
+    model = DecisionTreeRegressor(max_depth=6, random_state=0).fit(X, y[:, 0] if n_outputs == 1 else y)
+    background = X[:20]
+    rows = X[100:110].copy()
+    rows[0, 0] = np.nan
+    background = background.copy()
+    background[1, 1] = np.nan
+    original = shap.TreeExplainer(model, background, feature_perturbation="interventional")
+    experimental = shap.TreeExplainer(
+        model, background, feature_perturbation="interventional", enable_experimental=True
+    )
+    expected, actual = original(rows), experimental(rows)
+    # The original implementation stores node values in float32.
+    np.testing.assert_allclose(actual.values, expected.values, atol=1e-6)
+    np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-6)
+
+
+def test_experimental_interventional_deep_tree_few_features():
+    # Deeper than 16 splits, but only three distinct features per path, so decision
+    # patterns still apply.
+    rng = np.random.default_rng(0)
+    X = rng.uniform(-1, 1, size=(4000, 3))
+    y = np.sin(8 * X[:, 0]) + X[:, 1] * X[:, 2] + 0.1 * rng.normal(size=len(X))
+    model = DecisionTreeRegressor(max_depth=24, min_samples_leaf=5, random_state=0).fit(X, y)
+    background, rows = X[:100], X[100:200]
+    assert model.get_depth() > 16
+    # The dispatch rule picks patterns for this tree and these batch sizes.
+    assert np.sqrt(model.get_n_leaves()) * (1.5 / len(background) + 0.5 / len(rows)) <= 1
+    original = shap.TreeExplainer(model, background, feature_perturbation="interventional")
+    experimental = shap.TreeExplainer(
+        model, background, feature_perturbation="interventional", enable_experimental=True
+    )
+    expected, actual = original(rows), experimental(rows)
+    np.testing.assert_allclose(actual.values, expected.values, atol=1e-6)
+    np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-6)
+
+
+def test_experimental_interventional_probability_output():
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(200, 4))
+    model = GradientBoostingClassifier(n_estimators=10, max_depth=3, random_state=0).fit(X, X[:, 0] + X[:, 1] > 0)
+    original = shap.TreeExplainer(model, X[:20], feature_perturbation="interventional", model_output="probability")
+    experimental = shap.TreeExplainer(
+        model, X[:20], feature_perturbation="interventional", model_output="probability", enable_experimental=True
+    )
+    expected, actual = original(X[100:105]), experimental(X[100:105])
+    np.testing.assert_allclose(actual.values, expected.values, atol=1e-6)
+    np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-6)
+    np.testing.assert_allclose(
+        actual.values.sum(1) + actual.base_values, model.predict_proba(X[100:105])[:, 1], atol=1e-10
+    )
 
 
 def test_tree_explainer_with_sparse_input():
