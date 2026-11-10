@@ -94,15 +94,120 @@ class MetaExplanation(type):
 
 
 class Explanation(metaclass=MetaExplanation):
-    """A sliceable set of parallel arrays representing a SHAP explanation.
+    r"""A sliceable container holding the output of a SHAP explainer.
+
+    An ``Explanation`` is the canonical return type of every SHAP explainer.
+    It bundles together the attributions (the SHAP values themselves) with
+    the inputs they were computed on and any metadata that downstream
+    plotting and summarisation functions need.
+
+    The shap-additivity relationship for a single sample is
+
+    .. math::
+
+        f(x) \approx \text{base\_values} + \sum_i \text{values}_i
+
+    so together ``base_values`` and ``values`` explain the model output
+    ``f(x)`` exactly (up to explainer approximation error).
+
+    Parameters
+    ----------
+    values : numpy.ndarray, list, or Explanation
+        The SHAP values. Shape depends on the explainer and the model:
+
+        - single-output model: ``(n_samples, n_features)``
+        - multi-output model: ``(n_samples, n_features, n_outputs)``
+
+        If another ``Explanation`` is passed, its ``values``, ``base_values``
+        and ``data`` are copied onto this instance.
+    base_values : numpy.ndarray, list, float, or None
+        The expected model output on the background dataset — i.e. the
+        value that SHAP values are explaining the deviation *from*.
+        Shape matches the output-trailing shape of ``values``:
+        ``(n_samples,)`` for single-output models, ``(n_samples, n_outputs)``
+        for multi-output models.
+    data : numpy.ndarray, pandas.DataFrame, list, or None
+        The input data that was explained — typically a copy of the
+        ``X`` passed to the explainer's ``__call__``. Same number of rows as
+        ``values`` and used by plot functions to show feature values next
+        to their attributions.
+    display_data : numpy.ndarray, pandas.DataFrame, or None
+        A human-readable alternative to ``data`` used by plots. For
+        example, use the raw (un-encoded) strings of a categorical feature
+        here while ``data`` holds the encoded integers fed to the model.
+        If ``None``, plots fall back to ``data``.
+    instance_names : sequence of str, numpy.ndarray, or None
+        Optional label for each row (e.g. sample id). Used in some plots
+        as the y-axis tick label.
+    feature_names : sequence of str, numpy.ndarray, Alias, or None
+        Names of the input features, aligned with the feature axis of
+        ``values``. If ``None``, plot functions fall back to positional
+        names (``"Feature 0"``, ``"Feature 1"``, …).
+    output_names : sequence of str, numpy.ndarray, str, Alias, or None
+        Names of the model outputs — e.g. the class names of a multi-class
+        classifier. Aligned with the output axis of ``values``.
+    output_indexes : numpy.ndarray or None
+        For explainers that only compute a subset of outputs (e.g. the
+        top-k ranked outputs), the index of each explained output in the
+        original model's output vector.
+    lower_bounds, upper_bounds : numpy.ndarray or None
+        Confidence bounds on ``values``, shape matching ``values``. Used
+        by plots that support uncertainty display.
+    error_std : numpy.ndarray or None
+        Per-value standard error estimate, shape matching ``values``.
+    main_effects : numpy.ndarray or None
+        The SHAP "main effects" — the single-feature component of the
+        attribution, separate from interaction terms. Shape matches
+        ``values``.
+    hierarchical_values : numpy.ndarray, list, or None
+        Attributions against a hierarchical (partition) model of the
+        features, rather than flat per-feature. See
+        :class:`shap.explainers.PartitionExplainer`.
+    clustering : numpy.ndarray, list, or None
+        Partition tree of feature clusters used to compute
+        ``hierarchical_values``. A scipy-style linkage matrix, one row per
+        merge.
+    compute_time : float or None
+        Wall-clock seconds the explainer took, useful for benchmarking.
+
+    Attributes
+    ----------
+    op_history : list
+        The chain of operations that have been applied to this
+        ``Explanation`` (e.g. via ``.abs``, ``.mean(0)``, slicing). Plots
+        read this to label axes and subtitles.
+    output_dims : tuple of int
+        Which axes of ``values`` correspond to model outputs vs. samples
+        and features. Populated automatically from the shape.
 
     Notes
     -----
-    The *instance* methods such as `.max()` return new Explanation objects with the
-    operation applied.
+    *Instance* methods such as :meth:`.max` return new ``Explanation``
+    objects with the operation applied.
 
-    The *class* methods such as `Explanation.max` return OpChain objects that represent
-    a set of dot chained operations without actually running them.
+    *Class* methods (accessed on the class itself, not an instance) such
+    as ``Explanation.max`` return :class:`OpChain` objects that represent
+    a sequence of chained operations without actually running them.
+    OpChains are used as the ``order=`` argument to plot functions so the
+    sorting / reduction is deferred until plotting time.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import shap
+    >>> rng = np.random.default_rng(0)
+    >>> exp = shap.Explanation(
+    ...     values=rng.standard_normal((4, 3)),
+    ...     base_values=np.full(4, 0.5),
+    ...     data=rng.standard_normal((4, 3)),
+    ...     feature_names=["a", "b", "c"],
+    ... )
+    >>> exp.values.shape
+    (4, 3)
+    >>> exp[0].values.shape  # explanation of the first sample
+    (3,)
+    >>> exp[:, 0].feature_names  # explanation restricted to feature "a"
+    'a'
     """
 
     def __init__(
@@ -123,6 +228,7 @@ class Explanation(metaclass=MetaExplanation):
         clustering: npt.NDArray[Any] | list[Any] | None = None,
         compute_time: float | None = None,
     ) -> None:
+        """Build an ``Explanation``. See the class docstring for full parameter details."""
         self.op_history: list[OpHistoryItem] = []
 
         self.compute_time = compute_time
@@ -198,7 +304,13 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def values(self):
-        """Pass-through from the underlying slicer object."""
+        """The SHAP values themselves.
+
+        Shape ``(n_samples, n_features)`` for single-output models, or
+        ``(n_samples, n_features, n_outputs)`` for multi-output models.
+        Together with ``base_values`` these reconstruct the model output:
+        ``base_values + values.sum(axis=feature_axis) ≈ model(data)``.
+        """
         return self._s.values
 
     @values.setter
@@ -207,7 +319,13 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def base_values(self):
-        """Pass-through from the underlying slicer object."""
+        """The expected model output on the background dataset.
+
+        This is what SHAP values explain the deviation *from*. For a
+        single-output model it has shape ``(n_samples,)`` and every row
+        typically holds the same scalar; for a multi-output model the
+        shape is ``(n_samples, n_outputs)``.
+        """
         return self._s.base_values
 
     @base_values.setter
@@ -216,7 +334,12 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def data(self):
-        """Pass-through from the underlying slicer object."""
+        """The input data the explanation was computed on.
+
+        Typically a copy of the ``X`` passed to the explainer — same
+        number of rows as ``values``. Plot functions read this so they
+        can display feature values alongside their attributions.
+        """
         return self._s.data
 
     @data.setter
@@ -225,7 +348,12 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def display_data(self):
-        """Pass-through from the underlying slicer object."""
+        """A human-readable alternative to ``data`` for use in plots.
+
+        Useful when the model was fed an encoded representation (e.g.
+        integer category codes) but you want plots to show the original
+        strings. If unset, plots fall back to ``data``.
+        """
         return self._s.display_data
 
     @display_data.setter
@@ -236,12 +364,19 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def instance_names(self):
-        """Pass-through from the underlying slicer object."""
+        """Optional label for each row (e.g. sample id).
+
+        Used by some plots as the y-axis tick label.
+        """
         return self._s.instance_names
 
     @property
     def output_names(self):
-        """Pass-through from the underlying slicer object."""
+        """Names of the model outputs — e.g. class labels.
+
+        Aligned with the output axis of ``values``. Plots use these for
+        legend entries and subtitles.
+        """
         return self._s.output_names
 
     @output_names.setter
@@ -250,12 +385,21 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def output_indexes(self):
-        """Pass-through from the underlying slicer object."""
+        """For ranked-output explainers, the original-model index of each explained output.
+
+        Populated when the explainer was called with ``ranked_outputs=k``
+        rather than explaining every output. Lets callers map back from
+        explained-output position to original class index.
+        """
         return self._s.output_indexes
 
     @property
     def feature_names(self):
-        """Pass-through from the underlying slicer object."""
+        """Names of the input features, aligned with the feature axis of ``values``.
+
+        ``None`` means plot functions fall back to positional names like
+        ``"Feature 0"``.
+        """
         return self._s.feature_names
 
     @feature_names.setter
@@ -264,22 +408,26 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def lower_bounds(self):
-        """Pass-through from the underlying slicer object."""
+        """Lower confidence bound on ``values``, same shape as ``values``, or ``None``."""
         return self._s.lower_bounds
 
     @property
     def upper_bounds(self):
-        """Pass-through from the underlying slicer object."""
+        """Upper confidence bound on ``values``, same shape as ``values``, or ``None``."""
         return self._s.upper_bounds
 
     @property
     def error_std(self):
-        """Pass-through from the underlying slicer object."""
+        """Per-value standard error estimate, same shape as ``values``, or ``None``."""
         return self._s.error_std
 
     @property
     def main_effects(self):
-        """Pass-through from the underlying slicer object."""
+        """The main-effect component of the SHAP values, same shape as ``values``.
+
+        When the explainer also computes interactions, ``values`` =
+        ``main_effects`` + interaction terms. ``None`` otherwise.
+        """
         return self._s.main_effects
 
     @main_effects.setter

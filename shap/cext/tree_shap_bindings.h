@@ -118,7 +118,7 @@ void bind_dense_tree_shap(nb::module_ &m, Function implementation) {
         FloatArray values, FloatArray node_sample_weights, int max_depth,
         FloatArray X, BoolArray X_missing, FloatArray y, FloatArray R, BoolArray R_missing,
         int tree_limit, FloatArray base_offset, OutputArray out_contribs,
-        int feature_dependence, int model_output, bool interactions) {
+        int feature_dependence, int model_output, bool interactions, bool enable_experimental) {
         auto trees = make_tree(children_left, children_right, children_default, features,
                                thresholds, threshold_types, values, node_sample_weights,
                                max_depth, tree_limit, base_offset);
@@ -132,13 +132,13 @@ void bind_dense_tree_shap(nb::module_ &m, Function implementation) {
             throw nb::value_error("Explaining loss requires labels y");
         }
         // Retain the GIL: the CPU implementation calls Python's stderr API.
-        implementation(trees, data, out_contribs.data(), feature_dependence, model_output, interactions);
+        implementation(trees, data, out_contribs.data(), feature_dependence, model_output, interactions, enable_experimental);
         return values.data()[0];
     }, "children_left"_a, "children_right"_a, "children_default"_a, "features"_a,
        "thresholds"_a, "threshold_types"_a, "values"_a, "node_sample_weights"_a,
        "max_depth"_a, "X"_a, "X_missing"_a, "y"_a.none(), "R"_a.none(),
        "R_missing"_a.none(), "tree_limit"_a, "base_offset"_a,
        "out_contribs"_a.noconvert(), "feature_dependence"_a, "model_output"_a,
-       "interactions"_a, "Compute Tree SHAP values for a dense ensemble.");
+       "interactions"_a, "enable_experimental"_a = false, "Compute Tree SHAP values for a dense ensemble.");
 }
 }  // namespace shap_bindings
