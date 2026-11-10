@@ -79,16 +79,16 @@ test = [
   "xgboost",
   "lightgbm",
   "treelite>=4.0",
-  'catboost; python_version < "3.14"',  # TODO: pending 3.14 support
+  'catboost; python_version < "3.15"',
   'gpboost',
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers < 4.54.0",  # TODO: fix once tests pass for 4.54.0
+  "transformers",  # TODO: fix once tests pass for 4.54.0
   "tf-keras",
   "protobuf",  # See GH #3046
-  'torch<=2.11.0; python_version < "3.14"',  # TODO: pending 3.14 support, see GH #5016
-  'torchvision; python_version < "3.14"',  # TODO: pending 3.14 support
+  "torch",
+  "torchvision",
   'tensorflow; python_version < "3.14"',  # TODO: pending 3.14 support
   "sentencepiece",
   "opencv-python",
@@ -96,9 +96,7 @@ test = [
   # See GH #3707, #3768, 3922
   "numpy>=2.0",
   "causalml>=0.15.5",
-  # causalml imports private sklearn.ensemble._forest internals (DOUBLE, DTYPE, MAX_INT)
-  # that were removed in scikit-learn 1.9. See https://github.com/uber/causalml/issues/926
-  "scikit-learn<1.9",
+  "scikit-learn",
   "selenium",  # needed to test the javascript based plots
   # performance monitoring for time-critical explainers
   "asv",
