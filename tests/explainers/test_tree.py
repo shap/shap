@@ -3571,3 +3571,25 @@ def test_prebuilt_tree_ensemble_is_not_mutated():
     assert explainer.model.model_output == "probability"
     assert ensemble.model_output is None
     assert explainer.model.trees is ensemble.trees
+
+
+def test_prebuilt_tree_ensemble_keeps_translated_model_output():
+    """An ensemble built from a model keeps its translated model_output, e.g. predict_proba (GH #5098)."""
+    from shap.explainers._tree import TreeEnsemble
+
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(200, 4))
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+    background = X[:50]
+    model = sklearn.ensemble.HistGradientBoostingClassifier(max_iter=10, max_depth=3).fit(X, y)
+    ensemble = TreeEnsemble(model, background, np.isnan(background), "predict_proba")
+
+    prebuilt = shap.TreeExplainer(ensemble, background, model_output="predict_proba")
+    reference = shap.TreeExplainer(model, background, model_output="predict_proba")
+
+    assert prebuilt.model.model_output == "probability_doubled"
+    explanation = prebuilt(X[:5])
+    np.testing.assert_allclose(explanation.values, reference(X[:5]).values)
+    np.testing.assert_allclose(
+        explanation.values.sum(1) + explanation.base_values, model.predict_proba(X[:5]), atol=1e-4
+    )
