@@ -42,6 +42,12 @@ def shapley_coefficients(n: int) -> npt.NDArray[Any]:
     return out
 
 
+def _is_polars_dataframe(x: object) -> bool:
+    """Return True if ``x`` is a polars DataFrame, without importing polars."""
+    pl = sys.modules.get("polars")
+    return pl is not None and isinstance(x, pl.DataFrame)
+
+
 def convert_name(
     ind: str | int | None,
     shap_values: npt.NDArray[Any] | None,
