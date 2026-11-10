@@ -1223,6 +1223,7 @@ inline void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, co
 }
 
 #include "quadrature_tree_shap.h"
+#include "interventional_tree_shap.h"
 
 /**
  * The main method for computing Tree SHAP on models using dense data.
@@ -1238,6 +1239,8 @@ inline void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset 
         case FEATURE_DEPENDENCE::independent:
             if (interactions) {
                 std::cerr << "FEATURE_DEPENDENCE::independent does not support interactions!\n";
+            } else if (enable_experimental) {
+                shap_interventional::Explain(trees, data, out_contribs, transform);
             } else dense_independent(trees, data, out_contribs, transform);
             return;
 
