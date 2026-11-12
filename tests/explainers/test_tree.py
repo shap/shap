@@ -2968,6 +2968,30 @@ def test_path_dependent_small_background():
         np.testing.assert_allclose(shap_sum, pred[:, c], atol=1e-6)
 
 
+def test_dict_model_input_not_modified():
+    """TreeExplainer does not modify the arrays of a tree passed as a dict.
+
+    Previously, when background data was given, the node sample weights were
+    recomputed in place in the caller's ``node_sample_weight`` array.
+    """
+    node_sample_weight = np.array([10.0, 5.0, 5.0])
+    tree = {
+        "children_left": np.array([1, -1, -1]),
+        "children_right": np.array([2, -1, -1]),
+        "children_default": np.array([1, -1, -1]),
+        "features": np.array([0, -1, -1]),
+        "thresholds": np.array([0.0, 0.0, 0.0]),
+        "values": np.array([[0.0], [-1.0], [1.0]]),
+        "node_sample_weight": node_sample_weight,
+    }
+    background = np.array([[-1.0], [-2.0], [-3.0], [5.0]])  # three rows go left, one goes right
+
+    explainer = shap.TreeExplainer({"trees": [tree]}, data=background)
+
+    np.testing.assert_array_equal(node_sample_weight, [10.0, 5.0, 5.0])
+    np.testing.assert_array_equal(explainer.model.node_sample_weight[0], [4.0, 3.0, 1.0])
+
+
 def test_nullable_pandas_dtype():
     """TreeExplainer handles pandas nullable dtypes (Int64, Float64) with NA values.
 

@@ -2246,9 +2246,10 @@ class SingleTree:
         else:
             raise TypeError("Unknown input to SingleTree constructor: " + str(tree))
 
-        # These buffers are updated in place by the native tree bindings.
-        self.values = np.require(self.values, dtype=np.float64, requirements=["C", "W"])
-        self.node_sample_weight = np.require(self.node_sample_weight, dtype=np.float64, requirements=["C", "W"])
+        # These buffers are updated in place by the native tree bindings, so always copy them
+        # to avoid modifying arrays owned by the caller.
+        self.values = np.array(self.values, dtype=np.float64, order="C", copy=True)
+        self.node_sample_weight = np.array(self.node_sample_weight, dtype=np.float64, order="C", copy=True)
 
         # Re-compute the number of samples that pass through each node if we are given data
         if data is not None and data_missing is not None:
