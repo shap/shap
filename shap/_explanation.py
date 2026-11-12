@@ -210,6 +210,11 @@ class Explanation(metaclass=MetaExplanation):
     'a'
     """
 
+    # Let reflected operators (__rmul__, etc.) run when the left operand is a
+    # NumPy scalar or array. Without this, NumPy iterates the Explanation and
+    # returns an object-dtype array.
+    __array_ufunc__ = None
+
     def __init__(
         self,
         values: npt.NDArray[Any] | list[Any] | Explanation,
@@ -616,9 +621,9 @@ class Explanation(metaclass=MetaExplanation):
 
         if isinstance(other, Explanation):
             new_exp.values = binary_op(new_exp.values, other.values)
-            if new_exp.data is not None:
+            if new_exp.data is not None and other.data is not None:
                 new_exp.data = binary_op(new_exp.data, other.data)
-            if new_exp.base_values is not None:
+            if new_exp.base_values is not None and other.base_values is not None:
                 new_exp.base_values = binary_op(new_exp.base_values, other.base_values)
         else:
             new_exp.values = binary_op(new_exp.values, other)
