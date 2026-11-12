@@ -152,7 +152,6 @@ exclude = ["shap/benchmark/*", "tests/benchmark/*", "shap/_cutils.pyi"]
 # NOTE: Modules with added type hints have been removed from this list
 module = [
   # "shap.explainers._additive",       # NOW TYPE CHECKED - type hints added
-  "shap.explainers._deep.deep_pytorch",
   "shap.explainers._deep.deep_tf",
   # "shap.explainers._exact",          # NOW TYPE CHECKED - type hints added
   # "shap.explainers._explainer",      # NOW TYPE CHECKED - type hints added
