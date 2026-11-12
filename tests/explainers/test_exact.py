@@ -81,6 +81,56 @@ def test_exact_zero_varying_inputs_shapes():
     np.testing.assert_allclose(exp_inter.base_values + exp_inter.values.sum(axis=(1, 2)), model_single(X_test))
 
 
+def test_exact_zero_varying_inputs_multi_output_interactions_shape():
+    """Invariant rows keep separate interaction and output axes through the public API."""
+    X_bg = np.array([[1.0, 2.0], [1.0, 2.0]])
+    X_test = np.array([[1.0, 2.0], [3.0, 2.0]])  # row 0 invariant, row 1 varies
+    masker = shap.maskers.Independent(X_bg)
+
+    def model_multi(X):
+        return np.column_stack([X[:, 0] * X[:, 1], X[:, 0] + X[:, 1]])
+
+    exp = shap.explainers.Exact(model_multi, masker)(X_test, interactions=True)
+    assert exp.values.shape == (2, 2, 2, 2)
+    np.testing.assert_allclose(exp.values[0], np.zeros((2, 2, 2)))
+    np.testing.assert_allclose(exp.base_values + exp.values.sum(axis=(1, 2)), model_multi(X_test))
+
+
+def test_exact_zero_varying_inputs_rejects_invalid_interactions():
+    """interactions=0 or negative raises ValueError on invariant rows."""
+    X_bg = np.array([[1.0, 2.0], [1.0, 2.0]])
+    X_test = np.array([[1.0, 2.0], [1.0, 2.0]])  # both rows invariant
+    masker = shap.maskers.Independent(X_bg)
+
+    def model(X):
+        return X[:, 0] + X[:, 1]
+
+    ex = shap.explainers.Exact(model, masker)
+    for order in (0, -1):
+        try:
+            ex(X_test, interactions=order)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"expected ValueError for interactions={order}")
+
+
+def test_exact_main_effects_preserved_on_invariant_row():
+    """main_effects=True with an invariant first row returns zero main effects, not None/cleared."""
+    X_bg = np.array([[1.0, 2.0], [1.0, 2.0]])
+    X_test = np.array([[1.0, 2.0], [3.0, 2.0]])  # row 0 invariant, row 1 varies
+    masker = shap.maskers.Independent(X_bg)
+
+    def model(X):
+        return X[:, 0] * X[:, 1]
+
+    ex = shap.explainers.Exact(model, masker)
+    exp = ex(X_test, main_effects=True)
+    assert exp.main_effects is not None
+    assert exp.main_effects.shape[0] == 2
+    np.testing.assert_allclose(exp.main_effects[0], np.zeros(exp.main_effects.shape[1:]))
+
+
 @compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_single_output_auto_masker():
     model, data = common.basic_xgboost_scenario(100)

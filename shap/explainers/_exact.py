@@ -147,10 +147,8 @@ class ExactExplainer(Explainer):
                     row_values = np.zeros((len(fm), len(fm)) + outputs.shape[1:], dtype=np.float64)
                 elif interactions is False or (interactions == 1 and interactions is not True):
                     row_values = np.zeros((len(fm),) + outputs.shape[1:], dtype=np.float64)
-                elif interactions > 2:
-                    raise NotImplementedError(
-                        "Currently the Exact explainer does not support interactions higher than order 2!"
-                    )
+                else:
+                    raise ValueError("interactions must be False, True, 1, or 2")
                 return {
                     "values": row_values,
                     "expected_values": outputs[0],

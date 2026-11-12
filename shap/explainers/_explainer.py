@@ -366,6 +366,7 @@ class Explainer(Serializable):
         output_indices = []
         expected_values = []
         mask_shapes = []
+        main_effects_requested = main_effects
         main_effects = []  # type: ignore[var-annotated, assignment]
         hierarchical_values = []
         clustering = []
@@ -376,8 +377,8 @@ class Explainer(Serializable):
         for row_args in show_progress(zip(*args), num_rows, self.__class__.__name__ + " explainer", silent):
             row_result = self.explain_row(
                 *row_args,
+                main_effects=main_effects_requested,
                 max_evals=max_evals,
-                main_effects=main_effects,
                 error_bounds=error_bounds,
                 batch_size=batch_size,
                 outputs=outputs,
@@ -459,7 +460,7 @@ class Explainer(Serializable):
             tmp = []
             for i, v in enumerate(arg_values[j]):
                 if np.prod(mask_shapes[i][j]) != np.prod(v.shape):  # see if we have multiple outputs
-                    tmp.append(v.reshape(*mask_shapes[i][j], -1))
+                    tmp.append(v.reshape(*mask_shapes[i][j], *v.shape[1:]))
                 else:
                     tmp.append(v.reshape(*mask_shapes[i][j]))
             arg_values[j] = pack_values(tmp)  # type: ignore[assignment]
