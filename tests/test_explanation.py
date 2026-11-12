@@ -247,7 +247,6 @@ def test_cohorts_generation_with_one_feature():
     assert len(cohorts.cohorts) == 3
 
 
-
 def test_numpy_left_operand_returns_explanation():
     exp = shap.Explanation(
         values=np.array([[1.0, 2.0]]),
