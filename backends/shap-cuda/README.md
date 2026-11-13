@@ -11,7 +11,7 @@ not by importing `shap_cuda` directly.
 Install SHAP with the `cuda` extra to install both `shap` and `shap-cuda`:
 
 ```bash
-pip install "shap[cuda]"
+pip install --upgrade "shap[cuda]"
 ```
 
 Prebuilt wheels avoid compiling the backend yourself; building from source

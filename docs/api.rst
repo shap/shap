@@ -24,9 +24,7 @@ explainers
 ----------
 *See also:* :ref:`Explainer API Examples <explainers_examples>`.
 
-:class:`shap.GPUTreeExplainer` requires the separate ``shap-cuda`` Python
-package, installed with ``pip install "shap[cuda]"``. See
-:ref:`GPU support <gpu-support>` for installation details and requirements.
+For :class:`shap.GPUTreeExplainer` installation, see :ref:`GPU support <gpu-support>`.
 
 .. autosummary::
     :toctree: generated/
