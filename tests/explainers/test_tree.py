@@ -20,6 +20,8 @@ from shap.explainers._explainer import Explanation
 from shap.explainers._tree import SingleTree
 from shap.utils._exceptions import InvalidModelError
 
+from . import common
+
 
 def test_unsupported_model_raises_error():
     """Unsupported model inputs to TreeExplainer should raise an Exception."""
@@ -3502,3 +3504,17 @@ def test_treelite_lightgbm_scaled_sigmoid():
 
     sv = shap.TreeExplainer(tl_model, data=X, model_output="probability")(X)
     np.testing.assert_allclose(sv.base_values + sv.values.sum(axis=1), model.predict(X), rtol=1e-6, atol=1e-6)
+
+
+@pytest.mark.parametrize("background", [None, "array", "masker"])
+def test_serialization(background):
+    """A saved TreeExplainer loads back and gives the same SHAP values, cf. GH #2122."""
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(200, 4))
+    model = DecisionTreeRegressor(max_depth=4, random_state=0).fit(X, X[:, 0] + X[:, 1] * X[:, 2])
+    if background == "array":
+        background = X[:20]
+    elif background == "masker":
+        # more rows than the default max_samples=100, so the masker's own setting must survive loading
+        background = shap.maskers.Independent(X, max_samples=200)
+    common.test_serialization(shap.TreeExplainer, model, background, X)
