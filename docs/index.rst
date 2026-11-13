@@ -35,12 +35,11 @@ GPU-accelerated Tree SHAP (:class:`shap.GPUTreeExplainer`) is provided by the
 separate ``shap-cuda`` Python package. Install it alongside SHAP using the
 ``cuda`` extra::
 
-   pip install --upgrade "shap[cuda]"
+   pip install "shap[cuda]"
 
 See the
 `shap-cuda guide <https://github.com/shap/shap/blob/main/backends/shap-cuda/README.md>`_
-for requirements, source builds, and usage, or read the
-`release announcement <https://gcos.ai/blog/shap-cuda-is-now-available/>`_.
+for requirements, source builds, and usage.
 
 
 .. toctree::

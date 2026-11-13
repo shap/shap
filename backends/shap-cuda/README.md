@@ -11,8 +11,11 @@ not by importing `shap_cuda` directly.
 Install SHAP with the `cuda` extra to install both `shap` and `shap-cuda`:
 
 ```bash
-pip install --upgrade "shap[cuda]"
+pip install "shap[cuda]"
 ```
+
+If you already have an older SHAP version that does not provide the `cuda`
+extra, you may need to add `--upgrade` to this command.
 
 Prebuilt wheels avoid compiling the backend yourself; building from source
 requires the NVIDIA CUDA toolkit. Running explanations requires an NVIDIA GPU
