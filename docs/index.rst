@@ -26,6 +26,27 @@ SHAP can be installed from either `PyPI <https://pypi.org/project/shap>`_ or
    conda install -c conda-forge shap
 
 
+.. _gpu-support:
+
+GPU support
+-----------
+
+GPU-accelerated Tree SHAP (:class:`shap.GPUTreeExplainer`) is provided by the
+separate ``shap-cuda`` Python package. Install it alongside SHAP using the
+``cuda`` extra::
+
+   pip install "shap[cuda]"
+
+This installs both ``shap`` and ``shap-cuda``. Prebuilt wheels avoid compiling the
+backend yourself; building from source requires the
+`CUDA toolkit <https://developer.nvidia.com/cuda-toolkit>`_.
+Use the backend through ``shap.GPUTreeExplainer`` on an NVIDIA GPU
+with a compatible driver. See the
+`shap-cuda guide <https://github.com/shap/shap/blob/main/backends/shap-cuda/README.md>`_
+for prerequisites, local source installation, and a usage example, or read the
+`release announcement <https://gcos.ai/blog/shap-cuda-is-now-available/>`_.
+
+
 .. toctree::
    :maxdepth: 2
    :caption: Introduction

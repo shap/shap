@@ -6,6 +6,23 @@ Installing this package registers `GPUTreeExplainer` with `shap` via the
 `shap.tree_backends` entry-point group; use it through `shap.GPUTreeExplainer`,
 not by importing `shap_cuda` directly.
 
+## Install
+
+Install SHAP with the `cuda` extra to install both `shap` and `shap-cuda`:
+
+```bash
+pip install "shap[cuda]"
+```
+
+Prebuilt wheels avoid compiling the backend yourself; building from source
+requires the NVIDIA CUDA toolkit. Running explanations requires an NVIDIA GPU
+and a compatible driver. See the [prerequisites](#prerequisites)
+below for build requirements and [Verify and use the backend](#verify-and-use-the-backend)
+for a usage example.
+
+For development from a repository checkout, follow the local source installation
+instructions below.
+
 ## Build locally from source
 
 Build both `shap` and `shap-cuda` from the same checkout: the backend uses SHAP
