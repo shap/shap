@@ -52,6 +52,25 @@ def test_multi_output_interactions():
     np.testing.assert_allclose(row_values, expected)
 
 
+def test_multi_output_interactions_shape():
+    """Interaction values of a multi-output model keep a (features, features, outputs) layout per row."""
+    rng = np.random.default_rng(0)
+    background = rng.normal(size=(10, 4))
+    data = rng.normal(size=(3, 4))
+
+    def model(X):
+        return np.stack([X[:, 0] * X[:, 1] + X[:, 2], np.sin(X[:, 1]) * X[:, 3] - X[:, 0] ** 2], axis=1)
+
+    masker = shap.maskers.Independent(background)
+    shap_values = shap.explainers.ExactExplainer(model, masker)(data, interactions=2)
+    assert shap_values.values.shape == (3, 4, 4, 2)
+
+    for k in range(2):
+        single = shap.explainers.ExactExplainer(lambda X, k=k: model(X)[:, k], masker)(data, interactions=2)
+        np.testing.assert_allclose(shap_values.values[..., k], single.values)
+    np.testing.assert_allclose(shap_values.base_values + shap_values.values.sum((1, 2)), model(data))
+
+
 @compare_numpy_outputs_against_baseline(func_file=__file__)
 def test_tabular_single_output_auto_masker():
     model, data = common.basic_xgboost_scenario(100)
