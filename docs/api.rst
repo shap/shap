@@ -24,6 +24,8 @@ explainers
 ----------
 *See also:* :ref:`Explainer API Examples <explainers_examples>`.
 
+For :class:`shap.GPUTreeExplainer` installation, see :ref:`GPU support <gpu-support>`.
+
 .. autosummary::
     :toctree: generated/
 
