@@ -64,7 +64,7 @@ class Image(Masker):
         self.fixed_background = not isinstance(self.mask_value, str)
 
         # self.scratch_mask = np.zeros(self.input_shape[:-1], dtype=bool)
-        self.last_xid = None
+        self._last_x = None
 
         # flag that we return outputs that will not get changed by later masking calls
         self.immutable_outputs = True
@@ -97,9 +97,16 @@ class Image(Masker):
 
         if isinstance(self.mask_value, str):
             if self.blur_kernel is not None:
-                if self.last_xid != id(x):
+                cached_x = getattr(self, "_last_x", None)
+                if (
+                    self._blur_value_cache is None
+                    or cached_x is None
+                    or cached_x.dtype != x.dtype
+                    or not np.array_equal(cached_x, x, equal_nan=True)
+                ):
+                    self._last_x = None
                     self._blur_value_cache = cv2.blur(x.reshape(self.input_shape), self.blur_kernel).ravel()
-                    self.last_xid = id(x)
+                    self._last_x = x.copy()
                 out = x.copy()
                 out[~mask] = self._blur_value_cache[~mask]
 
