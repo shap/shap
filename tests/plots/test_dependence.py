@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -41,3 +42,96 @@ def test_dependence_use_line_collection_bug():
         shap_values=shap_values[:1, :],  # type: ignore[call-overload]
         show=False,
     )
+
+
+def _rank_fixture():
+    """Model and Explanation where feature "c" ranks first and "a" second by mean |SHAP|."""
+    X = np.random.default_rng(0).normal(size=(50, 3))
+    values = X * np.array([1.0, 0.01, 5.0])
+
+    def model(features):
+        return features[:, 2] * 2.0
+
+    return X, shap.Explanation(values=values, data=X, base_values=0.0, feature_names=["a", "b", "c"]), model
+
+
+def test_partial_dependence_rank_based_indexing():
+    """rank(N) selectors resolve against the Explanation supplied as data."""
+    # GH #2920
+    _, exp, model = _rank_fixture()
+
+    fig, ax = shap.plots.partial_dependence("rank(0)", model, exp, feature_names=["a", "b", "c"], ice=False, show=False)
+    assert ax.get_xlabel() == "c"
+    plt.close(fig)
+
+    fig, ax = shap.plots.partial_dependence("rank(1)", model, exp, feature_names=["a", "b", "c"], ice=False, show=False)
+    assert ax.get_xlabel() == "a"
+    plt.close(fig)
+
+
+def test_partial_dependence_rank_based_indexing_with_explicit_shap_values():
+    """rank(N) selectors resolve against explicitly supplied SHAP values."""
+    # GH #2920
+    X, exp, model = _rank_fixture()
+
+    fig, ax = shap.plots.partial_dependence(
+        "rank(1)", model, X, shap_values=exp, feature_names=["a", "b", "c"], ice=False, show=False
+    )
+    assert ax.get_xlabel() == "a"
+    plt.close(fig)
+
+
+def test_partial_dependence_two_feature_rank_based_indexing():
+    """rank(N) selectors resolve in the two-feature (3D) plot."""
+    # GH #2920
+    _, exp, model = _rank_fixture()
+
+    fig, ax = shap.plots.partial_dependence(
+        ("rank(0)", "rank(1)"), model, exp, feature_names=["a", "b", "c"], show=False
+    )
+    assert ax.get_xlabel() == "c"
+    assert ax.get_ylabel() == "a"
+    plt.close(fig)
+
+
+def test_partial_dependence_rank_without_shap_values_raises():
+    """Without any SHAP values, rank-based indexing keeps its informative error."""
+    # GH #2920
+    X, _, model = _rank_fixture()
+
+    with pytest.raises(ValueError, match="shap_values must be provided for rank-based indexing"):
+        shap.plots.partial_dependence("rank(0)", model, X, ice=False, show=False)
+
+
+def test_partial_dependence_ordinary_selectors():
+    """Integer and name selectors keep working alongside rank-based indexing."""
+    # GH #2920
+    X, exp, model = _rank_fixture()
+
+    fig, ax = shap.plots.partial_dependence("c", model, exp, feature_names=["a", "b", "c"], ice=False, show=False)
+    assert ax.get_xlabel() == "c"
+    plt.close(fig)
+
+    fig, ax = shap.plots.partial_dependence(0, model, X, ice=False, show=False)
+    assert ax.get_xlabel() == "Feature 0"
+    plt.close(fig)
+
+
+def test_partial_dependence_rank_based_indexing_single_sample():
+    """rank(N) resolves correctly for a single-sample Explanation with flat (n_features,) values."""
+    # GH #2920
+    X = np.random.default_rng(0).normal(size=(1, 3))
+    values = X * np.array([1.0, 0.01, 5.0])
+    exp = shap.Explanation(values=values[0], data=X, base_values=0.0, feature_names=["a", "b", "c"])
+
+    def model(features):
+        return features[:, 2] * 2.0
+
+    # the two-feature path exercises selector resolution without the
+    # Explanation-shaped overlays the one-feature path applies afterwards
+    fig, ax = shap.plots.partial_dependence(
+        ("rank(0)", "rank(1)"), model, exp, feature_names=["a", "b", "c"], show=False
+    )
+    assert ax.get_xlabel() == "c"
+    assert ax.get_ylabel() == "a"
+    plt.close(fig)
