@@ -245,3 +245,33 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_numpy_left_operand_returns_explanation():
+    exp = shap.Explanation(
+        values=np.array([[1.0, 2.0]]),
+        base_values=np.array([0.5]),
+        data=np.array([[10.0, 20.0]]),
+    )
+    left = np.float64(2) * exp
+    right = exp * np.float64(2)
+    assert type(left) is shap.Explanation
+    assert type(right) is shap.Explanation
+    np.testing.assert_array_equal(left.values, right.values)
+    np.testing.assert_array_equal(left.base_values, right.base_values)
+    np.testing.assert_array_equal(left.data, right.data)
+
+
+def test_explanation_addition_when_one_side_has_no_data():
+    exp = shap.Explanation(
+        values=np.array([[1.0, 2.0]]),
+        base_values=np.array([0.5]),
+        data=np.array([[10.0, 20.0]]),
+    )
+    values_only = shap.Explanation(values=np.array([[3.0, 4.0]]))
+    added = exp + values_only
+    assert type(added) is shap.Explanation
+    np.testing.assert_array_equal(added.values, np.array([[4.0, 6.0]]))
+    np.testing.assert_array_equal(added.data, exp.data)
+    np.testing.assert_array_equal(added.base_values, exp.base_values)
+    np.testing.assert_array_equal((values_only + exp).values, added.values)
