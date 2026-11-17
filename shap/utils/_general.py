@@ -282,7 +282,7 @@ def format_value(s: Any, format_str: str) -> str:
     """Strips trailing zeros and uses a unicode minus sign."""
     if not issubclass(type(s), str):
         s = format_str % s
-    s = re.sub(r"\.?0+$", "", s)
+        s = re.sub(r"\.?0+$", "", s)
     if len(s) > 0 and s[0] == "-":
         s = "\u2212" + s[1:]
     return s

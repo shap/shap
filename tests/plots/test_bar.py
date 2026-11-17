@@ -110,3 +110,17 @@ def test_bar_raises_error_for_empty_explanation(explainer):
     shap_values = explainer(explainer.data)
     with pytest.raises(ValueError, match="The passed Explanation is empty"):
         shap.plots.bar(shap_values[0:0], show=False)
+
+
+def test_bar_preserves_categorical_zero_label():
+    """Ensure that categorical zero values are shown in bar plot labels."""
+    explanation = shap.Explanation(
+        values=np.array([0.5]),
+        base_values=0.0,
+        display_data=np.array(["0"], dtype=object),
+        feature_names=["some categorical feature"],
+    )
+
+    ax = shap.plots.bar(explanation, show=False)
+
+    assert ax.get_yticklabels()[0].get_text() == "0 = some categorical feature"

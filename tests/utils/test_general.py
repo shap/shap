@@ -122,3 +122,9 @@ def test_format_value_string_input():
     # Test with string that starts with minus
     result = shap.utils._general.format_value("-123", "%0.03f")
     assert result == "\u2212" + "123"
+
+
+@pytest.mark.parametrize("value", ["0", "10", "100", "1", "yes"])
+def test_format_value_categorical_string_input(value):
+    """Tests that categorical string values are preserved."""
+    assert shap.utils._general.format_value(value, "%0.03f") == value
