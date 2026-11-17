@@ -54,6 +54,7 @@ def beeswarm(
     plot_size: Literal["auto"] | float | tuple[float, float] | None = "auto",
     color_bar_label: str = labels["FEATURE_VALUE"],
     group_remaining_features: bool = True,
+    show_directionality: bool = False,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -94,6 +95,13 @@ def beeswarm(
     group_remaining_features: bool
         If there are more features than ``max_display``, then plot a row representing
         the sum of SHAP values of all remaining features. Default True.
+
+    show_directionality: bool
+        If True, adds a visual indicator (+/-) next to feature names showing the
+        direction of association between feature values and SHAP values. A "+" indicates
+        that higher feature values tend to increase predictions (positive correlation),
+        while a "-" indicates that higher feature values tend to decrease predictions
+        (negative correlation). Computed using Spearman correlation. Default False.
 
     Returns
     -------
@@ -364,6 +372,54 @@ def beeswarm(
     yticklabels = [feature_names[i] for i in feature_inds]
     if include_grouped_remaining:
         yticklabels[-1] = f"Sum of {num_cut} other features"
+
+    # compute directionality if requested
+    directionality_symbols = None
+    if show_directionality and features is not None:
+        from scipy.stats import spearmanr
+
+        directionality_symbols = []
+        for i in feature_inds:
+            # Get the original feature indices for this (possibly merged) feature
+            orig_feature_inds = orig_inds[i]
+
+            # For merged features or grouped remaining, skip directionality
+            if len(orig_feature_inds) > 1 or (include_grouped_remaining and i == feature_inds[-1]):
+                directionality_symbols.append("")
+                continue
+
+            # Get feature values and SHAP values for this feature
+            feat_idx = orig_feature_inds[0]
+            feat_vals = features[:, feat_idx]
+            shap_vals = orig_values[:, feat_idx]
+
+            # Remove NaN values for correlation computation
+            valid_mask = ~(np.isnan(feat_vals) | np.isnan(shap_vals))
+            if np.sum(valid_mask) < 3:  # Need at least 3 points for correlation
+                directionality_symbols.append("")
+                continue
+
+            # Check if feature is categorical
+            try:
+                feat_vals_numeric = feat_vals[valid_mask].astype(np.float64)
+                shap_vals_numeric = shap_vals[valid_mask].astype(np.float64)
+
+                # Compute Spearman correlation
+                corr, p_value = spearmanr(feat_vals_numeric, shap_vals_numeric)
+
+                # Only show directionality if correlation is significant and meaningful
+                # Use p < 0.05 and |corr| > 0.1 as thresholds
+                if p_value < 0.05 and abs(corr) > 0.1:
+                    symbol = " +" if corr > 0 else " −"
+                else:
+                    symbol = ""
+                directionality_symbols.append(symbol)
+            except (ValueError, TypeError):
+                # Feature is categorical or can't be converted to numeric
+                directionality_symbols.append("")
+
+        # Add directionality symbols to labels
+        yticklabels = [label + symbol for label, symbol in zip(yticklabels, directionality_symbols)]
 
     row_height = 0.4
     if plot_size == "auto":
