@@ -256,7 +256,7 @@ This repository accepts PRs written by LLMs in any capacity. When filing a PR, p
 The documentation is hosted at
 [shap.readthedocs.io](https://shap.readthedocs.io/en/latest/). If you have
 modified the docstrings or notebooks, please also check that the changes are
-are rendered properly in the generated HTML files.
+rendered properly in the generated HTML files.
 
 ### Previewing changes on Pull Requests
 

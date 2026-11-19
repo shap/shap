@@ -33,13 +33,16 @@ conda install -c conda-forge shap
 
 ### GPU support
 
-To enable GPU-accelerated Tree SHAP (`GPUTreeExplainer`), install the `cuda` extra:
+GPU-accelerated Tree SHAP (`GPUTreeExplainer`) is provided by the separate
+[`shap-cuda`](backends/shap-cuda/README.md) Python package. Install it alongside
+SHAP using the `cuda` extra:
 
 <pre>
-pip install shap[cuda]
+pip install "shap[cuda]"
 </pre>
 
-This requires the [CUDA toolkit](https://developer.nvidia.com/cuda-toolkit) to be installed on your system.
+See the [shap-cuda guide](backends/shap-cuda/README.md) for requirements,
+source builds, and usage.
 
 ## Supported versions
 
