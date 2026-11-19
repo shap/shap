@@ -45,11 +45,6 @@ class DeepExplainer(Explainer):
             If the input is a tuple, the returned shap values will be for the input of the
             layer argument. layer must be a layer in the model, i.e. model.conv2
 
-            PyTorch ``nn.LSTM`` layers support batched dense sequences, including stacked,
-            bidirectional and projected layers. Packed sequences and unbatched LSTM
-            inputs are not supported. The model must return a tensor, rather than the
-            native LSTM tuple of sequence and state outputs.
-
         data :
             if framework == 'tensorflow': [np.array] or [pandas.DataFrame]
             if framework == 'pytorch': [torch.tensor]
