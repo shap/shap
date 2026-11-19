@@ -13,6 +13,12 @@ from ..utils.transformers import (
 from ._masker import Masker
 
 
+class NoOffsetsException(Exception):
+    """Raised when a tokenizer does not support offset mapping."""
+
+    pass
+
+
 class Text(Masker):
     """This masks out tokens according to the given tokenizer.
 
@@ -177,13 +183,19 @@ class Text(Masker):
     def token_segments(self, s):
         """Returns the substrings associated with each token in the given string."""
         try:
+            # todo: do we even need to support offset_mapping anymore?
             token_data = self.tokenizer(s, return_offsets_mapping=True)
+            if "offset_mapping" not in token_data:
+                raise NoOffsetsException(
+                    "The passed tokenizer does not support offset mapping. Please use a tokenizer that supports "
+                    "offset mapping or one that has a .convert_ids_to_tokens or .decode method."
+                )
             offsets = token_data["offset_mapping"]
             offsets = [(0, 0) if o is None else o for o in offsets]
             parts = [s[offsets[i][0] : max(offsets[i][1], offsets[i + 1][0])] for i in range(len(offsets) - 1)]
             parts.append(s[offsets[len(offsets) - 1][0] : offsets[len(offsets) - 1][1]])
             return parts, token_data["input_ids"]
-        except (NotImplementedError, TypeError):  # catch lack of support for return_offsets_mapping
+        except (NotImplementedError, TypeError, NoOffsetsException):  # catch lack of support for return_offsets_mapping
             token_ids = self.tokenizer(s)["input_ids"]
             if hasattr(self.tokenizer, "convert_ids_to_tokens"):
                 tokens = self.tokenizer.convert_ids_to_tokens(token_ids)

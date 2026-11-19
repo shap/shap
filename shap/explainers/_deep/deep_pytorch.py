@@ -67,13 +67,20 @@ class PyTorchDeep(Explainer):
         """Add handles to all non-container layers in the model.
         Recursively for non-container layers
         """
+        import torch
+
         handles_list = []
         model_children = list(model.children())
         if model_children:
             for child in model_children:
                 handles_list.extend(self.add_handles(child, forward_handle, backward_handle))
         else:  # leaves
-            handles_list.append(model.register_forward_hook(forward_handle))
+            if isinstance(model, torch.nn.LSTM):
+                from ._lstm import lstm_forward_hook
+
+                handles_list.append(model.register_forward_hook(lstm_forward_hook, with_kwargs=True))
+            else:
+                handles_list.append(model.register_forward_hook(forward_handle))
             handles_list.append(model.register_full_backward_hook(backward_handle))
         return handles_list
 
@@ -164,58 +171,61 @@ class PyTorchDeep(Explainer):
 
         # add the gradient handles
         handles = self.add_handles(self.model, add_interim_values, deeplift_grad)
-        if self.interim:
-            self.add_target_handle(self.layer)
-
-        # compute the attributions
-        output_phis = []
-        for i in range(model_output_ranks.shape[1]):
-            phis = []
+        try:
             if self.interim:
-                for k in range(len(self.interim_inputs_shape)):
-                    phis.append(np.zeros((X[0].shape[0],) + self.interim_inputs_shape[k][1:]))
-            else:
-                for k in range(len(X)):
-                    phis.append(np.zeros(X[k].shape))
-            for j in range(X[0].shape[0]):
-                # tile the inputs to line up with the background data samples
-                tiled_X = [
-                    X[t][j : j + 1].repeat((self.data[t].shape[0],) + tuple([1 for k in range(len(X[t].shape) - 1)]))
-                    for t in range(len(X))
-                ]
-                joint_x = [torch.cat((tiled_X[t], self.data[t]), dim=0) for t in range(len(X))]
-                # run attribution computation graph
-                feature_ind = model_output_ranks[j, i]
-                sample_phis = self.gradient(feature_ind, joint_x)
-                # assign the attributions to the right part of the output arrays
+                self.add_target_handle(self.layer)
+
+            # compute the attributions
+            output_phis = []
+            for i in range(model_output_ranks.shape[1]):
+                phis = []
                 if self.interim:
-                    sample_phis, output = sample_phis
-                    x, data = [], []
-                    for k in range(len(output)):
-                        x_temp, data_temp = np.split(output[k], 2)
-                        x.append(x_temp)
-                        data.append(data_temp)
-                    for t in range(len(self.interim_inputs_shape)):
-                        phis[t][j] = (sample_phis[t][self.data[t].shape[0] :] * (x[t] - data[t])).mean(0)
+                    for k in range(len(self.interim_inputs_shape)):
+                        phis.append(np.zeros((X[0].shape[0],) + self.interim_inputs_shape[k][1:]))
                 else:
-                    for t in range(len(X)):
-                        phis[t][j] = (
-                            (
-                                torch.from_numpy(sample_phis[t][self.data[t].shape[0] :]).to(self.device)
-                                * (X[t][j : j + 1] - self.data[t])
-                            )
-                            .cpu()
-                            .detach()
-                            .numpy()
-                            .mean(0)
+                    for k in range(len(X)):
+                        phis.append(np.zeros(X[k].shape))
+                for j in range(X[0].shape[0]):
+                    # tile the inputs to line up with the background data samples
+                    tiled_X = [
+                        X[t][j : j + 1].repeat(
+                            (self.data[t].shape[0],) + tuple([1 for k in range(len(X[t].shape) - 1)])
                         )
-            output_phis.append(phis[0] if not self.multi_input else phis)
-        # cleanup; remove all gradient handles
-        for handle in handles:
-            handle.remove()
-        self.remove_attributes(self.model)
-        if self.interim:
-            self.target_handle.remove()
+                        for t in range(len(X))
+                    ]
+                    joint_x = [torch.cat((tiled_X[t], self.data[t]), dim=0) for t in range(len(X))]
+                    # run attribution computation graph
+                    feature_ind = model_output_ranks[j, i]
+                    sample_phis = self.gradient(feature_ind, joint_x)
+                    # assign the attributions to the right part of the output arrays
+                    if self.interim:
+                        sample_phis, output = sample_phis
+                        x, data = [], []
+                        for k in range(len(output)):
+                            x_temp, data_temp = np.split(output[k], 2)
+                            x.append(x_temp)
+                            data.append(data_temp)
+                        for t in range(len(self.interim_inputs_shape)):
+                            phis[t][j] = (sample_phis[t][self.data[t].shape[0] :] * (x[t] - data[t])).mean(0)
+                    else:
+                        for t in range(len(X)):
+                            phis[t][j] = (
+                                (
+                                    torch.from_numpy(sample_phis[t][self.data[t].shape[0] :]).to(self.device)
+                                    * (X[t][j : j + 1] - self.data[t])
+                                )
+                                .cpu()
+                                .detach()
+                                .numpy()
+                                .mean(0)
+                            )
+                output_phis.append(phis[0] if not self.multi_input else phis)
+        finally:
+            for handle in handles:
+                handle.remove()
+            self.remove_attributes(self.model)
+            if self.interim:
+                self.target_handle.remove()
 
         # check that the SHAP values sum up to the model output
         if check_additivity:
@@ -380,6 +390,7 @@ op_handler["Dropout2d"] = passthrough
 op_handler["Dropout"] = passthrough
 op_handler["AlphaDropout"] = passthrough
 op_handler["Identity"] = passthrough
+op_handler["LSTM"] = passthrough  # The forward hook installs its custom DeepLIFT VJP.
 op_handler["Flatten"] = passthrough
 
 op_handler["Conv1d"] = linear_1d
