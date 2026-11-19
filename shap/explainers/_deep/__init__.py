@@ -38,10 +38,6 @@ class DeepExplainer(Explainer):
             output of the model to be explained. Note that SHAP values are specific to a single
             output value, so the output tf.Tensor should be a single dimensional output (,1).
 
-            TensorFlow ``While`` and ``StatelessWhile`` operations use the existing
-            DeepLIFT rules inside their bodies, including native unfused Keras LSTMs.
-            Loop conditions must not depend on the explained input values.
-
             if framework == 'pytorch', an nn.Module object (model), or a tuple (model, layer),
             where both are nn.Module objects.
             The model is an nn.Module object which takes as input a tensor (or list of tensors) of

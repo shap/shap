@@ -208,11 +208,6 @@ class TFDeep(Explainer):
     def _variable_inputs(self, op):
         """Return which inputs of this operation are variable (i.e. depend on the model inputs)."""
         if op not in self._vinputs:
-            if not hasattr(self, "between_tensors"):
-                raise NotImplementedError(
-                    "DeepExplainer cannot override a nested function gradient before input dependencies are known. "
-                    "Expose the function body in the model graph (for legacy Keras LSTM, use unroll=True)."
-                )
             out = np.zeros(len(op.inputs), dtype=bool)
             for i, t in enumerate(op.inputs):
                 out[i] = t.name in self.between_tensors
@@ -365,23 +360,23 @@ class TFDeep(Explainer):
         else:
 
             def anon():
-                original_record_gradient = tf_execute.record_gradient
                 tf_execute.record_gradient = custom_record_gradient
+
+                # build inputs that are correctly shaped, typed, and tf-wrapped
+                inputs = []
+                for i in range(len(X)):
+                    shape = list(self.model_inputs[i].shape)
+                    shape[0] = -1
+                    data = X[i].reshape(shape)
+                    v = tf.constant(data, dtype=self.model_inputs[i].dtype)
+                    inputs.append(v)
+                final_out = out(inputs)
                 try:
-                    # build inputs that are correctly shaped, typed, and tf-wrapped
-                    inputs = []
-                    for i in range(len(X)):
-                        shape = [
-                            dim if dim is not None else X[i].shape[j]
-                            for j, dim in enumerate(self.model_inputs[i].shape)
-                        ]
-                        shape[0] = -1
-                        data = X[i].reshape(shape)
-                        v = tf.constant(data, dtype=self.model_inputs[i].dtype)
-                        inputs.append(v)
-                    return out(inputs)
-                finally:
-                    tf_execute.record_gradient = original_record_gradient
+                    tf_execute.record_gradient = tf_backprop._record_gradient
+                except AttributeError:
+                    tf_execute.record_gradient = tf_backprop.record_gradient
+
+                return final_out
 
             return self.execute_with_overridden_gradients(anon)
 
@@ -395,7 +390,7 @@ class TFDeep(Explainer):
         # replace the gradients for all the non-linear activations
         # we do this by hacking our way into the registry (TODO: find a public API for this if it exists)
         reg = tf_ops._gradient_registry._registry
-        ops_not_in_registry = [name for name in ("TensorListReserve",) if name not in reg]
+        ops_not_in_registry = ["TensorListReserve"]
         # NOTE: location_tag taken from tensorflow source for None type ops
         location_tag = ("UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN")
         # TODO: unclear why some ops are not in the registry with TF 2.0 like TensorListReserve
@@ -432,44 +427,6 @@ class TFDeep(Explainer):
             return out
         else:
             return [v.numpy() for v in out]
-
-
-def while_loop(explainer, op, *grads):
-    """Use TensorFlow's loop backpropagation with DeepLIFT rules inside the body."""
-    from tensorflow.python.ops import while_v2
-
-    while_op = op.outputs[0].op
-    body = while_v2._get_graph(while_op, "body", "_body_graph")
-    condition = while_v2._get_graph(while_op, "cond", "_cond_graph")
-    # Make the same graph instances available to TensorFlow's native While gradient.
-    while_op._body_graph, while_op._cond_graph = body, condition
-    varying = explainer._variable_inputs(op).copy()
-
-    def dependencies(graph, flags):
-        variable = {t.name for t, flag in zip(graph.inputs, flags) if flag}
-        masks = {}
-        for node in graph.get_operations():
-            mask = np.array([t.name in variable for t in node.inputs], dtype=bool)
-            masks[node] = mask
-            if mask.any() and op_handlers.get(node.type) is not break_dependence:
-                variable.update(t.name for t in node.outputs)
-        return np.array([t.name in variable for t in graph.outputs], dtype=bool), masks
-
-    # A constant initial state may become input-dependent after the first iteration.
-    # Propagate that dependence to a fixed point over the loop-carried tensors.
-    while True:
-        outputs, masks = dependencies(body, varying)
-        updated = varying | outputs
-        if np.array_equal(updated, varying):
-            break
-        varying = updated
-    condition_outputs, _ = dependencies(condition, varying)
-    if condition_outputs.any():
-        raise NotImplementedError("DeepExplainer does not support input-dependent While conditions.")
-    explainer._vinputs.update(masks)
-    if op.type.startswith("shap_"):
-        op.type = op.type[5:]
-    return explainer.orig_grads[op.type](op, *grads)
 
 
 def tensors_blocked_by_false(ops):
@@ -782,8 +739,6 @@ op_handlers["TensorArrayWriteV3"] = passthrough
 
 # ops that don't pass any attributions to their inputs
 op_handlers["Shape"] = break_dependence
-op_handlers["Size"] = break_dependence
-op_handlers["Rank"] = break_dependence
 op_handlers["RandomUniform"] = break_dependence
 op_handlers["ZerosLike"] = break_dependence
 # op_handlers["StopGradient"] = break_dependence # this allows us to stop attributions when we want to (like softmax re-centering)
@@ -833,17 +788,3 @@ op_handlers["Softmax"] = softmax
 # Max
 # TensorArraySizeV3
 # Range
-
-# Sequence transport and functional control flow. Gate arithmetic keeps its existing rules.
-op_handlers["Split"] = linearity_1d(1)
-op_handlers["SplitV"] = linearity_1d(0)
-op_handlers["TensorListStack"] = linearity_1d(0)
-op_handlers["TensorListFromTensor"] = linearity_1d(0)
-op_handlers["TensorListGetItem"] = linearity_1d(0)
-op_handlers["TensorListSetItem"] = linearity_with_excluded([1])
-op_handlers["TensorListReserve"] = break_dependence
-op_handlers["EmptyTensorList"] = break_dependence
-op_handlers["TensorListLength"] = break_dependence
-op_handlers["TensorListElementShape"] = break_dependence
-op_handlers["While"] = while_loop
-op_handlers["StatelessWhile"] = while_loop
