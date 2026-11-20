@@ -191,6 +191,11 @@ class Explanation(metaclass=MetaExplanation):
     OpChains are used as the ``order=`` argument to plot functions so the
     sorting / reduction is deferred until plotting time.
 
+    Standard arithmetic operator expressions (such as ``+``, ``-``, ``*``, ``/``)
+    with numeric or NumPy operands support both operand orders and return a new
+    :class:`Explanation` instance. Direct NumPy ufunc function calls (e.g.
+    ``np.divide(arr, exp)``) are not supported.
+
     Examples
     --------
     >>> import numpy as np
@@ -209,6 +214,8 @@ class Explanation(metaclass=MetaExplanation):
     >>> exp[:, 0].feature_names  # explanation restricted to feature "a"
     'a'
     """
+
+    __array_ufunc__ = None
 
     def __init__(
         self,
@@ -616,16 +623,27 @@ class Explanation(metaclass=MetaExplanation):
 
         if isinstance(other, Explanation):
             new_exp.values = binary_op(new_exp.values, other.values)
-            if new_exp.data is not None:
+            if new_exp.data is not None and other.data is not None:
                 new_exp.data = binary_op(new_exp.data, other.data)
-            if new_exp.base_values is not None:
+            else:
+                new_exp.data = None
+            if new_exp.base_values is not None and other.base_values is not None:
                 new_exp.base_values = binary_op(new_exp.base_values, other.base_values)
+            else:
+                new_exp.base_values = None
         else:
             new_exp.values = binary_op(new_exp.values, other)
             if new_exp.data is not None:
                 new_exp.data = binary_op(new_exp.data, other)
             if new_exp.base_values is not None:
-                new_exp.base_values = binary_op(new_exp.base_values, other)
+                try:
+                    new_base = binary_op(new_exp.base_values, other)
+                    if np.shape(new_base) != np.shape(new_exp.base_values):
+                        new_exp.base_values = None
+                    else:
+                        new_exp.base_values = new_base
+                except (ValueError, TypeError, ZeroDivisionError):
+                    new_exp.base_values = None
         return new_exp
 
     def __add__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
@@ -638,7 +656,7 @@ class Explanation(metaclass=MetaExplanation):
         return self._apply_binary_operator(other, operator.sub, "__sub__")
 
     def __rsub__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
-        return self._apply_binary_operator(other, operator.sub, "__sub__")
+        return self._apply_binary_operator(other, lambda a, b: b - a, "__rsub__")
 
     def __mul__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
         return self._apply_binary_operator(other, operator.mul, "__mul__")
@@ -648,6 +666,9 @@ class Explanation(metaclass=MetaExplanation):
 
     def __truediv__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
         return self._apply_binary_operator(other, operator.truediv, "__truediv__")
+
+    def __rtruediv__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
+        return self._apply_binary_operator(other, lambda a, b: b / a, "__rtruediv__")
 
     def _numpy_func(self, fname: str, **kwargs: Any) -> Explanation:
         """Apply a numpy-style function to this Explanation."""
