@@ -88,6 +88,20 @@ def test_opchain_repr():
     assert repr(opchain) == expected_repr
 
 
+def test_opchain_call_does_not_modify_original():
+    """Calling an OpChain with new args should not change chains created from it earlier."""
+    mean = shap.Explanation.mean
+    mean_axis0 = mean(0)
+    mean_axis1 = mean(1)
+
+    assert repr(mean) == "shap.Explanation.mean"
+    assert repr(mean_axis0) == "shap.Explanation.mean(0)"
+    assert repr(mean_axis1) == "shap.Explanation.mean(1)"
+
+    exp = shap.Explanation(np.arange(12).reshape(4, 3))
+    np.testing.assert_allclose(mean_axis0.apply(exp).values, [4.5, 5.5, 6.5])
+
+
 def test_format_value_empty_string():
     """Tests that format_value() handles empty strings without raising IndexError."""
     # Test with empty string
