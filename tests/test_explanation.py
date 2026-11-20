@@ -245,3 +245,84 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_explanation_arithmetic_numpy_operands():
+    # gh-5319: operations with numpy types on LHS should return Explanation, not object ndarray
+    exp = shap.Explanation(
+        values=np.array([[1.0, 2.0]]),
+        base_values=np.array([0.5]),
+        data=np.array([[10.0, 20.0]]),
+    )
+
+    scalar = np.float64(2.0)
+    res_mul_left = scalar * exp
+    res_mul_right = exp * scalar
+    assert isinstance(res_mul_left, shap.Explanation)
+    assert isinstance(res_mul_right, shap.Explanation)
+    assert np.allclose(res_mul_left.values, res_mul_right.values)
+    assert np.allclose(res_mul_left.values, [[2.0, 4.0]])
+
+    arr = np.array([2.0, 3.0])
+    res_add_left = arr + exp
+    res_add_right = exp + arr
+    assert isinstance(res_add_left, shap.Explanation)
+    assert isinstance(res_add_right, shap.Explanation)
+    assert np.allclose(res_add_left.values, res_add_right.values)
+    assert np.allclose(res_add_left.values, [[3.0, 5.0]])
+
+    # Subtraction order check (other - self)
+    res_sub_left = arr - exp
+    res_sub_right = exp - arr
+    assert isinstance(res_sub_left, shap.Explanation)
+    assert isinstance(res_sub_right, shap.Explanation)
+    assert np.allclose(res_sub_left.values, [[1.0, 1.0]])
+    assert np.allclose(res_sub_right.values, [[-1.0, -1.0]])
+
+    # True division order check (other / self and self / other)
+    res_div_left = arr / exp
+    res_div_right = exp / arr
+    assert isinstance(res_div_left, shap.Explanation)
+    assert isinstance(res_div_right, shap.Explanation)
+    assert np.allclose(res_div_left.values, [[2.0, 1.5]])
+    assert np.allclose(res_div_right.values, [[0.5, 2.0 / 3.0]])
+
+    # gh-5319: symmetric handling when one Explanation lacks optional data/base_values
+    values_only = shap.Explanation(values=np.array([[1.0, 2.0]]))
+    res_part_left = values_only + exp
+    res_part_right = exp + values_only
+    assert isinstance(res_part_left, shap.Explanation)
+    assert isinstance(res_part_right, shap.Explanation)
+    assert np.allclose(res_part_left.values, res_part_right.values)
+    assert res_part_left.data is None and res_part_right.data is None
+    assert res_part_left.base_values is None and res_part_right.base_values is None
+
+    # Base values handling: scalars preserve baseline shape, feature-wise arrays clear incompatible baseline
+    exp_3samples = shap.Explanation(
+        values=np.ones((3, 2)),
+        base_values=np.array([0.5, 0.5, 0.5]),
+        data=np.ones((3, 2)),
+    )
+    res_scalar_3s = exp_3samples * 2.0
+    assert res_scalar_3s.base_values is not None
+    assert res_scalar_3s.base_values.shape == (3,)
+    assert np.allclose(res_scalar_3s.base_values, [1.0, 1.0, 1.0])
+
+    res_feat_3s = exp_3samples + arr
+    assert res_feat_3s.base_values is None
+    assert np.allclose(res_feat_3s.values, np.ones((3, 2)) + arr)
+
+    # Base values with float scalar or list
+    exp_float = shap.Explanation(np.array([1.0, 2.0]), base_values=0.5)
+    res_float = exp_float * np.float64(2.0)
+    assert np.isclose(res_float.base_values, 1.0)
+
+    exp_list = shap.Explanation(np.array([1.0, 2.0]), base_values=[0.5, 0.5])
+    res_list = exp_list + 2.0
+    assert res_list.base_values is None
+
+    # ZeroDivisionError on reflected division with zero base_values
+    exp_zero_bv = shap.Explanation(np.array([1.0, 2.0]), base_values=0.0)
+    res_zero_div = 2.0 / exp_zero_bv
+    assert np.allclose(res_zero_div.values, [2.0, 1.0])
+    assert res_zero_div.base_values is None
