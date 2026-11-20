@@ -12,15 +12,16 @@ pytestmark = pytest.mark.skipif(sys.platform == "darwin", reason="Memory error o
 
 
 def test_method_token_segments_pretrained_tokenizer():
-    """Check that the Text masker produces the same segments as its non-fast pretrained tokenizer."""
+    """Check token segmentation with the cased DistilBERT tokenizer."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=False)
+    # Transformers v5 uses the fast DistilBERT tokenizer even with use_fast=False.
+    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=True)
     masker = shap.maskers.Text(tokenizer)
 
     test_text = "I ate a Cannoli"
     output_token_segments, _ = masker.token_segments(test_text)
-    correct_token_segments = ["", " I", " ate", " a", " Can", "no", "li", ""]
+    correct_token_segments = ["", "I ", "ate ", "a ", "Can", "no", "li", ""]
 
     assert output_token_segments == correct_token_segments
 
@@ -40,17 +41,17 @@ def test_method_token_segments_pretrained_tokenizer_fast():
 
 
 def test_masker_call_pretrained_tokenizer():
-    """Check that the Text masker with a non-fast pretrained tokenizer masks correctly."""
+    """Check masking with the cased DistilBERT tokenizer."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased", use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=True)
     masker = shap.maskers.Text(tokenizer)
 
     test_text = "I ate a Cannoli"
     test_input_mask = np.array([True, False, True, True, False, True, True, True])
 
     output_masked_text = masker(test_input_mask, test_text)
-    correct_masked_text = "[MASK] ate a [MASK]noli"
+    correct_masked_text = "[MASK]ate a [MASK]noli"
 
     assert output_masked_text[0] == correct_masked_text
 
