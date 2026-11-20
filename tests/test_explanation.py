@@ -43,6 +43,39 @@ def test_explanation_repr():
     )
 
 
+def test_dataframe_data_scalar_row_slice_returns_series():
+    """Scalar row indexing should turn DataFrame ``data`` into a Series.
+
+    Regression for GH #5330: under newer pandas, slicer may leave a one-row
+    DataFrame instead of a Series. Slice indexing that keeps rows must still
+    return a DataFrame.
+    """
+    base_data = pd.DataFrame(
+        {
+            "a": ["hhi"],
+            "b": ["wdn"],
+            "c": ["weqwf"],
+            "d": ["wefnw"],
+        }
+    )
+    exp = shap.Explanation(
+        values=[[0, 0, 20, 33]],
+        base_values=[-53],
+        data=base_data,
+        feature_names=base_data.columns,
+    )
+
+    assert isinstance(exp.data, pd.DataFrame)
+    row = exp[0]
+    assert isinstance(row.data, pd.Series)
+    assert list(row.data.index) == list(base_data.columns)
+    assert list(row.data.values) == ["hhi", "wdn", "weqwf", "wefnw"]
+
+    kept_rows = exp[0:1]
+    assert isinstance(kept_rows.data, pd.DataFrame)
+    assert kept_rows.data.shape == (1, 4)
+
+
 def test_explanation_hstack(random_seed):
     """Checks that `hstack` works as expected with two valid Explanation objects.
     And that it returns an Explanation object.

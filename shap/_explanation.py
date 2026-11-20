@@ -569,6 +569,7 @@ class Explanation(metaclass=MetaExplanation):
             new_self = copy.copy(self)
         new_self._s = new_self._s.__getitem__(item)
         new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
+        _collapse_pandas_row_if_needed(new_self, item)
 
         return new_self
 
@@ -1153,3 +1154,22 @@ def list_wrap(x: npt.NDArray[Any] | Any) -> list[npt.NDArray[Any]] | Any:
         return [v for v in x]
     else:
         return x
+
+
+def _collapse_pandas_row_if_needed(explanation: Explanation, item: tuple) -> None:
+    """Coerce leftover one-row DataFrames to Series after a scalar row index.
+
+    ``Explanation`` historically exposes a ``pandas.Series`` when slicing a
+    DataFrame-backed explanation down to a single sample (e.g. ``exp[0]``).
+    Under newer pandas versions, ``slicer`` may leave a one-row DataFrame
+    instead. Plots such as waterfall expect a Series, so restore that contract
+    here when axis 0 was indexed with a scalar int (not a slice or list).
+    """
+    if not item or not isinstance(item[0], int):
+        return
+    data = explanation.data
+    if isinstance(data, pd.DataFrame):
+        explanation.data = data.iloc[0]
+    display_data = explanation.display_data
+    if isinstance(display_data, pd.DataFrame):
+        explanation.display_data = display_data.iloc[0]
