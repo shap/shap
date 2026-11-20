@@ -401,7 +401,7 @@ inline void dense_tree_path_dependent_interactions_gpu(
 void dense_tree_shap_gpu(const TreeEnsemble &trees,
                          const ExplanationDataset &data, tfloat *out_contribs,
                          const int feature_dependence, unsigned model_transform,
-                         bool interactions) {
+                         bool interactions, bool enable_experimental) { // enable_experimental is just for compatibility with the CPU version, it is not used in the GPU version
   // see what transform (if any) we have
   transform_f transform = get_transform(model_transform);
 

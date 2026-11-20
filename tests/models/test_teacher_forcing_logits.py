@@ -7,18 +7,30 @@ import shap
 
 
 def test_falcon():
-    pytest.importorskip("torch")
+    torch = pytest.importorskip("torch")
+    bitsandbytes = pytest.importorskip("bitsandbytes")
     transformers = pytest.importorskip("transformers")
     requests = pytest.importorskip("requests")
     name = "fxmarty/really-tiny-falcon-testing"
     try:
         tokenizer = transformers.AutoTokenizer.from_pretrained(name)
-        model = transformers.AutoModelForCausalLM.from_pretrained(
-            name, trust_remote_code=True, load_in_8bit=False, low_cpu_mem_usage=False
-        )
+        model = transformers.AutoModelForCausalLM.from_pretrained(name, trust_remote_code=False)
     except requests.exceptions.RequestException:
         pytest.xfail(reason="Connection error to transformers model")
 
+    # Transformers' bitsandbytes loader skips Falcon's custom Linear subclasses.
+    # Convert them explicitly, preserving the output head's tied embedding weights.
+    for module_name, module in list(model.named_modules()):
+        if isinstance(module, torch.nn.Linear) and module_name != "lm_head":
+            quantized = bitsandbytes.nn.Linear8bitLt(
+                module.in_features, module.out_features, bias=module.bias is not None, has_fp16_weights=False
+            )
+            quantized.load_state_dict(module.state_dict())
+            model.set_submodule(module_name, quantized.to("cpu"))
+
+    quantized_layers = [module for module in model.modules() if isinstance(module, bitsandbytes.nn.Linear8bitLt)]
+    assert quantized_layers
+    assert all(module.weight.dtype == torch.int8 for module in quantized_layers)
     model = model.eval()
 
     s = ["I enjoy walking with my cute dog"]
