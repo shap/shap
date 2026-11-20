@@ -2,7 +2,8 @@
 
 void dense_tree_shap_gpu(const TreeEnsemble &trees, const ExplanationDataset &data,
                          tfloat *out_contribs, int feature_dependence,
-                         unsigned model_transform, bool interactions);
+                         unsigned model_transform, bool interactions,
+			 bool enable_experimental);
 
 NB_MODULE(_cext_gpu, m) {
     m.doc() = "Bindings for the GPU Tree SHAP implementation.";
