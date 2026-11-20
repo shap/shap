@@ -41,6 +41,9 @@ find_package(nanobind CONFIG REQUIRED)
 nanobind_add_module(
   _cutils
 
+  # Optimize for speed rather than nanobind's default of binary size: with GCC,
+  NOMINSIZE
+
   # This extension is free-threaded
   FREE_THREADED
 
