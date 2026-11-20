@@ -14,7 +14,10 @@ from typing import Any
 from scikit_build_core import build as _skbuild
 
 _SYMLINKED_HEADERS: list[Path] = [
-    Path(__file__).parent / "shap_cuda" / "cext" / name for name in ("tree_shap.h", "tree_shap_bindings.h")
+    Path(__file__).parent / "shap_cuda" / "cext" / name for name in ("tree_shap.h",
+                                                                     "tree_shap_bindings.h",
+                                                                     "interventional_tree_shap.h",
+                                                                     "quadrature_tree_shap.h")
 ]
 
 
