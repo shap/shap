@@ -4,9 +4,9 @@ import pickle
 
 import numpy as np
 from conftest import compare_numpy_outputs_against_baseline
-from shap._cutils import compute_grey_code_row_values_st
 
 import shap
+from shap._cutils import compute_grey_code_row_values_st
 
 from . import common
 
@@ -50,6 +50,20 @@ def test_multi_output_interactions():
 
     expected = np.array([[[0.0, 0.0], [1.5, 20.0]], [[1.5, 20.0], [0.0, 0.0]]])
     np.testing.assert_allclose(row_values, expected)
+
+
+def test_interactions_match_coalition_means():
+    background = np.array([[0.0, 2.0], [2.0, 0.0]])
+    rows = np.array([[4.0, 3.0]])
+
+    def model(data):
+        left, right = data.T
+        return left * right + 2 * left
+
+    explanation = shap.ExactExplainer(model, background)(rows, interactions=2)
+    # The empty, left-only, right-only and full coalition means are 2, 12, 5 and 20.
+    np.testing.assert_array_equal(explanation.base_values, [2.0])
+    np.testing.assert_array_equal(explanation.values, [[[10.0, 2.5], [2.5, 3.0]]])
 
 
 @compare_numpy_outputs_against_baseline(func_file=__file__)
