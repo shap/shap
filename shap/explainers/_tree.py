@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import io
 import json
 import os
@@ -240,6 +241,10 @@ class TreeExplainer(Explainer):
             Currently the "probability" and "log_loss" options are only
             supported when ``feature_perturbation="interventional"``.
 
+            If ``model`` is a pre-built ``TreeEnsemble`` that already has a
+            ``model_output``, the ensemble's value is used and this argument is
+            ignored.
+
         approximate : bool
             Deprecated, will be deprecated in v0.47.0 and removed in version v0.49.0.
             Please use the ``approximate`` argument in the :meth:`.shap_values` or ``__call__`` methods instead.
@@ -325,6 +330,13 @@ class TreeExplainer(Explainer):
             # to construct trees by hand (e.g. with categorical splits, which the
             # third-party model parsers are needed for otherwise) and explain them
             # without round-tripping through an external model object.
+            # A hand-built ensemble may not set model_output, so fill it in from the
+            # argument (on a shallow copy, leaving the caller's ensemble unchanged).
+            # An ensemble that already has one keeps it: TreeEnsemble may have
+            # translated it while loading a model, e.g. "predict_proba" to "probability".
+            if model.model_output is None:
+                model = copy.copy(model)
+                model.model_output = model_output
             self.model = model
         else:
             self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
