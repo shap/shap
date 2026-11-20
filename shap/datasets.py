@@ -711,6 +711,34 @@ def cache(url: str, file_name: str | None = None) -> str:
 
     file_path: str = os.path.join(data_dir, file_name)
     if not os.path.isfile(file_path):
-        urlretrieve(url, file_path)
+        # 1. Check local data directory in repository (offline fallback)
+        repo_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+        repo_file = os.path.join(repo_data_dir, file_name)
+        if os.path.isfile(repo_file):
+            import shutil
+
+            shutil.copyfile(repo_file, file_path)
+            return file_path
+
+        # 2. Check SHAP_DATA_DIR environment variable
+        env_data_dir = os.environ.get("SHAP_DATA_DIR")
+        if env_data_dir:
+            env_file = os.path.join(env_data_dir, file_name)
+            if os.path.isfile(env_file):
+                import shutil
+
+                shutil.copyfile(env_file, file_path)
+                return file_path
+
+        # 3. Download using a custom User-Agent to avoid HTTP 403 Forbidden on CI
+        from urllib.error import HTTPError, URLError
+        from urllib.request import Request, urlopen
+
+        try:
+            req = Request(url, headers={"User-Agent": "shap-dataset-fetcher/1.0"})
+            with urlopen(req, timeout=30) as response, open(file_path, "wb") as out_file:
+                out_file.write(response.read())
+        except (HTTPError, URLError, TimeoutError, OSError):
+            urlretrieve(url, file_path)
 
     return file_path
