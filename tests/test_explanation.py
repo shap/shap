@@ -64,6 +64,49 @@ def test_explanation_hstack(random_seed):
     assert new_exp.values.shape == (20, 12)
 
 
+def test_explanation_hstack_stacks_feature_attributes(random_seed):
+    """Checks that `hstack` stacks data, feature names and per-feature arrays, not only values."""
+    rs = np.random.RandomState(random_seed)
+    base_vals = np.zeros(4)
+    exp1 = shap.Explanation(
+        values=rs.randn(4, 2),
+        base_values=base_vals,
+        data=rs.randn(4, 2),
+        feature_names=["a", "b"],
+        lower_bounds=rs.randn(4, 2),
+        upper_bounds=rs.randn(4, 2),
+    )
+    exp2 = shap.Explanation(
+        values=rs.randn(4, 3),
+        base_values=base_vals,
+        data=rs.randn(4, 3),
+        feature_names=["c", "d", "e"],
+        lower_bounds=rs.randn(4, 3),
+        upper_bounds=rs.randn(4, 3),
+    )
+    new_exp = exp1.hstack(exp2)
+
+    assert new_exp.data.shape == (4, 5)
+    np.testing.assert_array_equal(new_exp.data, np.hstack([exp1.data, exp2.data]))
+    assert list(new_exp.feature_names) == ["a", "b", "c", "d", "e"]
+    np.testing.assert_array_equal(new_exp.lower_bounds, np.hstack([exp1.lower_bounds, exp2.lower_bounds]))
+    np.testing.assert_array_equal(new_exp.upper_bounds, np.hstack([exp1.upper_bounds, exp2.upper_bounds]))
+    np.testing.assert_array_equal(new_exp[:, "d"].data, exp2.data[:, 1])
+    np.testing.assert_array_equal(new_exp[:, 4].values, exp2.values[:, 2])
+
+
+def test_explanation_hstack_drops_attribute_missing_on_one_side(random_seed):
+    """Checks that a per-feature attribute present on only one side is not misaligned with values."""
+    rs = np.random.RandomState(random_seed)
+    base_vals = np.zeros(4)
+    exp1 = shap.Explanation(values=rs.randn(4, 2), base_values=base_vals, data=rs.randn(4, 2))
+    exp2 = shap.Explanation(values=rs.randn(4, 3), base_values=base_vals)
+    new_exp = exp1.hstack(exp2)
+
+    assert new_exp.values.shape == (4, 5)
+    assert new_exp.data is None
+
+
 def test_explanation_hstack_errors(random_seed):
     """Checks that `hstack` throws errors on invalid input."""
     # generate 2 Explanation objects for stacking
