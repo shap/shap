@@ -185,6 +185,10 @@ void compute_grey_code_row_values_st_1d(
     gc_require(shapley_coeff.shape(0) > 0, "shapley_coeff is empty");
     gc_require(mask.shape(0) >= M, "mask is shorter than inds");
     gc_require(row_values.shape(0) >= M && row_values.shape(1) >= M, "row_values is smaller than M x M");
+    for (size_t ii = 0; ii < M; ii++) {
+        gc_require(inds(ii) >= 0 && static_cast<size_t>(inds(ii)) < mask.shape(0), "inds is out of range for mask");
+        gc_require(static_cast<size_t>(inds(ii)) < rv.shape(0), "inds is out of range for row_values");
+    }
     const size_t n_iter = gc_validate_stream(extended_delta_indexes, mask, M, noop_code);
     gc_require(outputs.shape(0) >= n_iter, "outputs has fewer entries than 2**M");
 
@@ -200,17 +204,20 @@ void compute_grey_code_row_values_st_1d(
         }
 
         for (size_t j = 0; j < M; j++) {
+            // j/k index positions in inds; mask and row_values are indexed by global feature
+            const int gj = inds(j);
             for (size_t k = j + 1; k < M; k++) {
+                const int gk = inds(k);
                 double delta;
-                if (!mask(j) && !mask(k)) {
+                if (!mask(gj) && !mask(gk)) {
                     delta = outputs(i) * shapley_coeff(set_size);
-                } else if (mask(j) != mask(k)) {
+                } else if (mask(gj) != mask(gk)) {
                     delta = -outputs(i) * shapley_coeff(set_size - 1);
                 } else {
                     delta = outputs(i) * shapley_coeff(set_size - 2);
                 }
-                rv(j, k) += delta;
-                rv(k, j) += delta;
+                rv(gj, gk) += delta;
+                rv(gk, gj) += delta;
             }
         }
     }
@@ -233,6 +240,10 @@ void compute_grey_code_row_values_st_2d(
     gc_require(shapley_coeff.shape(0) > 0, "shapley_coeff is empty");
     gc_require(mask.shape(0) >= M, "mask is shorter than inds");
     gc_require(row_values.shape(0) >= M && row_values.shape(1) >= M, "row_values is smaller than M x M");
+    for (size_t ii = 0; ii < M; ii++) {
+        gc_require(inds(ii) >= 0 && static_cast<size_t>(inds(ii)) < mask.shape(0), "inds is out of range for mask");
+        gc_require(static_cast<size_t>(inds(ii)) < rv.shape(0), "inds is out of range for row_values");
+    }
     const size_t n_iter = gc_validate_stream(extended_delta_indexes, mask, M, noop_code);
     gc_require(outputs.shape(0) >= n_iter, "outputs has fewer rows than 2**M");
     gc_require(row_values.shape(2) >= outputs.shape(1), "row_values has fewer outputs than outputs");
@@ -249,18 +260,21 @@ void compute_grey_code_row_values_st_2d(
         }
 
         for (size_t j = 0; j < M; j++) {
+            // j/k index positions in inds; mask and row_values are indexed by global feature
+            const int gj = inds(j);
             for (size_t k = j + 1; k < M; k++) {
+                const int gk = inds(k);
                 for (size_t output_ind = 0; output_ind < outputs.shape(1); output_ind++) {
                     double delta;
-                    if (!mask(j) && !mask(k)) {
+                    if (!mask(gj) && !mask(gk)) {
                         delta = outputs(i, output_ind) * shapley_coeff(set_size);
-                    } else if (mask(j) != mask(k)) {
+                    } else if (mask(gj) != mask(gk)) {
                         delta = -outputs(i, output_ind) * shapley_coeff(set_size - 1);
                     } else {
                         delta = outputs(i, output_ind) * shapley_coeff(set_size - 2);
                     }
-                    rv(j, k, output_ind) += delta;
-                    rv(k, j, output_ind) += delta;
+                    rv(gj, gk, output_ind) += delta;
+                    rv(gk, gj, output_ind) += delta;
                 }
             }
         }
