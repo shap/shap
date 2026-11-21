@@ -481,10 +481,12 @@ class Explanation(metaclass=MetaExplanation):
             orig_t = t
             if isinstance(t, OpChain):
                 t = t.apply(self)
+                if isinstance(t, Explanation):
+                    t = t.values
                 if isinstance(t, (np.int64, np.int32)):  # because slicer does not like numpy indexes
                     t = int(t)
                 elif isinstance(t, np.ndarray):
-                    t = [int(v) for v in t]  # slicer wants lists not numpy arrays for indexing
+                    t = t.tolist()  # slicer wants lists not numpy arrays for indexing
             elif isinstance(t, Explanation):
                 t = t.values
             elif isinstance(t, str):
