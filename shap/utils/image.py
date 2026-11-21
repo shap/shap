@@ -98,7 +98,7 @@ def resize_image(path_to_image, reshaped_dir):
     # checking if either of (pixel_size, pixel_size) dimension is greater than 500.
     reshaped_path = None
     _, tail = os.path.split(path_to_image)
-    file_name = tail.split(".")[0]
+    file_name = os.path.splitext(tail)[0]
     max_pixels = 500
     reshape = True
 
