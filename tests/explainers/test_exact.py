@@ -4,9 +4,9 @@ import pickle
 
 import numpy as np
 from conftest import compare_numpy_outputs_against_baseline
-from shap._cutils import compute_grey_code_row_values_st
 
 import shap
+from shap._cutils import compute_grey_code_row_values_st
 
 from . import common
 
@@ -195,3 +195,82 @@ def test_multi_output_with_non_varying_features():
     # Varying features (1 and 3) should have non-zero SHAP values
     assert np.any(np.abs(shap_values.values[0, 1, :]) > 1e-10)
     assert np.any(np.abs(shap_values.values[0, 3, :]) > 1e-10)
+
+
+def test_interactions_non_varying_middle_feature():
+    """Regression test for GH #5335: the ST kernel must map local pair positions through inds.
+
+    Feature 1 equals the background value, so inds = [0, 2] and the local pair (0, 1)
+    must be written to the global cells (0, 2) / (2, 0) with a positive sign.
+    """
+
+    def model(x):
+        return x[:, 0] * x[:, 2]
+
+    background = np.zeros((1, 3))
+    test_x = np.array([[2.0, 0.0, 3.0]])  # feature 1 matches the background, so inds = [0, 2]
+
+    shap_values = shap.explainers.ExactExplainer(model, background)(test_x, interactions=2)
+
+    expected = np.array([[0.0, 0.0, 3.0], [0.0, 0.0, 0.0], [3.0, 0.0, 0.0]])
+    np.testing.assert_allclose(shap_values.values[0], expected, atol=1e-10)
+
+    pred = model(test_x)
+    np.testing.assert_allclose(shap_values.base_values[0] + shap_values.values[0].sum(), pred, atol=1e-10)
+
+
+def test_interactions_non_varying_leading_features():
+    """Regression test for GH #5335: invariant leading features made the ST kernel read shapley_coeff out of bounds.
+
+    Features 0 and 1 equal the background, so inds = [2, 3]. On the unpatched kernel the
+    both-off branch runs even at set_size == M and reads one past the length-M shapley_coeff
+    array, leaving denormal garbage in cells (0, 1) / (1, 0) and no value at (2, 3).
+    """
+
+    def model(x):
+        return x[:, 2] * x[:, 3]
+
+    background = np.zeros((1, 4))
+    test_x = np.array([[0.0, 0.0, 2.0, 3.0]])  # features 0 and 1 match the background, so inds = [2, 3]
+
+    shap_values = shap.explainers.ExactExplainer(model, background)(test_x, interactions=2)
+
+    expected = np.zeros((4, 4))
+    expected[2, 3] = 3.0
+    expected[3, 2] = 3.0
+    np.testing.assert_allclose(shap_values.values[0], expected, atol=1e-10)
+
+    # cells outside the interaction must stay exactly zero (the OOB read wrote denormal garbage here)
+    np.testing.assert_array_equal(shap_values.values[0][:2, :2], np.zeros((2, 2)))
+
+    pred = model(test_x)
+    np.testing.assert_allclose(shap_values.base_values[0] + shap_values.values[0].sum(), pred, atol=1e-10)
+
+
+def test_multi_output_interactions_non_varying_feature():
+    """Regression test for GH #5335 covering compute_grey_code_row_values_st_2d with inds != arange(M).
+
+    Feature 1 equals the background, so inds = [0, 2]: output 0 is multiplicative (a 3/3
+    interaction between features 0 and 2) and output 1 is linear (main effects only).
+    """
+
+    def model(x):
+        return np.column_stack([x[:, 0] * x[:, 2], x[:, 0] - x[:, 2]])
+
+    background = np.zeros((1, 3))
+    test_x = np.array([[2.0, 0.0, 3.0]])  # feature 1 matches the background, so inds = [0, 2]
+
+    shap_values = shap.explainers.ExactExplainer(model, background)(test_x, interactions=2)
+
+    values = shap_values.values[0].reshape(3, 3, 2)  # (feature, feature, output)
+    expected = np.stack(
+        [
+            np.array([[0.0, 0.0, 3.0], [0.0, 0.0, 0.0], [3.0, 0.0, 0.0]]),
+            np.array([[2.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, -3.0]]),
+        ],
+        axis=-1,
+    )
+    np.testing.assert_allclose(values, expected, atol=1e-10)
+
+    pred = model(test_x)
+    np.testing.assert_allclose(shap_values.base_values[0] + values.sum(axis=(0, 1)), pred[0], atol=1e-10)
