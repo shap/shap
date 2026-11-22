@@ -338,9 +338,7 @@ def text(
         xmax,
         output_name,
     )
-    out += (
-        "<div align='center' dir='auto'><div style=\"color: rgb(120,120,120); font-size: 12px; margin-top: -15px;\">inputs</div>"
-    )
+    out += "<div align='center' dir='auto'><div style=\"color: rgb(120,120,120); font-size: 12px; margin-top: -15px;\">inputs</div>"
     for i, token in enumerate(tokens):
         scaled_value = 0.5 + 0.5 * values[i] / (cmax + 1e-8)
         color = colors.red_transparent_blue(scaled_value)
