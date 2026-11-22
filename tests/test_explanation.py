@@ -245,3 +245,17 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_sample_with_replacement_allows_oversampling():
+    # With replacement, requesting more rows than exist is valid (e.g.
+    # bootstrapping) and must return the requested number of rows. Without
+    # replacement, the count stays capped at the number of rows, as documented.
+    exp = shap.Explanation(
+        values=np.arange(10).reshape(10, 1).astype(float),
+        base_values=np.zeros(10),
+        data=np.arange(10).reshape(10, 1).astype(float),
+    )
+    assert exp.sample(25, replace=True).shape[0] == 25
+    assert exp.sample(25, replace=False).shape[0] == 10
+    assert exp.sample(4, replace=False).shape[0] == 4
