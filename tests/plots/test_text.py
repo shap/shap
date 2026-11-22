@@ -82,6 +82,7 @@ def test_text_plot_rtl_container_direction_and_hr_markup():
         data=np.array([["Hello ", "world"], ["مرحبا ", "بالعالم"]]),
     )
     multi_html = shap.plots.text(multi_exp, display=False)
-    assert 'margin-bottom: 18px;"' not in multi_html
+    assert '#ccc;"">' not in multi_html
+    assert 'border-top: 1px dashed #ccc;">' in multi_html
     assert "<div align='center' dir='ltr'>" in multi_html
     assert "<div align='center' dir='rtl'>" in multi_html
