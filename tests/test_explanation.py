@@ -245,3 +245,24 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+@pytest.mark.parametrize(
+    "labels, expected_keys",
+    [
+        (np.array([0, 1] * 25), {"0", "1"}),
+        (np.array([True, False] * 25), {"False", "True"}),
+        (np.array(["A", "B"] * 25), {"A", "B"}),
+    ],
+)
+def test_explanation_cohorts_accepts_non_string_labels(labels, expected_keys):
+    exp = shap.Explanation(
+        values=np.random.randn(50, 4),
+        base_values=np.zeros(50),
+        feature_names=list("abcd"),
+    )
+
+    cohorts = exp.cohorts(labels)
+
+    assert isinstance(cohorts, shap.Cohorts)
+    assert set(cohorts.cohorts.keys()) == expected_keys
