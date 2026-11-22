@@ -122,7 +122,7 @@ def text(
         for i, v in enumerate(shap_values):
             out += f"""
     <br>
-    <hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
+    <hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;">
     <div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
     </div>
                 """
@@ -284,7 +284,7 @@ def text(
         for i, v in enumerate(shap_values):
             out += f"""
 <br>
-<hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
+<hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;">
 <div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
 </div>
             """
@@ -339,7 +339,7 @@ def text(
         output_name,
     )
     out += (
-        "<div align='center'><div style=\"color: rgb(120,120,120); font-size: 12px; margin-top: -15px;\">inputs</div>"
+        "<div align='center' dir='auto'><div style=\"color: rgb(120,120,120); font-size: 12px; margin-top: -15px;\">inputs</div>"
     )
     for i, token in enumerate(tokens):
         scaled_value = 0.5 + 0.5 * values[i] / (cmax + 1e-8)
@@ -362,8 +362,8 @@ def text(
 
         # the HTML for this token
         out += f"""<div style='display: {wrapper_display}; text-align: center;'
-    ><div style='display: {label_display}; color: #999; padding-top: 0px; font-size: 12px;'>{value_label}</div
-        ><div id='_tp_{uuid}_ind_{i}'
+    ><div dir='ltr' style='display: {label_display}; color: #999; padding-top: 0px; font-size: 12px; unicode-bidi: isolate;'>{value_label}</div
+        ><div id='_tp_{uuid}_ind_{i}' dir='auto'
             style='display: inline; background: {rgba_css}; border-radius: 3px; padding: 0px'
             onclick="
             if (this.previousSibling.style.display == 'none') {{
