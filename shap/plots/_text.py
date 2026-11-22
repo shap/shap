@@ -1,6 +1,7 @@
 import json
 import random
 import string
+import unicodedata
 import warnings
 
 import numpy as np
@@ -15,6 +16,18 @@ def _css_rgba(r, g, b, a) -> str:
     CSS requires plain numeric literals.
     """
     return f"rgba({float(r)}, {float(g)}, {float(b)}, {float(a)})"
+
+
+def _text_direction(tokens) -> str:
+    """Return ``'rtl'`` or ``'ltr'`` from the first strong BiDi character in *tokens*."""
+    for token in tokens:
+        for ch in str(token):
+            bidi = unicodedata.bidirectional(ch)
+            if bidi in ("R", "AL"):
+                return "rtl"
+            if bidi == "L":
+                return "ltr"
+    return "ltr"
 
 
 try:
@@ -338,7 +351,11 @@ def text(
         xmax,
         output_name,
     )
-    out += "<div align='center' dir='auto'><div style=\"color: rgb(120,120,120); font-size: 12px; margin-top: -15px;\">inputs</div>"
+    tokens_dir = _text_direction(tokens)
+    out += (
+        f"<div align='center' dir='{tokens_dir}'>"
+        '<div dir="ltr" style="color: rgb(120,120,120); font-size: 12px; margin-top: -15px;">inputs</div>'
+    )
     for i, token in enumerate(tokens):
         scaled_value = 0.5 + 0.5 * values[i] / (cmax + 1e-8)
         color = colors.red_transparent_blue(scaled_value)

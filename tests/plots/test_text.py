@@ -51,3 +51,37 @@ def test_single_text_to_text():
         hierarchical_values=[test_hierarchical_values],
     )
     shap.plots.text(shap_values_test)
+
+
+def test_text_plot_rtl_container_direction_and_hr_markup():
+    """Verify RTL token sequences get dir='rtl' on the container and valid <hr> markup."""
+    rtl_exp = shap.Explanation(
+        values=np.array([0.8, -0.3]),
+        base_values=0.1,
+        data=np.array(["مرحبا ", "بالعالم"]),
+    )
+    rtl_html = shap.plots.text(rtl_exp, display=False)
+    assert "<div align='center' dir='rtl'>" in rtl_html
+    assert (
+        '<div dir="ltr" style="color: rgb(120,120,120); font-size: 12px; margin-top: -15px;">inputs</div>' in rtl_html
+    )
+    assert "dir='auto'" in rtl_html
+    assert "unicode-bidi: isolate;" in rtl_html
+
+    ltr_exp = shap.Explanation(
+        values=np.array([0.5, -0.2]),
+        base_values=0.0,
+        data=np.array(["Hello ", "world"]),
+    )
+    ltr_html = shap.plots.text(ltr_exp, display=False)
+    assert "<div align='center' dir='ltr'>" in ltr_html
+
+    multi_exp = shap.Explanation(
+        values=np.array([[0.5, -0.2], [0.1, 0.3]]),
+        base_values=np.array([0.0, 0.0]),
+        data=np.array([["Hello ", "world"], ["مرحبا ", "بالعالم"]]),
+    )
+    multi_html = shap.plots.text(multi_exp, display=False)
+    assert 'margin-bottom: 18px;"' not in multi_html
+    assert "<div align='center' dir='ltr'>" in multi_html
+    assert "<div align='center' dir='rtl'>" in multi_html
