@@ -2,6 +2,7 @@
 
 import pickle
 
+import numpy as np
 from conftest import compare_numpy_outputs_against_baseline
 
 import shap
@@ -64,4 +65,22 @@ def test_serialization_custom_model_save(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
     return common.test_serialization(
         shap.explainers.PartitionExplainer, model, tokenizer, data, model_saver=pickle.dump, model_loader=pickle.load
+    )
+
+
+def test_partition_linearized_logit_link():
+    background = np.array([[0.0, 0.0], [1.0, 1.0], [0.5, 0.1]])
+    samples = np.array([[2.0, 3.0], [1.5, 2.0]])
+
+    def model(x):
+        return 0.2 + 0.1 * x.sum(axis=1)
+
+    masker = shap.maskers.Partition(background, clustering=np.array([[0, 1, 1, 2]]))
+    explainer = shap.Explainer(model, masker, algorithm="partition", link=shap.links.logit)
+    explanation = explainer(samples)
+
+    assert np.isfinite(explanation.values).all()
+    np.testing.assert_allclose(explanation.base_values, shap.links.logit(model(background).mean()))
+    np.testing.assert_allclose(
+        explanation.base_values + explanation.values.sum(axis=1), shap.links.logit(model(samples))
     )

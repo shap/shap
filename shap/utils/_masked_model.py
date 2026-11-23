@@ -69,7 +69,7 @@ class MaskedModel:
                 return self._full_masking_call(full_masks, zero_index=zero_index, batch_size=batch_size)
 
         else:
-            return self._full_masking_call(masks, batch_size=batch_size)
+            return self._full_masking_call(masks, zero_index=zero_index, batch_size=batch_size)
 
     def _full_masking_call(self, masks, zero_index=None, batch_size=None):
         if batch_size is None:
