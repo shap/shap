@@ -352,3 +352,21 @@ def test_boolean_mask_with_ragged_explanation(mask_factory):
 
     with pytest.raises(IndexError):
         exp[1, mask_factory([True, False])]
+
+
+def test_ragged_explanation_with_explanation_boolean_mask():
+    exp = shap.Explanation(
+        values=[
+            np.array([1.0, 2.0]),
+            np.array([3.0, 4.0, 5.0]),
+        ]
+    )
+
+    first_mask = shap.Explanation(values=np.array([True, False]))
+    second_mask = shap.Explanation(values=np.array([True, False, True]))
+
+    first = exp[0, first_mask]
+    second = exp[1, second_mask]
+
+    np.testing.assert_array_equal(first.values, [1.0])
+    np.testing.assert_array_equal(second.values, [3.0, 5.0])

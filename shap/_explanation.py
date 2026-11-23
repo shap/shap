@@ -558,16 +558,12 @@ class Explanation(metaclass=MetaExplanation):
             elif (isinstance(t, np.ndarray) and t.ndim == 1 and t.dtype == np.bool_) or (
                 isinstance(t, list) and len(t) > 0 and all(isinstance(v, (bool, np.bool_)) for v in t)
             ):
-                # Preserve slicer's native boolean indexing for ragged axes,
-                # where the number of features can vary between rows.
-                if self.shape[pos] is None:
-                    continue
-
-                # Normalize boolean masks to integer positions for
-                # fixed-size axes, preserving list-backed metadata.
-                mask = np.asarray(t, dtype=bool)
-                indices = np.arange(self.shape[pos])[mask]
-                t = indices.tolist() if len(indices) else slice(0, 0)
+                # Preserve slicer's native boolean indexing for ragged axes.
+                # Normalize masks only when the axis has a fixed size.
+                if self.shape[pos] is not None:
+                    mask = np.asarray(t, dtype=bool)
+                    indices = np.arange(self.shape[pos])[mask]
+                    t = indices.tolist() if len(indices) else slice(0, 0)
 
             if t is not orig_t:
                 tmp = list(item)
