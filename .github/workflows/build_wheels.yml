@@ -121,7 +121,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-14, macos-15-intel, windows-latest, windows-11-arm]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, macos-15-intel, windows-latest, windows-11-arm]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -173,7 +173,7 @@ jobs:
           SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SHAP: ${{ needs.compute_version.outputs.version }}
           CIBW_ENVIRONMENT_PASS_LINUX: SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SHAP
           CIBW_ARCHS_LINUX: ${{ contains(matrix.os, '-arm') && 'aarch64' || 'x86_64' }}
-          CIBW_ARCHS_MACOS: ${{ matrix.os == 'macos-14' && 'arm64' || 'x86_64' }}
+          CIBW_ARCHS_MACOS: ${{ matrix.os == 'macos-15' && 'arm64' || 'x86_64' }}
           CIBW_ARCHS_WINDOWS: ${{ contains(matrix.os, '-arm') && 'ARM64' || 'AMD64' }}
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_MUSLLINUX_AARCH64_IMAGE: musllinux_1_2
