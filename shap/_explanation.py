@@ -470,7 +470,7 @@ class Explanation(metaclass=MetaExplanation):
 
         # convert any OpChains or magic strings
         pos = -1
-        for t in item:
+        for item_pos, t in enumerate(item):
             pos += 1
 
             # skip over Ellipsis
@@ -555,10 +555,18 @@ class Explanation(metaclass=MetaExplanation):
 
             if isinstance(t, (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)
+            elif (isinstance(t, np.ndarray) and t.ndim == 1 and t.dtype == np.bool_) or (
+                isinstance(t, list) and len(t) > 0 and all(isinstance(v, (bool, np.bool_)) for v in t)
+            ):
+                # Normalize boolean masks to integer positions so slicer
+                # indexes array values and list-backed metadata consistently.
+                mask = np.asarray(t, dtype=bool)
+                indices = np.arange(self.shape[pos])[mask]
+                t = indices.tolist() if len(indices) else slice(0, 0)
 
             if t is not orig_t:
                 tmp = list(item)
-                tmp[pos] = t
+                tmp[item_pos] = t
                 item = tuple(tmp)
 
         # call slicer for the real work

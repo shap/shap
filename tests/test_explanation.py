@@ -245,3 +245,85 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+@pytest.mark.parametrize("mask_factory", [list, np.array], ids=["list", "numpy"])
+@pytest.mark.parametrize(
+    ("mask", "expected_names"),
+    [
+        ([True, False, True], ["A", "C"]),
+        ([False, True, False], ["B"]),
+        ([True, True, False], ["A", "B"]),
+        ([False, False, False], []),
+    ],
+)
+def test_boolean_feature_mask_preserves_metadata(mask, expected_names, mask_factory):
+    values = np.array(
+        [
+            [0.1, 0.2, 0.3],
+            [0.4, 0.5, 0.6],
+        ]
+    )
+    data = np.array(
+        [
+            [10, 20, 30],
+            [40, 50, 60],
+        ]
+    )
+
+    exp = shap.Explanation(
+        values=values,
+        data=data,
+        feature_names=["A", "B", "C"],
+    )
+
+    boolean_mask = mask_factory(mask)
+    selected = exp[:, boolean_mask]
+
+    np.testing.assert_array_equal(
+        selected.values,
+        values[:, boolean_mask],
+    )
+    np.testing.assert_array_equal(
+        selected.data,
+        data[:, boolean_mask],
+    )
+    assert list(selected.feature_names) == expected_names
+
+
+@pytest.mark.parametrize("mask_factory", [list, np.array], ids=["list", "numpy"])
+def test_boolean_output_mask_with_ellipsis_preserves_metadata(mask_factory):
+    values = np.arange(12).reshape(2, 3, 2)
+    data = np.arange(6).reshape(2, 3)
+
+    exp = shap.Explanation(
+        values=values,
+        data=data,
+        feature_names=["A", "B", "C"],
+        output_names=["left", "right"],
+    )
+
+    selected = exp[..., mask_factory([True, False])]
+
+    np.testing.assert_array_equal(
+        selected.values,
+        values[..., [0]],
+    )
+    np.testing.assert_array_equal(selected.data, data)
+
+    assert selected.feature_names == ["A", "B", "C"]
+    assert list(selected.output_names) == ["left"]
+
+
+def test_numpy_integer_index_with_ellipsis():
+    values = np.arange(12).reshape(2, 3, 2)
+
+    exp = shap.Explanation(
+        values=values,
+        output_names=["left", "right"],
+    )
+
+    selected = exp[..., np.int64(1)]
+
+    np.testing.assert_array_equal(selected.values, values[..., 1])
+    assert selected.output_names == "right"
