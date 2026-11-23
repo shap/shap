@@ -327,3 +327,28 @@ def test_numpy_integer_index_with_ellipsis():
 
     np.testing.assert_array_equal(selected.values, values[..., 1])
     assert selected.output_names == "right"
+
+
+@pytest.mark.parametrize("mask_factory", [list, np.array], ids=["list", "numpy"])
+def test_boolean_mask_with_ragged_explanation(mask_factory):
+    exp = shap.Explanation(
+        values=[
+            np.array([1.0, 2.0]),
+            np.array([3.0, 4.0, 5.0]),
+        ]
+    )
+
+    assert exp.shape == (2, None)
+
+    first = exp[0, mask_factory([True, False])]
+    np.testing.assert_array_equal(first.values, [1.0])
+
+    second = exp[1, mask_factory([True, False, True])]
+    np.testing.assert_array_equal(second.values, [3.0, 5.0])
+
+    # Mask lengths must match the selected row.
+    with pytest.raises(IndexError):
+        exp[0, mask_factory([True])]
+
+    with pytest.raises(IndexError):
+        exp[1, mask_factory([True, False])]
