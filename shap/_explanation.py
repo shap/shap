@@ -14,12 +14,19 @@ import scipy.sparse
 import scipy.spatial
 import sklearn
 from slicer import Alias, Obj, Slicer
+from slicer.slicer_internal import DataFrameHandler, SeriesHandler, UnifiedDataHandler
 
 from .utils._clustering import hclust_ordering
 from .utils._exceptions import DimensionError
 from .utils._general import OpChain
 
 op_chain_root = OpChain("shap.Explanation")
+
+# slicer looks up its pandas handlers by the class's __module__, which is
+# "pandas.core.frame" before pandas 3 and "pandas" from pandas 3 on. Without these
+# entries slicer treats DataFrames and Series as opaque objects and does not slice them.
+UnifiedDataHandler.type_map.setdefault(("pandas", "DataFrame"), DataFrameHandler)
+UnifiedDataHandler.type_map.setdefault(("pandas", "Series"), SeriesHandler)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence

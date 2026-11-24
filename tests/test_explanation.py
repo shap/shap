@@ -245,3 +245,26 @@ def test_cohorts_generation_with_one_feature():
     cohorts = exp.cohorts(3)
     assert isinstance(cohorts, shap.Cohorts)
     assert len(cohorts.cohorts) == 3
+
+
+def test_explanation_slices_pandas_data():
+    """Indexing must slice DataFrame data the same way as the values (GH #5330)."""
+    df = pd.DataFrame({"a": [10, 20, 30], "b": [1, 2, 3]})
+    exp = shap.Explanation(
+        values=np.arange(6.0).reshape(3, 2),
+        base_values=np.zeros(3),
+        data=df,
+        feature_names=list(df.columns),
+    )
+
+    row = exp[2]
+    assert isinstance(row.data, pd.Series)
+    pd.testing.assert_series_equal(row.data, df.iloc[2])
+    pd.testing.assert_series_equal(exp[np.int64(2)].data, df.iloc[2])
+
+    pd.testing.assert_frame_equal(exp[1:3].data, df.iloc[1:3])
+    pd.testing.assert_frame_equal(exp[[0, 2]].data, df.iloc[[0, 2]])
+
+    pd.testing.assert_series_equal(exp[:, 0].data, df["a"])
+    pd.testing.assert_series_equal(exp[:, "b"].data, df["b"])
+    assert exp[2, 1].data == 3

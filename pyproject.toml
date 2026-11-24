@@ -204,7 +204,7 @@ module = [
   "pyspark.*",
   "scipy.*",
   "sklearn.*",
-  "slicer",
+  "slicer.*",
   "tensorflow.*",
   "transformers.*",
   "torch.*",
