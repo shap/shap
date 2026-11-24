@@ -477,7 +477,7 @@ class Explanation(metaclass=MetaExplanation):
 
         # convert any OpChains or magic strings
         pos = -1
-        for t in item:
+        for item_pos, t in enumerate(item):
             pos += 1
 
             # skip over Ellipsis
@@ -565,7 +565,7 @@ class Explanation(metaclass=MetaExplanation):
 
             if t is not orig_t:
                 tmp = list(item)
-                tmp[pos] = t
+                tmp[item_pos] = t
                 item = tuple(tmp)
 
         # call slicer for the real work

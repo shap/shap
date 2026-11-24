@@ -127,6 +127,21 @@ def test_feature_names_slicing_for_square_arrays(random_seed, N):
     assert column_e.feature_names == "e"
 
 
+@pytest.mark.parametrize(
+    ("shape", "key", "expected_key"),
+    [
+        param((2, 3, 2), (..., "pos"), (..., 1), id="3d-output-name"),
+        param((2, 3, 2), (..., np.int64(1)), (..., 1), id="3d-numpy-int"),
+        param((2, 3, 3, 2), (..., np.int64(0), slice(None)), (..., 0, slice(None)), id="4d-numpy-int-then-slice"),
+    ],
+)
+def test_getitem_converted_key_after_ellipsis(shape, key, expected_key):
+    """Checks that output names and numpy integers after `...` index the right axis."""
+    values = np.arange(np.prod(shape), dtype=float).reshape(shape)
+    exp = shap.Explanation(values, output_names=["neg", "pos"])
+    np.testing.assert_array_equal(exp[key].values, values[expected_key])
+
+
 def test_populating_op_history():
     """Tests whether the Explanation.op_history attribute is populated properly after operations have been applied."""
     values = np.arange(-18, 17).reshape(7, 5)
