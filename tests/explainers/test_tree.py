@@ -426,6 +426,29 @@ def test_lightgbm_mse_regressor():
     _common_lightgbm_regressor_test(create_model)
 
 
+@pytest.mark.parametrize("train_nan", [False, True])
+def test_lightgbm_nan_interventional_additivity(train_nan):
+    lightgbm = pytest.importorskip("lightgbm")
+
+    # without NaN in training, LightGBM sets missing_type "None" and replaces NaN with 0.0 at prediction time;
+    # with NaN in training, missing_type is "NaN" and NaN follows default_left
+    X = np.linspace(-3, 3, 61).reshape(-1, 1)
+    y = (X[:, 0] > -1.0).astype(float)
+    if train_nan:
+        X = np.vstack([X, np.full((10, 1), np.nan)])
+        y = np.concatenate([y, np.zeros(10)])
+    model = lightgbm.LGBMRegressor(
+        n_estimators=3, num_leaves=2, learning_rate=1.0, min_child_samples=1, verbose=-1
+    ).fit(X, y)
+
+    x = np.array([[np.nan]])
+    explainer = shap.TreeExplainer(model, data=X, feature_perturbation="interventional", model_output="raw")
+    shap_values = explainer.shap_values(x)
+    np.testing.assert_allclose(
+        shap_values.sum() + explainer.expected_value, model.predict(x, raw_score=True)[0], atol=1e-6
+    )
+
+
 def _common_lightgbm_nonsklearn_api(dataset, params, validation):
     import lightgbm
     from sklearn.model_selection import train_test_split
