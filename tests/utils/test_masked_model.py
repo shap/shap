@@ -3,7 +3,8 @@ import pytest
 from shap._cutils import _init_masks  # type: ignore[attr-defined]
 
 from shap.links import identity, logit
-from shap.utils._masked_model import _build_fixed_output
+from shap.maskers import Independent
+from shap.utils._masked_model import MaskedModel, _build_fixed_output
 
 
 def test_init_masks():
@@ -135,3 +136,23 @@ def test_build_fixed_output_matches_numpy(output_count, dtype, weighted):
     )
 
     np.testing.assert_allclose(averaged_outs, expected, rtol=2e-3, atol=2e-3)
+
+
+@pytest.mark.parametrize("batch_size", [None, 1, 2])
+@pytest.mark.parametrize("zero_index", [0, 1])
+def test_full_masks_linearized_link_baseline(batch_size, zero_index):
+    background = np.array([[0.0, 0.0], [1.0, 1.0], [0.5, 0.1]])
+    sample = np.array([2.0, 3.0])
+
+    def model(x):
+        return 0.2 + 0.1 * x.sum(axis=1)
+
+    masks = np.array([[False, False], [True, True]])
+    if zero_index == 1:
+        masks = masks[::-1]
+    masked_model = MaskedModel(model, Independent(background), logit, True, sample)
+    outputs = masked_model(masks, zero_index=zero_index, batch_size=batch_size)
+
+    np.testing.assert_allclose(masked_model.background_outputs, model(background))
+    np.testing.assert_allclose(outputs[zero_index], logit(model(background).mean()))
+    np.testing.assert_allclose(outputs[1 - zero_index], logit(model(sample[None, :]))[0])
