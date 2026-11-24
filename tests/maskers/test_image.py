@@ -181,3 +181,15 @@ def test_inpaint_fully_masked_image():
     # mean = 100/ (5*5) = 4.00
     result = image_masker(None, image)
     assert np.all(result[0] == 4.0)
+
+
+def test_call_image_masker_with_single_element_list():
+    """A single-element list should behave like its contained image."""
+    image = np.arange(75, dtype=float).reshape(5, 5, 3)
+    masker = shap.maskers.Image(0, shape=image.shape)
+    mask = np.ones(75, dtype=bool)
+
+    expected = masker(mask, image)[0]
+    actual = masker(mask, [image])[0]
+
+    np.testing.assert_array_equal(actual, expected)
