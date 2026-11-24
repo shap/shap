@@ -70,6 +70,10 @@ class Image(Masker):
         self.immutable_outputs = True
 
     def __call__(self, mask, x):
+        # Unwrap single-input models represented in multi-input format.
+        if isinstance(x, list) and len(x) == 1:
+            x = x[0]
+
         if safe_isinstance(x, "torch.Tensor"):
             x = x.cpu().numpy()
 
@@ -81,10 +85,6 @@ class Image(Masker):
                 + " != "
                 + " * ".join([str(i) for i in self.input_shape])
             )
-
-        # unwrap single element lists (which are how single input models look in multi-input format)
-        if isinstance(x, list) and len(x) == 1:
-            x = x[0]
 
         # we preserve flattened inputs as flattened and full-shaped inputs as their original shape
         in_shape = x.shape
