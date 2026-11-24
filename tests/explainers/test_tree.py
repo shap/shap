@@ -1735,6 +1735,17 @@ class TestExplainerLightGBM:
         # check that SHAP values sum to model output
         assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
+    @pytest.mark.parametrize("model_output", ["probability", "log_loss"])
+    def test_lightgbm_multiclass_unsupported_model_output(self, model_output):
+        lightgbm = pytest.importorskip("lightgbm")
+
+        X, Y = shap.datasets.iris()
+        model = lightgbm.LGBMClassifier(n_estimators=10, n_jobs=1)
+        model.fit(X, Y)
+
+        with pytest.raises(Exception, match="does not have a known objective"):
+            shap.TreeExplainer(model, X, model_output=model_output)
+
     # def test_lightgbm_ranking(self):
     #     try:
     #         import lightgbm
