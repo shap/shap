@@ -46,6 +46,7 @@ def test_multi_output_parity_with_invariant_feature():
     interaction = (both - left_only - right_only + base) / 2
 
     permutation = shap.PermutationExplainer(model, background, seed=42)(rows, max_evals=15, error_bounds=True)
+    assert isinstance(permutation, shap.Explanation)
     expected = np.zeros((1, 3, 2))
     expected[0, 0] = left_only - base + interaction
     expected[0, 2] = right_only - base + interaction
