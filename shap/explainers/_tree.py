@@ -2105,7 +2105,12 @@ class SingleTree:
                         self.children_right[vsplit_idx] = right_child["split_index"]
                     else:
                         self.children_right[vsplit_idx] = right_child["leaf_index"] + num_parents
-                    if vertex["default_left"]:
+                    if vertex.get("missing_type") == "None" and isinstance(vertex["threshold"], (int, float)):
+                        # LightGBM replaces NaN with 0.0 when the training data had no missing values
+                        default_left = 0.0 <= vertex["threshold"]
+                    else:
+                        default_left = vertex["default_left"]
+                    if default_left:
                         self.children_default[vsplit_idx] = self.children_left[vsplit_idx]
                     else:
                         self.children_default[vsplit_idx] = self.children_right[vsplit_idx]
