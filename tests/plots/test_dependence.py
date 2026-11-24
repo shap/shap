@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -41,3 +42,47 @@ def test_dependence_use_line_collection_bug():
         shap_values=shap_values[:1, :],  # type: ignore[call-overload]
         show=False,
     )
+
+
+def test_partial_dependence_custom_ax():
+    """Passing a custom ax should plot on that axes, not create a new one.
+
+    Regression test for GH #3206.
+    """
+    sklearn = pytest.importorskip("sklearn")
+
+    X, y = shap.datasets.california(n_points=20)
+    model = sklearn.linear_model.LinearRegression()
+    model.fit(X, y)
+
+    fig, axes = plt.subplots(1, 2)
+
+    # Plot on the first axes
+    shap.partial_dependence_plot(
+        "MedInc",
+        model.predict,
+        X,
+        ice=False,
+        show=False,
+        ax=axes[0],
+    )
+
+    # Plot on the second axes
+    shap.partial_dependence_plot(
+        "HouseAge",
+        model.predict,
+        X,
+        ice=False,
+        show=False,
+        ax=axes[1],
+    )
+
+    # Verify that each axes received its own plot (has lines drawn on it)
+    assert len(axes[0].lines) > 0, "First axes should have plot lines"
+    assert len(axes[1].lines) > 0, "Second axes should have plot lines"
+
+    # Verify that the axes labels are different (each feature plotted separately)
+    assert axes[0].get_xlabel() == "MedInc"
+    assert axes[1].get_xlabel() == "HouseAge"
+
+    plt.close(fig)
