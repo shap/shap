@@ -204,11 +204,11 @@ class MaskedModel:
         masked_inputs, varying_rows = self.masker(masks, *self.args)
         num_varying_rows = varying_rows.sum(1)
 
-        subset_masked_inputs = [arg[varying_rows.reshape(-1)] for arg in masked_inputs]
+        row_mask = varying_rows.reshape(-1)
+        subset_masked_inputs = [arg[row_mask] for arg in masked_inputs]
 
-        batch_positions = np.zeros(len(varying_rows) + 1, dtype=int)
-        for i in range(len(varying_rows)):
-            batch_positions[i + 1] = batch_positions[i] + num_varying_rows[i]
+        batch_positions = np.zeros(len(varying_rows) + 1, dtype=np.int64)
+        np.cumsum(num_varying_rows, out=batch_positions[1:])
 
         # joined_masked_inputs = self._stack_inputs(all_masked_inputs)
         outputs = self.model(*subset_masked_inputs)
@@ -322,10 +322,14 @@ def _validate_build_fixed_inputs(
         raise ValueError("batch_positions must have len(averaged_outs) + 1 entries")
     if varying_rows.shape != (n_batches, sample_count):
         raise ValueError("varying_rows must have shape (len(averaged_outs), len(last_outs))")
-    counts = np.diff(batch_positions)
+    counts = batch_positions[1:] - batch_positions[:-1]
     if batch_positions[0] < 0 or (counts < 0).any() or batch_positions[-1] > outputs.shape[0]:
         raise ValueError("batch_positions must be non-decreasing and lie within outputs")
-    if not np.array_equal(num_varying_rows, counts) or not np.array_equal(varying_rows.sum(axis=1), counts):
+    if (
+        num_varying_rows.shape != counts.shape
+        or (num_varying_rows != counts).any()
+        or (varying_rows.sum(axis=1) != counts).any()
+    ):
         raise ValueError("num_varying_rows and varying_rows are inconsistent with batch_positions")
     if outputs.shape[1:] != last_outs.shape[1:] or averaged_outs.shape[1:] != last_outs.shape[1:]:
         raise ValueError("averaged_outs, last_outs and outputs must share their output dimensions")

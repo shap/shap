@@ -29,6 +29,38 @@ def test_exact_second_order():
     assert np.allclose(right_answer, shap_values.values)  # type: ignore[union-attr]
 
 
+def test_multi_output_parity_with_invariant_feature():
+    background = np.array([[0.0, 5.0, 2.0], [2.0, 5.0, 0.0]])
+    rows = np.array([[4.0, 5.0, 3.0]])
+
+    def model(data):
+        left, invariant, right = data.T
+        interaction = left * right
+        return np.column_stack((interaction + 2 * left + invariant, 2 * interaction + right))
+
+    # Coalition means from replacing the selected columns of the background.
+    base = np.array([7.0, 1.0])
+    left_only = np.array([17.0, 9.0])
+    right_only = np.array([10.0, 9.0])
+    both = np.array([25.0, 27.0])
+    interaction = (both - left_only - right_only + base) / 2
+
+    permutation = shap.PermutationExplainer(model, background, seed=42)(rows, max_evals=15, error_bounds=True)
+    assert isinstance(permutation, shap.Explanation)
+    expected = np.zeros((1, 3, 2))
+    expected[0, 0] = left_only - base + interaction
+    expected[0, 2] = right_only - base + interaction
+    expected_std = np.zeros_like(expected)
+    expected_std[0, [0, 2]] = np.abs(interaction)
+    np.testing.assert_array_equal(permutation.base_values, base[None, :])
+    np.testing.assert_array_equal(permutation.values, expected)
+    np.testing.assert_array_equal(permutation.error_std, expected_std)
+
+    exact = shap.ExactExplainer(model, background)(rows)
+    np.testing.assert_array_equal(exact.base_values, base[None, :])
+    np.testing.assert_array_equal(exact.values, expected)
+
+
 # TODO: add baseline comparison once PermutationExplainer supports passing a numpy.random.Generator
 # for reproducible results (currently uses global np.random state)
 def test_tabular_single_output_auto_masker():
