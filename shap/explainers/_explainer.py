@@ -546,9 +546,14 @@ class Explainer(Serializable):
     ) -> Explainer | dict[str, Any]:
         """Load an Explainer from the given file stream.
 
+        .. warning::
+            Only load files from a trusted source. This method uses pickle-based
+            deserialization, which can execute arbitrary code while loading a file.
+
         Parameters
         ----------
-        in_file : The file stream to load objects from.
+        in_file : file-like object
+            A binary stream containing a trusted serialized explainer.
 
         """
         if instantiate:
