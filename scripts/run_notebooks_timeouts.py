@@ -18,7 +18,6 @@ allow_to_fail = [
     Path("image_examples/image_captioning/Image Captioning using Azure Cognitive Services.ipynb"),
     Path("image_examples/image_captioning/Image Captioning using Open Source.ipynb"),
     Path("image_examples/image_classification/Image Multi Class.ipynb"),
-    Path("overviews/An introduction to explainable AI with Shapley values.ipynb"),
     Path("overviews/Be careful when interpreting predictive models in search of causal insights.ipynb"),
     Path("overviews/Explaining quantitative measures of fairness.ipynb"),
     Path("tabular_examples/model_agnostic/Multioutput Regression SHAP.ipynb"),
@@ -64,6 +63,7 @@ allow_to_timeout = [
     Path("text_examples/text_entailment/Textual Entailment Explanation Demo.ipynb"),
     Path("text_examples/text_generation/Open Ended GPT2 Text Generation Explanations.ipynb"),
     Path("text_examples/translation/Machine Translation Explanations.ipynb"),
+    Path("overviews/An introduction to explainable AI with Shapley values.ipynb"),
 ]
 
 
