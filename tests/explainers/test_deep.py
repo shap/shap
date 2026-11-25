@@ -558,6 +558,28 @@ def test_pytorch_custom_nested_models(torch_device):
     )
 
 
+@pytest.mark.parametrize(
+    "activation",
+    ["SiLU", "Mish", "CELU", "PReLU", "ReLU6", "Hardtanh", "Hardsigmoid", "Hardswish", "LogSigmoid", "Softsign"],
+)
+def test_pytorch_elementwise_activations(activation):
+    """Elementwise activations use the DeepLIFT rescale rule, so the attributions sum to the output."""
+    torch = pytest.importorskip("torch")
+    from torch import nn
+
+    torch.manual_seed(0)
+    model = nn.Sequential(nn.Linear(6, 16), getattr(nn, activation)(), nn.Linear(16, 3)).eval()
+    background = 2 * torch.randn(16, 6)
+    x = 2 * torch.randn(5, 6)
+
+    e = shap.DeepExplainer(model, background)
+    shap_values = e.shap_values(x, check_additivity=False)
+
+    with torch.no_grad():
+        outputs = model(x).numpy()
+    np.testing.assert_allclose(shap_values.sum(1) + e.expected_value, outputs, atol=1e-5)
+
+
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_single_output(torch_device):
     """Testing single outputs"""

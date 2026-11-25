@@ -9,7 +9,6 @@ from .explainers._coalition import CoalitionExplainer
 from .explainers._deep import DeepExplainer
 from .explainers._exact import ExactExplainer
 from .explainers._explainer import Explainer
-from .explainers._gpu_tree import GPUTreeExplainer
 from .explainers._gradient import GradientExplainer
 from .explainers._kernel import KernelExplainer
 from .explainers._linear import LinearExplainer
@@ -148,3 +147,11 @@ __all__ = [
     "sample",
     "kmeans",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    if name in ("GPUTreeExplainer", "GPUTree"):
+        from . import explainers
+
+        return getattr(explainers, "GPUTreeExplainer")
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

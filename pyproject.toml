@@ -1,10 +1,7 @@
 [build-system]
-# Note for maintainers: this numpy constraint is specific to wheels for PyPI. See:
-# https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-abi-handling
 requires = [
   "scikit-build-core>=0.10.0",
   "setuptools-scm>=8.0",
-  "numpy>=2.0",
   "packaging>20.9",
   "nanobind>=2.0.0",
 ]
@@ -47,6 +44,9 @@ classifiers = [
 ]
 dynamic = ["version"]
 
+[project.optional-dependencies]
+cuda = ["shap-cuda"]
+
 
 [dependency-groups]
 plots = ["matplotlib", "ipython"]
@@ -78,26 +78,29 @@ test = [
   {include-group = "test-core"},
   "xgboost",
   "lightgbm",
-  'catboost; python_version < "3.14"',  # TODO: pending 3.14 support
+  "treelite>=4.0",
+  'catboost; python_version < "3.15"',
   'gpboost',
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers < 4.54.0",  # TODO: fix once tests pass for 4.54.0
-  "tf-keras",
+  "transformers",  # TODO: fix once tests pass for 4.54.0
   "protobuf",  # See GH #3046
-  'torch<=2.11.0; python_version < "3.14"',  # TODO: pending 3.14 support, see GH #5016
-  'torchvision; python_version < "3.14"',  # TODO: pending 3.14 support
-  'tensorflow; python_version < "3.14"',  # TODO: pending 3.14 support
+  "bitsandbytes",
+  "torch",
+  "torchvision",
+  # TensorFlow 2.22 fixes the Triton import crash (tensorflow/tensorflow#124205).
+  # Remove both RC pins once TensorFlow and tf-keras 2.22 have stable releases.
+  'tensorflow==2.22.0rc1; python_version < "3.14"',
+  'tf-keras==2.22.0rc0; python_version < "3.14"',
+  'tf-keras; python_version >= "3.14"',
   "sentencepiece",
   "opencv-python",
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
   # See GH #3707, #3768, 3922
   "numpy>=2.0",
-  "causalml>=0.15.5",
-  # causalml imports private sklearn.ensemble._forest internals (DOUBLE, DTYPE, MAX_INT)
-  # that were removed in scikit-learn 1.9. See https://github.com/uber/causalml/issues/926
-  "scikit-learn<1.9",
+  "causalml>=0.17.0",
+  "scikit-learn",
   "selenium",  # needed to test the javascript based plots
   # performance monitoring for time-critical explainers
   "asv",
@@ -123,14 +126,17 @@ Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
 [tool.uv]
 cache-keys = [
   { file = "shap/cext/*.cc" },
-  { file = "shap/cext/*.cu" },
   { file = "shap/cext/*.h" },
   { file = "shap/cutils/*.cpp" },
   { file = "shap/cutils/*.h" },
   { file = "CMakeLists.txt" },
 ]
 
+[tool.uv.workspace]
+members = ["backends/*"]
 
+[tool.uv.sources]
+shap-cuda = {workspace = true}
 
 [tool.mypy]
 check_untyped_defs = true
@@ -198,12 +204,13 @@ module = [
   "pyspark.*",
   "scipy.*",
   "sklearn.*",
-  "slicer",
+  "slicer.*",
   "tensorflow.*",
   "transformers.*",
   "torch.*",
   "tqdm.*",
   "xgboost.*",
+  "treelite.*",
   "causalml.*",
   "selenium.*",
 ]
@@ -346,7 +353,7 @@ test-groups = ["test-core", "plots"]
 #   https://github.com/scikit-learn/scikit-learn/issues/34652 (Python 3.15 support)
 #   https://github.com/pandas-dev/pandas/issues/66740 (Python 3.15 tracker)
 #   https://github.com/scikit-learn/scikit-learn/issues/27004 (musllinux wheels)
-test-skip = "cp315* *-musllinux*"
+# test-skip = "cp315* *-musllinux*"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]

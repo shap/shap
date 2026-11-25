@@ -4,16 +4,18 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
     paths:
       - "shap/**"
       - "tests/**"
       - "data/**"
       - "javascript/**"  # Include JS changes that affect bundle.js
       - ".github/workflows/run_tests.yml"
+      - ".github/workflows/build_pyodide_wheel.yml"
+      - "scripts/run_pyodide_tests.py"
       - "pyproject.toml"
       - "CMakeLists.txt"
 
@@ -30,11 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Python 3.12
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - name: Install dependencies for dataset download
         run: |
           uv pip install --system . --group download-datasets
@@ -44,14 +46,19 @@ jobs:
         run: |
           mkdir -p /tmp/test_data_cache
           cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
-          cp -r shap/cached_data /tmp/test_data_cache/ || true
+          SHAP_DATA_DIR=$(python -P -c "import pathlib, shap; print(pathlib.Path(shap.__file__).parent / 'cached_data')")
+          cp -r "$SHAP_DATA_DIR" /tmp/test_data_cache/
           ls -la /tmp/test_data_cache/
       - name: Upload cached datasets
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
           retention-days: 1
+
+  run_wasm_tests:
+    needs: prepare_data
+    uses: ./.github/workflows/build_pyodide_wheel.yml
 
   run_tests:
     needs: prepare_data
@@ -86,21 +93,53 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dorny/paths-filter@v4
-        id: filter
         with:
-          filters: |
-            js:
-              - 'javascript/**'
+          fetch-depth: 0
+      - name: Check for JavaScript changes
+        id: filter
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          # Manual runs and initial pushes rebuild the bundle unconditionally.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "js=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # A force-push can leave the previous tip outside the fetched history.
+          for commit in "$BASE_SHA" "$HEAD_SHA"; do
+            if ! git cat-file -e "$commit^{commit}"; then
+              git fetch --no-tags origin "$commit"
+            fi
+          done
+
+          # PRs compare against the merge base; pushes compare the two tips.
+          comparison="$BASE_SHA..$HEAD_SHA"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            comparison="$BASE_SHA...$HEAD_SHA"
+          fi
+          changed_files="$RUNNER_TEMP/shap-changed-files"
+          git diff --no-renames --name-only -z "$comparison" -- > "$changed_files"
+          js=false
+          while IFS= read -r -d '' path; do
+            if [[ "$path" == javascript/* ]]; then
+              js=true
+              break
+            fi
+          done < "$changed_files"
+          echo "js=$js" >> "$GITHUB_OUTPUT"
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: ${{ matrix.python-version == '3.15' }}
       # Build JavaScript bundle if JS files have changed
       - name: Set up Node.js
         if: steps.filter.outputs.js == 'true'
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: lts/Hydrogen
       - name: Build JavaScript bundle conditionally
@@ -120,7 +159,7 @@ jobs:
           echo "DYLD_LIBRARY_PATH=$_libomp_path:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
           unset _libomp_path
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       # Released pandas/scikit-learn do not yet ship cp315 wheels. In particular,
       # scikit-learn's isolated build pulls in scipy<1.18, which has no cp315 wheels.
       - name: Install Python 3.15 dependency nightlies
@@ -134,7 +173,7 @@ jobs:
         run: |
           uv pip install --system . --group ${{matrix.extras}} --group plots
       - name: Download pre-cached datasets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
@@ -173,15 +212,78 @@ jobs:
           --import-mode=append
       - name: Upload mpl test report
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: mpl-results-${{ matrix.python-version }}-${{ runner.os }}-${{ matrix.extras }}
           path: mpl-results/
           if-no-files-found: ignore
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  run_tests_nightly:
+    # Run the test suite against nightly / pre-release builds of select
+    # dependencies (currently LightGBM). See GH #5013.
+    name: run tests (nightly dependencies)
+    needs: prepare_data
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python 3.13
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Install dependencies
+        # Do regular install NOT editable install: see GH #3020
+        run: |
+          uv pip install --system . --group test --group plots
+      - name: Install nightly pre-release packages
+        run: |
+          # Require LightGBM from the nightly index; dependencies are installed above (GH #5013).
+          uv pip install --system --reinstall-package lightgbm --pre --no-deps \
+            --index-url https://pypi.anaconda.org/lightgbm-packages/simple \
+            lightgbm
+      - name: Show installed nightly versions
+        run: python -c "import lightgbm; print('lightgbm', lightgbm.__version__)"
+      - name: Download pre-cached datasets
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: test-data-cache
+          path: /tmp/test_data_cache
+      - name: Restore datasets to correct locations
+        shell: bash
+        run: |
+          # Restore sklearn data
+          cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+
+          # Restore shap cached data to the installed package location
+          SHAP_CACHE_DIR=$(python -P -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
+          mkdir -p "$SHAP_CACHE_DIR"
+          cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
+
+          echo "Sklearn data:"
+          ls -la ~/scikit_learn_data/ 2>/dev/null || echo "No sklearn data"
+          echo "Shap cache data:"
+          ls -la "$SHAP_CACHE_DIR" 2>/dev/null || echo "No shap data"
+      - name: Test with pytest
+        # Run the full suite: a nightly dependency can break anything that
+        # touches it, not just dedicated lightgbm tests. No coverage upload
+        # here to avoid affecting codecov.yml `after_n_builds`.
+        run: >
+          pytest --durations=20
+          --mpl-generate-summary=html --mpl-results-path=./mpl-results
+          --import-mode=append
+      - name: Upload mpl test report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mpl-results-nightly
+          path: mpl-results/
+          if-no-files-found: ignore
 
   test_oldest_supported_numpy:
     # Package is built with numpy 2.X
@@ -193,14 +295,52 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Python 3.12
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: 3.12
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - name: Install dependencies
         run: |
           uv pip install --system numpy==2.0 . --group test-core --group plots
+      - name: Test with pytest
+        run: pytest --durations=20 --import-mode=append
+
+  test_spec0_oldest_supported:
+    # Test the oldest supported versions of all dependencies.
+    # spec0-action raises the lower bounds in pyproject.toml to the SPEC 0 floors
+    # (https://scientific-python.org/specs/spec-0000/), for dependencies outside SPEC 0
+    # to versions released in the last two years. The change is not committed. uv then
+    # installs the lowest versions that satisfy those bounds, so the floors move
+    # forward every quarter without manual edits here.
+    # Python is excluded, so the job tests the minimum Python declared in pyproject.toml.
+    name: run tests (SPEC 0 oldest supported versions)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Raise lower bounds to the SPEC 0 floors
+        uses: scientific-python/spec0-action@7c875bc60508e9aab2bdb851e99bfcc53b283e94 # v1.6
+        with:
+          create_pr: false
+          update_all: 2
+          excluded_packages: python
+      - name: Read minimum Python version
+        id: python
+        run: |
+          version=$(python3 -c 'import re, tomllib; spec = tomllib.load(open("pyproject.toml", "rb"))["project"]["requires-python"]; print(re.search(r"[0-9.]+", spec).group())')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Set up Python ${{ steps.python.outputs.version }}
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: ${{ steps.python.outputs.version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Install the lowest supported versions
+        run: |
+          uv pip install --system --resolution lowest-direct . --group test-core --group plots
+      - name: Show installed versions
+        run: |
+          python -c "import sys, numpy, scipy, pandas, sklearn, matplotlib, IPython; print('python', sys.version.split()[0]); [print(m.__name__, m.__version__) for m in (numpy, scipy, pandas, sklearn, matplotlib, IPython)]"
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
 
@@ -211,11 +351,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Python 3.13
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: 3.13
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - name: Install dependencies
         run: |
           uv pip install --system . --group test-core

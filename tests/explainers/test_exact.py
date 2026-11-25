@@ -18,7 +18,7 @@ def test_tabular_simple_case():
     sk = pytest.importorskip("sklearn")
 
     model = xgboost.XGBClassifier(tree_method="exact", base_score=0.5)
-    X, y = sk.datasets.make_classification(n_samples=100, n_features=2, n_informative=2, n_redundant=0, return_X_y=True)
+    X, y = sk.datasets.make_classification(n_samples=100, n_features=2, n_informative=2, n_redundant=0)
 
     X_train = X[:80]
     X_test = X[80:]
@@ -50,6 +50,20 @@ def test_multi_output_interactions():
 
     expected = np.array([[[0.0, 0.0], [1.5, 20.0]], [[1.5, 20.0], [0.0, 0.0]]])
     np.testing.assert_allclose(row_values, expected)
+
+
+def test_interactions_match_coalition_means():
+    background = np.array([[0.0, 2.0], [2.0, 0.0]])
+    rows = np.array([[4.0, 3.0]])
+
+    def model(data):
+        left, right = data.T
+        return left * right + 2 * left
+
+    explanation = shap.ExactExplainer(model, background)(rows, interactions=2)
+    # The empty, left-only, right-only and full coalition means are 2, 12, 5 and 20.
+    np.testing.assert_array_equal(explanation.base_values, [2.0])
+    np.testing.assert_array_equal(explanation.values, [[[10.0, 2.5], [2.5, 3.0]]])
 
 
 @compare_numpy_outputs_against_baseline(func_file=__file__)

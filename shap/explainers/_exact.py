@@ -164,12 +164,10 @@ class ExactExplainer(Explainer):
             delta_indexes = self._cached_gray_codes(len(inds))
 
             # map to a larger mask that includes the invariant entries
-            extended_delta_indexes = np.zeros(2 ** len(inds), dtype=np.int64)
-            for i in range(2 ** len(inds)):
-                if delta_indexes[i] == MaskedModel.delta_mask_noop_value:
-                    extended_delta_indexes[i] = delta_indexes[i]
-                else:
-                    extended_delta_indexes[i] = inds[delta_indexes[i]]
+            extended_delta_indexes = np.empty(len(delta_indexes), dtype=np.int64)
+            # The first Gray code entry is the no-op for the all-hidden mask.
+            extended_delta_indexes[0] = delta_indexes[0]
+            extended_delta_indexes[1:] = inds[delta_indexes[1:]]
 
             # run the model
             outputs = fm(extended_delta_indexes, zero_index=0, batch_size=batch_size)

@@ -24,6 +24,13 @@ explainers
 ----------
 *See also:* :ref:`Explainer API Examples <explainers_examples>`.
 
+For :class:`shap.GPUTreeExplainer` installation, see :ref:`GPU support <gpu-support>`.
+
+.. warning::
+
+    Only pass trusted files to :meth:`shap.Explainer.load`. SHAP uses pickle-based
+    serialization for explainers, and loading an untrusted file can execute arbitrary code.
+
 .. autosummary::
     :toctree: generated/
 

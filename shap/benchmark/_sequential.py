@@ -17,7 +17,7 @@ class SequentialMasker:
     def __init__(self, mask_type, sort_order, masker, model, *model_args, batch_size=500):
         for arg in model_args:
             if isinstance(arg, pd.DataFrame):
-                raise TypeError("DataFrame arguments dont iterate correctly, pass numpy arrays instead!")
+                raise TypeError("DataFrame arguments don't iterate correctly, pass numpy arrays instead!")
 
         # convert any DataFrames to numpy arrays
         # self.model_arg_cols = []

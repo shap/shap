@@ -8,6 +8,7 @@ import sys
 import numpy as np
 import pandas as pd
 import pytest
+import scipy.sparse
 import sklearn
 import sklearn.pipeline
 from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor, RandomForestClassifier
@@ -269,7 +270,7 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
             diffs = expected_values + shap_values.sum(1) - predictions.class1
             assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class0!"
         else:
-            normalizedPredictions = (predictions.T / predictions.sum(1)).T
+            normalizedPredictions = (predictions.T / predictions.sum(axis=1)).T
             diffs = expected_values[0] + shap_values[:, :, 0].sum(1) - normalizedPredictions.class0
             assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class0!" + model
             diffs = expected_values[1] + shap_values[:, :, 1].sum(1) - normalizedPredictions.class1
@@ -1499,24 +1500,6 @@ class TestExplainerXGBoost:
             explanation.values.sum(1) + explanation.base_values,
             predicted[:, 1],
         )
-
-    # def test_front_page_xgboost_global_path_dependent():
-    #     try:
-    #         xgboost = pytest.importorskip("xgboost")
-    #     except Exception:
-    #         print("Skipping test_front_page_xgboost!")
-    #         return
-    #
-    #     # train XGBoost model
-    #     X, y = shap.datasets.california(n_points=500)
-    #     model = xgboost.XGBRegressor()
-    #     model.fit(X, y)
-
-    #     # explain the model's predictions using SHAP values
-    #     explainer = shap.TreeExplainer(model, X, feature_perturbation="global_path_dependent")
-    #     shap_values = explainer.shap_values(X)
-
-    #     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))
 
     def test_explanation_data_not_dmatrix(self, random_seed):
         """Checks that DMatrix is not stored in Explanation.data after TreeExplainer.__call__,
@@ -3016,3 +2999,506 @@ def test_nullable_pandas_dtype():
     explainer = shap.TreeExplainer(model)
     sv = explainer.shap_values(X_test)
     assert not np.any(np.isnan(sv[~np.isnan(X_test.to_numpy(dtype=float, na_value=np.nan)).any(axis=1)]))
+
+
+@pytest.mark.parametrize("n_outputs", [1, 3])
+@pytest.mark.parametrize("interactions", [False, True])
+def test_quadrature_matches_original(n_outputs, interactions):
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(100, 4))
+    y = rng.normal(size=(100, n_outputs))
+    model = DecisionTreeRegressor(max_depth=6, random_state=0).fit(X, y[:, 0] if n_outputs == 1 else y)
+    rows = X[:10].copy()
+    rows[0, 0] = np.nan
+    original = shap.TreeExplainer(model)
+    quadrature = shap.TreeExplainer(model, enable_experimental=True)
+
+    expected = original(rows, interactions=interactions)
+    actual = quadrature(rows, interactions=interactions)
+    np.testing.assert_allclose(actual.values, expected.values, atol=1e-12, rtol=1e-12)
+    np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-12, rtol=1e-12)
+
+
+@pytest.mark.parametrize("interactions", [False, True])
+def test_quadrature_dispatch(interactions, monkeypatch):
+    X = np.array([[0.0], [1.0]])
+    model = DecisionTreeRegressor(max_depth=1, random_state=0).fit(X, X[:, 0])
+    calls = []
+    dense_tree_shap = shap.explainers._tree._cext.dense_tree_shap
+
+    def record_dispatch(*args):
+        calls.append(args[-1])
+        return dense_tree_shap(*args)
+
+    monkeypatch.setattr(shap.explainers._tree._cext, "dense_tree_shap", record_dispatch)
+    shap.TreeExplainer(model)(X, interactions=interactions)
+    shap.TreeExplainer(model, enable_experimental=True)(X, interactions=interactions)
+    assert calls == [False, True]
+
+
+@pytest.mark.parametrize("interactions", [False, True])
+def test_quadrature_legacy_pickle_defaults_to_original(interactions):
+    X = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]])
+    model = DecisionTreeRegressor(max_depth=2, random_state=0).fit(X, X[:, 0] + 2 * X[:, 1])
+    explainer = shap.TreeExplainer(model)
+    expected = explainer(X, interactions=interactions)
+
+    # Older pickles have no experimental flag, and restoring skips __init__.
+    del explainer.enable_experimental
+    restored = pickle.loads(pickle.dumps(explainer))
+    actual = restored(X, interactions=interactions)
+    np.testing.assert_array_equal(actual.values, expected.values)
+    np.testing.assert_array_equal(actual.base_values, expected.base_values)
+
+
+@pytest.mark.parametrize("depth", [50, 80])
+@pytest.mark.parametrize("interactions", [False, True])
+def test_quadrature_deep_tree_stability(depth, interactions):
+    # An AND chain has depth d but only 2d + 1 nodes. Each feature independently
+    # takes its hot branch with probability 1/2; only the final leaf has value 1.
+    nodes = 2 * depth + 1
+    left = np.full(nodes, -1, dtype=np.int32)
+    right = left.copy()
+    left[:depth] = np.arange(depth, 2 * depth)
+    right[:depth] = np.arange(1, depth + 1)
+    right[depth - 1] = 2 * depth
+    features = np.full(nodes, -1, dtype=np.int32)
+    features[:depth] = np.arange(depth)
+    cover = np.empty(nodes)
+    cover[:depth] = np.exp2(-np.arange(depth, dtype=float))
+    cover[depth : 2 * depth] = cover[:depth] / 2
+    cover[-1] = cover[depth - 1] / 2
+    values = np.zeros((nodes, 1))
+    values[-1] = 1
+    tree = {
+        "children_left": left,
+        "children_right": right,
+        "children_default": right,
+        "features": features,
+        "thresholds": np.zeros(nodes),
+        "values": values,
+        "node_sample_weight": cover,
+    }
+    explainer = shap.TreeExplainer({"trees": [tree]}, enable_experimental=True)
+    X = np.ones((3, depth))
+    X[1] = -1
+    X[2] = np.nan  # Missing values follow the hot branch.
+    result = explainer(X, interactions=interactions)
+    baseline = 2.0**-depth
+    # Symmetry determines each attribution, independently of legacy Tree SHAP.
+    expected = np.broadcast_to(np.array([1 - baseline, -baseline, 1 - baseline])[:, None] / depth, X.shape)
+    actual = result.values.sum(axis=2) if interactions else result.values
+    assert np.isfinite(result.values).all()
+    np.testing.assert_allclose(actual, expected, rtol=1e-12, atol=1e-15)
+    np.testing.assert_allclose(result.base_values, baseline, rtol=1e-14, atol=0)
+    np.testing.assert_allclose(actual.sum(axis=1) + result.base_values, [1, 0, 1], rtol=0, atol=1e-13)
+    if interactions:
+        np.testing.assert_allclose(result.values, result.values.swapaxes(1, 2), rtol=0, atol=1e-15)
+
+
+@pytest.mark.parametrize("n_outputs", [1, 3])
+@pytest.mark.parametrize("interactions", [False, True])
+def test_quadrature_repeated_features(n_outputs, interactions):
+    # Six distinct features require three quadrature points.
+    # Features 0 and 1 repeat on the chain for both scalar and vector leaves.
+    depth = 8
+    nodes = 2 * depth + 1
+    left = np.full(nodes, -1, dtype=np.int32)
+    right = left.copy()
+    left[:depth] = np.arange(depth, 2 * depth)
+    right[:depth] = np.arange(1, depth + 1)
+    right[depth - 1] = 2 * depth
+    features = np.full(nodes, -1, dtype=np.int32)
+    features[:depth] = [0, 1, 2, 0, 3, 4, 1, 5]
+    thresholds = np.zeros(nodes)
+    thresholds[[3, 6]] = 0.5
+    cover = np.empty(nodes)
+    cover[:depth] = np.exp2(-np.arange(depth, dtype=float))
+    cover[depth : 2 * depth] = cover[:depth] / 2
+    cover[-1] = cover[depth - 1] / 2
+    rng = np.random.default_rng(123)
+    tree = {
+        "children_left": left,
+        "children_right": right,
+        "children_default": left,
+        "features": features,
+        "thresholds": thresholds,
+        "values": rng.normal(size=(nodes, n_outputs)),
+        "node_sample_weight": cover,
+    }
+    model = {"trees": [tree]}
+    rows = rng.uniform(-1, 1, size=(24, 6))
+    rows[0] = 1
+    rows[1] = -1  # Repeated features remain cold; other descendants still matter.
+    rows[2] = 0.25  # A previously hot feature becomes cold at its repeated split.
+    rows[3] = np.nan
+    original = shap.TreeExplainer(model)(rows, interactions=interactions)
+    actual = shap.TreeExplainer(model, enable_experimental=True)(rows, interactions=interactions)
+    np.testing.assert_allclose(actual.values, original.values, atol=1e-12, rtol=1e-12)
+    np.testing.assert_allclose(actual.base_values, original.base_values, atol=1e-12, rtol=1e-12)
+    # Repeated calls and row order must not change the attributions.
+    explainer = shap.TreeExplainer(model, enable_experimental=True)
+    explainer(rows, interactions=interactions)
+    repeated = explainer(rows[::-1], interactions=interactions)
+    np.testing.assert_allclose(repeated.values, actual.values[::-1], atol=1e-12, rtol=1e-12)
+
+
+@pytest.mark.parametrize("with_background", [False, True])
+def test_quadrature_preserves_approximate(with_background):
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(50, 3))
+    model = DecisionTreeRegressor(max_depth=4, random_state=0).fit(X, X[:, 0] * X[:, 1])
+    background = X if with_background else None
+    expected = shap.TreeExplainer(model, background).shap_values(X[:5], approximate=True)
+    actual = shap.TreeExplainer(model, background, enable_experimental=True).shap_values(X[:5], approximate=True)
+    np.testing.assert_array_equal(actual, expected)
+
+
+def _brute_force_interventional(predict, x, background):
+    """Average exact Shapley values of each fixed-reference game."""
+    M = len(x)
+    phi = np.zeros(M)
+    for r in background:
+        for i in range(M):
+            others = [j for j in range(M) if j != i]
+            for k in range(M):
+                weight = math.factorial(k) * math.factorial(M - k - 1) / math.factorial(M)
+                for subset in itertools.combinations(others, k):
+                    z = r.copy()
+                    z[list(subset)] = x[list(subset)]
+                    without = predict(z[None])[0]
+                    z[i] = x[i]
+                    phi[i] += weight * (predict(z[None])[0] - without)
+    return phi / len(background)
+
+
+# The large tree with few references uses the traversal; the small tree uses decision patterns.
+@pytest.mark.parametrize("max_depth,n_background", [(8, 6), (3, 12)])
+def test_experimental_interventional_matches_brute_force(max_depth, n_background):
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(200, 4))
+    # Repeated features along paths exercise source reuse at later splits.
+    model = DecisionTreeRegressor(max_depth=max_depth, random_state=0).fit(X, X[:, 0] * X[:, 1] + np.sin(3 * X[:, 0]))
+    background = X[:n_background]
+    rows = np.vstack([X[50:53], background[:1]])
+    explainer = shap.TreeExplainer(model, background, feature_perturbation="interventional", enable_experimental=True)
+    explanation = explainer(rows)
+    expected = np.array([_brute_force_interventional(model.predict, x, background) for x in rows])
+    np.testing.assert_allclose(explanation.values, expected, atol=1e-12)
+    np.testing.assert_allclose(explanation.base_values, model.predict(background).mean(), atol=1e-12)
+
+
+@pytest.mark.parametrize("n_outputs", [1, 3])
+def test_experimental_interventional_matches_original(n_outputs):
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(200, 5))
+    y = np.c_[X[:, 0] * X[:, 1], X[:, 2], X[:, 3] - X[:, 0]][:, :n_outputs]
+    model = DecisionTreeRegressor(max_depth=6, random_state=0).fit(X, y[:, 0] if n_outputs == 1 else y)
+    background = X[:20]
+    rows = X[100:110].copy()
+    rows[0, 0] = np.nan
+    background = background.copy()
+    background[1, 1] = np.nan
+    original = shap.TreeExplainer(model, background, feature_perturbation="interventional")
+    experimental = shap.TreeExplainer(
+        model, background, feature_perturbation="interventional", enable_experimental=True
+    )
+    expected, actual = original(rows), experimental(rows)
+    # The original implementation stores node values in float32.
+    np.testing.assert_allclose(actual.values, expected.values, atol=1e-6)
+    np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-6)
+
+
+def test_experimental_interventional_deep_tree_few_features():
+    # Deeper than 16 splits, but only three distinct features per path, so decision
+    # patterns still apply.
+    rng = np.random.default_rng(0)
+    X = rng.uniform(-1, 1, size=(4000, 3))
+    y = np.sin(8 * X[:, 0]) + X[:, 1] * X[:, 2] + 0.1 * rng.normal(size=len(X))
+    model = DecisionTreeRegressor(max_depth=24, min_samples_leaf=5, random_state=0).fit(X, y)
+    background, rows = X[:100], X[100:200]
+    assert model.get_depth() > 16
+    # The dispatch rule picks patterns for this tree and these batch sizes.
+    assert np.sqrt(model.get_n_leaves()) * (1.5 / len(background) + 0.5 / len(rows)) <= 1
+    original = shap.TreeExplainer(model, background, feature_perturbation="interventional")
+    experimental = shap.TreeExplainer(
+        model, background, feature_perturbation="interventional", enable_experimental=True
+    )
+    expected, actual = original(rows), experimental(rows)
+    np.testing.assert_allclose(actual.values, expected.values, atol=1e-6)
+    np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-6)
+
+
+def test_experimental_interventional_probability_output():
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(200, 4))
+    model = GradientBoostingClassifier(n_estimators=10, max_depth=3, random_state=0).fit(X, X[:, 0] + X[:, 1] > 0)
+    original = shap.TreeExplainer(model, X[:20], feature_perturbation="interventional", model_output="probability")
+    experimental = shap.TreeExplainer(
+        model, X[:20], feature_perturbation="interventional", model_output="probability", enable_experimental=True
+    )
+    expected, actual = original(X[100:105]), experimental(X[100:105])
+    np.testing.assert_allclose(actual.values, expected.values, atol=1e-6)
+    np.testing.assert_allclose(actual.base_values, expected.base_values, atol=1e-6)
+    np.testing.assert_allclose(
+        actual.values.sum(1) + actual.base_values, model.predict_proba(X[100:105])[:, 1], atol=1e-10
+    )
+
+
+def test_tree_explainer_with_sparse_input():
+    """Test if TreeExplainer correctly handles sparse matrix input
+    by converting it to a dense numpy array.
+    """
+    # Create a simple sparse matrix and labels
+    x_sparse = scipy.sparse.csr_matrix([[1, 0, 1], [0, 1, 0], [1, 1, 1]])
+    y = np.array([0, 1, 0])
+
+    # Fit a model that supports sparse input
+    model = RandomForestClassifier(n_estimators=2, random_state=42).fit(x_sparse, y)
+    explainer = shap.TreeExplainer(model)
+
+    # Execute SHAP values calculation
+    shap_values = explainer(x_sparse)
+    assert isinstance(shap_values.values, np.ndarray), "SHAP values should be a numpy array"
+
+    # Validate SHAP additivity
+    raw_predictions = model.predict_proba(x_sparse)
+    for class_idx in range(model.n_classes_):
+        expected_value = explainer.expected_value[class_idx]
+        sum_shap_values = shap_values.values[:, :, class_idx].sum(axis=1)
+        reconstructed_output = expected_value + sum_shap_values
+
+        actual_output = raw_predictions[:, class_idx]
+        np.testing.assert_allclose(reconstructed_output, actual_output, atol=1e-5)
+
+
+def test_treelite_regressor():
+    treelite = pytest.importorskip("treelite")
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.california(n_points=100)
+    bst = xgboost.train(
+        {"learning_rate": 0.1, "max_depth": 3, "verbosity": 0},
+        xgboost.DMatrix(X, label=y),
+        num_boost_round=20,
+    )
+    tl_model = treelite.frontend.from_xgboost(bst)
+    explainer = shap.TreeExplainer(tl_model)
+    sv = explainer(X)
+    assert sv.values.shape == (len(X), X.shape[1])
+
+
+@pytest.mark.parametrize("fraction", [0.25, 0.5, 0.75])
+def test_treelite_xgboost_float32_threshold_precision(fraction):
+    """Converting float32 split thresholds must preserve SHAP values at the boundary."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    xgboost = pytest.importorskip("xgboost")
+
+    # A single split at x < 4, with leaf values 0 and 1 and equal sample weights.
+    X = np.array([[3.0], [4.0]], dtype=np.float32)
+    model = xgboost.train(
+        {
+            "objective": "reg:squarederror",
+            "max_depth": 1,
+            "eta": 1,
+            "min_child_weight": 0,
+            "lambda": 0,
+            "base_score": 0,
+            "tree_method": "hist",
+        },
+        xgboost.DMatrix(X, label=[0.0, 1.0]),
+        num_boost_round=1,
+    )
+    tl_model = treelite.frontend.from_xgboost(model)
+    thresholds = tl_model.get_tree_accessor(0).get_field("threshold")
+    assert thresholds.dtype == np.float32
+    assert thresholds[0] == 4.0
+
+    # SHAP implements < as <= nextafter(threshold, -inf). Moving one float32
+    # step before converting to float64 gives a different boundary than moving
+    # one float64 step afterwards. This input lies strictly between the two.
+    lower = float(np.nextafter(np.float32(4.0), np.float32(-np.inf)))
+    upper = np.nextafter(np.float64(4.0), -np.inf)
+    probe = lower + fraction * (4.0 - lower)
+    assert lower < probe < upper
+    goes_right = fraction >= 0.5
+    assert (np.float32(probe) == 4.0) == goes_right
+    X_test = np.array([[3.0], [probe], [4.0]], dtype=np.float64)
+
+    expected = shap.TreeExplainer(model)(X_test)
+    actual = shap.TreeExplainer(tl_model)(X_test)
+
+    # The quarter-gap input rounds down; the midpoint and three-quarter input
+    # round up to 4. The conversion must preserve both rounding directions.
+    predictions = model.predict(xgboost.DMatrix(X_test))
+    np.testing.assert_array_equal(predictions, [0.0, float(goes_right), 1.0])
+    np.testing.assert_allclose(expected.values, [[-0.5], [float(goes_right) - 0.5], [0.5]])
+    np.testing.assert_allclose(actual.base_values + actual.values.sum(axis=1), predictions)
+    np.testing.assert_allclose(actual.base_values, expected.base_values)
+    np.testing.assert_allclose(actual.values, expected.values)
+
+
+def test_treelite_binary_classifier():
+    treelite = pytest.importorskip("treelite")
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.adult(n_points=100)
+    bst = xgboost.train(
+        {"objective": "binary:logistic", "learning_rate": 0.1, "max_depth": 3, "verbosity": 0},
+        xgboost.DMatrix(X, label=y),
+        num_boost_round=10,
+    )
+    tl_model = treelite.frontend.from_xgboost(bst)
+    explainer = shap.TreeExplainer(tl_model, model_output="raw")
+    sv = explainer(X)
+    assert sv.values.shape == (len(X), X.shape[1])
+
+
+def test_treelite_lightgbm():
+    treelite = pytest.importorskip("treelite")
+    lgb = pytest.importorskip("lightgbm")
+    X, y = shap.datasets.california(n_points=100)
+    bst = lgb.train({"num_leaves": 7, "n_iter": 10, "verbose": -1}, lgb.Dataset(X, label=y))
+    tl_model = treelite.frontend.from_lightgbm(bst)
+    explainer = shap.TreeExplainer(tl_model)
+    sv = explainer(X)
+    assert sv.values.shape == (len(X), X.shape[1])
+
+
+def test_treelite_sklearn_float32_input_precision():
+    """Sklearn rounds inputs to float32 even though its thresholds are float64."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    model = sklearn.ensemble.RandomForestRegressor(n_estimators=1, max_depth=1, bootstrap=False, random_state=0).fit(
+        [[3.0], [5.0]], [0.0, 1.0]
+    )
+    assert model.estimators_[0].tree_.threshold[0] == 4.0
+    X_test = np.array([[3.0], [4.0 + 1e-8], [5.0]], dtype=np.float64)
+    assert X_test[1, 0] > 4.0
+    assert np.float32(X_test[1, 0]) == 4.0
+
+    expected = shap.TreeExplainer(model)(X_test)
+    actual = shap.TreeExplainer(treelite.sklearn.import_model(model))(X_test)
+    predictions = model.predict(X_test)
+    np.testing.assert_array_equal(predictions, [0.0, 0.0, 1.0])
+    np.testing.assert_allclose(actual.base_values + actual.values.sum(axis=1), predictions)
+    np.testing.assert_allclose(actual.values, expected.values)
+
+
+def test_treelite_xgboost_multiclass_base_scores():
+    """Each class must retain its own base score when reconstructing raw margins."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    xgboost = pytest.importorskip("xgboost", minversion="3.1")
+    X = np.arange(30, dtype=np.float32).reshape(-1, 1)
+    y = np.array([0] * 20 + [1] * 7 + [2] * 3)
+    model = xgboost.train(
+        {
+            "objective": "multi:softprob",
+            "num_class": 3,
+            "base_score": "[0.25,0.5,0.75]",
+            "max_depth": 2,
+            "nthread": 1,
+        },
+        xgboost.DMatrix(X, label=y),
+        num_boost_round=2,
+    )
+    tl_model = treelite.frontend.from_xgboost(model)
+    np.testing.assert_array_equal(tl_model.get_header_accessor().get_field("base_scores"), [0.25, 0.5, 0.75])
+
+    sv = shap.TreeExplainer(tl_model)(X)
+    predictions = model.predict(xgboost.DMatrix(X), output_margin=True)
+    reconstructed = sv.base_values + sv.values.sum(axis=1)
+    assert reconstructed.shape == predictions.shape
+    np.testing.assert_allclose(reconstructed, predictions, rtol=1e-6, atol=1e-6)
+
+
+def test_treelite_lightgbm_categorical_split():
+    """A categorical split must preserve membership in a non-contiguous category set."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    lightgbm = pytest.importorskip("lightgbm")
+    X = np.tile(np.array([[0.0], [1.0], [2.0], [3.0]]), (30, 1))
+    y = np.isin(X[:, 0], [0, 2]).astype(float)
+    model = lightgbm.train(
+        {
+            "objective": "regression",
+            "num_leaves": 2,
+            "min_data_in_leaf": 1,
+            "min_data_per_group": 1,
+            "cat_smooth": 0,
+            "cat_l2": 0,
+            "max_cat_to_onehot": 1,
+            "verbose": -1,
+            "num_threads": 1,
+        },
+        lightgbm.Dataset(X, label=y, categorical_feature=[0]),
+        num_boost_round=3,
+    )
+    tl_model = treelite.frontend.from_lightgbm(model)
+    assert tl_model.get_tree_accessor(0).get_field("node_type")[0] == 2
+    X_test = X[:4]
+    predictions = model.predict(X_test, raw_score=True)
+    assert predictions[0] == predictions[2]
+    assert predictions[0] != predictions[1]
+
+    sv = shap.TreeExplainer(tl_model)(X_test)
+    np.testing.assert_allclose(sv.base_values + sv.values.sum(axis=1), predictions, rtol=1e-6, atol=1e-6)
+
+
+def test_treelite_xgboost_multiple_targets():
+    """Trees assigned to different regression targets must not be summed together."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    xgboost = pytest.importorskip("xgboost", minversion="2.0")
+    X = np.arange(12, dtype=np.float32).reshape(-1, 1)
+    y = np.column_stack((X[:, 0], -X[:, 0]))
+    model = xgboost.train(
+        {"max_depth": 1, "multi_strategy": "one_output_per_tree", "nthread": 1},
+        xgboost.DMatrix(X, label=y),
+        num_boost_round=1,
+    )
+    tl_model = treelite.frontend.from_xgboost(model)
+    assert tl_model.get_header_accessor().get_field("num_target")[0] == 2
+
+    sv = shap.TreeExplainer(tl_model)(X)
+    predictions = model.predict(xgboost.DMatrix(X), output_margin=True)
+    reconstructed = sv.base_values + sv.values.sum(axis=1)
+    assert reconstructed.shape == predictions.shape
+    np.testing.assert_allclose(reconstructed, predictions, rtol=1e-6, atol=1e-6)
+
+
+def test_treelite_sklearn_vector_leaves():
+    """Random-forest class probabilities are stored in vector-valued leaves."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    X = np.arange(12, dtype=np.float64).reshape(-1, 1)
+    model = RandomForestClassifier(n_estimators=1, max_depth=1, bootstrap=False, random_state=0).fit(
+        X, [0] * 6 + [1] * 6
+    )
+    tl_model = treelite.sklearn.import_model(model)
+    np.testing.assert_array_equal(tl_model.get_header_accessor().get_field("leaf_vector_shape"), [1, 2])
+
+    sv = shap.TreeExplainer(tl_model)(X)
+    predictions = model.predict_proba(X)
+    reconstructed = sv.base_values + sv.values.sum(axis=1)
+    assert reconstructed.shape == predictions.shape
+    np.testing.assert_allclose(reconstructed, predictions, rtol=1e-6, atol=1e-6)
+
+
+def test_treelite_lightgbm_scaled_sigmoid():
+    """Probability explanations must account for LightGBM's sigmoid scale."""
+    treelite = pytest.importorskip("treelite", minversion="4.0")
+    lightgbm = pytest.importorskip("lightgbm")
+    X = np.arange(20, dtype=np.float64).reshape(-1, 1)
+    y = (X[:, 0] >= 10).astype(int)
+    model = lightgbm.train(
+        {
+            "objective": "binary",
+            "sigmoid": 2.0,
+            "num_leaves": 2,
+            "min_data_in_leaf": 1,
+            "verbose": -1,
+            "num_threads": 1,
+        },
+        lightgbm.Dataset(X, label=y),
+        num_boost_round=3,
+    )
+    tl_model = treelite.frontend.from_lightgbm(model)
+    assert tl_model.get_header_accessor().get_field("sigmoid_alpha")[0] == 2.0
+
+    sv = shap.TreeExplainer(tl_model, data=X, model_output="probability")(X)
+    np.testing.assert_allclose(sv.base_values + sv.values.sum(axis=1), model.predict(X), rtol=1e-6, atol=1e-6)
