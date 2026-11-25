@@ -1,5 +1,6 @@
 """Test tree functions."""
 
+import functools
 import itertools
 import math
 import pickle
@@ -1301,15 +1302,30 @@ class TestExplainerXGBoost:
     Included models:
         * XGBRegressor
         * XGBClassifier
-        * XGBRFRegressor
-        * XGBRFClassifier
+        * XGBRegressor / XGBClassifier configured as a random forest
         * XGBRanker
     """
 
     xgboost = pytest.importorskip("xgboost")
 
-    regressors = [xgboost.XGBRegressor, xgboost.XGBRFRegressor]
-    classifiers = [xgboost.XGBClassifier, xgboost.XGBRFClassifier]
+    # XGBRFRegressor and XGBRFClassifier are deprecated in XGBoost. These are the
+    # parameters they set, applied to the boosting estimators as XGBoost recommends.
+    rf_params = {
+        "n_estimators": 1,
+        "num_parallel_tree": 100,
+        "learning_rate": 1.0,
+        "subsample": 0.8,
+        "colsample_bynode": 0.8,
+        "reg_lambda": 1e-5,
+    }
+    regressors = [
+        pytest.param(xgboost.XGBRegressor, id="XGBRegressor"),
+        pytest.param(functools.partial(xgboost.XGBRegressor, **rf_params), id="XGBRegressor-rf"),
+    ]
+    classifiers = [
+        pytest.param(xgboost.XGBClassifier, id="XGBClassifier"),
+        pytest.param(functools.partial(xgboost.XGBClassifier, **rf_params), id="XGBClassifier-rf"),
+    ]
 
     @pytest.mark.parametrize("Reg", regressors)
     def test_xgboost_regression(self, Reg):
@@ -1369,7 +1385,7 @@ class TestExplainerXGBoost:
 
         assert np.allclose(shap_values[0, :], _brute_force_tree_shap(explainer.model, X[0, :]))
 
-    # TODO: test against multiclass XGBRFClassifier
+    # TODO: test against a multiclass random forest (num_parallel_tree > 1)
     def test_xgboost_multiclass(self):
         # train XGBoost model
         X, y = shap.datasets.iris()
@@ -1396,11 +1412,6 @@ class TestExplainerXGBoost:
 
         # ensure plot works for first class
         shap.dependence_plot(0, explanation[..., 0].values, X, show=False)
-
-        with pytest.raises(NotImplementedError, match="random forest"):
-            clf = self.xgboost.XGBRFClassifier(n_estimators=2)
-            clf.fit(X, y)
-            shap.TreeExplainer(clf).model.predict(X)
 
         with pytest.raises(NotImplementedError, match="random forest"):
             clf = self.xgboost.XGBClassifier(n_estimators=2, num_parallel_tree=3)
