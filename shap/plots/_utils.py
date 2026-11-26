@@ -188,7 +188,7 @@ def fill_internal_max_values(partition_tree, leaf_values):
 
 
 def fill_counts(partition_tree):
-    """This updates the"""
+    """This fills the fourth column of the partition tree matrix with the leaf count for each cluster."""
     M = partition_tree.shape[0] + 1
     for i in range(partition_tree.shape[0]):
         val = 0
