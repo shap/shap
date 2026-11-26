@@ -374,9 +374,17 @@ def scatter(
     ymin = parse_axis_limit(ymin, s, is_shap_axis=True)
     ymax = parse_axis_limit(ymax, s, is_shap_axis=True)
     if xmin is not None or xmax is not None:
-        ax.set_xlim(*_suggest_buffered_limits(xmin, xmax, xv))
+        low, high = _suggest_buffered_limits(xmin, xmax, xv)
+        if low == high:
+            # constant data gives a zero-range limit; expand it the same way
+            # matplotlib would, to avoid the "transformation singular" warning
+            low, high = ax.xaxis.get_major_locator().nonsingular(low, high)
+        ax.set_xlim(low, high)
     if ymin is not None or ymax is not None:
-        ax.set_ylim(*_suggest_buffered_limits(ymin, ymax, s))
+        low, high = _suggest_buffered_limits(ymin, ymax, s)
+        if low == high:
+            low, high = ax.yaxis.get_major_locator().nonsingular(low, high)
+        ax.set_ylim(low, high)
 
     # plot any nan feature values as tick marks along the y-axis
     xlim = ax.get_xlim()

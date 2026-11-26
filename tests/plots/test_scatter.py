@@ -1,3 +1,5 @@
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -112,3 +114,16 @@ def test_scatter_plot_value_input(input):
     shap.plots.scatter(explanations, show=False)
     plt.tight_layout()
     return plt.gcf()
+
+
+def test_scatter_zero_range_values_no_singular_warning():
+    """A feature with constant SHAP values should not trigger matplotlib's singular-limits warning."""
+    # GH #3066
+    input_arr = np.array([[1], [1]])
+    explanations = shap.Explanation(input_arr, data=input_arr, feature_names=["feature1"])
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        shap.plots.scatter(explanations, show=False)
+    singular = [w for w in caught if "makes transformation singular" in str(w.message)]
+    assert not singular
