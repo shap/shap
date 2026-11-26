@@ -3469,6 +3469,38 @@ def test_lightgbm_categorical_split_interventional():
     np.testing.assert_allclose(sv.base_values + sv.values.sum(axis=1), predictions, atol=1e-5)
 
 
+def test_lightgbm_categorical_split_interventional_high_category():
+    """A category mask above 2**24 must keep its low bits (a float32 threshold would drop them)."""
+    lightgbm = pytest.importorskip("lightgbm")
+    X = np.tile(np.array([[1.0], [3.0], [26.0], [27.0]]), (30, 1))
+    y = np.isin(X[:, 0], [1, 26]).astype(float)
+    model = lightgbm.train(
+        {
+            "objective": "regression",
+            "num_leaves": 2,
+            "min_data_in_leaf": 1,
+            "min_data_per_group": 1,
+            "cat_smooth": 0,
+            "cat_l2": 0,
+            "max_cat_to_onehot": 1,
+            "verbose": -1,
+            "num_threads": 1,
+        },
+        lightgbm.Dataset(X, label=y, categorical_feature=[0]),
+        num_boost_round=3,
+    )
+    X_test = X[:4]
+    predictions = model.predict(X_test, raw_score=True)
+    assert predictions[0] == predictions[2]
+    assert predictions[0] != predictions[1]
+
+    explainer = shap.TreeExplainer(model, X_test, feature_perturbation="interventional")
+    assert explainer.model.thresholds[explainer.model.threshold_types == 1].max() >= 2**24
+    np.testing.assert_allclose(explainer.model.predict(X_test), predictions, atol=1e-6)
+    sv = explainer(X_test)
+    np.testing.assert_allclose(sv.base_values + sv.values.sum(axis=1), predictions, atol=1e-6)
+
+
 def test_treelite_xgboost_multiple_targets():
     """Trees assigned to different regression targets must not be summed together."""
     treelite = pytest.importorskip("treelite", minversion="4.0")

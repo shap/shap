@@ -152,7 +152,8 @@ inline transform_f get_transform(unsigned model_transform) {
     return transform;
 }
 
-inline bool category_in_threshold(float threshold, float category) {
+// threshold is a double so masks with categories above 24 keep their low bits
+inline bool category_in_threshold(tfloat threshold, tfloat category) {
     int category_flag = (1 << (int(category) - 1));
     return (int(threshold) & category_flag) != 0;
 }
@@ -543,7 +544,8 @@ inline void tree_shap(const TreeEnsemble& tree, const ExplanationDataset &data,
 struct Node {
     int cl, cr, cd, pnode; // was int16; node indices can exceed 2^15 - 1, see GH#3486
     long feat, pfeat;
-    float thres, value;
+    tfloat thres; // double so a categorical bitmask keeps every bit (a float holds only 24)
+    float value;
     int thres_type; // 0 for a numeric split, 1 for a categorical split (see threshold_types)
     char from_flag;
 };
@@ -720,22 +722,19 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
             continue;
         }
 
-        const bool x_right = node_goes_right(curr_node, x[feat]);
-        const bool r_right = node_goes_right(curr_node, r[feat]);
-
         if (x_missing[feat]) {
             next_xnode = cd;
-        } else if (x_right) {
+        } else if (node_goes_right(curr_node, x[feat])) {
             next_xnode = cr;
-        } else if (!x_right) {
+        } else {
             next_xnode = cl;
         }
 
         if (r_missing[feat]) {
             next_rnode = cd;
-        } else if (r_right) {
+        } else if (node_goes_right(curr_node, r[feat])) {
             next_rnode = cr;
-        } else if (!r_right) {
+        } else {
             next_rnode = cl;
         }
 
