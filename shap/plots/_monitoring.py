@@ -14,14 +14,15 @@ def truncate_text(text, max_len):
         return text
 
 
-def monitoring(ind, shap_values, features, feature_names=None, show=True):
+def monitoring(ind, shap_values, features, feature_names=None, show=True, ax=None):
     """Create a SHAP monitoring plot.
 
-    (Note this function is preliminary and subject to change!!)
-    A SHAP monitoring plot is meant to display the behavior of a model
-    over time. Often the shap_values given to this plot explain the loss
-    of a model, so changes in a feature's impact on the model's loss over
-    time can help in monitoring the model's performance.
+    Note: this function is preliminary and subject to change.
+
+    A SHAP monitoring plot displays the behavior of a model over time. Often
+    the shap_values given to this plot explain the loss of a model, so changes
+    in a feature's impact on the model's loss over time can help in monitoring
+    the model's performance.
 
     Parameters
     ----------
@@ -37,6 +38,18 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
     feature_names : list
         Names of the features (length # features)
 
+    show : bool
+        Whether to call ``plt.show()`` after rendering. Set to ``False`` when
+        embedding the plot in a larger figure.
+
+    ax : matplotlib.axes.Axes, optional
+        Axes object to draw the plot on. If ``None`` (default), a new figure
+        with ``figsize=(10, 3)`` is created.
+
+    Returns
+    -------
+    matplotlib.axes.Axes or None
+        The axes object when ``show=False``, otherwise ``None``.
     """
     if isinstance(features, pd.DataFrame):
         if feature_names is None:
@@ -48,7 +61,11 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
     if feature_names is None:
         feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
 
-    plt.figure(figsize=(10, 3))
+    if ax is None:
+        _, ax = plt.subplots(figsize=(10, 3))
+    else:
+        show = False
+
     ys = shap_values[:, ind]
     xs = np.arange(len(ys))  # np.linspace(0, 12*2, len(ys))
 
@@ -62,20 +79,22 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
     min_pval_ind = float(np.argmin(pvals) * inc + inc)
 
     if min_pval < 0.05 / shap_values.shape[1]:
-        plt.axvline(min_pval_ind, linestyle="dashed", color="#666666", alpha=0.2)
+        ax.axvline(min_pval_ind, linestyle="dashed", color="#666666", alpha=0.2)
 
-    plt.scatter(xs, ys, s=10, c=features[:, ind], cmap=colors.red_blue)
+    ax.scatter(xs, ys, s=10, c=features[:, ind], cmap=colors.red_blue)
 
-    plt.xlabel("Sample index")
-    plt.ylabel(truncate_text(feature_names[ind], 30) + "\nSHAP value", size=13)
-    plt.gca().xaxis.set_ticks_position("bottom")
-    plt.gca().yaxis.set_ticks_position("left")
-    plt.gca().spines["right"].set_visible(False)
-    plt.gca().spines["top"].set_visible(False)
-    cb = plt.colorbar()
+    ax.set_xlabel("Sample index")
+    ax.set_ylabel(truncate_text(feature_names[ind], 30) + "\nSHAP value", size=13)
+    ax.xaxis.set_ticks_position("bottom")
+    ax.yaxis.set_ticks_position("left")
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    cb = ax.get_figure().colorbar(ax.collections[0], ax=ax)
     cb.outline.set_visible(False)  # type: ignore
-    bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
+    bbox = cb.ax.get_window_extent().transformed(ax.get_figure().dpi_scale_trans.inverted())
     cb.ax.set_aspect((bbox.height - 0.7) * 20)
     cb.set_label(truncate_text(feature_names[ind], 30), size=13)
     if show:
         plt.show()
+    else:
+        return ax
