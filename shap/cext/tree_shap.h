@@ -157,7 +157,8 @@ inline transform_f get_transform(unsigned model_transform) {
 inline bool category_in_threshold(tfloat threshold, tfloat category) {
     // The threshold is the sum of 2^(c - 1) over the split's categories c (category 0 adds 0.5),
     // so doubling it gives a mask with bit c set for each category c.
-    if (category < 0 || category >= 64) return false;
+    if (category < 0 || category >= 53) return false;
+    if (!(threshold < std::ldexp(1.0, 52))) return false;
     unsigned long long category_flag = 1ull << int(category);
     return ((unsigned long long)(threshold * 2) & category_flag) != 0;
 }

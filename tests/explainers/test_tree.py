@@ -3512,6 +3512,32 @@ def test_interventional_categorical_codes_above_52_raise(library):
         explainer.shap_values(X[:5])
 
 
+def test_many_categories_are_supported_via_lightgbm_native_implementation():
+    lightgbm = pytest.importorskip("lightgbm")
+    X = np.repeat(np.arange(57.0), 10)[:, None]
+    y = (X[:, 0] >= 52).astype(float)
+    model = lightgbm.LGBMRegressor(n_estimators=5, verbose=-1)
+    model.fit(X, y, categorical_feature=[0])
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+    prediction = model.predict(X, raw_score=True)
+    np.testing.assert_allclose(shap_values.sum(axis=1) + explainer.expected_value, prediction, atol=1e-5)
+
+
+def test_many_categories_are_supported_via_xgboost_native_implementation():
+    xgboost = pytest.importorskip("xgboost")
+    X = np.repeat(np.arange(1080.0), 10)[:, None]
+    y = (X[:, 0] >= 1075).astype(float)
+    model = xgboost.XGBRegressor(n_estimators=5, enable_categorical=True, feature_types=["c"])
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+    prediction = model.predict(X, output_margin=True)
+    np.testing.assert_allclose(shap_values.sum(axis=1) + explainer.expected_value, prediction, atol=1e-5)
+
+
 def test_treelite_xgboost_multiple_targets():
     """Trees assigned to different regression targets must not be summed together."""
     treelite = pytest.importorskip("treelite", minversion="4.0")

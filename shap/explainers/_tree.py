@@ -2530,7 +2530,8 @@ class XGBTreeModelLoader:
             # XGBoost sends the categories in a split's set right (threshold type 2). Encode the set
             # as the LightGBM parser does, as the sum of 2 ** (cat - 1).
             for node in np.flatnonzero(split_types == 1):
-                thresholds[node] = sum(2.0 ** (cat - 1) for cat in tree_categories[node])
+                cats = tree_categories[node]
+                thresholds[node] = sum(2.0 ** (cat - 1) for cat in cats) if max(cats) <= 52 else np.inf
                 threshold_types[node] = 2
 
     @staticmethod
