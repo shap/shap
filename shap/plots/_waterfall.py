@@ -6,6 +6,7 @@ import pandas as pd
 from .. import Explanation
 from ..utils import format_value
 from ._labels import labels
+from ._show import resolve_show
 from ._style import get_style
 
 
@@ -13,7 +14,7 @@ from ._style import get_style
 # plot that is associated with that feature get overlaid on the plot...it would quickly allow users to answer
 # why a feature is pushing down or up. Perhaps the best way to do this would be with an ICE plot hanging off
 # of the bar...
-def waterfall(shap_values, max_display=10, show=True):
+def waterfall(shap_values, max_display=10, show=None):
     """Plots an explanation of a single prediction as a waterfall plot.
 
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
@@ -43,6 +44,7 @@ def waterfall(shap_values, max_display=10, show=True):
     See `waterfall plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/waterfall.html>`_.
 
     """
+    show = resolve_show(show, plot_name="waterfall")
     style = get_style()
     # Turn off interactive plot
     if show is False:

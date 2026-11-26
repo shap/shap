@@ -11,6 +11,7 @@ from ..utils import hclust_ordering
 from ..utils._legacy import LogitLink, convert_to_link
 from . import colors
 from ._labels import labels
+from ._show import resolve_show
 
 
 def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndarray:
@@ -226,7 +227,7 @@ def decision(
     auto_size_plot=True,
     title=None,
     xlim=None,
-    show=True,
+    show: bool | None = None,
     return_objects=False,
     ignore_warnings=False,
     new_base_value=None,
@@ -352,6 +353,8 @@ def decision(
     See more `decision plot examples here <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/decision_plot.html>`_.
 
     """
+    show = resolve_show(show, plot_name="decision")
+
     # code taken from force_plot. auto unwrap the base_value
     if isinstance(base_value, np.ndarray) and len(base_value) == 1:
         base_value = base_value[0]
