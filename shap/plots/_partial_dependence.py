@@ -84,10 +84,6 @@ def partial_dependence(
                     ice_vals[i, :] = model(pd.DataFrame(features_tmp, columns=feature_names))
                 else:
                     ice_vals[i, :] = model(features_tmp)
-            # if linewidth is None:
-            #     linewidth = 1
-            # if opacity is None:
-            #     opacity = 0.5
 
         features_tmp = features.copy()
         vals = np.zeros(npoints)
@@ -100,18 +96,15 @@ def partial_dependence(
 
         if ax is None:
             fig = plt.figure()
-            ax1 = plt.gca()
+            ax1 = fig.gca()
         else:
-            fig = plt.gcf()
-            ax1 = plt.gca()
+            ax1 = ax
 
-        # fig, ax1 = plt.subplots(figsize)
         ax2 = ax1.twinx()
         ax2 = typing.cast("plt.Axes", ax2)  # fix for matplotlib typing
 
         # the histogram of the data
         if hist:
-            # n, bins, patches =
             ax2.hist(xv, 50, density=False, facecolor="black", alpha=0.1, range=(xmin, xmax))
 
         # ice line plot
@@ -175,19 +168,6 @@ def partial_dependence(
             ax1.axhline(model_expected_value, color="#999999", zorder=-1, linestyle="--", linewidth=1)
 
         if shap_values is not None:
-            # vals = shap_values.values[:, ind]
-            # if shap_value_features is None:
-            #     shap_value_features = features
-            #     assert shap_values.shape == features.shape
-            # #sample_ind = 18
-            # vals = shap_values[:, ind]
-            # if type(model_expected_value) is bool:
-            #     if use_dataframe:
-            #         model_expected_value = model(pd.DataFrame(features, columns=feature_names)).mean()
-            #     else:
-            #         model_expected_value = model(features).mean()
-            # if isinstance(shap_value_features, pd.DataFrame):
-            #     shap_value_features = shap_value_features.values
             markerline, stemlines, _ = ax1.stem(
                 shap_values.data[:, ind],
                 shap_values.base_values + shap_values.values[:, ind],
@@ -196,15 +176,15 @@ def partial_dependence(
                 basefmt=" ",
             )
             stemlines.set_edgecolors([red_rgb if v > 0 else blue_rgb for v in vals])
-            plt.setp(stemlines, "zorder", -1)
-            plt.setp(stemlines, "linewidth", 2)
-            plt.setp(markerline, "color", "black")
-            plt.setp(markerline, "markersize", 4)
+            stemlines.set_zorder(-1)
+            stemlines.set_linewidths(2)
+            markerline.set_color("black")
+            markerline.set_markersize(4)
 
         if show:
             plt.show()
         else:
-            return fig, ax1
+            return ax1
 
     # this is for a 2D partial dependence plot
     else:
@@ -234,23 +214,24 @@ def partial_dependence(
                 features_tmp[:, ind1] = xs1[j]
                 x0[i, j] = xs0[i]
                 x1[i, j] = xs1[j]
-                vals[i, j] = model(features_tmp).mean()
+                if use_dataframe:
+                    vals[i, j] = model(pd.DataFrame(features_tmp, columns=feature_names)).mean()
+                else:
+                    vals[i, j] = model(features_tmp).mean()
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection="3d")
+        if ax is None:
+            fig = plt.figure()
+            ax_3d = fig.add_subplot(111, projection="3d")
+        else:
+            ax_3d = ax
 
-        #         x = y = np.arange(-3.0, 3.0, 0.05)
-        #         X, Y = np.meshgrid(x, y)
-        #         zs = np.array(fun(np.ravel(X), np.ravel(Y)))
-        #         Z = zs.reshape(X.shape)
+        ax_3d.plot_surface(x0, x1, vals, cmap=red_blue_transparent)
 
-        ax.plot_surface(x0, x1, vals, cmap=red_blue_transparent)
-
-        ax.set_xlabel(feature_names[ind0], fontsize=13)
-        ax.set_ylabel(feature_names[ind1], fontsize=13)
-        ax.set_zlabel("E[f(x) | " + str(feature_names[ind0]) + ", " + str(feature_names[ind1]) + "]", fontsize=13)
+        ax_3d.set_xlabel(feature_names[ind0], fontsize=13)
+        ax_3d.set_ylabel(feature_names[ind1], fontsize=13)
+        ax_3d.set_zlabel("E[f(x) | " + str(feature_names[ind0]) + ", " + str(feature_names[ind1]) + "]", fontsize=13)
 
         if show:
             plt.show()
         else:
-            return fig, ax
+            return ax_3d
