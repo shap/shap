@@ -581,6 +581,11 @@ def summary_legacy(
 
     """
     # handle randomization machinery in conformance with SPEC 7
+    warnings.warn(
+        "summary_legacy is deprecated and will be removed in a future version. Use shap.plots.beeswarm() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if rng is not None:
         rng = np.random.default_rng(rng)
     else:
