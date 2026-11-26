@@ -104,37 +104,15 @@ def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
     return n_iterations
 
 
-_XGBOOST_ENABLE_CATEGORICAL_DEFAULT_TRUE_VERSION = "3.3"
-
-
-def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
-    # XGBoost's own internal SHAP calculation (used for feature_perturbation=
-    # "tree_path_dependent") has natively supported categorical splits since
-    # XGBoost 1.5.0, so no guard is needed there. This guard only applies to
-    # shap's own C extension (used for "interventional" and by GPUTreeExplainer),
-    # which still cannot interpret XGBoost's categorical split encoding.
-    if model.model_type != "xgboost":
-        return
-
-    has_cat_columns = model.cat_feature_indices is not None
-    enable_categorical_flag = getattr(model, "_xgb_enable_categorical", False)
-
-    # Before XGBoost 3.3, `enable_categorical` defaulted to False, so a user
-    # setting it to True was a meaningful signal on its own (even before we can
-    # see any actual categorical columns, e.g. a Booster loaded without data).
-    # From 3.3 onward it defaults to True regardless of the data, so it's no
-    # longer trustworthy on its own -- only the actually-detected categorical
-    # columns (cat_feature_indices) are.
-    if enable_categorical_flag:
-        import xgboost
-
-        if version.parse(xgboost.__version__) < version.parse(_XGBOOST_ENABLE_CATEGORICAL_DEFAULT_TRUE_VERSION):
-            has_cat_columns = True
-
-    if has_cat_columns:
+def _categorical_unsupported(model: TreeEnsemble, feature_perturbation: str) -> None:
+    # A categorical split's threshold is the sum of 2 ** (code - 1) over its category codes, which
+    # double precision holds exactly for the codes 0 to 52. A code above 52 makes it reach 2 ** 52.
+    categorical = model.threshold_types > 0
+    if feature_perturbation == "interventional" and np.any(model.thresholds[categorical] >= 2**52):
         raise NotImplementedError(
-            "Categorical split is not yet supported. You can still use"
-            " TreeExplainer with `feature_perturbation=tree_path_dependent`."
+            "Categorical splits on category codes above 52 are not yet supported with"
+            ' feature_perturbation="interventional". You can still use TreeExplainer with'
+            ' feature_perturbation="tree_path_dependent".'
         )
 
 
@@ -250,7 +228,9 @@ class TreeExplainer(Explainer):
             for exact path-dependent values and interactions, and exact
             interventional values in double precision, computed by SHAP's CPU
             extension. Model-native and GPU routing and approximate values are
-            currently unchanged.
+            currently unchanged. Interventional values of models with categorical
+            splits always use the experimental algorithm, which supports category
+            codes 0 to 52.
 
         References
         ----------
@@ -749,7 +729,11 @@ class TreeExplainer(Explainer):
             X, y, tree_limit, check_additivity
         )
         transform = self.model.get_transform()
-        _xgboost_cat_unsupported(self.model)
+        _categorical_unsupported(self.model, self.feature_perturbation)
+        # Of the interventional algorithms, only the experimental one evaluates categorical splits.
+        enable_experimental = getattr(self, "enable_experimental", False) or (
+            self.feature_perturbation == "interventional" and bool(np.any(self.model.threshold_types > 0))
+        )
 
         # run the core algorithm using the C extension
         assert_import("cext")
@@ -777,7 +761,7 @@ class TreeExplainer(Explainer):
                 feature_perturbation_codes[self.feature_perturbation],
                 output_transform_codes[transform],
                 False,
-                getattr(self, "enable_experimental", False),
+                enable_experimental,
             )
         else:
             _cext.dense_tree_saabas(
@@ -1088,7 +1072,6 @@ class TreeEnsemble:
         self.tree_limit = None  # used for limiting the number of trees we use by default (like from early stopping)
         self.num_stacked_models = 1  # If this is greater than 1 it means we have multiple stacked models with the same number of trees in each model (XGBoost multi-output style)
         self.cat_feature_indices = None  # If this is set it tells us which features are treated categorically
-        self._xgb_enable_categorical = False
 
         # we use names like keras
         objective_name_map = {
@@ -1479,7 +1462,6 @@ class TreeEnsemble:
             # Some properties of the sklearn API are passed to a DMatrix object in
             # xgboost We need to make sure we do the same here - GH #3313
             self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
-            self._xgb_enable_categorical = bool(self._xgb_dmatrix_props.get("enable_categorical", False))
         elif safe_isinstance(model, ["xgboost.sklearn.XGBRegressor", "xgboost.sklearn.XGBRanker"]):
             self.original_model = model.get_booster()
             self._set_xgboost_model_attributes(
@@ -1491,7 +1473,6 @@ class TreeEnsemble:
             # Some properties of the sklearn API are passed to a DMatrix object in
             # xgboost We need to make sure we do the same here - GH #3313
             self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
-            self._xgb_enable_categorical = bool(self._xgb_dmatrix_props.get("enable_categorical", False))
         elif safe_isinstance(model, "lightgbm.basic.Booster"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
@@ -2510,7 +2491,7 @@ class XGBTreeModelLoader:
 
             # Xgboost uses < for thresholds where shap uses <= Move the threshold down
             # by the smallest possible increment
-            thresholds = np.where(is_leaf, 0.0, np.nextafter(thresholds, -np.float32(np.inf)))
+            thresholds = np.where(is_leaf, 0.0, np.nextafter(thresholds, -np.float32(np.inf))).astype(np.float64)
             threshold_types = np.zeros_like(thresholds, dtype=np.int32)
 
             self.values.append(leaf_weight.reshape(leaf_weight.size, 1))
@@ -2535,6 +2516,12 @@ class XGBTreeModelLoader:
 
             tree_categories = self.parse_categories(cat_nodes, cat_segments, cat_sizes, cats, self.node_cleft[-1])
             self.categories.append(tree_categories)
+
+            # XGBoost sends the categories in a split's set right (threshold type 2). Encode the set
+            # as the LightGBM parser does, as the sum of 2 ** (cat - 1).
+            for node in np.flatnonzero(split_types == 1):
+                thresholds[node] = sum(2.0 ** (cat - 1) for cat in tree_categories[node])
+                threshold_types[node] = 2
 
     @staticmethod
     def parse_categories(
@@ -2592,10 +2579,10 @@ class XGBTreeModelLoader:
                 "children_left": self.node_cleft[i],
                 "children_right": self.node_cright[i],
                 "children_default": self.children_default[i],
-                "feature": self.features[i],
-                "threshold": self.thresholds[i],
-                "threshold_type": self.threshold_types[i],
-                "value": self.values[i],
+                "features": self.features[i],
+                "thresholds": self.thresholds[i],
+                "threshold_types": self.threshold_types[i],
+                "values": self.values[i],
                 "node_sample_weight": self.sum_hess[i],
             }
             trees.append(SingleTree(info, data=data, data_missing=data_missing))
@@ -2863,20 +2850,6 @@ class TreeliteModelLoader:
                 threshold[nid] = float(np.sum(2.0 ** (node_cats.astype(np.float64) - 1)))
                 threshold_types[nid] = 1
                 children_default[nid] = cleft[nid] if default_left[nid] else cright[nid]
-                if 0 in node_cats:
-                    # The C extension uses (1 << (cat-1)); for cat=0 this is
-                    # (1 << -1) = UB, acting as (1 << 31) = 0x80000000 on x86.
-                    # cat=0 ALWAYS goes to children_right. Fix: complement encoding
-                    # + swap so cat=0 falls to children_right = the correct leaf.
-                    # 0xFFFFFF = 2^24-1: exactly representable in float32,
-                    # bit31=0 ensures cat=0 UB always ANDs to 0.
-                    bitmask_nz = int(threshold[nid])
-                    threshold[nid] = float(0xFFFFFF - bitmask_nz)
-                    children_left[nid], children_right[nid] = (
-                        children_right[nid],
-                        children_left[nid],
-                    )
-                    children_default[nid] = cleft[nid] if default_left[nid] else cright[nid]
 
         features = split_index.astype(np.int32)
 

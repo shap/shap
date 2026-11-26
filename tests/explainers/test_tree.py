@@ -3441,6 +3441,67 @@ def test_treelite_lightgbm_categorical_split():
     np.testing.assert_allclose(sv.base_values + sv.values.sum(axis=1), predictions, rtol=1e-6, atol=1e-6)
 
 
+@pytest.mark.parametrize("library", ["lightgbm", "xgboost"])
+def test_categorical_splits_on_codes_0_to_52(library):
+    """SHAP values are exact for categorical splits on the category codes 0 to 52."""
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(3000, 4))
+    X[:, 2] = rng.integers(0, 53, size=3000)
+    effect = rng.normal(scale=2.0, size=53)
+    effect[[0, 52]] = [-8.0, 8.0]  # so that the splits use the codes 0 and 52
+    y = effect[X[:, 2].astype(int)] * (1 + 0.5 * X[:, 0]) + X[:, 1]
+    X_explain, background = X[:54].copy(), X[-12:]
+    X_explain[:, 2] = [*range(53), np.nan]
+
+    if library == "lightgbm":
+        lightgbm = pytest.importorskip("lightgbm")
+        model = lightgbm.LGBMRegressor(
+            n_estimators=20, num_leaves=8, min_data_per_group=5, max_cat_threshold=64, verbose=-1
+        )
+        model.fit(X, y, categorical_feature=[2])
+        predict = lambda Z: model.predict(Z, raw_score=True)  # noqa: E731
+    else:
+        xgboost = pytest.importorskip("xgboost")
+        model = xgboost.XGBRegressor(
+            n_estimators=20, max_depth=3, enable_categorical=True, feature_types=["q", "q", "c", "q"]
+        )
+        model.fit(X, y)
+        predict = lambda Z: model.predict(Z, output_margin=True)  # noqa: E731
+
+    explainer = shap.TreeExplainer(model, background, feature_perturbation="interventional")
+    # Category 0 adds 0.5 to a split's threshold, and category 52 adds 2 ** 51.
+    thresholds = explainer.model.thresholds[explainer.model.threshold_types > 0]
+    assert (thresholds % 1 == 0.5).any() and (thresholds >= 2**51).any()
+
+    exact = shap.ExactExplainer(predict, shap.maskers.Independent(background, max_samples=len(background)))
+    np.testing.assert_allclose(explainer.shap_values(X_explain), exact(X_explain).values, atol=1e-5)
+
+    if library == "lightgbm":
+        # shap computes the path-dependent interactions, whose rows sum to LightGBM's SHAP values.
+        native = model.predict(X_explain, pred_contrib=True)[:, :-1]
+        for enable_experimental in [False, True]:
+            explainer = shap.TreeExplainer(model, enable_experimental=enable_experimental)
+            np.testing.assert_allclose(explainer.shap_interaction_values(X_explain).sum(axis=2), native, atol=1e-5)
+
+
+@pytest.mark.parametrize("library", ["lightgbm", "xgboost"])
+def test_interventional_categorical_codes_above_52_raise(library):
+    X = np.repeat(np.arange(60.0), 10)[:, None]
+    y = (X[:, 0] == 57).astype(float)
+    if library == "lightgbm":
+        lightgbm = pytest.importorskip("lightgbm")
+        model = lightgbm.LGBMRegressor(n_estimators=2, min_data_per_group=5, min_child_samples=5, verbose=-1)
+        model.fit(X, y, categorical_feature=[0])
+    else:
+        xgboost = pytest.importorskip("xgboost")
+        model = xgboost.XGBRegressor(n_estimators=2, enable_categorical=True, feature_types=["c"])
+        model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model, X[:10], feature_perturbation="interventional")
+    with pytest.raises(NotImplementedError, match="above 52"):
+        explainer.shap_values(X[:5])
+
+
 def test_treelite_xgboost_multiple_targets():
     """Trees assigned to different regression targets must not be summed together."""
     treelite = pytest.importorskip("treelite", minversion="4.0")
