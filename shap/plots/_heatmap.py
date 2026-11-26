@@ -79,7 +79,7 @@ def heatmap(
     if feature_order is None:
         feature_order = np.argsort(-feature_values)
     elif issubclass(type(feature_order), OpChain):
-        feature_order = feature_order.apply(Explanation(values))
+        feature_order = feature_order.apply(Explanation(values)).values
     elif not hasattr(feature_order, "__len__"):
         raise Exception(f"Unsupported feature_order: {str(feature_order)}!")
     xlabel = "Instances"
