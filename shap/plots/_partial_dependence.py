@@ -102,8 +102,8 @@ def partial_dependence(
             fig = plt.figure()
             ax1 = plt.gca()
         else:
-            fig = plt.gcf()
-            ax1 = plt.gca()
+            fig = ax.get_figure()
+            ax1 = ax
 
         # fig, ax1 = plt.subplots(figsize)
         ax2 = ax1.twinx()
