@@ -185,7 +185,7 @@ class Deserializer:
         encoder_name = pickle.load(self.in_stream)
         log.debug("encoder_name = %s", encoder_name)
         if encoder_name == "custom_encoder" or callable(decoder):
-            assert callable(decoder), "You must provide a callable custom decoder for the data item {name}!"
+            assert callable(decoder), f"You must provide a callable custom decoder for the data item {encoder_name}!"
             return decoder(self.in_stream)
         if encoder_name == "no_encoder":
             return None
