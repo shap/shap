@@ -56,6 +56,19 @@ def partial_dependence(
     else:
         features = data
 
+    # convert_name resolves "rank(N)" selectors from a plain (n_samples, n_features)
+    # array of SHAP values, so unwrap an Explanation if one was supplied.
+    if shap_values is None:
+        ranking_values = None
+    elif isinstance(shap_values, Explanation):
+        ranking_values = shap_values.values
+    else:
+        ranking_values = shap_values
+    if ranking_values is not None and ranking_values.ndim == 1:
+        # a single sample yields flat (n_features,) values; restore the sample
+        # axis that convert_name's mean-|SHAP| ranking averages across
+        ranking_values = ranking_values.reshape(1, -1)
+
     # convert from DataFrames if we got any
     use_dataframe = False
     if isinstance(features, pd.DataFrame):
@@ -69,7 +82,7 @@ def partial_dependence(
 
     # this is for a 1D partial dependence plot
     if not isinstance(ind, tuple):
-        ind = convert_name(ind, None, feature_names)
+        ind = convert_name(ind, ranking_values, feature_names)
         xv = features[:, ind]
         xmin, xmax = compute_bounds(xmin, xmax, xv)
         npoints = 100 if npoints is None else npoints
@@ -208,8 +221,8 @@ def partial_dependence(
 
     # this is for a 2D partial dependence plot
     else:
-        ind0 = convert_name(ind[0], None, feature_names)
-        ind1 = convert_name(ind[1], None, feature_names)
+        ind0 = convert_name(ind[0], ranking_values, feature_names)
+        ind1 = convert_name(ind[1], ranking_values, feature_names)
         xv0 = features[:, ind0]
         xv1 = features[:, ind1]
 
