@@ -40,6 +40,11 @@ class SamplingExplainer(KernelExplainer):
         KernelExplainer, this data can be the whole training set, even if that is a large set. This
         is because SamplingExplainer only samples from this background dataset.
 
+    Examples
+    --------
+    See the SHAP documentation for examples using ``SamplingExplainer``:
+    https://shap.readthedocs.io/en/latest/api_examples.html#explainers
+
     """
 
     def __init__(
