@@ -152,9 +152,15 @@ inline transform_f get_transform(unsigned model_transform) {
     return transform;
 }
 
-inline bool category_in_threshold(float threshold, float category) {
-    int category_flag = (1 << (int(category) - 1));
-    return (int(threshold) & category_flag) != 0;
+// Categorical splits send the categories in their set left (threshold type 1, LightGBM) or right
+// (threshold type 2, XGBoost).
+inline bool category_in_threshold(tfloat threshold, tfloat category) {
+    // The threshold is the sum of 2^(c - 1) over the split's categories c (category 0 adds 0.5),
+    // so doubling it gives a mask with bit c set for each category c.
+    if (category < 0 || category >= 53) return false;
+    if (!(threshold < std::ldexp(1.0, 52))) return false;
+    unsigned long long category_flag = 1ull << int(category);
+    return ((unsigned long long)(threshold * 2) & category_flag) != 0;
 }
 
 inline tfloat *tree_predict(unsigned i, const TreeEnsemble &trees, const tfloat *x, const bool *x_missing) {
@@ -175,6 +181,8 @@ inline tfloat *tree_predict(unsigned i, const TreeEnsemble &trees, const tfloat 
         } else if (trees.threshold_types[pos] == 0 && x[feature] <= trees.thresholds[pos]) {
             node = trees.children_left[pos];
         } else if (trees.threshold_types[pos] == 1 && category_in_threshold(trees.thresholds[pos], x[feature])) {
+            node = trees.children_left[pos];
+        } else if (trees.threshold_types[pos] == 2 && !category_in_threshold(trees.thresholds[pos], x[feature])) {
             node = trees.children_left[pos];
         } else {
             node = trees.children_right[pos];
@@ -240,6 +248,8 @@ inline void tree_update_weights(unsigned i, TreeEnsemble &trees, const tfloat *x
             node = trees.children_left[pos];
         } else if (trees.threshold_types[pos] == 1 && category_in_threshold(trees.thresholds[pos], x[feature])) {
             node = trees.children_left[pos];
+        } else if (trees.threshold_types[pos] == 2 && !category_in_threshold(trees.thresholds[pos], x[feature])) {
+            node = trees.children_left[pos];
         }
          else {
             node = trees.children_right[pos];
@@ -275,7 +285,11 @@ inline void tree_saabas(tfloat *out, const TreeEnsemble &tree, const Explanation
         const unsigned feature = tree.features[curr_node];
         if (data.X_missing[feature]) {
             next_node = tree.children_default[curr_node];
-        } else if (data.X[feature] <= tree.thresholds[curr_node]) {
+        } else if (tree.threshold_types[curr_node] == 0 && data.X[feature] <= tree.thresholds[curr_node]) {
+            next_node = tree.children_left[curr_node];
+        } else if (tree.threshold_types[curr_node] == 1 && category_in_threshold(tree.thresholds[curr_node], data.X[feature])) {
+            next_node = tree.children_left[curr_node];
+        } else if (tree.threshold_types[curr_node] == 2 && !category_in_threshold(tree.thresholds[curr_node], data.X[feature])) {
             next_node = tree.children_left[curr_node];
         } else {
             next_node = tree.children_right[curr_node];
@@ -430,6 +444,8 @@ inline void tree_shap_recursive(const unsigned num_outputs, const int *children_
         } else if (type == 0 && x[split_index] <= thresholds[node_index]) {
             hot_index = children_left[node_index];
         } else if (type == 1 && category_in_threshold(thresholds[node_index], x[split_index])) {
+            hot_index = children_left[node_index];
+        } else if (type == 2 && !category_in_threshold(thresholds[node_index], x[split_index])) {
             hot_index = children_left[node_index];
         }
         else {

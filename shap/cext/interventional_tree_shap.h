@@ -66,6 +66,7 @@ inline bool GoesLeft(const TreeEnsemble &tree, unsigned node, const double *x, c
     unsigned feature = tree.features[node];
     if (missing[feature]) return tree.children_default[node] == tree.children_left[node];
     if (tree.threshold_types[node] == 1) return category_in_threshold(tree.thresholds[node], x[feature]);
+    if (tree.threshold_types[node] == 2) return !category_in_threshold(tree.thresholds[node], x[feature]);
     return x[feature] <= tree.thresholds[node];
 }
 

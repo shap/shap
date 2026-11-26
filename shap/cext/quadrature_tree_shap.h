@@ -227,6 +227,7 @@ template <bool Interactions, bool SingleOutput = false> struct Runner {
         unsigned feature = tree.features[node];
         bool left = missing[feature] ? tree.children_default[node] == tree.children_left[node] :
             (tree.threshold_types[node] == 1 ? category_in_threshold(tree.thresholds[node], x[feature]) :
+             tree.threshold_types[node] == 2 ? !category_in_threshold(tree.thresholds[node], x[feature]) :
                                              x[feature] <= tree.thresholds[node]);
         double *right = Workspace(depth);
         Visit(node, tree.children_left[node], left, depth, basis, result);
