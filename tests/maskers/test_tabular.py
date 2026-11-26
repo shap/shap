@@ -161,6 +161,8 @@ def test_independent_masker_with_dict_mean_cov():
     # Should have mean and cov attributes
     assert hasattr(masker, "mean")
     assert hasattr(masker, "cov")
+    assert masker.mean is not None
+    assert masker.cov is not None
     assert np.allclose(masker.mean, data_dict["mean"])
     assert np.allclose(masker.cov, data_dict["cov"])
 
@@ -280,3 +282,23 @@ def test_subsampling_warning_when_data_exceeds_max_samples(caplog):
     assert len(caplog.records) == 1
     assert "200" in caplog.records[0].message
     assert "max_samples=50" in caplog.records[0].message
+
+
+def test_serialization_independent_masker_mean_cov():
+    """Test that Independent masker with mean/cov background survives save/load."""
+    mean = np.array([1.0, 2.0])
+    cov = np.array([[2.0, 0.25], [0.25, 3.0]])
+    x = np.array([[4.0, 6.0]])
+
+    original = shap.LinearExplainer((np.array([2.0, 3.0]), 5.0), (mean, cov))
+    before = original(x)
+
+    with tempfile.TemporaryFile() as f:
+        original.save(f)
+        f.seek(0)
+        restored = shap.Explainer.load(f)
+
+    after = restored(x)  # type: ignore[operator]
+
+    np.testing.assert_allclose(after.values, before.values)  # type: ignore[union-attr]
+    np.testing.assert_allclose(after.base_values, before.base_values)  # type: ignore[union-attr]
