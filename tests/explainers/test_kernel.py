@@ -1,4 +1,5 @@
 import sys
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -111,8 +112,14 @@ def test_kernel_shap_with_dataframe(random_seed):
     linear_model = sklearn.linear_model.LinearRegression()
     linear_model.fit(df_X, df_y)
 
-    explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
-    _ = explainer.shap_values(df_X)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
+        _ = explainer.shap_values(df_X)
+    dropped_tz = [
+        w for w in caught if "DatetimeIndex.values returning an ndarray that drops timezone" in str(w.message)
+    ]
+    assert not dropped_tz
 
 
 def test_kernel_shap_with_dataframe_explanation(random_seed):

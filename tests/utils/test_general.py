@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -122,3 +124,26 @@ def test_format_value_string_input():
     # Test with string that starts with minus
     result = shap.utils._general.format_value("-123", "%0.03f")
     assert result == "\u2212" + "123"
+
+
+def test_index_to_numpy():
+    """index_to_numpy returns the same values as the deprecated Index.values without warning."""
+    # GH #3066
+    naive_dates = pd.date_range("2018-01-01", periods=3, freq="D")
+    tz_aware_dates = pd.date_range("2018-01-01", periods=3, freq="D", tz="UTC")
+    expected_dates = np.array(["2018-01-01", "2018-01-02", "2018-01-03"], dtype="datetime64")
+    cases = [
+        (pd.RangeIndex(3), np.array([0, 1, 2])),
+        (pd.Index(["a", "b", "c"]), np.array(["a", "b", "c"])),
+        (naive_dates, expected_dates),
+        (tz_aware_dates, expected_dates),
+        # nullable labels must pass through as an extension array: to_numpy()
+        # would round integers above 2**53 through float64
+        (pd.Index(pd.array([2**53 + 1, 2**53 + 2], dtype="Int64")), np.array([2**53 + 1, 2**53 + 2], dtype="int64")),
+    ]
+    for index, expected in cases:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result = shap.utils.index_to_numpy(index)
+        assert len(caught) == 0, [str(w.message) for w in caught]
+        np.testing.assert_array_equal(result, expected)

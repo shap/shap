@@ -6,6 +6,8 @@ import scipy.sparse
 from sklearn.cluster import KMeans
 from sklearn.impute import SimpleImputer
 
+from ._general import index_to_numpy
+
 
 def kmeans(X, k, round_values=True):
     """Summarize a dataset with k mean samples weighted by the number of data points they
@@ -223,7 +225,7 @@ def convert_to_data(val, keep_index=False):
         return DenseData(val.values.reshape((1, len(val))), list(val.index))
     if isinstance(val, pd.DataFrame):
         if keep_index:
-            return DenseDataWithIndex(val.values, list(val.columns), val.index.values, val.index.name)
+            return DenseDataWithIndex(val.values, list(val.columns), index_to_numpy(val.index), val.index.name)
         else:
             return DenseData(val.values, list(val.columns))
     if scipy.sparse.issparse(val):
