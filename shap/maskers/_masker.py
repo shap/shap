@@ -12,14 +12,35 @@ if TYPE_CHECKING:
 
 
 class Masker(Serializable):
-    """This is the superclass of all maskers."""
+    """This is the base class for shap maskers."""
 
     # Subclasses should define these attributes
     shape: tuple[int | None, int] | Callable[..., tuple[int | None, int]]
     clustering: npt.NDArray[Any] | Callable[..., Any] | None
 
     def __call__(self, mask: bool | npt.NDArray[Any], *args: Any) -> Any:
-        """Maskers are callable objects that accept the same inputs as the model plus a binary mask."""
+        """Masker calls accept the same inputs as the model plus a binary mask.
+
+        Parameters
+        ----------
+        mask : bool or np.ndarray
+            A binary mask indicating which features to keep (True) and
+            which to mask (False). The length of the mask should match the number of
+            features in the input data, usually ``x`` in ``MyMasker__call__``.
+            Masked features will be replaced with a background value upon ``__call__``.
+            A common such background value is the mean of the feature across
+            the training data.
+
+        x : 1D np.ndarray
+            Data to be masked, present as explicit kwarg in most child classes.
+            Usually contains a 1D dataframe-row-like vector representing a
+            single row of input data, called ``x``, usually ``np.ndarray``.
+            The indices of ``x`` correspond to the indices in ``mask``.
+
+        *args : Any
+            The remaining arguments are the same as those passed to the model.
+        """
+        pass
 
     def _standardize_mask(self, mask: bool | npt.NDArray[Any], *args: Any) -> npt.NDArray[np.bool_]:
         """This allows users to pass True/False as short hand masks."""
