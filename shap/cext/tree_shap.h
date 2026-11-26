@@ -544,8 +544,15 @@ struct Node {
     int cl, cr, cd, pnode; // was int16; node indices can exceed 2^15 - 1, see GH#3486
     long feat, pfeat;
     float thres, value;
+    int thres_type; // 0 for a numeric split, 1 for a categorical split (see threshold_types)
     char from_flag;
 };
+
+// Whether a non-missing value goes to the right child of the given node.
+inline bool node_goes_right(const Node &node, tfloat value) {
+    if (node.thres_type == 1) return !category_in_threshold(node.thres, value);
+    return value > node.thres;
+}
 
 #define FROM_NEITHER 0
 #define FROM_X_NOT_R 1
@@ -583,13 +590,12 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
     long feat, pfeat = -1;
     int next_xnode = -1, next_rnode = -1;
     int next_node = -1, from_child = -1;
-    float thres, pos_x = 0, neg_x = 0, pos_r = 0, neg_r = 0;
+    float pos_x = 0, neg_x = 0, pos_r = 0, neg_r = 0;
     char from_flag;
     unsigned M = 0, N = 0;
 
     Node curr_node = mytree[node];
     feat = curr_node.feat;
-    thres = curr_node.thres;
     cl = curr_node.cl;
     cr = curr_node.cr;
     cd = curr_node.cd;
@@ -608,17 +614,17 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
 
     if (x_missing[feat]) {
         next_xnode = cd;
-    } else if (x[feat] > thres) {
+    } else if (node_goes_right(curr_node, x[feat])) {
         next_xnode = cr;
-    } else if (x[feat] <= thres) {
+    } else {
         next_xnode = cl;
     }
 
     if (r_missing[feat]) {
         next_rnode = cd;
-    } else if (r[feat] > thres) {
+    } else if (node_goes_right(curr_node, r[feat])) {
         next_rnode = cr;
-    } else if (r[feat] <= thres) {
+    } else {
         next_rnode = cl;
     }
 
@@ -652,7 +658,6 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
         node = next_node;
         curr_node = mytree[node];
         feat = curr_node.feat;
-        thres = curr_node.thres;
         cl = curr_node.cl;
         cr = curr_node.cr;
         cd = curr_node.cd;
@@ -715,8 +720,8 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
             continue;
         }
 
-        const bool x_right = x[feat] > thres;
-        const bool r_right = r[feat] > thres;
+        const bool x_right = node_goes_right(curr_node, x[feat]);
+        const bool r_right = node_goes_right(curr_node, r[feat]);
 
         if (x_missing[feat]) {
             next_xnode = cd;
@@ -976,6 +981,7 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
             }
 
             node_tree[j].thres = trees.thresholds[en_ind];
+            node_tree[j].thres_type = trees.threshold_types[en_ind];
             node_tree[j].feat = trees.features[en_ind];
         }
     }

@@ -3441,6 +3441,34 @@ def test_treelite_lightgbm_categorical_split():
     np.testing.assert_allclose(sv.base_values + sv.values.sum(axis=1), predictions, rtol=1e-6, atol=1e-6)
 
 
+def test_lightgbm_categorical_split_interventional():
+    """Interventional SHAP values must follow categorical splits by category membership."""
+    lightgbm = pytest.importorskip("lightgbm")
+    rng = np.random.default_rng(0)
+    X = np.column_stack([rng.normal(size=200), rng.integers(1, 5, size=200)]).astype(float)
+    # category set {1, 3} is not a contiguous range, so a numeric threshold cannot reproduce it
+    y = X[:, 0] + 3 * np.isin(X[:, 1], [1, 3])
+    model = lightgbm.train(
+        {
+            "objective": "regression",
+            "min_data_per_group": 1,
+            "cat_smooth": 0,
+            "cat_l2": 0,
+            "max_cat_to_onehot": 1,
+            "verbose": -1,
+            "num_threads": 1,
+        },
+        lightgbm.Dataset(X, label=y, categorical_feature=[1]),
+        num_boost_round=10,
+    )
+    predictions = model.predict(X, raw_score=True)
+
+    explainer = shap.TreeExplainer(model, X[:50], feature_perturbation="interventional")
+    assert (explainer.model.threshold_types == 1).any()
+    sv = explainer(X, check_additivity=False)
+    np.testing.assert_allclose(sv.base_values + sv.values.sum(axis=1), predictions, atol=1e-5)
+
+
 def test_treelite_xgboost_multiple_targets():
     """Trees assigned to different regression targets must not be summed together."""
     treelite = pytest.importorskip("treelite", minversion="4.0")
