@@ -653,8 +653,11 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
             )
 
     # draw the y-ticks twice, once in gray and then again with just the feature names in black
+
+    ytick_pos = list(range(num_features)) + list(np.arange(num_features) + 1e-8)
+
     plt.yticks(
-        list(range(num_features)) * 2,
+        ytick_pos,
         yticklabels[:-1] + [label.split("=")[-1] for label in yticklabels[:-1]],
         fontsize=13,
     )
