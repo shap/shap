@@ -2,6 +2,7 @@
 
 from dataclasses import asdict
 
+import matplotlib as mpl
 import pytest
 
 import shap
@@ -13,6 +14,9 @@ def reset_style_to_default():
     # Protect against any unintended state changes between tests
     options = asdict(_style.load_default_style())
     _style.set_style(**options)
+    # Ensure consistent font family and text hinting across OS platforms
+    mpl.rcParams["font.family"] = "DejaVu Sans"
+    mpl.rcParams["text.hinting"] = "force"
 
 
 @pytest.fixture()
