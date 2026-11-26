@@ -367,6 +367,9 @@ def waterfall(shap_values, max_display=10, show=True):
     for i in range(num_features):
         tick_labels[i].set_color(style.tick_labels_color)
 
+    # Apply tight_layout to prevent label cutoff when saving (issue #3924)
+    plt.tight_layout()
+
     if show:
         plt.show()
     else:
@@ -730,6 +733,9 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     tick_labels = ax.yaxis.get_majorticklabels()
     for i in range(num_features):
         tick_labels[i].set_color(style.tick_labels_color)
+
+    # Apply tight_layout to prevent label cutoff when saving (issue #3924)
+    plt.tight_layout()
 
     if show:
         plt.show()
