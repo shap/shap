@@ -1556,7 +1556,7 @@ class TreeEnsemble:
                 self.trees = None  # we get here because the cext can't handle categorical splits yet
             self.objective = objective_name_map.get(model.objective, None)
             self.tree_output = tree_output_name_map.get(model.objective, None)
-            if model.objective is None:
+            if model.objective is None and model.n_classes_ <= 2:
                 self.objective = "binary_crossentropy"
                 self.tree_output = "log_odds"
         elif safe_isinstance(model, "catboost.core.CatBoostRegressor"):
