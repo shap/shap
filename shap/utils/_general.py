@@ -282,7 +282,10 @@ def format_value(s: Any, format_str: str) -> str:
     """Strips trailing zeros and uses a unicode minus sign."""
     if not issubclass(type(s), str):
         s = format_str % s
-    s = re.sub(r"\.?0+$", "", s)
+        # Only strip trailing zeros from numbers we formatted ourselves. A string
+        # input is a pre-existing label (e.g. a categorical feature value such as
+        # "2020" or "00") and must be left intact.
+        s = re.sub(r"\.?0+$", "", s)
     if len(s) > 0 and s[0] == "-":
         s = "\u2212" + s[1:]
     return s

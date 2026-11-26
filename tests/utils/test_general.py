@@ -122,3 +122,12 @@ def test_format_value_string_input():
     # Test with string that starts with minus
     result = shap.utils._general.format_value("-123", "%0.03f")
     assert result == "\u2212" + "123"
+
+
+@pytest.mark.parametrize("value", ["2020", "100", "00", "10", "Group10", "1.50"])
+def test_format_value_string_input_keeps_trailing_zeros(value):
+    """String inputs (e.g. categorical feature values) must not have trailing zeros stripped.
+
+    Only numbers formatted by format_value itself should be stripped of trailing zeros.
+    """
+    assert shap.utils._general.format_value(value, "%0.03f") == value
