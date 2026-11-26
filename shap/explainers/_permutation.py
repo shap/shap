@@ -63,7 +63,7 @@ class PermutationExplainer(Explainer):
 
         """
         # setting seed for random generation: if seed is not None, then shap values computation should be reproducible
-        np.random.seed(seed)
+        self._rng = np.random.default_rng(seed)
 
         if masker is None:
             raise ValueError("masker cannot be None.")
@@ -180,7 +180,7 @@ class PermutationExplainer(Explainer):
                     # assert len(inds) == len(fm), "Need to support partition shuffle when not all the inds vary!!"
                     partition_tree_shuffle(inds, inds_mask, row_clustering)
                 else:
-                    np.random.shuffle(inds)
+                    self._rng.shuffle(inds)
 
                 # create a large batch of masks to evaluate
                 masks[1 : ninds + 1] = inds
