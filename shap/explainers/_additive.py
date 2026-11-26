@@ -64,6 +64,9 @@ class AdditiveExplainer(Explainer):
                 )
                 return
 
+        elif safe_isinstance(model, "interpret.glassbox.ExplainableBoostingRegressor"):
+            self.model = model.predict
+
         # here we need to compute the offsets ourselves because we can't pull them directly from a model we know about
         assert safe_isinstance(self.masker, "shap.maskers.Independent"), (
             "The Additive explainer only supports the Tabular masker at the moment!"
@@ -114,7 +117,12 @@ class AdditiveExplainer(Explainer):
         """
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
             if model.interactions != 0:
-                raise NotImplementedError("Need to add support for interaction effects!")
+                return False
+            return True
+
+        if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingRegressor"):
+            if model.interactions != 0:
+                return False
             return True
 
         return False
