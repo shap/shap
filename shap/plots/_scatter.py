@@ -442,6 +442,9 @@ def _suggest_buffered_limits(ax_min: float | None, ax_max: float | None, values:
 
 def _suggest_x_jitter(values: np.ndarray) -> float:
     """Suggest a suitable x_jitter value based on the unique values in the feature"""
+    values = np.asarray(values)
+    if values.dtype == object:
+        values = values[~pd.isna(values)]
     unique_vals = np.sort(np.unique(values))
     if len(unique_vals) < 2:
         # If there is only one unique value, no jitter is needed
