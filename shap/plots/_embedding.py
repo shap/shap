@@ -52,7 +52,7 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
     elif hasattr(method, "shape") and method.shape[1] == 2:
         embedding_values = method
     else:
-        print("Unsupported embedding method:", method)
+        raise ValueError(f"Unsupported embedding method: {method}. Expected 'pca' or a (n_samples, 2) numpy array.")
 
     plt.scatter(embedding_values[:, 0], embedding_values[:, 1], c=cvals, cmap=colors.red_blue, alpha=alpha, linewidth=0)
     plt.axis("off")
