@@ -114,15 +114,32 @@ def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
         )
 
 
-def _categorical_unsupported(model: TreeEnsemble, feature_perturbation: str) -> None:
+def _categorical_unsupported(model: TreeEnsemble, feature_perturbation: str, X: Any) -> None:
+    # Raise where shap's own algorithms raised before supporting categorical splits: for
+    # interventional values, and for XGBoost models.
+    if feature_perturbation == "interventional":
+        categorical = model.threshold_types > 0
+    else:
+        categorical = model.threshold_types == 2
+    if not np.any(categorical):
+        return
     # A categorical split's threshold is the sum of 2 ** (code - 1) over its category codes, which
     # double precision holds exactly for the codes 0 to 52. A code above 52 makes it reach 2 ** 52.
-    categorical = model.threshold_types > 0
-    if feature_perturbation == "interventional" and np.any(model.thresholds[categorical] >= 2**52):
+    if np.any(model.thresholds[categorical] >= 2**52):
         raise NotImplementedError(
-            "Categorical splits on category codes above 52 are not yet supported with"
-            ' feature_perturbation="interventional". You can still use TreeExplainer with'
-            ' feature_perturbation="tree_path_dependent".'
+            "Categorical splits on category codes above 52 are not yet supported by shap's own"
+            ' algorithms. You can still use TreeExplainer with feature_perturbation="tree_path_dependent"'
+            " and no background data."
+        )
+    # The models split on category codes, while shap reads a pandas categorical column's categories.
+    if isinstance(X, pd.DataFrame) and any(
+        isinstance(dtype, pd.CategoricalDtype) and not dtype.categories.equals(pd.RangeIndex(len(dtype.categories)))
+        for dtype in X.dtypes
+    ):
+        raise NotImplementedError(
+            "Pandas categorical columns whose categories are not their codes 0, 1, 2, ... are not yet"
+            " supported by shap's own algorithms. You can pass the category codes instead, or use"
+            ' TreeExplainer with feature_perturbation="tree_path_dependent" and no background data.'
         )
 
 
@@ -735,11 +752,11 @@ class TreeExplainer(Explainer):
             if phi is not None:
                 return phi
 
+        _categorical_unsupported(self.model, self.feature_perturbation, X)
         X, y, X_missing, flat_output, tree_limit, check_additivity = self._validate_inputs(
             X, y, tree_limit, check_additivity
         )
         transform = self.model.get_transform()
-        _categorical_unsupported(self.model, self.feature_perturbation)
         # Of the interventional algorithms, only the experimental one evaluates categorical splits.
         enable_experimental = getattr(self, "enable_experimental", False) or (
             self.feature_perturbation == "interventional" and bool(np.any(self.model.threshold_types > 0))
