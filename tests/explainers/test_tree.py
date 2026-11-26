@@ -3538,6 +3538,36 @@ def test_many_categories_are_supported_via_xgboost_native_implementation():
     np.testing.assert_allclose(shap_values.sum(axis=1) + explainer.expected_value, prediction, atol=1e-5)
 
 
+@pytest.mark.parametrize(("library", "use_background"), [("lightgbm", True), ("xgboost", True), ("xgboost", False)])
+def test_approximate_shap_values_with_categorical_splits(library, use_background):
+    """Saabas values (approximate=True) follow categorical splits, so they add up to the model output."""
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(3000, 3))
+    X[:, 1] = rng.integers(0, 53, size=3000)
+    y = rng.normal(scale=3.0, size=53)[X[:, 1].astype(int)] * (1 + 0.5 * X[:, 0]) + X[:, 2]
+    X_explain = X[:54].copy()
+    X_explain[:, 1] = [*range(53), np.nan]
+    if library == "lightgbm":
+        lightgbm = pytest.importorskip("lightgbm")
+        model = lightgbm.LGBMRegressor(
+            n_estimators=20, num_leaves=8, min_data_per_group=5, max_cat_threshold=64, verbose=-1
+        )
+        model.fit(X, y, categorical_feature=[1])
+        prediction = model.predict(X_explain, raw_score=True)
+    else:
+        xgboost = pytest.importorskip("xgboost")
+        model = xgboost.XGBRegressor(
+            n_estimators=20, max_depth=3, enable_categorical=True, feature_types=["q", "c", "q"]
+        )
+        model.fit(X, y)
+        prediction = model.predict(X_explain, output_margin=True)
+
+    background = X[-50:] if use_background else None
+    explainer = shap.TreeExplainer(model, background, feature_perturbation="tree_path_dependent")
+    shap_values = explainer.shap_values(X_explain, approximate=True)
+    np.testing.assert_allclose(shap_values.sum(axis=1) + explainer.expected_value, prediction, atol=1e-5)
+
+
 def test_treelite_xgboost_multiple_targets():
     """Trees assigned to different regression targets must not be summed together."""
     treelite = pytest.importorskip("treelite", minversion="4.0")

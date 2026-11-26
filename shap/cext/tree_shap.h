@@ -285,7 +285,11 @@ inline void tree_saabas(tfloat *out, const TreeEnsemble &tree, const Explanation
         const unsigned feature = tree.features[curr_node];
         if (data.X_missing[feature]) {
             next_node = tree.children_default[curr_node];
-        } else if (data.X[feature] <= tree.thresholds[curr_node]) {
+        } else if (tree.threshold_types[curr_node] == 0 && data.X[feature] <= tree.thresholds[curr_node]) {
+            next_node = tree.children_left[curr_node];
+        } else if (tree.threshold_types[curr_node] == 1 && category_in_threshold(tree.thresholds[curr_node], data.X[feature])) {
+            next_node = tree.children_left[curr_node];
+        } else if (tree.threshold_types[curr_node] == 2 && !category_in_threshold(tree.thresholds[curr_node], data.X[feature])) {
             next_node = tree.children_left[curr_node];
         } else {
             next_node = tree.children_right[curr_node];
