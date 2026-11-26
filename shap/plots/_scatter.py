@@ -120,8 +120,13 @@ def scatter(
     Returns
     -------
     ax : matplotlib Axes object
-        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it. Only
-        returned if ``show=False``.
+        When a **single feature** is plotted and ``show=False``, returns the
+        :external+mpl:class:`~matplotlib.axes.Axes` object so the plot can be
+        further customised.
+    fig : matplotlib Figure object
+        When **multiple features** are plotted and ``show=False``, returns the
+        :external+mpl:class:`~matplotlib.figure.Figure` object containing all
+        subplots. Use ``fig.axes`` to access the individual Axes.
 
     Examples
     --------
@@ -140,7 +145,7 @@ def scatter(
         ymin = parse_axis_limit(ymin, shap_values.values, is_shap_axis=True)
         ymax = parse_axis_limit(ymax, shap_values.values, is_shap_axis=True)
         ymin, ymax = _suggest_buffered_limits(ymin, ymax, shap_values.values)
-        _ = plt.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
+        fig, _ = plt.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
         for i in inds:
             ax = plt.subplot(1, len(inds), i + 1)
             scatter(shap_values[:, i], color=color, show=False, ax=ax, ymin=ymin, ymax=ymax)
@@ -160,7 +165,8 @@ def scatter(
             plt.legend()
         if show:
             plt.show()
-        return
+        else:
+            return fig
 
     if len(shap_values.shape) != 1:
         raise DimensionError(
