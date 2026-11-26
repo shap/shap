@@ -2,6 +2,8 @@
 
 import pytest
 import sklearn
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.neural_network import MLPClassifier
 
 import shap
 
@@ -95,3 +97,50 @@ def test_explainer_xgboost():
     # check the properties of Explanation object
     assert explanation.values.shape == (*X.shape,)  # type: ignore[union-attr]
     assert explanation.base_values.shape == (len(X),)  # type: ignore[union-attr]
+
+
+def test_text_explainer_rejects_string_outputs():
+    """Ensure string-valued model outputs raise a helpful error."""
+
+    texts = [
+        "I am happy",
+        "This is great",
+        "Wonderful day",
+        "I am sad",
+        "Terrible news",
+        "Very bad",
+    ]
+
+    labels = [
+        "happy",
+        "happy",
+        "happy",
+        "sad",
+        "sad",
+        "sad",
+    ]
+
+    vectorizer = CountVectorizer()
+    X = vectorizer.fit_transform(texts)
+
+    clf = MLPClassifier(
+        hidden_layer_sizes=(10,),
+        max_iter=500,
+        random_state=0,
+    )
+
+    clf.fit(X, labels)
+
+    def pipeline_predict(x):
+        return clf.predict(vectorizer.transform(x))
+
+    explainer = shap.Explainer(
+        pipeline_predict,
+        shap.maskers.Text(tokenizer=r"\W+"),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Model outputs must be numeric",
+    ):
+        explainer(["I am sad"])
