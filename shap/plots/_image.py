@@ -21,6 +21,7 @@ from ..utils._legacy import kmeans
 from . import colors
 
 if TYPE_CHECKING:
+    from matplotlib.axes import Axes
     from matplotlib.colors import Colormap
 
 
@@ -36,16 +37,18 @@ def image(
     cmap: str | Colormap | None = colors.red_transparent_blue,
     vmax: float | None = None,
     show: bool | None = True,
-):
+    *,
+    ax: Axes | None = None,
+) -> plt.Figure:
     """Plots SHAP values for image inputs.
 
     Parameters
     ----------
-    shap_values : [numpy.array]
-        List of arrays of SHAP values. Each array has the shape
-        (# samples x width x height x channels), and the
-        length of the list is equal to the number of model outputs that are being
-        explained.
+    shap_values : Explanation or numpy.array or list of numpy.array
+    An ``Explanation`` object or a list of arrays of SHAP values. Each
+    array has the shape (# samples x width x height x channels), and
+    the length of the list is equal to the number of model outputs
+    being explained.
 
     pixel_values : numpy.array
         Matrix of pixel values (# samples x width x height x channels) for each image.
@@ -75,6 +78,17 @@ def image(
         Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
+
+    ax : matplotlib.axes.Axes, optional
+       Pre-existing axes to use for the plot. Note that because this
+       function creates a grid of subplots internally, the ``ax``
+       parameter is accepted for API consistency but the figure is
+       returned rather than a single axes object.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The figure containing the plot. Only returned when ``show=False``.
 
     Examples
     --------
@@ -164,7 +178,7 @@ def image(
             x_curr_gray = x_curr
             x_curr_disp = x_curr
 
-        axes[row, 0].imshow(x_curr_disp, cmap=plt.get_cmap("gray"))
+        axes[row, 0].imshow(x_curr_disp, cmap="gray")
         if true_labels:
             axes[row, 0].set_title(true_labels[row], **label_kwargs)
         axes[row, 0].axis("off")
@@ -181,9 +195,7 @@ def image(
                 if labels.shape[0] > 1 or row == 0:
                     axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
-            axes[row, i + 1].imshow(
-                x_curr_gray, cmap=plt.get_cmap("gray"), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1)
-            )
+            axes[row, i + 1].imshow(x_curr_gray, cmap="gray", alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1))
             im = axes[row, i + 1].imshow(sv, cmap=cmap, vmin=-max_val, vmax=max_val)
             axes[row, i + 1].axis("off")
     if hspace == "auto":
@@ -196,6 +208,47 @@ def image(
     cb.outline.set_visible(False)  # type: ignore
     if show:
         plt.show()
+    return fig
+
+
+def image_legacy(
+    shap_values: np.ndarray | list[np.ndarray],
+    pixel_values: np.ndarray | None = None,
+    labels: list[str] | list[list[str]] | np.ndarray | None = None,
+    true_labels: list | None = None,
+    width: int | None = 20,
+    aspect: float | None = 0.2,
+    hspace: float | Literal["auto"] | None = 0.2,
+    labelpad: float | None = None,
+    cmap: str | Colormap | None = colors.red_transparent_blue,
+    vmax: float | None = None,
+    show: bool | None = True,
+) -> None:
+    """Legacy wrapper for :func:`image` using numpy arrays directly.
+
+    .. deprecated::
+        Use :func:`image` with an :class:`~shap.Explanation` object instead.
+    """
+    import warnings
+
+    warnings.warn(
+        "image_legacy is deprecated. Use shap.plots.image with an Explanation object instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    image(
+        shap_values,
+        pixel_values=pixel_values,
+        labels=labels,
+        true_labels=true_labels,
+        width=width,
+        aspect=aspect,
+        hspace=hspace,
+        labelpad=labelpad,
+        cmap=cmap,
+        vmax=vmax,
+        show=show,
+    )
 
 
 def image_to_text(shap_values):
