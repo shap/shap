@@ -1,5 +1,6 @@
 """Test tree functions."""
 
+import functools
 import itertools
 import math
 import pickle
@@ -3441,8 +3442,9 @@ def test_treelite_lightgbm_categorical_split():
     np.testing.assert_allclose(sv.base_values + sv.values.sum(axis=1), predictions, rtol=1e-6, atol=1e-6)
 
 
+@pytest.mark.parametrize("use_treelite", [False, True])
 @pytest.mark.parametrize("library", ["lightgbm", "xgboost"])
-def test_categorical_splits_on_codes_0_to_52(library):
+def test_categorical_splits_on_codes_0_to_52(library, use_treelite):
     """SHAP values are exact for categorical splits on the category codes 0 to 52."""
     rng = np.random.default_rng(0)
     X = rng.normal(size=(3000, 4))
@@ -3459,14 +3461,22 @@ def test_categorical_splits_on_codes_0_to_52(library):
             n_estimators=20, num_leaves=8, min_data_per_group=5, max_cat_threshold=64, verbose=-1
         )
         model.fit(X, y, categorical_feature=[2])
-        predict = lambda Z: model.predict(Z, raw_score=True)  # noqa: E731
+        predict = functools.partial(model.predict, raw_score=True)
+        native = model.predict(X_explain, pred_contrib=True)[:, :-1]
     else:
         xgboost = pytest.importorskip("xgboost")
         model = xgboost.XGBRegressor(
             n_estimators=20, max_depth=3, enable_categorical=True, feature_types=["q", "q", "c", "q"]
         )
         model.fit(X, y)
-        predict = lambda Z: model.predict(Z, output_margin=True)  # noqa: E731
+        predict = functools.partial(model.predict, output_margin=True)
+        native = model.get_booster().predict(xgboost.DMatrix(X_explain), pred_contribs=True)[:, :-1]
+    if use_treelite:
+        treelite = pytest.importorskip("treelite", minversion="4.0")
+        if library == "lightgbm":
+            model = treelite.frontend.from_lightgbm(model.booster_)
+        else:
+            model = treelite.frontend.from_xgboost(model.get_booster())
 
     explainer = shap.TreeExplainer(model, background, feature_perturbation="interventional")
     # Category 0 adds 0.5 to a split's threshold, and category 52 adds 2 ** 51.
@@ -3476,12 +3486,12 @@ def test_categorical_splits_on_codes_0_to_52(library):
     exact = shap.ExactExplainer(predict, shap.maskers.Independent(background, max_samples=len(background)))
     np.testing.assert_allclose(explainer.shap_values(X_explain), exact(X_explain).values, atol=1e-5)
 
-    if library == "lightgbm":
-        # shap computes the path-dependent interactions, whose rows sum to LightGBM's SHAP values.
-        native = model.predict(X_explain, pred_contrib=True)[:, :-1]
-        for enable_experimental in [False, True]:
-            explainer = shap.TreeExplainer(model, enable_experimental=enable_experimental)
-            np.testing.assert_allclose(explainer.shap_interaction_values(X_explain).sum(axis=2), native, atol=1e-5)
+    # Path-dependent values match the library's own SHAP values. shap computes the interactions
+    # (except for XGBoost models), and for TreeLite models also the SHAP values.
+    for enable_experimental in [False, True]:
+        explainer = shap.TreeExplainer(model, enable_experimental=enable_experimental)
+        np.testing.assert_allclose(explainer.shap_values(X_explain), native, atol=1e-5)
+        np.testing.assert_allclose(explainer.shap_interaction_values(X_explain).sum(axis=2), native, atol=1e-5)
 
 
 @pytest.mark.parametrize("library", ["lightgbm", "xgboost"])

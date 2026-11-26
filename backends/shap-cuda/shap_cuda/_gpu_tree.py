@@ -5,6 +5,7 @@ import shap
 from packaging.version import parse as _parse_version
 from shap.explainers._tree import (
     TreeExplainer,
+    _xgboost_cat_unsupported,
     feature_perturbation_codes,
     output_transform_codes,
 )
@@ -90,11 +91,7 @@ class GPUTreeExplainer(TreeExplainer):
         )
 
         model = self.model
-        if np.any(model.threshold_types == 2):
-            raise NotImplementedError(
-                "Categorical splits of XGBoost models are not yet supported by GPUTreeExplainer. You can still use"
-                " TreeExplainer."
-            )
+        _xgboost_cat_unsupported(model)
         transform = model.get_transform()
 
         # run the core algorithm using the C extension

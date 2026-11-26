@@ -104,6 +104,16 @@ def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
     return n_iterations
 
 
+def _xgboost_cat_unsupported(model: TreeEnsemble) -> None:
+    # GPUTreeExplainer cannot evaluate XGBoost's categorical splits (threshold type 2) yet.
+    # shap-cuda imports this function, so keep its name and signature.
+    if np.any(model.threshold_types == 2):
+        raise NotImplementedError(
+            "Categorical splits of XGBoost models are not yet supported by GPUTreeExplainer."
+            " You can still use TreeExplainer."
+        )
+
+
 def _categorical_unsupported(model: TreeEnsemble, feature_perturbation: str) -> None:
     # A categorical split's threshold is the sum of 2 ** (code - 1) over its category codes, which
     # double precision holds exactly for the codes 0 to 52. A code above 52 makes it reach 2 ** 52.
