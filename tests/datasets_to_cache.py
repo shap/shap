@@ -6,6 +6,8 @@ This file is used by the CI pipeline to pre-download datasets before running tes
 
 from __future__ import annotations
 
+import shutil
+from pathlib import Path
 from typing import TypedDict
 
 
@@ -50,8 +52,24 @@ SKLEARN_FETCH_DATASETS: list[Dataset] = [
 ]
 
 
+def copy_local_repo_datasets():
+    """Copy pre-existing datasets from the repository data/ directory into shap's cached_data."""
+    import shap
+
+    repo_data = Path(__file__).resolve().parent.parent / "data"
+    if repo_data.is_dir():
+        cache_dir = Path(shap.__file__).resolve().parent / "cached_data"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        for item in repo_data.iterdir():
+            if item.is_file():
+                dest = cache_dir / item.name
+                if not dest.exists():
+                    shutil.copyfile(item, dest)
+
+
 def download_all_datasets():
     """Download all datasets used in tests."""
+    copy_local_repo_datasets()
     from sklearn import datasets as sklearn_datasets
 
     import shap

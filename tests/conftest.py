@@ -1,4 +1,5 @@
 import functools
+import shutil
 import sys
 from pathlib import Path
 
@@ -21,9 +22,25 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pytest  # noqa: E402
 
+import shap  # noqa: E402
+
 
 def pytest_addoption(parser):
     parser.addoption("--random-seed", action="store", help="Fix the random seed")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def populate_cached_data_from_repo():
+    """Populate shap's cached_data from the local repository data/ directory for offline testing."""
+    repo_data = Path(__file__).resolve().parent.parent / "data"
+    if repo_data.is_dir():
+        cache_dir = Path(shap.__file__).resolve().parent / "cached_data"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        for item in repo_data.iterdir():
+            if item.is_file():
+                dest = cache_dir / item.name
+                if not dest.exists():
+                    shutil.copyfile(item, dest)
 
 
 @pytest.fixture()
