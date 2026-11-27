@@ -181,3 +181,24 @@ def test_inpaint_fully_masked_image():
     # mean = 100/ (5*5) = 4.00
     result = image_masker(None, image)
     assert np.all(result[0] == 4.0)
+
+
+@pytest.mark.parametrize(
+    "mask_value",
+    [0, "blur(3,3)", "inpaint_telea", "inpaint_ns"],
+)
+def test_image_masker_torch_requires_grad(mask_value):
+    """Gradient-tracked PyTorch images should be maskable."""
+    torch = pytest.importorskip("torch")
+
+    image = torch.arange(75, dtype=torch.float32).reshape(5, 5, 3)
+    image.requires_grad_()
+
+    masker = shap.maskers.Image(mask_value, shape=(5, 5, 3))
+    mask = np.ones(75, dtype=bool)
+    mask[::5] = False
+
+    expected = masker(mask, image.detach())[0]
+    actual = masker(mask, image)[0]
+
+    np.testing.assert_array_equal(actual, expected)
