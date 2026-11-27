@@ -366,7 +366,7 @@ class Explainer(Serializable):
         output_indices = []
         expected_values = []
         mask_shapes = []
-        main_effects = []  # type: ignore[var-annotated, assignment]
+        main_effects_list = []
         hierarchical_values = []
         clustering = []
         output_names = []
@@ -388,7 +388,7 @@ class Explainer(Serializable):
             output_indices.append(row_result.get("output_indices", None))
             expected_values.append(row_result.get("expected_values", None))
             mask_shapes.append(row_result["mask_shapes"])
-            main_effects.append(row_result.get("main_effects", None))  # type: ignore[attr-defined, arg-type]
+            main_effects_list.append(row_result.get("main_effects", None))
             clustering.append(row_result.get("clustering", None))
             hierarchical_values.append(row_result.get("hierarchical_values", None))
             tmp = row_result.get("output_names", None)
@@ -410,9 +410,8 @@ class Explainer(Serializable):
 
         # collapse the arrays as possible
         expected_values = pack_values(expected_values)  # type: ignore[assignment]
-        main_effects = pack_values(main_effects)  # type: ignore[assignment]
+        main_effects = pack_values(main_effects_list)  # type: ignore[assignment]
         output_indices = pack_values(output_indices)  # type: ignore[assignment]
-        main_effects = pack_values(main_effects)  # type: ignore[assignment]
         hierarchical_values = pack_values(hierarchical_values)  # type: ignore[assignment]
         error_std = pack_values(error_std)  # type: ignore[assignment]
         clustering = pack_values(clustering)  # type: ignore[assignment]
