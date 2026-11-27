@@ -162,16 +162,17 @@ class PermutationExplainer(Explainer):
 
         # loop over many permutations
         inds = fm.varying_inputs()
+        ninds = len(inds)
         inds_mask = np.zeros(len(fm), dtype=bool)
         inds_mask[inds] = True
-        masks = np.zeros(2 * len(inds) + 1, dtype=int)
+        masks = np.zeros(2 * ninds + 1, dtype=int)
         masks[0] = MaskedModel.delta_mask_noop_value
-        npermutations = max_evals // (2 * len(inds) + 1)
+        npermutations = max_evals // len(masks)
         row_values = None
         row_values_history = None
         history_pos = 0
         main_effect_values = None
-        if len(inds) > 0:
+        if ninds > 0:
             for _ in range(npermutations):
                 # shuffle the indexes so we get a random permutation ordering
                 if row_clustering is not None:
@@ -182,13 +183,8 @@ class PermutationExplainer(Explainer):
                     np.random.shuffle(inds)
 
                 # create a large batch of masks to evaluate
-                i = 1
-                for ind in inds:
-                    masks[i] = ind
-                    i += 1
-                for ind in inds:
-                    masks[i] = ind
-                    i += 1
+                masks[1 : ninds + 1] = inds
+                masks[ninds + 1 :] = inds
 
                 # evaluate the masked model
                 outputs = fm(masks, zero_index=0, batch_size=batch_size)
@@ -206,19 +202,14 @@ class PermutationExplainer(Explainer):
                         )
 
                 # update our SHAP value estimates
-                i = 0
-                for ind in inds:  # forward
-                    row_values[ind] += outputs[i + 1] - outputs[i]
-                    if error_bounds:
-                        row_values_history[history_pos][ind] = outputs[i + 1] - outputs[i]  # type: ignore[index]
-                    i += 1
-                history_pos += 1
-                for ind in inds:  # backward
-                    row_values[ind] += outputs[i] - outputs[i + 1]
-                    if error_bounds:
-                        row_values_history[history_pos][ind] = outputs[i] - outputs[i + 1]  # type: ignore[index]
-                    i += 1
-                history_pos += 1
+                forward = outputs[1 : ninds + 1] - outputs[:ninds]
+                backward = outputs[ninds:-1] - outputs[ninds + 1 :]
+                row_values[inds] += forward
+                row_values[inds] += backward
+                if error_bounds:
+                    row_values_history[history_pos, inds] = forward  # type: ignore[index]
+                    row_values_history[history_pos + 1, inds] = backward  # type: ignore[index]
+                history_pos += 2
 
             if npermutations == 0:
                 raise ValueError(
