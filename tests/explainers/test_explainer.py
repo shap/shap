@@ -1,5 +1,6 @@
 """Tests for Explainer class."""
 
+import numpy as np
 import pytest
 import sklearn
 
@@ -95,3 +96,48 @@ def test_explainer_xgboost():
     # check the properties of Explanation object
     assert explanation.values.shape == (*X.shape,)  # type: ignore[union-attr]
     assert explanation.base_values.shape == (len(X),)  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize("main_effects", [False, True])
+def test_main_effects_argument_is_respected(main_effects):
+    """The main_effects flag should reach every row, and the results should be returned (GH #5366)."""
+    rs = np.random.RandomState(0)
+    background = rs.randn(1, 5)
+    X = rs.randn(3, 5)
+    w = rs.randn(5)
+    n_model_rows = 0
+
+    def model(x):
+        nonlocal n_model_rows
+        n_model_rows += len(x)
+        return x @ w
+
+    explainer = shap.PermutationExplainer(model, background, seed=0)
+    explainer(X[:1], max_evals=11, main_effects=main_effects, silent=True)
+    rows_for_one_sample = n_model_rows
+
+    n_model_rows = 0
+    explanation = explainer(X, max_evals=11, main_effects=main_effects, silent=True)
+    assert isinstance(explanation, shap.Explanation)
+    assert n_model_rows == len(X) * rows_for_one_sample
+
+    if main_effects:
+        assert np.allclose(explanation.main_effects, w * (X - background))
+    else:
+        assert explanation.main_effects is None
+
+
+@pytest.mark.parametrize("explainer_class", [shap.PermutationExplainer, shap.ExactExplainer])
+@pytest.mark.parametrize("background_first", [False, True])
+def test_main_effects_with_a_row_equal_to_the_background(explainer_class, background_first):
+    """A row where nothing varies has zero main effects, also when batched with other rows."""
+    rs = np.random.RandomState(0)
+    background = rs.randn(1, 5)
+    w = rs.randn(5)
+    rows = [background[0], background[0] + 1]
+    X = np.array(rows if background_first else rows[::-1])
+
+    explainer = explainer_class(lambda x: x @ w, background)
+    explanation = explainer(X, main_effects=True, silent=True)
+    assert isinstance(explanation.main_effects, np.ndarray)
+    assert np.allclose(explanation.main_effects, w * (X - background))
