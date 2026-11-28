@@ -226,6 +226,9 @@ class PermutationExplainer(Explainer):
             outputs = fm(masks, zero_index=0, batch_size=1)
             expected_value = outputs[0]
             row_values = np.zeros((len(fm),) + outputs.shape[1:])
+            if main_effects:
+                # nothing varies, so every feature has a zero main effect
+                main_effect_values = np.zeros_like(row_values)
             if error_bounds:
                 row_values_history = np.zeros(
                     (

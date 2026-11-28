@@ -148,7 +148,8 @@ class ExactExplainer(Explainer):
                     "values": np.zeros(row_args[0].shape),
                     "expected_values": outputs[0],
                     "mask_shapes": fm.mask_shapes,
-                    "main_effects": None,
+                    # nothing varies, so every feature has a zero main effect
+                    "main_effects": np.zeros((len(fm),) + outputs.shape[1:]) if main_effects else None,
                     "clustering": getattr(self.masker, "clustering", None),
                 }
 

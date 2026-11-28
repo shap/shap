@@ -125,3 +125,19 @@ def test_main_effects_argument_is_respected(main_effects):
         assert np.allclose(explanation.main_effects, w * (X - background))
     else:
         assert explanation.main_effects is None
+
+
+@pytest.mark.parametrize("explainer_class", [shap.PermutationExplainer, shap.ExactExplainer])
+@pytest.mark.parametrize("background_first", [False, True])
+def test_main_effects_with_a_row_equal_to_the_background(explainer_class, background_first):
+    """A row where nothing varies has zero main effects, also when batched with other rows."""
+    rs = np.random.RandomState(0)
+    background = rs.randn(1, 5)
+    w = rs.randn(5)
+    rows = [background[0], background[0] + 1]
+    X = np.array(rows if background_first else rows[::-1])
+
+    explainer = explainer_class(lambda x: x @ w, background)
+    explanation = explainer(X, main_effects=True, silent=True)
+    assert isinstance(explanation.main_effects, np.ndarray)
+    assert np.allclose(explanation.main_effects, w * (X - background))
