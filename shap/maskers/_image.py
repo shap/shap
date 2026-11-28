@@ -71,7 +71,7 @@ class Image(Masker):
 
     def __call__(self, mask, x):
         if safe_isinstance(x, "torch.Tensor"):
-            x = x.cpu().numpy()
+            x = x.detach().cpu().numpy()
 
         if np.prod(x.shape) != np.prod(self.input_shape):
             raise DimensionError(
