@@ -141,7 +141,7 @@ class AdditiveExplainer(Explainer):
             "values": phi,
             "expected_values": self._expected_value,
             "mask_shapes": [a.shape for a in row_args],
-            "main_effects": phi,
+            "main_effects": phi if main_effects else None,
             "clustering": getattr(self.masker, "clustering", None),
         }
 
